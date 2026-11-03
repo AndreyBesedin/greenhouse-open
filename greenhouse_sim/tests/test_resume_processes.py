@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import workers_support
 
 SHORT: Final = workers_support.SHORT
+SHORT_DAYS: Final = workers_support.SHORT_DAYS
 WAIT_S: Final = 240.0
 # Slow enough that the first day is committed well before the second.
 SECONDS_PER_DAY: Final = 8
@@ -81,6 +82,12 @@ def test_a_worker_killed_mid_epoch_is_resumed_over_the_api_and_ends_as_an_epoch_
     # The worker that died holds no lease any more: the scheduler told the epoch,
     # and lets go of the lease just after writing what it told.
     _until(lambda: not epoch.worked(), "the lease to be let go")
+    # Killed outright, it had no chance to say why, and it is not said to have
+    # failed. What it reported at its commit stays, for the next worker to add to.
+    assert epoch.manifest().reason is None
+    killed = epoch.usage()
+    assert killed is not None and killed.cpu_s is not None and killed.peak_memory_bytes is not None
+    assert killed.cpu_s > 0 and killed.peak_memory_bytes > 0 and killed.days_computed == 1.0
 
     path = f"/api/runs/{shown.run_id}/epochs/{shown.epoch}/resume"
     resumed = respond(simulator, "POST", path)
@@ -90,6 +97,12 @@ def test_a_worker_killed_mid_epoch_is_resumed_over_the_api_and_ends_as_an_epoch_
     assert [c.digest for c in epoch.commits()] == [c.digest for c in whole.commits()]
     epoch.verify()
     assert respond(simulator, "POST", path).status == HTTPStatus.CONFLICT
+    carried = epoch.usage()
+    assert carried is not None and carried.cpu_s is not None
+    assert carried.cpu_s > killed.cpu_s
+    assert carried.peak_memory_bytes is not None
+    assert carried.peak_memory_bytes >= killed.peak_memory_bytes
+    assert carried.days_computed == SHORT_DAYS and carried.commits == SHORT_DAYS
 
 
 @pytest.mark.parametrize(

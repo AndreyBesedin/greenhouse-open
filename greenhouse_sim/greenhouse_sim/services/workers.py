@@ -62,6 +62,7 @@ from greenhouse_sim.services.run_store import (
     ObjectStore,
     Status,
     decompress,
+    failure_reason,
 )
 from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.runs import RunRequest
@@ -275,9 +276,9 @@ def _drive(
                 _days(run, from_s) if isinstance(driver, Free) else driver.barriers,
                 stopping,
             )
-    except Exception:
+    except Exception as error:
         logger.exception("the epoch %s of %s failed", epoch.epoch, epoch.run_id)
-        epoch.set_status(Status.FAILED)
+        epoch.set_status(Status.FAILED, reason=failure_reason(error))
     status = epoch.manifest().status
     if status == Status.RUNNING:
         status = Status.INTERRUPTED

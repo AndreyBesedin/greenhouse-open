@@ -5,7 +5,10 @@ The store is an interface over named objects (`ObjectStore`: put one whole,
 get, list, delete) and a folder under the user's state folder is its first
 backend (`FolderStore`). An epoch's objects, under `{run_id}/{epoch}/`:
 
-- `manifest.json`: the run, its seed, its status;
+- `manifest.json`: the run, its seed, its status, and why it failed if it did;
+- `usage.json`: what the epoch has used (`EpochUsage`, decision 0067), written
+  after each commit and as it ends: a report in no digest, which nothing that
+  decides a trajectory reads, and which the list reads so as not to walk;
 - `segments/{start}-{end}/{observations,events,outcomes}.parquet`: its
   records for a span of simulated time, written once, zstd Parquet, read and
   written with DuckDB;
@@ -33,8 +36,10 @@ analysis selects by); an event and an outcome are a few columns beside their
 whole record as JSON, which is how they come back exactly.
 """
 
+import errno
 import hashlib
 import json
+import logging
 import math
 import os
 import secrets
@@ -55,9 +60,14 @@ from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.outcome import ActionOutcome
 from greenhouse_protocol.provenance import RecordSource
-from pydantic import BaseModel, ConfigDict, JsonValue
+from pydantic import BaseModel, ConfigDict, JsonValue, ValidationError
 
+from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import leases
+from greenhouse_sim.services.errors import ServiceError
+from greenhouse_sim.services.resources import ProcessUse
+
+logger = logging.getLogger(__name__)
 
 FORMAT: Final = "run-store-1"
 CHECKPOINT_TYPE: Final = "application/json+zstd"
@@ -69,6 +79,7 @@ INSTANT_DIGITS: Final = 16
 SEQ_DIGITS: Final = 8
 _PARTIAL: Final = ".partial"
 _INHERITED_OUTCOMES: Final = "inherited/outcomes.jsonl"
+_USAGE: Final = "usage.json"
 # How much is drawn to tell apart two requests asked in one nanosecond.
 REQUEST_TOKEN_BYTES: Final = 4
 # The instant instants are counted from in a segment's file.
@@ -90,6 +101,31 @@ class Status(StrEnum):
 
 # The statuses an epoch is told when it is no longer worked.
 ENDED: Final = frozenset({Status.FINISHED, Status.FAILED, Status.INTERRUPTED})
+
+# What a failed epoch whose writer gave no reason says.
+NO_REASON_GIVEN: Final = "no reason was given: its worker's log may say"
+_DISK_FULL: Final = frozenset({errno.ENOSPC, errno.EDQUOT})
+
+
+def failure_reason(error: BaseException) -> str:
+    """Why an epoch failed, as any client that lists it may read. A service's
+    error is already written for a client. Of any other only its kind is said,
+    and never its text, which can hold a path or a value; the traceback stays in
+    its worker's log."""
+    while not isinstance(error, ServiceError) and error.__cause__ is not None:
+        error = error.__cause__
+    if isinstance(error, ServiceError):
+        return error.message
+    if isinstance(error, MemoryError):
+        return "its worker ran out of memory"
+    if isinstance(error, StoreCorrupt):
+        return "an object its commits name is missing, or is not what its digest says"
+    if isinstance(error, OSError):
+        if error.errno in _DISK_FULL:
+            return "the disk of its run store is full"
+        code = errno.errorcode.get(error.errno or 0, type(error).__name__)
+        return f"its run store could not be read or written ({code})"
+    return f"its run could not be worked out ({type(error).__name__})"
 
 
 class Kind(StrEnum):
@@ -239,6 +275,43 @@ class EpochManifest(BaseModel):
     # The real seconds to a simulated day its worker advances at: none, as fast
     # as it can.
     seconds_per_day: float | None = None
+    # Why it failed (`failure_reason`), for any client: none unless it did, or
+    # if it failed before epochs said why.
+    reason: str | None = None
+
+
+class EpochUsage(BaseModel):
+    """What an epoch has used, as `usage.json` says it (decision 0067): written
+    after each commit and as the epoch ends, so that it may lag a crash by a
+    commit. It is a report and not a record: in no digest, and read by nothing
+    that decides a trajectory.
+
+    Across a resume, each figure says the epoch's whole so far:
+
+    - `commits`, `checkpoints`, `frontier_s`, `days_computed` and `bytes_kept`
+      are worked out afresh from what it holds, so that nothing is counted twice
+      and a resume resets nothing. A fork counts from the state it inherits: that
+      state's bytes are its own, its parent's days are not, and a day worked out
+      by a worker that died before committing it does not count;
+    - `cpu_s` adds up its workers' seconds, each worker's as far as it last
+      reported them, those spent on work a crash then lost included: it is what
+      the machine gave. A fork starts from none of its parent's;
+    - `peak_memory_bytes` is the highest of any one of its workers.
+
+    The last two are none if no process of its own ever worked the epoch: a
+    playback in the API's process or a caller's `execute` shares that process
+    with other work, whose figures are not the epoch's. An epoch resumed that
+    had none, or was worked partly so, counts only the workers that reported."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    commits: int
+    checkpoints: int
+    frontier_s: float
+    days_computed: float
+    bytes_kept: int
+    cpu_s: float | None = None
+    peak_memory_bytes: int | None = None
 
 
 class LogEntry(BaseModel):
@@ -514,6 +587,10 @@ class EpochStore:
         self.run_id = run_id
         self.epoch = epoch
         self._home = f"{run_id}/{epoch}"
+        # What this process has used, if it works this epoch and nothing else,
+        # and what the epoch's report said before it (`counted_by`).
+        self._meter: Callable[[], ProcessUse] | None = None
+        self._earlier: EpochUsage | None = None
 
     @classmethod
     def create(cls, objects: ObjectStore, manifest: EpochManifest) -> EpochStore:
@@ -555,17 +632,20 @@ class EpochStore:
             raise StoreCorrupt(f"epoch {self._home} has no manifest")
         return EpochManifest.model_validate_json(data)
 
-    def set_status(self, status: Status) -> None:
-        """Says what the epoch is. One said to run is held by this process
-        (`leases`) until it is said to have ended, by whoever says it."""
+    def set_status(self, status: Status, *, reason: str | None = None) -> None:
+        """Says what the epoch is, and if it failed, why. One said to run is
+        held by this process (`leases`) until it is said to have ended, by
+        whoever says it, and what it used is reported then, with all it keeps."""
         before = self.manifest()
-        manifest = before.model_copy(update={"status": status})
+        said = (reason or NO_REASON_GIVEN) if status == Status.FAILED else None
+        manifest = before.model_copy(update={"status": status, "reason": said})
         self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
         if status == Status.RUNNING:
             if before.status != Status.RUNNING:
                 leases.hold(self.objects, self._home)
         elif status in ENDED:
             leases.release(self.objects, self._home)
+            self.report_usage()
 
     def queue_again(self, *, scenario_file: str | None, seconds_per_day: float | None) -> None:
         """Says the epoch waits for a worker again, with what that worker
@@ -573,6 +653,7 @@ class EpochStore:
         manifest = self.manifest().model_copy(
             update={
                 "status": Status.QUEUED,
+                "reason": None,
                 "scenario_file": scenario_file,
                 "seconds_per_day": seconds_per_day,
             }
@@ -609,9 +690,76 @@ class EpochStore:
 
     def size_bytes(self, listed: Iterable[str] | None = None) -> int:
         """How many bytes the epoch's objects hold, those `listed` of it if
-        they have just been."""
+        they have just been, the report of what it used aside."""
         names = self.objects.names(f"{self._home}/") if listed is None else listed
-        return sum(self.objects.size(name) or 0 for name in names)
+        report = f"{self._home}/{_USAGE}"
+        return sum(self.objects.size(name) or 0 for name in names if name != report)
+
+    def usage(self) -> EpochUsage | None:
+        """What the epoch's report says it used: none if it has none, as an
+        epoch has before its first commit or from before they were written, or
+        one this build cannot read, which is a report and fails nothing."""
+        data = self.objects.get(f"{self._home}/{_USAGE}")
+        if data is None:
+            return None
+        try:
+            return EpochUsage.model_validate_json(data)
+        except ValidationError:
+            logger.warning("the report of what %s used cannot be read", self._home)
+            return None
+
+    def counted_by(self, meter: Callable[[], ProcessUse]) -> None:
+        """Says this process works the epoch and nothing else, and that `meter`
+        says what it has used. What the epoch's earlier workers used is read
+        now and once, so that each report adds this process's whole to it."""
+        self._earlier = self.usage()
+        self._meter = meter
+
+    def report_usage(self, commits: Sequence[Commit] | None = None) -> None:
+        """Writes what the epoch has used, through `commits` if they have just
+        been read. A report that cannot be written is logged and ends nothing:
+        the disk that refuses it refuses the next commit too, and that says so."""
+        try:
+            usage = self._usage_now(self.commits() if commits is None else commits)
+            self.objects.put(f"{self._home}/{_USAGE}", usage.model_dump_json().encode())
+        except Exception:
+            logger.warning("what %s used could not be reported", self._home, exc_info=True)
+
+    def _usage_now(self, commits: Sequence[Commit]) -> EpochUsage:
+        fork = self.manifest().fork
+        start_s = 0.0 if fork is None else fork.start_s
+        frontier_s = commits[-1].end_s if commits else start_s
+        inherited = fork is not None and fork.checkpoint_sha256 is not None
+        kept = sum(commit.checkpoint is not None for commit in commits)
+        before = self.usage() if self._meter is None else self._earlier
+        cpu_s = None if before is None else before.cpu_s
+        peak = None if before is None else before.peak_memory_bytes
+        if self._meter is not None:
+            used = self._meter()
+            cpu_s = (cpu_s or 0.0) + used.cpu_s
+            peak = max(peak or 0, used.peak_memory_bytes)
+        return EpochUsage(
+            commits=len(commits),
+            checkpoints=kept + inherited,
+            frontier_s=frontier_s,
+            days_computed=(frontier_s - start_s) / DAY_S,
+            bytes_kept=self.size_bytes(),
+            cpu_s=cpu_s,
+            peak_memory_bytes=peak,
+        )
+
+    def holds_as_counted(self, usage: EpochUsage) -> bool:
+        """Whether the epoch's folders agree with its report: as many commits,
+        and no fewer segments and checkpoints, since those of a commit are
+        written before it. One listing of each and no object read, which a list
+        of many epochs can afford, and so no sight of a file lost from inside a
+        segment's folder, which only `lacks` has."""
+        home = self._home
+        return (
+            len(self.objects.children(f"{home}/commits/")) == usage.commits
+            and len(self.objects.children(f"{home}/segments/")) >= usage.commits
+            and len(self.objects.children(f"{home}/checkpoints/")) >= usage.checkpoints
+        )
 
     def lacks(
         self, manifest: EpochManifest, commits: Sequence[Commit], listed: Iterable[str]
@@ -751,6 +899,7 @@ class EpochStore:
         self.objects.put(
             f"{self._home}/commits/{made.seq:0{SEQ_DIGITS}d}.json", made.model_dump_json().encode()
         )
+        self.report_usage([*commits, made])
         return made
 
     def _checked(self, commit: Commit, kind: Kind) -> bytes:
@@ -860,9 +1009,14 @@ class EpochStore:
         was never made, and a commit past a gap. The next commit writes over
         those of its own span; the rest, of another span, would stay. Log
         entries past the last commit stay, to be applied again, as do the
-        requests and answers, which no commit names. The names removed."""
+        requests and answers, which no commit names, and the report of what it
+        used, which its next worker adds to. The names removed."""
         commits = self.commits()
-        kept = {f"{self._home}/manifest.json", f"{self._home}/interventions.jsonl"}
+        kept = {
+            f"{self._home}/manifest.json",
+            f"{self._home}/interventions.jsonl",
+            f"{self._home}/{_USAGE}",
+        }
         kept.add(f"{self._home}/{_INHERITED_OUTCOMES}")
         fork = self.manifest().fork
         if fork is not None and fork.checkpoint_sha256 is not None:
@@ -962,19 +1116,29 @@ class StoredRun(BaseModel):
     start_s: float = 0.0
     fork: ForkOf | None = None
     # Whether an object its commits name is missing, so that it cannot be read
-    # whole. Said from the names of its objects, not from their contents.
+    # whole. Said from the names of its objects, not from their contents: in a
+    # list, from how many its folders hold (`EpochStore.holds_as_counted`).
     damaged: bool = False
+    # What it has used (`EpochUsage`): the days it has computed itself, and the
+    # seconds of a core and the most memory its workers took, none if none of
+    # them reported any.
+    days_computed: float = 0.0
+    cpu_s: float | None = None
+    peak_memory_bytes: int | None = None
+    # Why it failed, if it did and it says.
+    reason: str | None = None
 
 
-def stored_run(objects: ObjectStore, run_id: str, epoch_number: int) -> StoredRun:
-    """One epoch as a list of them shows it. Only its own folder is read, and
-    no more of it than its size asks: its commits, and the names of its objects,
-    which are listed after the commits so that all they name are there."""
-    epoch = EpochStore(objects, run_id, epoch_number)
-    manifest = epoch.manifest()
-    commits = epoch.commits()
-    frontier = commits[-1].end_s if commits else epoch.start_s()
-    listed = objects.names(f"{run_id}/{epoch_number}/")
+def _shown(
+    run_id: str,
+    manifest: EpochManifest,
+    *,
+    frontier_s: float,
+    size_bytes: int,
+    usage: EpochUsage | None,
+    damaged: bool,
+) -> StoredRun:
+    start_s = 0.0 if manifest.fork is None else manifest.fork.start_s
     return StoredRun(
         run_id=run_id,
         epoch=manifest.epoch,
@@ -982,26 +1146,73 @@ def stored_run(objects: ObjectStore, run_id: str, epoch_number: int) -> StoredRu
         seed=manifest.seed,
         layout=manifest.layout,
         status=manifest.status,
-        frontier_s=frontier,
+        frontier_s=frontier_s,
         duration_s=manifest.duration_s,
-        progress=None if not manifest.duration_s else frontier / manifest.duration_s,
+        progress=None if not manifest.duration_s else frontier_s / manifest.duration_s,
         created_at=manifest.created_at,
-        size_bytes=epoch.size_bytes(listed),
-        start_s=0.0 if manifest.fork is None else manifest.fork.start_s,
+        size_bytes=size_bytes,
+        start_s=start_s,
         fork=manifest.fork,
+        damaged=damaged,
+        days_computed=(frontier_s - start_s) / DAY_S,
+        cpu_s=None if usage is None else usage.cpu_s,
+        peak_memory_bytes=None if usage is None else usage.peak_memory_bytes,
+        reason=manifest.reason,
+    )
+
+
+def stored_run(objects: ObjectStore, run_id: str, epoch_number: int) -> StoredRun:
+    """One epoch as a list of them shows it, walked: its commits, and the names
+    of its objects, listed after the commits so that all they name are there,
+    which says for certain whether it is damaged. Its size is asked of each
+    object only if its report is missing or behind its commits."""
+    epoch = EpochStore(objects, run_id, epoch_number)
+    manifest = epoch.manifest()
+    commits = epoch.commits()
+    listed = objects.names(f"{run_id}/{epoch_number}/")
+    usage = epoch.usage()
+    current = usage is not None and usage.commits == len(commits)
+    return _shown(
+        run_id,
+        manifest,
+        frontier_s=commits[-1].end_s if commits else epoch.start_s(),
+        size_bytes=usage.bytes_kept if usage is not None and current else epoch.size_bytes(listed),
+        usage=usage,
         damaged=epoch.lacks(manifest, commits, listed),
+    )
+
+
+def _listed(objects: ObjectStore, run_id: str, manifest: EpochManifest) -> StoredRun:
+    """One epoch of a list: from its report, if its folders agree with it. If
+    they do not, or it has none, it is walked: one is behind a crash, or has lost
+    something, and one from before reports were written costs what it always
+    did, since nothing else knows its size."""
+    epoch = EpochStore(objects, run_id, manifest.epoch)
+    usage = epoch.usage()
+    if usage is None or not epoch.holds_as_counted(usage):
+        return stored_run(objects, run_id, manifest.epoch)
+    return _shown(
+        run_id,
+        manifest,
+        frontier_s=usage.frontier_s,
+        size_bytes=usage.bytes_kept,
+        usage=usage,
+        damaged=False,
     )
 
 
 def stored_runs(objects: ObjectStore, scenario_id: str | None = None) -> list[StoredRun]:
     """The epochs a store holds, those of `scenario_id` if given, by run and
-    epoch. Only the runs' folders are read, not their segments."""
+    epoch. An epoch costs its manifest, its report and a listing of three of its
+    folders, however long it is (`_listed`)."""
     found = []
     for run_id in objects.children():
-        for epoch_number in epochs(objects, run_id):
-            if scenario_id is not None:
-                manifest = EpochStore(objects, run_id, epoch_number).manifest()
-                if manifest.scenario_id != scenario_id:
-                    continue
-            found.append(stored_run(objects, run_id, epoch_number))
+        numbers = sorted(int(name) for name in objects.children(f"{run_id}/") if name.isdigit())
+        for number in numbers:
+            data = objects.get(f"{run_id}/{number}/manifest.json")
+            if data is None:
+                continue
+            manifest = EpochManifest.model_validate_json(data)
+            if scenario_id is None or manifest.scenario_id == scenario_id:
+                found.append(_listed(objects, run_id, manifest))
     return found
