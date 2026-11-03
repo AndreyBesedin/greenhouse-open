@@ -516,6 +516,11 @@ describe("the setup builder (P12.2)", () => {
       (input) => input.value,
     );
     expect(fields).toEqual(["2026-03-01", "12", "3"]);
+    // A run made of the draft is of a copy: the file's own can be run as it is.
+    expect(said(page, "builder-uploaded-note")).toContain("opened from a scenario file");
+    expect(
+      page.querySelector('[data-testid="builder-uploaded-note"] a')?.getAttribute("href"),
+    ).toBe("/#run=shared_box");
     sessionStorage.clear();
   });
 
@@ -607,5 +612,57 @@ describe("the setup builder (P12.2)", () => {
     expect(asked.some((each) => each.includes("/playback/start"))).toBe(false);
     expect(went).toEqual([]);
     expect(said(shown.container, "builder-status")).toBe("");
+  });
+  it("keeps the run settings of the draft opened while an uploaded scenario was on its way (P17.11)", async () => {
+    sessionStorage.setItem(
+      "greenhouse.uploaded.shared_box",
+      JSON.stringify({
+        start_date: "2026-03-01",
+        duration_days: 12,
+        random_seed: 3,
+        weather: "default",
+      }),
+    );
+    let arrives = () => {};
+    const slow = new Promise<void>((resolve) => {
+      arrives = resolve;
+    });
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === "/api/scenarios/shared_box/installation") {
+        await slow;
+        return answer(STARTING_HOUSE);
+      }
+      if (url.startsWith("/api/builder/assess")) {
+        return answer(STARTING_HOUSE);
+      }
+      return answer(
+        url.startsWith("/api/drafts") || url === "/api/scenarios" ? [] : { error: "no" },
+      );
+    });
+    shown = render(<Builder hash="#scenario=shared_box" />);
+    const page = shown.container;
+    await settled();
+
+    // A file imported while the scenario is on its way.
+    const input = page.querySelector<HTMLInputElement>(".builder-start input[type=file]");
+    Object.defineProperty(input, "files", {
+      value: [new File(["{}"], "mine.json", { type: "application/json" })],
+      configurable: true,
+    });
+    await act(async () => {
+      input?.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await settled();
+    arrives();
+    await settled();
+
+    expect(said(page, "builder-status")).toContain("Imported");
+    const fields = [...page.querySelectorAll<HTMLInputElement>(".builder-run input")].map(
+      (each) => each.value,
+    );
+    expect(fields).toEqual(["2026-04-01", "7", "0"]);
+    expect(page.querySelector('[data-testid="builder-uploaded-note"]')).toBeNull();
+    sessionStorage.clear();
   });
 });

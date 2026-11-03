@@ -50,6 +50,8 @@ export { BUILDER_PATH };
  * and its latest revision saved, under the identifier it was saved as, if
  * it has one. Its identifier is its installation's. */
 interface Editing {
+  /** The scenario whose file this draft was opened from, if it was. */
+  from?: string;
   schemaVersion: number;
   history: History<Installation>;
   saved: { draftId: string; revision: number; installation: Installation } | null;
@@ -332,6 +334,10 @@ export function Builder({
       }
       return;
     }
+    // Another draft opened meanwhile keeps its own run settings.
+    if (session.current !== asked) {
+      return;
+    }
     const { installation, schema_version } = answer.value;
     const fields = keptFields(scenarioId);
     if (fields !== null) {
@@ -339,7 +345,12 @@ export function Builder({
     }
     begin(
       asked,
-      { schemaVersion: schema_version, history: begun(installation), saved: null },
+      {
+        from: scenarioId,
+        schemaVersion: schema_version,
+        history: begun(installation),
+        saved: null,
+      },
       `Opened ${installation.name} from a scenario file; not saved yet.`,
     );
   }
@@ -811,6 +822,13 @@ export function Builder({
               onRun={(settings) => void run(settings)}
             />
             {ran !== null && <ShareScenario key={ran.scenarioId} scenarioId={ran.scenarioId} />}
+            {editing.from !== undefined && (
+              <p className="builder-note" data-testid="builder-uploaded-note">
+                This draft was opened from a scenario file. A run made here is of a copy of its
+                house under the default weather and site, not the file's. To run the file as it is,{" "}
+                <a href={newRunAddress(editing.from)}>start a run of it</a>.
+              </p>
+            )}
             <FinishStep
               busy={busy}
               startWhy={startWhy}
