@@ -75,7 +75,6 @@ def _interrupted_after(simulator: Simulator, root: Path, days: int) -> EpochStor
     return epoch
 
 
-@pytest.mark.slow
 def test_a_resumed_epoch_is_the_epoch_that_was_never_interrupted(
     tmp_path: Path, uninterrupted: EpochStore
 ) -> None:
@@ -106,7 +105,6 @@ def test_an_epoch_with_nothing_committed_begins_again(
     assert _digests(epoch) == _digests(uninterrupted)
 
 
-@pytest.mark.slow
 def test_only_an_interrupted_epoch_resumes(simulator: Simulator, tmp_path: Path) -> None:
     finished = _epoch(simulator, tmp_path)
     assert execute(simulator, finished, Free()) == Status.FINISHED
@@ -216,7 +214,6 @@ def test_a_crash_between_the_log_and_the_commit_leaves_a_segment_that_is_written
     epoch.verify()
 
 
-@pytest.mark.slow
 def test_a_crash_as_a_checkpoint_is_written_leaves_a_segment_that_no_commit_names(
     tmp_path: Path, uninterrupted: EpochStore
 ) -> None:
@@ -230,7 +227,6 @@ def test_a_crash_as_a_checkpoint_is_written_leaves_a_segment_that_no_commit_name
     epoch.verify()
 
 
-@pytest.mark.slow
 def test_an_epoch_whose_final_day_is_committed_is_finished_not_driven_again(
     tmp_path: Path, uninterrupted: EpochStore
 ) -> None:

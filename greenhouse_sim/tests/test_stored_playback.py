@@ -111,7 +111,6 @@ class Listing(FolderStore):
         return super().names(prefix)
 
 
-@pytest.mark.slow
 def test_the_runs_of_a_store_are_found_by_their_folders(kept: Kept) -> None:
     assert kept.epochs.folder is not None
     objects = Listing(kept.epochs.folder)
