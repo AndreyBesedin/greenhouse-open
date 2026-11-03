@@ -1,9 +1,8 @@
 # P19: The viewer's design system
 
-**Status:** proposed: the design below, with decision
-[0068](../decisions/0068-the-viewers-design-system-is-its-own-tokens-and-components.md),
-for review before any of it is built. Part of the
-[simulator roadmap](README.md).
+**Status:** accepted: the design below, with decision
+[0068](../decisions/0068-the-viewers-design-system-is-its-own-tokens-and-components.md).
+Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -336,13 +335,24 @@ it is judged by.
    own diff. The test goes when selectors start to move (P19.6).
 2. **Page baselines at no tolerance.** `e2e/visual/pages.spec.ts`, 10 new images
    drawn by CI: the landing page, the runs dialog, the builder's first step, the
-   replay and the viewer on `/view?scene=example`, each dark and light, with
-   `threshold: 0`, `maxDiffPixels: 0` and the canvas hidden, since the scene is
-   the other baselines' and CSS does not draw it. The visual job has no simulator,
-   so the page's few requests (`/api/scenarios`, `/api/runs`, `/api/drafts`, a
-   position) are answered from small committed fixtures (decision 0063, rule 3).
-   A page's image with no scene in it was about 65 kB here. They take over from the
-   digest for the component steps, whose selectors change and whose pixels must not.
+   replay and the viewer on `/view?scene=example` with its folds open, each dark
+   and light, with `threshold: 0` and `maxDiffPixels: 0`. What the stylesheet does
+   not draw is left out (`e2e/visual/pages.css`): the canvas and the labels over
+   it, the viewer inside a replay, the HUD's measurements of the machine, and the
+   commit the viewer was built from. The visual job has no simulator, so the page's
+   few requests (`/api/scenarios`, `/api/runs`, `/api/drafts`, a position) are
+   answered in `e2e/visual/pageAnswers.ts`, typed by the simulator's contracts, so
+   that a change of one fails the type check before the baselines' build. A question
+   it does not know fails the test. The date, time zone and locale are fixed. A
+   page's image is under 100 kB. They take over from the digest for the component
+   steps, whose selectors change and whose pixels must not. Their spec holds them to
+   this: a colour one level away, or a padding, radius or font size one pixel away,
+   fails its comparison, in every run of the job.
+
+**While they stand.** A change that means to change a look writes the digests
+the test prints, in its own diff, until P19.6 removes them. A change of a page's
+look or words takes that page's new images from CI's `visual-results`, as any
+baseline does (decision 0014).
 
 **What is disturbed.** Tokens, the split and the components disturb no baseline:
 if one moves, the step is wrong. Of the 27 QA baselines, only a visual step that
@@ -359,7 +369,7 @@ no digest changed.
 
 | Step | Scope | Proof | Status |
 | --- | --- | --- | --- |
-| P19.1 | The proofs: the resolved digest, page baselines and their fixtures. No style changes. The job is run twice, to show the no-tolerance images are stable. | adds them | Proposed |
+| P19.1 | The proofs: the resolved digest, page baselines and their answers. No style changes. The job is run twice, to show the no-tolerance images are stable. | adds them | Done: `styles.test.ts` (`RESOLVED_DIGESTS`), `e2e/visual/pages.spec.ts` and 10 images drawn by CI |
 | P19.2 | `design/tokens.css` and `base.css` cut out behind `styles.css`'s imports; the 7 raw colours become `--data-*`, with the test against `WIND_COLOR` and `SUN_COLOR`; the guard on colours everywhere. | neutral | Proposed |
 | P19.3 | Colour tokens take their role names. | neutral | Proposed |
 | P19.4 | Type, radii and `--target`; the guard on them, with `OFF_SCALE`; the styles' budget raised. | neutral | Proposed |
@@ -418,15 +428,18 @@ and by keyboard alone. Each looks as before P19.2, but for the visual changes ta
 focus is visible at each step; `/qa/design` shows each component in each state; and
 the status of a failed run reads the same with colour removed.
 
+## Settled in review
+
+1. **The compact size.** 44 px on pages; in panels and forms, `compact`, with 24 px
+   as its minimum, taken as a named visual step.
+2. **The panels' browser-drawn look** stays through the neutral steps. Drawing their
+   buttons from tokens is a visual step of its own.
+3. **The named visual changes** are taken one by one.
+4. **The styles' budget** goes to about 32 kB in the step that needs it, P19.4.
+
 ## Open questions
 
-1. **The compact size.** Panels and the builder's forms hold most controls and are
-   far under 44 px. The design keeps two sizes, 44 for pages and `compact` for
-   density, with 24 px as a visual step; the builder's forms could instead take 44,
-   at the cost of about twice the height over 15 rows.
-2. **Is the panels' browser-drawn look kept?** Only 18 of 82 buttons have a class
-   of their own, so the panels and builder look unlike the landing page. Keeping
-   this is the neutral path. Drawing them from tokens is the largest visual step.
-3. **No-tolerance images in CI.** If the pinned container is not stable to the
-   pixel for a page's text, which P19.1 finds out, the fallback is a comparison of
-   computed styles per element: exact and with no images, but blind to layout.
+One: whether the no-tolerance images stay stable as more of them are drawn. If the
+pinned container is not stable to the pixel for a page's text, the fallback is a
+comparison of computed styles per element: exact and with no images, but blind to
+layout.

@@ -14,7 +14,7 @@ takes one checks first that it is still there.
 
 ### Medium
 
-- [ ] **The builder has no way home.** Its only ways out are "Save and go back",
+- [x] **The builder has no way home.** Its only ways out are "Save and go back",
   which saves, and a link that appears after a run. The viewer has a Home button.
 - [ ] **A scene opened without following a run is not framed on the house.** The
   camera stays at its default (5.2, -5.2, 5.2) and the house runs off under the View
@@ -25,7 +25,7 @@ takes one checks first that it is still there.
 
 ### Low to medium
 
-- [ ] **A replay reads one moment three ways:** "Day 10, 02:24", "day 9, 2 h 24 min",
+- [x] **A replay reads one moment three ways:** "Day 10, 02:24", "day 9, 2 h 24 min",
   and a tick "day 0" under "Day 1, 00:00".
 - [x] **Deleting a running run shows a raw id** and says to stop the run, and the
   dialog has no stop control. It says which run, by its seed and epoch, and what to
@@ -45,17 +45,18 @@ takes one checks first that it is still there.
 
 **Builder**
 
-- [ ] "Run this revision" with an empty seed gives no feedback beside the button.
+- [x] "Run this revision" with an empty seed gives no feedback beside the button.
 - [ ] Some text is too pale in the dark theme.
-- [ ] `builder/portable.py` words its refusals as "format None" and "not JSON:
+- [x] `builder/portable.py` words its refusals as "format None" and "not JSON:
   Expecting value…".
 
 **Viewer**
 
 - [ ] The green test cube shows behind an error.
-- [ ] "before day one is not available" is awkward wording.
+- [x] "before day one is not available" is awkward wording.
 - [ ] The wind label shows through the light panel.
-- [ ] The console reports a 404 for `favicon.ico` and the deprecation of `THREE.Clock`.
+- [ ] The console reports the deprecation of `THREE.Clock`, from `@react-three/fiber`.
+- [x] The console reports a 404 for `favicon.ico`.
 
 **Replay**
 

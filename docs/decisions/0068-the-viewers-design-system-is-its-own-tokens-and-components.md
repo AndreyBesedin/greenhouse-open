@@ -1,6 +1,6 @@
 # 0068: The viewer's design system is its own tokens and components
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-11-03
 
 ## Context

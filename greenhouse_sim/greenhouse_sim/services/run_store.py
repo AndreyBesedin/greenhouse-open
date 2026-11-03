@@ -213,8 +213,9 @@ class ForkOf(BaseModel):
 
 class EpochManifest(BaseModel):
     """What an epoch is: its run, its number, the scenario it is of, its seed
-    (none: the scenario's own), its layout and its status; and, for a fork, its
-    parent."""
+    (none: the scenario's own), its layout and its status; for a fork, its
+    parent; and what a worker needs beside it (decision 0067). An epoch written
+    before they were kept says neither of the last two."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -231,6 +232,13 @@ class EpochManifest(BaseModel):
     # When the epoch was started, when its writer says.
     created_at: datetime | None = None
     fork: ForkOf | None = None
+    # The digest of its scenario's portable file in this store
+    # (`services.scenario_files`): none for a packaged scenario, which every
+    # simulator has.
+    scenario_file: str | None = None
+    # The real seconds to a simulated day its worker advances at: none, as fast
+    # as it can.
+    seconds_per_day: float | None = None
 
 
 class LogEntry(BaseModel):
@@ -558,6 +566,18 @@ class EpochStore:
                 leases.hold(self.objects, self._home)
         elif status in ENDED:
             leases.release(self.objects, self._home)
+
+    def queue_again(self, *, scenario_file: str | None, seconds_per_day: float | None) -> None:
+        """Says the epoch waits for a worker again, with what that worker
+        needs, in one write."""
+        manifest = self.manifest().model_copy(
+            update={
+                "status": Status.QUEUED,
+                "scenario_file": scenario_file,
+                "seconds_per_day": seconds_per_day,
+            }
+        )
+        self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
 
     def worked(self, *, now: float | None = None) -> bool:
         """Whether a process holds the epoch's lease."""

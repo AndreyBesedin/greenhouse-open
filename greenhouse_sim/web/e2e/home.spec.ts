@@ -25,6 +25,19 @@ test("the viewer has a Home button at the top left that opens the landing page",
   await expect(page.getByRole("heading", { name: "What would you like to do?" })).toBeVisible();
 });
 
+test("the builder has the same way home, which leaves without saving", async ({ page }) => {
+  await page.goto("/builder");
+  await expect(page.getByRole("heading", { name: "A new house" })).toBeVisible();
+
+  const home = page.getByRole("link", { name: "Home" });
+  const box = await home.boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN_TARGET_PX);
+  await home.click();
+
+  await expect(page).toHaveURL((url) => url.pathname === LANDING_PATH && url.search === "");
+  await expect(page.getByRole("heading", { name: "What would you like to do?" })).toBeVisible();
+});
+
 test("the viewer does not show the line that says which scene is shown", async ({ page }) => {
   await page.goto(EXAMPLE_SCENE);
   const status = page.getByTestId("scene-status");
