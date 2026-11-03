@@ -166,7 +166,6 @@ steps replace values and do not change them.
 | `--chart-*` | a chart's face, ring and neutral lines | as named: `face`, `ring`, `neutral`, `strong`, `soft`, `off`, `faint`, `blue-text` | as today | as today |
 | `--data-*` | a chart's coloured lines, the same in both themes, named by hue, since what red means is each chart's | the raw colours above: `red`, `blue`, `sky`, `navy`, `amber`, `orange`, `green` | | |
 
-`--replay-track` and `--replay-hatch`, each used once, go back into their rules.
 
 **Sizes.**
 
@@ -371,7 +370,7 @@ no digest changed.
 | --- | --- | --- | --- |
 | P19.1 | The proofs: the resolved digest, page baselines and their answers. No style changes. The job is run twice, to show the no-tolerance images are stable. | adds them | Done: `styles.test.ts` (`RESOLVED_DIGESTS`), `e2e/visual/pages.spec.ts` and 10 images drawn by CI |
 | P19.2 | `design/tokens.css` and `base.css` cut out behind `styles.css`'s imports; the 7 raw colours become `--data-*`, with the test against `WIND_COLOR` and `SUN_COLOR`; the guard on colours everywhere. | neutral | Done: the digests did not move. `--replay-track` and `--replay-hatch`, each used once, went back into their rules. `base.css` holds `html`, `body` and `#root`; `.visually-hidden` stays where it stands until selectors may move (P19.6), since moving it changes the order the digest holds |
-| P19.3 | Colour tokens take their role names. | neutral | Proposed |
+| P19.3 | Colour tokens take their role names. | neutral | Done: the digests did not move, and a test refuses a colour token not named for a role. `--chart-*` keep their names, as the design has it |
 | P19.4 | Type, radii and `--target`; the guard on them, with `OFF_SCALE`; the styles' budget raised. | neutral | Proposed |
 | P19.5 | Spacing, and the guard on it. Theme: `data-theme` and `design/theme.ts`. | neutral | Proposed |
 | P19.6 | `Button`, `LinkButton`, `IconButton`, `.ds-` rules and the guard on them; the reference page, its two baselines and its browser test; the contrast test with today's failures listed. The digest test goes. | neutral: nothing yet uses them | Proposed |

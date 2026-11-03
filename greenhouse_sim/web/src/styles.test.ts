@@ -62,6 +62,15 @@ function rawColours(stylesheet: string): string[] {
     .map(([property, value]) => `${property}: ${value};`);
 }
 
+// What a colour token may be, by the role it has: a new one is added here, where
+// review sees it (decision 0068).
+const COLOUR_ROLE =
+  /^--(?:surface-\w+|text(?:-\w+)?|border|action|warn|mark|scheme|chart-[\w-]+|data-\w+)$/;
+
+function misnamedTokens(names: Iterable<string>): string[] {
+  return [...names].filter((name) => !COLOUR_ROLE.test(name));
+}
+
 describe("the stylesheet", () => {
   it("colours every panel's text and background from the panels' theme (#208)", () => {
     expect(unthemed(STYLES)).toEqual([]);
@@ -90,6 +99,18 @@ describe("the stylesheet", () => {
       "box-shadow: 0 0 2px oklch(0.7 0.1 200);",
       "outline-color: navy;",
       "border-top: 1px solid color-mix(in srgb, #fff 25%, transparent);",
+    ]);
+  });
+
+  it("names each colour for what it does, not where it stands (P19.3)", () => {
+    expect(misnamedTokens(tokenValues(STYLES, "dark").keys())).toEqual([]);
+  });
+
+  it("refuses a token named for a place", () => {
+    expect(misnamedTokens(["--text-soft", "--panel-text", "--landing-bg", "--textual"])).toEqual([
+      "--panel-text",
+      "--landing-bg",
+      "--textual",
     ]);
   });
 
