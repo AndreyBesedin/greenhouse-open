@@ -2,33 +2,52 @@
 with its number before it is acted on, a part of its trajectory, and applied
 again, once, when the epoch is carried on."""
 
-from collections.abc import Iterable, Iterator
+import json
+import sys
+import time
+from collections.abc import Callable, Iterable, Iterator
 from datetime import timedelta
+from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Final
 
 import pytest
 from greenhouse_protocol.actions import Action, Harvest, HarvestScope, SetLevel
+from greenhouse_protocol.authorisation import AuthorisationConfig
 from greenhouse_protocol.plan import At, Plan, PlannedAction
 from pydantic import JsonValue
 
+from greenhouse_sim.api.responses import Response
+from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.services import interventions
 from greenhouse_sim.services.errors import Conflict
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR
 from greenhouse_sim.services.playback import Epochs, Playback
 from greenhouse_sim.services.run_store import EpochStore, FolderStore, Kind, Status
+from greenhouse_sim.services.runs import RunPlan
 from greenhouse_sim.services.scenarios import plant_ids, scenario
+from greenhouse_sim.services.scheduler import Scheduler
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.services.stored_playback import Position, StoredEpoch
 from greenhouse_sim.services.workers import Free, Stepped, execute, queued, resume
 
+# A worker starts from nothing and imports what it is told to build its
+# simulator with by name, so that the module is put where its process finds it.
+sys.path.insert(0, str(Path(__file__).parent))
+
+import workers_support
+
+LONG: Final = workers_support.LONG
 BOX: Final = "climate_box"
 SHORT: Final = "climate_box_short"
 DAYS: Final = 3
 MINUTE_S: Final = 60.0
 REFERENCE: Final = "reference_greenhouse"
 REFERENCE_SHORT: Final = "reference_short"
+WAIT_S: Final = 180.0
 
 
 def _simulator() -> Simulator:
@@ -407,3 +426,140 @@ def test_a_log_that_does_not_give_the_outcomes_kept_is_not_carried_on(
     monkeypatch.setattr(Playback, "_apply", lambda _self, _entry: None)
     with _simulator() as after, pytest.raises(Conflict, match="does not give"):
         resume(after, epoch, Free())
+
+
+def test_a_reader_of_the_epoch_draws_it_under_the_plan_its_log_makes(
+    simulator: Simulator, tmp_path: Path, steered: EpochStore
+) -> None:
+    held = StoredEpoch(simulator, steered.objects, steered.run_id, steered.epoch)
+    position = Position(held, "p")
+
+    state = position.state()
+
+    assert state.commands == [(DAY_S + MINUTE_S, "heater", 0.5)]
+    assert held.run().plan.commanded() == ((DAY_S + MINUTE_S, "heater", 0.5),)
+    assert (
+        StoredEpoch(simulator, steered.objects, steered.run_id, steered.epoch).run() == held.run()
+    )
+
+
+def test_an_epoch_with_no_log_is_drawn_as_its_run_alone(
+    simulator: Simulator, tmp_path: Path
+) -> None:
+    objects = FolderStore(tmp_path)
+    epoch = queued(simulator, objects, SHORT)
+    held = StoredEpoch(simulator, objects, epoch.run_id, epoch.epoch)
+    assert held.run().plan == RunPlan()
+    assert Position(held, "p").state().commands == []
+
+
+@pytest.fixture
+def served(tmp_path: Path) -> Iterator[Simulator]:
+    with Simulator(runs=FolderStore(tmp_path)) as made:
+        made.catalogue.register(
+            SCENARIO_REGISTRY[BOX].model_copy(update=dict(greenhouse_id=SHORT, duration_days=DAYS))
+        )
+        yield made
+
+
+def _read(response: Response) -> dict[str, Any]:
+    assert isinstance(response.body, dict)
+    return response.body
+
+
+def test_a_change_is_asked_of_a_queued_epoch_over_the_api_and_taken_by_its_worker(
+    served: Simulator, tmp_path: Path
+) -> None:
+    epoch = queued(served, FolderStore(tmp_path), SHORT)
+    url = f"/api/runs/{epoch.run_id}/epochs/{epoch.epoch}/changes"
+    plan = _plan(epoch, served, DAY_S)
+    body = json.dumps(_given(plan)).encode()
+
+    answer = respond(served, "POST", url, body)
+    assert answer.status == HTTPStatus.OK
+    asked = _read(answer)["request"]
+    before = _read(respond(served, "GET", url))
+    assert before["waiting"] == [asked]
+    assert before["log"] == []
+
+    assert execute(served, epoch, Free()) == Status.FINISHED
+
+    after = _read(respond(served, "GET", url))
+    assert after["waiting"] == []
+    assert [entry["request"] for entry in after["log"]] == [asked]
+    assert epoch.log()[0].what["plan"] == plan.model_dump(mode="json")
+
+
+def test_a_change_is_refused_by_an_epoch_that_is_not_being_worked(
+    served: Simulator, tmp_path: Path
+) -> None:
+    epoch = queued(served, FolderStore(tmp_path), SHORT)
+    epoch.set_status(Status.FINISHED)
+    url = f"/api/runs/{epoch.run_id}/epochs/{epoch.epoch}/changes"
+    body = json.dumps(_given(_plan(epoch, served, DAY_S))).encode()
+
+    answer = respond(served, "POST", url, body)
+
+    assert answer.status == HTTPStatus.CONFLICT
+    assert "a fork" in str(answer.body)
+    assert epoch.requests() == []
+
+
+@pytest.mark.parametrize(
+    "body",
+    [b"not json", b'{"kind": "no such kind"}', b'{"kind": "targets", "targets": {"nope": 1.0}}'],
+)
+def test_what_is_no_change_is_refused_before_it_reaches_the_store(
+    served: Simulator, tmp_path: Path, body: bytes
+) -> None:
+    epoch = queued(served, FolderStore(tmp_path), SHORT)
+    url = f"/api/runs/{epoch.run_id}/epochs/{epoch.epoch}/changes"
+
+    assert respond(served, "POST", url, body).status == HTTPStatus.BAD_REQUEST
+    assert epoch.requests() == []
+
+
+def test_what_the_server_forbids_is_refused_though_a_worker_would_take_it(
+    tmp_path: Path,
+) -> None:
+    nobody = AuthorisationConfig(version=1, groups=())
+    with Simulator(runs=FolderStore(tmp_path), authorisation=nobody) as made:
+        epoch = queued(made, FolderStore(tmp_path), BOX)
+        url = f"/api/runs/{epoch.run_id}/epochs/{epoch.epoch}/changes"
+        body = json.dumps(_given(_plan(epoch, made, DAY_S))).encode()
+        assert respond(made, "POST", url, body).status == HTTPStatus.BAD_REQUEST
+    assert epoch.requests() == []
+
+
+def test_a_worker_in_a_process_of_its_own_takes_a_change_through_the_store(tmp_path: Path) -> None:
+    """Nothing but the store between the API and the worker: the worker's own
+    process logs the change, and a later commit names it."""
+    with Simulator(runs=FolderStore(tmp_path)) as made:
+        made.catalogue.register(
+            SCENARIO_REGISTRY[BOX].model_copy(update=dict(greenhouse_id=LONG, duration_days=8))
+        )
+        scheduler = Scheduler(made, tmp_path, limit=1, made_by=workers_support.MADE_BY)
+        made.scheduler = scheduler
+        run = scheduler.start(LONG)
+        epoch = EpochStore(FolderStore(tmp_path), run.run_id, run.epoch)
+        try:
+            _until(lambda: epoch.frontier_s() >= DAY_S, "its first day")
+            request = interventions.ask(
+                made,
+                run.run_id,
+                run.epoch,
+                json.dumps(_given(_plan(epoch, made, 7 * DAY_S))).encode(),
+            ).request
+            _until(lambda: any(e.request == request for e in epoch.log()), "the change committed")
+        finally:
+            scheduler.cancel(run.run_id, run.epoch)
+    (entry,) = epoch.log()
+    assert entry.given_s >= DAY_S
+    assert entry.seq == 0
+
+
+def _until(condition: Callable[[], bool], what: str) -> None:
+    deadline = time.monotonic() + WAIT_S
+    while not condition():
+        assert time.monotonic() < deadline, f"waited for {what}"
+        time.sleep(0.05)
