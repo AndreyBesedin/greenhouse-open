@@ -61,10 +61,10 @@ takes one checks first that it is still there.
 
 **Replay**
 
-- [ ] Play at the end does nothing.
-- [ ] `aria-valuenow` can be fractional.
-- [ ] The legend says "not computed yet" on a finished run.
-- [ ] At phone width the panel covers the scene, and the last tick is missing.
+- [x] Play at the end does nothing.
+- [x] `aria-valuenow` can be fractional.
+- [x] The legend says "not computed yet" on a finished run.
+- [ ] At phone width the panel covers the scene. The last tick is labelled now.
 
 ### From a second walk
 
