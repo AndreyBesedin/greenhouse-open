@@ -9,6 +9,7 @@ import { Findings } from "./Findings";
 import type { Installation } from "./generated/assessedTypes";
 import { HouseForm } from "./HouseForm";
 import { RowCrops } from "./RowCrops";
+import { FIRST_RUN, RunStep } from "./RunStep";
 
 const HOUSE = {
   installation_id: "house",
@@ -30,6 +31,23 @@ function input(within: ParentNode, label: string): HTMLInputElement {
 describe("the builder's parts (P12.2)", () => {
   let shown: Rendered | undefined;
   afterEach(() => shown?.unmount());
+
+  it("ask for a seed beside the run step's button, as for its other fields", () => {
+    shown = render(
+      <RunStep
+        weathers={["default"]}
+        disabled={false}
+        why=""
+        fields={{ ...FIRST_RUN, seed: "" }}
+        onFields={vi.fn()}
+        onRun={vi.fn()}
+      />,
+    );
+    const form = shown.container.querySelector("form");
+
+    // The browser says what is missing, at the field, and sends nothing.
+    expect(form?.checkValidity()).toBe(false);
+  });
 
   it("draft a house from the first form, its fields labelled as the schema titles them", () => {
     const onDraft = vi.fn();
