@@ -188,7 +188,32 @@ def test_a_file_in_a_format_it_does_not_read_is_refused(version: object) -> None
 
     refused = _refused(document)
     assert refused.field == "schema_version"
-    assert "this simulator reads formats" in refused.message
+    assert "this simulator reads format" in refused.message
+
+
+@pytest.mark.parametrize(
+    ("document", "said"),
+    [
+        ('{"hello": "world"}', f"no format named; this simulator reads format {SCHEMA_VERSION}"),
+        (
+            f'{{"schema_version": {SCHEMA_VERSION + 1}}}',
+            f"format {SCHEMA_VERSION + 1}; this simulator reads format {SCHEMA_VERSION}",
+        ),
+    ],
+)
+def test_a_refused_format_is_said_in_words(document: str, said: str) -> None:
+    with pytest.raises(ScenarioFileError) as refused:
+        import_scenario_file(document)
+
+    assert refused.value.message == said
+
+
+@pytest.mark.parametrize("text", ["not json", "", '{"a": 1,}'])
+def test_what_is_not_json_is_said_so_without_the_parsers_words(text: str) -> None:
+    with pytest.raises(ScenarioFileError) as refused:
+        import_scenario_file(text)
+
+    assert refused.value.message == "not JSON"
 
 
 def _with(document: dict[str, Any], path: list[str], value: object) -> dict[str, Any]:
