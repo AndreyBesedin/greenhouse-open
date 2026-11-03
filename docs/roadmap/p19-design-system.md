@@ -370,7 +370,7 @@ no digest changed.
 | Step | Scope | Proof | Status |
 | --- | --- | --- | --- |
 | P19.1 | The proofs: the resolved digest, page baselines and their answers. No style changes. The job is run twice, to show the no-tolerance images are stable. | adds them | Done: `styles.test.ts` (`RESOLVED_DIGESTS`), `e2e/visual/pages.spec.ts` and 10 images drawn by CI |
-| P19.2 | `design/tokens.css` and `base.css` cut out behind `styles.css`'s imports; the 7 raw colours become `--data-*`, with the test against `WIND_COLOR` and `SUN_COLOR`; the guard on colours everywhere. | neutral | Proposed |
+| P19.2 | `design/tokens.css` and `base.css` cut out behind `styles.css`'s imports; the 7 raw colours become `--data-*`, with the test against `WIND_COLOR` and `SUN_COLOR`; the guard on colours everywhere. | neutral | Done: the digests did not move. `base.css` holds `html`, `body` and `#root`; `.visually-hidden` stays where it stands until selectors may move (P19.6), since moving it changes the order the digest holds |
 | P19.3 | Colour tokens take their role names. | neutral | Proposed |
 | P19.4 | Type, radii and `--target`; the guard on them, with `OFF_SCALE`; the styles' budget raised. | neutral | Proposed |
 | P19.5 | Spacing, and the guard on it. Theme: `data-theme` and `design/theme.ts`. | neutral | Proposed |

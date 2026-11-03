@@ -1,0 +1,67 @@
+/* The panels' colours (#208): dark by default, light if chosen
+ * (`panelTheme.ts`). The 3D scene, its legends' colour scales and the
+ * charts' coloured lines are the same in both. */
+:root {
+  --panel-scheme: dark;
+  --panel-bg: rgb(17 24 39 / 90%);
+  --panel-text: #e5e9f0;
+  --panel-muted: #a7b1c2;
+  --panel-muted-strong: #c3cad6;
+  --panel-rule: #3d4a5f;
+  --panel-warn: #ffb380;
+  --panel-link: #8cb8ff;
+  --panel-accent: #e277b5;
+  --label-bg: rgb(17 24 39 / 85%);
+  --landing-bg: #0b1220;
+  --landing-backdrop: rgb(0 0 0 / 60%);
+  /* What is not computed yet, hatched in the panels' rule colour, on the
+   * replay's track and in its legend: the same in either theme, as the rule is. */
+  --replay-track:
+    repeating-linear-gradient(135deg, var(--panel-rule) 0 6px, transparent 6px 12px) center / 100%
+    14px no-repeat;
+  --replay-hatch: repeating-linear-gradient(135deg, var(--panel-rule) 0 3px, transparent 3px 6px);
+  --chart-face: #1e293b;
+  --chart-ring: #6b7a90;
+  --chart-neutral: #b8c2d1;
+  --chart-strong: #e5e9f0;
+  --chart-soft: #8794a8;
+  --chart-off: #8794a8;
+  --chart-faint: #5d6b80;
+  --chart-blue-text: #5aa9e6;
+}
+
+:root[data-panels="light"] {
+  --panel-scheme: light;
+  --panel-bg: rgb(255 255 255 / 88%);
+  --panel-text: #000000;
+  --panel-muted: #555555;
+  --panel-muted-strong: #444444;
+  --panel-rule: #cccccc;
+  --panel-warn: #8a3b12;
+  --panel-link: #1f5fbf;
+  --panel-accent: #aa3377;
+  --label-bg: rgb(255 255 255 / 85%);
+  --landing-bg: #f4f6f3;
+  --landing-backdrop: rgb(20 30 25 / 50%);
+  --chart-face: #ffffff;
+  --chart-ring: #999999;
+  --chart-neutral: #555555;
+  --chart-strong: #333333;
+  --chart-soft: #888888;
+  --chart-off: #7f8c8d;
+  --chart-faint: #bbbbbb;
+  --chart-blue-text: #0072b2;
+}
+
+/* A chart's coloured lines, the same in both themes, named by hue, since what
+ * red means is each chart's. Two are also the scene's (`weather/weather.ts`),
+ * which a test holds equal. */
+:root {
+  --data-amber: #e6a800;
+  --data-blue: #2b7bb9;
+  --data-green: #2e8b57;
+  --data-navy: #0072b2;
+  --data-orange: #ff8c1a;
+  --data-red: #c0392b;
+  --data-sky: #2e86c1;
+}

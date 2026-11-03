@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { SUN_COLOR, WIND_COLOR } from "./weather/weather";
+
 /** A stylesheet's text with each `@import` in its place, in the build's order. */
 function withImports(
   path: string,
@@ -32,9 +34,63 @@ function unthemed(stylesheet: string): string[] {
     .map(([property, value]) => `${property}: ${value};`);
 }
 
+// A colour in a value: written in hex, made by a function, or named. `color-mix`
+// is not one by itself: what it mixes is read as any other value, so that the
+// text's own colour may be mixed and a written one may not.
+const RAW_COLOUR = new RegExp(
+  [
+    "#[0-9a-f]{3,8}\\b",
+    "\\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|light-dark)\\(",
+    "(?<![\\w-])(?:black|silver|gr[ae]y|white|maroon|red|purple|fuchsia|magenta|green|lime|olive|yellow|navy|blue|teal|aqua|cyan|orange|pink|brown)(?![\\w-])",
+  ].join("|"),
+  "i",
+);
+
+/** Every declaration in `stylesheet`, outside the tokens' `:root` blocks, that
+ * writes a colour rather than naming a token. */
+function rawColours(stylesheet: string): string[] {
+  const rules = stylesheet.replace(/\/\*[\s\S]*?\*\//g, "").replace(/:root[^{]*\{[^}]*\}/g, "");
+  return [...rules.matchAll(/(?:^|[{;])\s*([a-z-]+)\s*:\s*([^;{}]*)/gm)]
+    .map(([, property, value]) => [property, (value ?? "").trim()])
+    .filter(([, value]) => RAW_COLOUR.test(value ?? ""))
+    .map(([property, value]) => `${property}: ${value};`);
+}
+
 describe("the stylesheet", () => {
   it("colours every panel's text and background from the panels' theme (#208)", () => {
     expect(unthemed(STYLES)).toEqual([]);
+  });
+
+  it("writes a colour nowhere but in the tokens (P19.2)", () => {
+    expect(rawColours(STYLES)).toEqual([]);
+  });
+
+  it("takes a colour for raw in any declaration, and not a name that holds one's word", () => {
+    const written = `
+      /* #111 in a comment, and red. */
+      :root { --ink: #111111; }
+      .a { stroke: #c0392b; fill: rgb(0 0 0 / 50%); border: 1px solid Red; }
+      .b { box-shadow: 0 0 2px oklch(0.7 0.1 200); outline-color: navy; }
+      .c { stroke: var(--data-red); color: var(--chart-blue-text); fill: none; }
+      .d { background: var(--replay-green-track); transition: color 1s; }
+      #root:hover .e { gap: 2px; }
+      .f { border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
+      .g { border-top: 1px solid color-mix(in srgb, #fff 25%, transparent); }
+    `;
+    expect(rawColours(written)).toEqual([
+      "stroke: #c0392b;",
+      "fill: rgb(0 0 0 / 50%);",
+      "border: 1px solid Red;",
+      "box-shadow: 0 0 2px oklch(0.7 0.1 200);",
+      "outline-color: navy;",
+      "border-top: 1px solid color-mix(in srgb, #fff 25%, transparent);",
+    ]);
+  });
+
+  it("gives a chart's wind and sun the colours the scene gives them", () => {
+    const tokens = tokenValues(STYLES, "dark");
+    expect(tokens.get("--data-blue")).toBe(WIND_COLOR);
+    expect(tokens.get("--data-amber")).toBe(SUN_COLOR);
   });
 
   it("takes a colour for the theme's only when it is one of the theme's", () => {
