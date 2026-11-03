@@ -27,7 +27,26 @@ export interface PositionState {
   seconds_per_day: number;
   frontier_s: number;
   duration_s: number | null;
+  start_s: number;
+  fork: ForkOf | null;
   targets: [number, string, number][];
   commands: [number, string, number][];
   crop: [number, string, string, string][];
+}
+/**
+ * Where a fork comes from (decision 0065): its parent, the exact instant
+ * it branches at, the state it inherits (a checkpoint at `start_s`, kept as a
+ * copy of its own, and the parent's trajectory digest through it; none for
+ * one from its run's start), how many entries of its log are its parent's,
+ * and the layout it changes to, if it does.
+ */
+export interface ForkOf {
+  run_id: string;
+  epoch: number;
+  at_s: number;
+  start_s: number;
+  digest: string | null;
+  checkpoint_sha256: string | null;
+  inherited: number;
+  layout: string | null;
 }

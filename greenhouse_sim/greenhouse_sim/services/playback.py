@@ -125,11 +125,13 @@ from greenhouse_sim.services.interventions import (
     ASKED,
     LOGGED,
     ActionsCancelled,
+    LevelsAsked,
     Logged,
     PlanCancelled,
     PlanGiven,
     TargetsAsked,
     TargetsChanged,
+    levels_plan,
     principal_of,
     spelled,
 )
@@ -139,6 +141,7 @@ from greenhouse_sim.services.run_store import (
     EpochManifest,
     EpochStore,
     FolderStore,
+    ForkOf,
     Kind,
     LogEntry,
     ObjectStore,
@@ -410,6 +413,7 @@ class Playback:
         clock: Callable[[], float] = monotonic,
         epochs: Epochs | None = None,
         epoch: EpochStore | None = None,
+        fork: ForkOf | None = None,
     ) -> None:
         self._simulator = simulator
         config = scenario(simulator.catalogue, scenario_id)
@@ -459,7 +463,7 @@ class Playback:
         # outcomes of it are written.
         self._store: EpochStore | None = epoch
         if epochs is not None:
-            self._store = self._open_epoch(epochs)
+            self._store = self._open_epoch(epochs, fork)
         self._stored_days = 0
         self._stored_outcomes = 0
         self._store_ended = False
@@ -528,7 +532,7 @@ class Playback:
             target=self._work, name=f"playback of {self.run_id}", daemon=True
         )
 
-    def _open_epoch(self, epochs: Epochs) -> EpochStore:
+    def _open_epoch(self, epochs: Epochs, fork: ForkOf | None = None) -> EpochStore:
         """The epoch it is starting, in the run store."""
         return epochs.open(
             EpochManifest(
@@ -539,6 +543,7 @@ class Playback:
                 layout=self.layout,
                 duration_s=self.end_s,
                 created_at=datetime.now(UTC),
+                fork=fork,
             )
         )
 
@@ -571,16 +576,26 @@ class Playback:
             self._stored_days = days
             logged = self._store.logged()
             self._logged = len(logged)
-            self._due = deque(logged)
+            fork = self._store.manifest().fork
+            inherited = 0 if fork is None else fork.inherited
+            # A fork's outcomes begin where it does: those its inherited
+            # changes gave by then are its parent's, and its own changes' are
+            # its own, at whatever moment they are given.
+            first = 0
             self._replaying = True
             try:
+                if fork is not None:
+                    self._due = deque(logged[:inherited])
+                    self._gateway_to(fork.start_s)
+                    first = len(self._outcomes_until(fork.start_s, 0))
+                self._due.extend(logged[inherited:])
                 self._time_s = self._gateway_to(time_s)
                 self._carry_kept(time_s)
                 self._gateway.advance(self._executor.instant(time_s))
             finally:
                 self._replaying = False
-            self._check_outcomes_kept()
-            self._stored_outcomes = sum(
+            self._check_outcomes_kept(first)
+            self._stored_outcomes = first + sum(
                 commit.counts[Kind.OUTCOMES] for commit in self._store.commits()
             )
 
@@ -593,7 +608,7 @@ class Playback:
         waiting = self._executor.crop_waiting_before(self._executor.instant(before_s))
         if not waiting:
             return
-        kept = self._store.outcomes().records
+        kept = self._store.outcomes_kept()
         carried = {}
         for assignment in waiting:
             # Two plans may ask for the same action at one moment: their outcomes
@@ -620,14 +635,14 @@ class Playback:
             )
         self._executor.carried_out(carried)
 
-    def _check_outcomes_kept(self) -> None:
+    def _check_outcomes_kept(self, first: int) -> None:
         """The outcomes the log gives when applied again are those the epoch
         kept: a log that gives others is not this epoch's."""
         assert self._store is not None
         kept = self._store.outcomes().records
         if not kept:
             return
-        given = self._gateway.outcomes(0, len(kept)).outcomes
+        given = self._gateway.outcomes(first, len(kept)).outcomes
         if tuple(kept) != tuple(given):
             raise Conflict(
                 f"the log of epoch {self._epoch} of {self.run_id}, applied again, does not give "
@@ -663,6 +678,17 @@ class Playback:
             match ASKED.validate_json(store.request(request) or b""):
                 case TargetsAsked(targets=targets):
                     self.set_targets(targets, request=request)
+                case LevelsAsked(levels=levels):
+                    moment = self.state().time_s
+                    plan = levels_plan(
+                        levels,
+                        run_id=self.run_id,
+                        epoch=self._epoch,
+                        start=self.start,
+                        at_s=moment,
+                        plan_id=f"levels_{request}",
+                    )
+                    refused = self.submit(plan, request=request)
                 case PlanGiven(plan=plan):
                     refused = self.submit(plan, request=request)
                 case ActionsCancelled(keys=keys):
@@ -783,9 +809,27 @@ class Playback:
                 every_s=self.every_s,
                 clock=self._clock,
                 epochs=self._epochs,
+                fork=self._forked_as(layout, seed),
             )
             self._successor = replacing
         return replacing
+
+    def _forked_as(self, layout: str, seed: int | None) -> ForkOf | None:
+        """What the run in its place is of it: a fork of its epoch, at its start,
+        if it is the same run rearranged (#271), which leaves this epoch in the
+        store as it was; nothing if it is at another seed, another run asked for."""
+        same_seed = seed is None or seed == self.seed
+        if self._epochs is None or not same_seed or layout_name(layout) == self.layout:
+            return None
+        return ForkOf(
+            run_id=self.run_id,
+            epoch=self._epoch,
+            at_s=0.0,
+            start_s=0.0,
+            # The target changes it takes, an entry of its log.
+            inherited=1 if self._executor.plan().targeted() else 0,
+            layout=layout_name(layout),
+        )
 
     def stop(self, *, wait: bool = True) -> None:
         """Stops working days out, the one under way left at its next moment:

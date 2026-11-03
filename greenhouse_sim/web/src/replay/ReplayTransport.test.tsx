@@ -24,6 +24,8 @@ function position(more: Partial<PositionState> = {}): PositionState {
     seconds_per_day: 10,
     frontier_s: 41 * DAY_S,
     duration_s: 120 * DAY_S,
+    start_s: 0,
+    fork: null,
     targets: [],
     commands: [],
     crop: [],

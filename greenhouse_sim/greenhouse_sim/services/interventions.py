@@ -15,10 +15,12 @@ writer of its log. So a change asked for is not yet a change given, and `changes
 says which it has become.
 """
 
+from collections.abc import Mapping
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Annotated, Final, Literal
 
-from greenhouse_protocol.actions import SetTarget
-from greenhouse_protocol.plan import ActionKey, Plan, Principal, PrincipalKind
+from greenhouse_protocol.actions import SetLevel, SetTarget
+from greenhouse_protocol.plan import ActionKey, At, Plan, PlannedAction, Principal, PrincipalKind
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound, read_as
@@ -74,17 +76,58 @@ class PlanCancelled(_Change):
     epoch: int
 
 
+class LevelsAsked(_Change):
+    """Devices to set, by name, doors and vents included, from the moment it
+    is given: a plan of them, as the epoch's gateway takes one."""
+
+    kind: Literal["levels"] = "levels"
+    levels: dict[str, float]
+
+
 Logged = Annotated[
     TargetsChanged | PlanGiven | ActionsCancelled | PlanCancelled, Field(discriminator="kind")
 ]
 Asked = Annotated[
-    TargetsAsked | PlanGiven | ActionsCancelled | PlanCancelled, Field(discriminator="kind")
+    TargetsAsked | LevelsAsked | PlanGiven | ActionsCancelled | PlanCancelled,
+    Field(discriminator="kind"),
 ]
 
 LOGGED: Final = TypeAdapter[Logged](Logged)
 ASKED: Final = TypeAdapter[Asked](Asked)
 
 _BY_MARK: Final = ":"
+
+
+def levels_plan(
+    levels: Mapping[str, float],
+    *,
+    run_id: str,
+    epoch: int,
+    start: datetime,
+    at_s: float,
+    plan_id: str,
+) -> Plan:
+    """Devices set at a moment, as a plan of its own for a run's gateway."""
+    if not levels:
+        raise InvalidRequest("levels wants device:level pairs, and none was given")
+    return read_as(
+        "levels",
+        lambda: Plan(
+            plan_id=plan_id,
+            run_id=run_id,
+            epoch=epoch,
+            revision=1,
+            actions=tuple(
+                PlannedAction(
+                    action_id=f"set_{index}",
+                    action=SetLevel(device_id=device, level=level),
+                    timing=At(at=start + timedelta(seconds=at_s)),
+                    proposed_by=LOCAL_OPERATOR,
+                )
+                for index, (device, level) in enumerate(levels.items())
+            ),
+        ),
+    )
 
 
 def spelled(principal: Principal) -> str:
@@ -142,17 +185,23 @@ def ask(simulator: Simulator, run_id: str, epoch: int, body: bytes) -> ChangeAsk
             f"epoch {epoch} of {run_id} is {status}: it takes no more changes; a fork acts "
             "from a moment of it"
         )
-    _check_allowed(simulator, asked)
+    check_allowed(simulator, asked)
     return ChangeAsked(request=kept.ask(ASKED.dump_python(asked, mode="json")))
 
 
-def _check_allowed(simulator: Simulator, asked: Asked) -> None:
+def check_allowed(simulator: Simulator, asked: Asked) -> None:
+    """Refuses what the server's authorisation forbids the local operator: a
+    worker has its own simulator, with no such file to read."""
     allowed = simulator.authorisation.allows
     match asked:
         case TargetsAsked(targets=targets):
             for name, value in targets.items():
                 if not allowed(LOCAL_OPERATOR, _set_target(name, value)):
                     raise InvalidRequest(f"{LOCAL_OPERATOR.id} may not change {name}")
+        case LevelsAsked(levels=levels):
+            for device, level in levels.items():
+                if not allowed(LOCAL_OPERATOR, _set_level(device, level)):
+                    raise InvalidRequest(f"{LOCAL_OPERATOR.id} may not set {device}")
         case PlanGiven(plan=plan):
             for planned in plan.actions:
                 if not allowed(LOCAL_OPERATOR, planned.action):
@@ -161,6 +210,12 @@ def _check_allowed(simulator: Simulator, asked: Asked) -> None:
                     )
         case _:
             pass
+
+
+def _set_level(device: str, level: float) -> SetLevel:
+    return read_as(
+        "a level", lambda: SetLevel.model_validate({"device_id": device, "level": level})
+    )
 
 
 def _set_target(name: str, value: float) -> SetTarget:
