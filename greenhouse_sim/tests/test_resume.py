@@ -2,6 +2,7 @@
 from the checkpoint of its last commit, ending as the epoch that was never
 interrupted does, whatever a crash left past its last commit."""
 
+import threading
 import time
 from collections.abc import Iterator
 from pathlib import Path
@@ -24,11 +25,12 @@ from greenhouse_sim.services.run_store import (
     instant_name,
 )
 from greenhouse_sim.services.simulator import Simulator
-from greenhouse_sim.services.workers import Free, Stepped, execute, queued, resume
+from greenhouse_sim.services.workers import Free, Paced, Stepped, execute, queued, resume
 
 BOX: Final = "climate_box"
 SHORT: Final = "climate_box_short"
 DAYS: Final = 3
+WAIT_S: Final = 60.0
 
 
 def _simulator() -> Simulator:
@@ -240,6 +242,40 @@ def test_a_crash_as_a_checkpoint_is_written_leaves_a_segment_that_no_commit_name
 
     assert _digests(epoch) == _digests(uninterrupted)
     epoch.verify()
+
+
+def test_an_epoch_whose_final_day_is_committed_is_finished_not_driven_again(
+    tmp_path: Path, uninterrupted: EpochStore
+) -> None:
+    # The process dies as the epoch is told it finished, the third write of
+    # its manifest: every day is committed, and the status says running.
+    epoch = _crashed("manifest.json", tmp_path, skip=2)
+    assert len(epoch.commits()) == DAYS
+
+    _carried_on(epoch)
+
+    assert epoch.manifest().status == Status.FINISHED
+    assert _digests(epoch) == _digests(uninterrupted)
+
+
+def test_an_epoch_whose_final_day_is_committed_is_finished_at_a_pace_too(
+    tmp_path: Path, uninterrupted: EpochStore
+) -> None:
+    epoch = _crashed("manifest.json", tmp_path, skip=2)
+    # A resume that would wait for a day to pass is ended, and the test failed.
+    stop = threading.Event()
+    timer = threading.Timer(WAIT_S, stop.set)
+    timer.start()
+    try:
+        with _simulator() as after:
+            after.runs = epoch.objects
+            interrupted.mark(after, now=time.time() + leases.EXPIRES_AFTER_S * 2)
+            assert resume(after, epoch, Paced(1.0), stop=stop) == Status.FINISHED
+    finally:
+        timer.cancel()
+
+    assert not stop.is_set()
+    assert _digests(epoch) == _digests(uninterrupted)
 
 
 def test_what_a_crash_left_past_the_last_commit_is_removed_before_it_is_carried_on(
