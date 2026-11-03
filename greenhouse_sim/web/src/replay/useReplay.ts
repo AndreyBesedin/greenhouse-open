@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   askPosition,
@@ -30,9 +30,23 @@ function isComputing(status: string): boolean {
  *
  * A page that is shown twice, as the development server's strict mode does,
  * opens two positions and closes the first.
+ *
+ * What the simulator answers is taken in the order it was asked, never in
+ * the order it arrives: a seek, a command or a pace is the page's latest
+ * word on where the position stands, so an answer to an earlier one, or to a
+ * look that began before it, or to anything asked of a replay that is no
+ * longer the page's, is dropped. Dragging the handle asks for a seek at every
+ * move; only the last one's answer is kept.
  */
 export function useReplay(runId: string, epoch: number, fetchFn: typeof fetch = fetch) {
   const [load, setLoad] = useState<PositionLoad>(LOADING);
+  // Counts what has been asked of the replay shown: each change of the replay,
+  // and each seek, command or pace. An answer counts only if nothing was asked
+  // after the question it answers.
+  const asked = useRef(0);
+  // How many of those are still waiting for their answer: a look that comes
+  // back while one is, may have been answered before it.
+  const waiting = useRef(0);
   const positionId = load.status === "loaded" ? load.position.position_id : null;
   const moving =
     load.status === "loaded" &&
@@ -41,6 +55,8 @@ export function useReplay(runId: string, epoch: number, fetchFn: typeof fetch = 
   useEffect(() => {
     let left = false;
     let opened: string | null = null;
+    asked.current += 1;
+    waiting.current = 0;
     setLoad(LOADING);
     // Not aborted once asked: a position the simulator has opened is closed,
     // however late its answer comes.
@@ -58,6 +74,7 @@ export function useReplay(runId: string, epoch: number, fetchFn: typeof fetch = 
     });
     return () => {
       left = true;
+      asked.current += 1;
       if (opened !== null) {
         void closePosition(opened, fetchFn);
       }
@@ -70,10 +87,18 @@ export function useReplay(runId: string, epoch: number, fetchFn: typeof fetch = 
     }
     const controller = new AbortController();
     const timer = setInterval(() => {
+      const since = asked.current;
       void askPosition(positionId, fetchFn, { signal: controller.signal }).then(
         (answer) => {
-          // A failed ask is asked again; the last good state stays.
-          if (answer.status === "loaded" && !controller.signal.aborted) {
+          // A failed look is made again; the last good state stays. A look
+          // that began before something was asked, or that comes back while
+          // something asked waits, may say less than the page knows.
+          if (
+            answer.status === "loaded" &&
+            !controller.signal.aborted &&
+            asked.current === since &&
+            waiting.current === 0
+          ) {
             setLoad(answer);
           }
         },
@@ -87,9 +112,13 @@ export function useReplay(runId: string, epoch: number, fetchFn: typeof fetch = 
   }, [positionId, moving, fetchFn]);
 
   const keep = useCallback((answered: Promise<PositionLoad>) => {
+    asked.current += 1;
+    waiting.current += 1;
+    const ticket = asked.current;
     void answered.then((answer) => {
+      waiting.current = Math.max(0, waiting.current - 1);
       // A refused command leaves the position where it stood.
-      if (answer.status === "loaded") {
+      if (answer.status === "loaded" && asked.current === ticket) {
         setLoad(answer);
       }
     });

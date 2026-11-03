@@ -109,6 +109,16 @@ describe("what moves a position over a stored run", () => {
     expect(button(container, "Follow the newest day").getAttribute("aria-pressed")).toBe("true");
   });
 
+  it("stops following when its pressed button is pressed again, by pausing the position", () => {
+    // A following position shows Play, so that nothing else can pause it.
+    const { container, onPause, onFollow } = shown(position({ following: true, playing: false }));
+
+    click(button(container, "Follow the newest day"));
+
+    expect(onPause).toHaveBeenCalledOnce();
+    expect(onFollow).not.toHaveBeenCalled();
+  });
+
   it("is over the whole of the run, from its start to the frontier", () => {
     expect(spanOf(position())).toEqual({ startS: 0, frontierS: 41 * DAY_S, endS: 120 * DAY_S });
     expect(canFollow(position({ status: "queued" }))).toBe(true);

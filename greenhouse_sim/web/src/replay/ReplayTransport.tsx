@@ -131,7 +131,9 @@ export function ReplayTransport({
             type="button"
             className="replay-follow"
             aria-pressed={position.following}
-            onClick={onFollow}
+            // A position that follows is held where it is by pausing it, which
+            // clears the following and the playing alike (it shows Play then).
+            onClick={position.following ? onPause : onFollow}
           >
             Follow the newest day
           </button>

@@ -54,8 +54,8 @@ function simulator(first: Partial<PositionState> = {}) {
   return { fetchFn, calls };
 }
 
-function Probe({ fetchFn }: { fetchFn: typeof fetch }) {
-  const replay = useReplay("run-1", 0, fetchFn);
+function Probe({ fetchFn, runId = "run-1" }: { fetchFn: typeof fetch; runId?: string }) {
+  const replay = useReplay(runId, 0, fetchFn);
   return (
     <div>
       <span data-testid="status">{replay.load.status}</span>
@@ -68,8 +68,44 @@ function Probe({ fetchFn }: { fetchFn: typeof fetch }) {
       <button type="button" onClick={() => replay.seek(3600)}>
         seek
       </button>
+      <button type="button" onClick={() => replay.seek(7200)}>
+        seek later
+      </button>
     </div>
   );
+}
+
+/** A simulator whose answers to seeks and to looks are held until the test
+ * lets each come, so that they can arrive in any order. */
+function held(first: Partial<PositionState> = {}) {
+  const seeks: ((timeS: number) => void)[] = [];
+  const looks: ((timeS: number) => void)[] = [];
+  let opened = 0;
+  const fetchFn = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.endsWith("/positions")) {
+      opened += 1;
+      return Promise.resolve(Response.json(state({ ...first, position_id: `p${opened}` })));
+    }
+    if (url.endsWith("/close")) {
+      return Promise.resolve(Response.json({}));
+    }
+    return new Promise<Response>((resolve) => {
+      const answer = (timeS: number) => resolve(Response.json(state({ ...first, time_s: timeS })));
+      (url.includes("/seek") ? seeks : looks).push(answer);
+      init?.signal?.addEventListener("abort", () => resolve(new Response("{}", { status: 499 })));
+    });
+  }) as unknown as typeof fetch;
+  return { fetchFn, seeks, looks };
+}
+
+function pressed(container: HTMLElement, name: string): void {
+  const control = [...container.querySelectorAll("button")].find((b) => b.textContent === name);
+  act(() => control?.click());
+}
+
+function shownTime(container: HTMLElement): string | null | undefined {
+  return container.querySelector('[data-testid="time"]')?.textContent;
 }
 
 async function settle(): Promise<void> {
@@ -160,5 +196,82 @@ describe("a stored epoch replayed", () => {
     expect(rendered.container.querySelector('[data-testid="status"]')?.textContent).toBe(
       "unavailable",
     );
+  });
+});
+
+describe("the answers a replay takes, in the order they were asked", () => {
+  let rendered: Rendered | undefined;
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    rendered?.unmount();
+    vi.useRealTimers();
+  });
+
+  it("keeps the last seek's answer, though an earlier one arrives after it", async () => {
+    const { fetchFn, seeks } = held();
+    rendered = render(<Probe fetchFn={fetchFn} />);
+    await settle();
+
+    pressed(rendered.container, "seek");
+    pressed(rendered.container, "seek later");
+    // The later seek is answered first, then the earlier, as a drag can.
+    seeks[1]?.(7200);
+    await settle();
+    seeks[0]?.(3600);
+    await settle();
+
+    expect(shownTime(rendered.container)).toBe("7200");
+  });
+
+  it("drops the answer to a seek that is asked of a replay no longer shown", async () => {
+    const { fetchFn, seeks } = held();
+    rendered = render(<Probe fetchFn={fetchFn} runId="run-1" />);
+    await settle();
+    pressed(rendered.container, "seek");
+
+    rendered.rerender(<Probe fetchFn={fetchFn} runId="run-2" />);
+    await settle();
+    expect(shownTime(rendered.container)).toBe("0");
+    seeks[0]?.(3600);
+    await settle();
+
+    expect(shownTime(rendered.container)).toBe("0");
+  });
+
+  it("drops a look that began before a seek, when it comes back after it", async () => {
+    const { fetchFn, seeks, looks } = held({ status: "running" });
+    rendered = render(<Probe fetchFn={fetchFn} />);
+    await settle();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1100);
+    });
+    expect(looks).toHaveLength(1);
+
+    pressed(rendered.container, "seek later");
+    seeks[0]?.(7200);
+    await settle();
+    looks[0]?.(100);
+    await settle();
+
+    expect(shownTime(rendered.container)).toBe("7200");
+  });
+
+  it("drops a look that comes back while a seek still waits", async () => {
+    const { fetchFn, seeks, looks } = held({ status: "running" });
+    rendered = render(<Probe fetchFn={fetchFn} />);
+    await settle();
+    pressed(rendered.container, "seek later");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1100);
+    });
+    expect(looks).toHaveLength(1);
+
+    looks[0]?.(100);
+    await settle();
+    expect(shownTime(rendered.container)).toBe("0");
+    seeks[0]?.(7200);
+    await settle();
+
+    expect(shownTime(rendered.container)).toBe("7200");
   });
 });
