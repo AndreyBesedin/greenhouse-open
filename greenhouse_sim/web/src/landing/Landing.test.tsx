@@ -127,6 +127,10 @@ describe("the page where a person decides what to do", () => {
     expect(contribute?.getAttribute("href")).toBe(REPOSITORY_URL);
     expect(contribute?.getAttribute("target")).toBe("_blank");
     expect(contribute?.getAttribute("rel")).toContain("noopener");
+    // The mark is decoration: the link keeps its name from its text.
+    const mark = contribute?.querySelector("svg");
+    expect(mark?.getAttribute("aria-hidden")).toBe("true");
+    expect(contribute?.textContent).toBe("Contribute");
     expect(link(container, "Open the builder")?.getAttribute("href")).toBe("/builder");
   });
 
