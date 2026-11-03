@@ -50,6 +50,18 @@ async function daysIn(row: Locator): Promise<number> {
   return Number(/^(\d+)/.exec(text ?? "")?.[1]);
 }
 
+// What earlier specs left computing would hold the workers these wait for.
+test.beforeEach(async ({ page }) => {
+  const runs: { run_id: string; epoch: number; status: string }[] = await (
+    await page.request.get("/api/runs")
+  ).json();
+  for (const { run_id, epoch, status } of runs) {
+    if (status === "queued" || status === "running") {
+      await page.request.post(`/api/runs/${encodeURIComponent(run_id)}/epochs/${epoch}/stop`);
+    }
+  }
+});
+
 test("two runs of one scenario are computed at once, from the dialog, each followed in its replay", async ({
   page,
 }) => {
