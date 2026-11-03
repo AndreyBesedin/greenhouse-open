@@ -13,9 +13,10 @@ A process is the worker because P17.1 measured what a thread costs a process
 that is working: 46% of its speed against 5% for another process.
 
 An epoch whose worker ends without ending it, killed or lost, is told
-`interrupted` with what it had committed; resuming it is P17.9. An epoch
-still `queued` or `running` when the producer that started it is gone is
-found by the next step, not by this one.
+`interrupted` with what it had committed, and can be asked for again to be
+carried on from there (`resume`, P17.9): queued once more, taken by a worker
+that resumes it. An epoch still `queued` or `running` when the producer that
+started it is gone is found at startup (`interrupted.mark`).
 """
 
 import importlib
@@ -28,10 +29,20 @@ from multiprocessing.context import SpawnProcess
 from pathlib import Path
 from typing import Final
 
+from greenhouse_sim.services import interrupted
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.run_store import EpochStore, FolderStore, Status, StoredRun, stored_run
+from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.simulator import Simulator
-from greenhouse_sim.services.workers import Driver, Free, Paced, execute, queued
+from greenhouse_sim.services.workers import (
+    Driver,
+    Free,
+    Paced,
+    check_resumable,
+    execute,
+    queued,
+)
+from greenhouse_sim.services.workers import resume as carry_on
 
 logger = logging.getLogger(__name__)
 
@@ -45,14 +56,17 @@ LOOK_EVERY_S: Final = 0.1
 END_WITHIN_S: Final = 10.0
 
 
-def work(root: str, run_id: str, epoch: int, driver: Driver, made_by: str) -> None:
+def work(
+    root: str, run_id: str, epoch: int, driver: Driver, made_by: str, *, resuming: bool = False
+) -> None:
     """A worker's process: executes the epoch `epoch` of the run `run_id` in
-    the store under `root`, with a simulator `made_by` makes, and exits with
-    0 if the epoch finished."""
+    the store under `root`, or carries it on if it is `resuming`, with a
+    simulator `made_by` makes, and exits with 0 if the epoch finished."""
     module, _, name = made_by.partition(":")
     simulator = getattr(importlib.import_module(module), name)()
     with simulator:
-        status = execute(simulator, EpochStore(FolderStore(Path(root)), run_id, epoch), driver)
+        kept = EpochStore(FolderStore(Path(root)), run_id, epoch)
+        status = (carry_on if resuming else execute)(simulator, kept, driver)
     raise SystemExit(0 if status == Status.FINISHED else 1)
 
 
@@ -70,6 +84,7 @@ class _Job:
     run_id: str
     epoch: int
     driver: Driver
+    resuming: bool = False
 
 
 class Scheduler:
@@ -89,10 +104,14 @@ class Scheduler:
         # A worker is a process started from nothing, not a copy of this one
         # with its threads and locks.
         self._context = multiprocessing.get_context("spawn")
-        self._lock = threading.Lock()
+        # Re-entrant: finding an epoch no one works asks the scheduler what it
+        # holds, and is done under the lock a resume is scheduled under.
+        self._lock = threading.RLock()
         self._waiting: deque[_Job] = deque()
         self._running: dict[tuple[str, int], SpawnProcess] = {}
         self._cancelled: set[tuple[str, int]] = set()
+        # The running workers that were asked to carry an epoch on.
+        self._resuming: set[tuple[str, int]] = set()
         self._closed = threading.Event()
         self._watcher = threading.Thread(target=self._watch, name="workers", daemon=True)
         self._watcher.start()
@@ -119,6 +138,38 @@ class Scheduler:
             self._waiting.append(_Job(epoch.run_id, epoch.epoch, chosen))
             self._launch()
             return stored_run(self._objects, epoch.run_id, epoch.epoch)
+
+    def resume(self, run_id: str, epoch: int, *, driver: Driver | None = None) -> StoredRun:
+        """Asks for an `interrupted` epoch to be carried on from its last
+        commit: queued once more, and taken by a worker that resumes it when
+        there is room. An epoch the store still calls `running` whose producer
+        is gone is found interrupted first, under the lock the epoch is queued
+        under, so that two requests for it are told apart: the second finds
+        the epoch queued. Refused, as `workers.check_resumable` says, if it
+        cannot be; the store is not changed by a refusal."""
+        chosen = Free() if driver is None else driver
+        if not isinstance(chosen, Free | Paced):
+            raise InvalidRequest("a worker advances its epoch freely or at a pace")
+        key = (run_id, epoch)
+        if epoch not in stored_epochs(self._objects, run_id):
+            raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
+        kept = EpochStore(self._objects, run_id, epoch)
+        with self._lock:
+            if self._closed.is_set():
+                raise Conflict("the workers are closed")
+            if key in self._running or any((j.run_id, j.epoch) == key for j in self._waiting):
+                raise Conflict(f"epoch {epoch} of {run_id} is waiting for a worker or has one")
+            interrupted.mark_epoch(self._simulator, run_id, epoch)
+            if kept.manifest().status != Status.INTERRUPTED:
+                raise Conflict(
+                    f"epoch {epoch} of {run_id} is {kept.manifest().status}: "
+                    "only an interrupted one resumes"
+                )
+            check_resumable(kept)
+            kept.set_status(Status.QUEUED)
+            self._waiting.append(_Job(run_id, epoch, chosen, resuming=True))
+            self._launch()
+        return stored_run(self._objects, run_id, epoch)
 
     def workers(self) -> list[Worker]:
         """The epochs being executed now."""
@@ -184,6 +235,7 @@ class Scheduler:
             process = self._context.Process(
                 target=work,
                 args=(str(self._root), job.run_id, job.epoch, job.driver, self._made_by),
+                kwargs={"resuming": job.resuming},
                 name=f"worker of {job.run_id}",
                 daemon=True,
             )
@@ -196,6 +248,8 @@ class Scheduler:
                 self._say((job.run_id, job.epoch), Status.FAILED)
                 continue
             self._running[(job.run_id, job.epoch)] = process
+            if job.resuming:
+                self._resuming.add((job.run_id, job.epoch))
 
     def _reap(self) -> None:
         """Under the lock: says how each epoch ended whose worker has."""
@@ -204,17 +258,28 @@ class Scheduler:
                 continue
             process.join()
             del self._running[key]
-            self._ended(key, process.exitcode, cancelled=key in self._cancelled)
+            self._ended(
+                key,
+                process.exitcode,
+                cancelled=key in self._cancelled,
+                resuming=key in self._resuming,
+            )
             self._cancelled.discard(key)
+            self._resuming.discard(key)
 
-    def _ended(self, key: tuple[str, int], exit_code: int, *, cancelled: bool) -> None:
+    def _ended(
+        self, key: tuple[str, int], exit_code: int, *, cancelled: bool, resuming: bool
+    ) -> None:
         """An epoch whose worker has ended: left as it says if it ended
-        itself; else interrupted, if it had begun or was cancelled, failed if
-        its worker never began it."""
+        itself; else interrupted, if it had begun, was cancelled or was being
+        carried on, failed if its worker never began it."""
         status = EpochStore(self._objects, *key).manifest().status
         if status in (Status.FINISHED, Status.FAILED, Status.INTERRUPTED):
             return
-        if cancelled or status == Status.RUNNING:
+        if cancelled or status == Status.RUNNING or resuming:
+            # An epoch asked to be carried on, whose worker ended before it
+            # took it up, is as interrupted as it was, with or without a
+            # commit.
             self._say(key, Status.INTERRUPTED)
             return
         logger.error("the worker of %s ended with %s before it began", key, exit_code)
@@ -259,6 +324,14 @@ def start(
     """A run of a scenario asked for: freely, or at `seconds_per_day`."""
     driver = None if seconds_per_day is None else Paced(seconds_per_day)
     return of(simulator).start(scenario_id, layout=layout, seed=seed, driver=driver)
+
+
+def resume(
+    simulator: Simulator, run_id: str, epoch: int, *, seconds_per_day: float | None = None
+) -> StoredRun:
+    """An interrupted epoch asked to be carried on (`Scheduler.resume`)."""
+    driver = None if seconds_per_day is None else Paced(seconds_per_day)
+    return of(simulator).resume(run_id, epoch, driver=driver)
 
 
 def cancel(simulator: Simulator, run_id: str, epoch: int) -> StoredRun:
