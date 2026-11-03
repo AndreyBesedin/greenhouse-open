@@ -190,6 +190,7 @@ def _door_flow(simulator: Simulator, weather: str) -> float:
     return float(next(o["net_m3_s"] for o in body["openings"] if o["opening_id"] == "door"))
 
 
+@pytest.mark.slow
 def test_the_winds_direction_can_be_overridden_for_qa_and_an_open_door_follows_it(
     simulator: Simulator,
 ) -> None:

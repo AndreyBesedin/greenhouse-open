@@ -178,6 +178,7 @@ def _observed_by(epoch: EpochStore, until_s: float, start: Any) -> list[Observat
     return [o for o in epoch.observations().records if (o.delivered_at or o.timestamp) <= limit]
 
 
+@pytest.mark.slow
 def test_a_fork_at_a_moment_inside_a_day_changes_nothing_before_it(
     simulator: Simulator, whole: EpochStore
 ) -> None:
@@ -203,6 +204,7 @@ def test_a_fork_at_a_moment_inside_a_day_changes_nothing_before_it(
     assert any(o.value != parent[o.observation_id] for o in after)
 
 
+@pytest.mark.slow
 def test_a_fork_inherits_the_changes_given_by_its_instant_and_not_those_after(
     tmp_path: Path,
 ) -> None:
@@ -333,6 +335,7 @@ class StoppingAfterACommit(FolderStore):
             self._stop.set()
 
 
+@pytest.mark.slow
 def test_a_fork_interrupted_resumes_to_the_digests_of_one_never_interrupted(
     tmp_path: Path,
 ) -> None:
@@ -421,6 +424,7 @@ def _until(condition: Callable[[], bool], what: str) -> None:
         time.sleep(0.05)
 
 
+@pytest.mark.slow
 def test_a_fork_starts_through_the_scheduler_in_a_process_of_its_own(tmp_path: Path) -> None:
     objects = FolderStore(tmp_path)
     with workers_support.short_simulator() as made:
@@ -561,6 +565,7 @@ def test_what_a_fork_inherits_is_kept_after_a_discard(simulator: Simulator, tmp_
     assert made.checkpoint_at(DAY_S) is not None
 
 
+@pytest.mark.slow
 def test_a_fork_is_told_what_its_parents_crop_actions_before_its_state_did(tmp_path: Path) -> None:
     """A harvest behind the state a fork inherits is not worked out again: what
     its parent's outcome says of it comes with the fork, and it needs its parent
