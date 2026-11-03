@@ -2,6 +2,8 @@
 
 /** The page where a person decides what to do. */
 export const LANDING_PATH = "/";
+/** The setup builder, where a scenario is built or an uploaded one opened. */
+export const BUILDER_PATH = "/builder";
 /** The viewer, which shows a scenario or a run. */
 export const VIEWER_PATH = "/view";
 /** Where the project's code is, for whoever wants to contribute. */

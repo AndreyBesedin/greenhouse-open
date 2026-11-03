@@ -477,6 +477,72 @@ describe("the setup builder (P12.2)", () => {
     expect(page.querySelector(".builder-share")).not.toBeNull();
     expect(button(page, "Download scenario file")).toBeDefined();
   });
+
+  it("opens an uploaded scenario's house as a draft not saved, with the run settings its file held (P17.11)", async () => {
+    sessionStorage.setItem(
+      "greenhouse.uploaded.shared_box",
+      JSON.stringify({
+        start_date: "2026-03-01",
+        duration_days: 12,
+        random_seed: 3,
+        weather: "default",
+      }),
+    );
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      const url = String(input);
+      asked.push(url);
+      if (
+        url === "/api/scenarios/shared_box/installation" ||
+        url.startsWith("/api/builder/assess")
+      ) {
+        return answer(STARTING_HOUSE);
+      }
+      return answer(
+        url.startsWith("/api/drafts") || url === "/api/scenarios" ? [] : { error: "no" },
+        200,
+      );
+    });
+    shown = render(<Builder hash="#scenario=shared_box" />);
+    const page = shown.container;
+    await settled();
+
+    expect(asked).toContain("/api/scenarios/shared_box/installation");
+    expect(said(page, "builder-status")).toBe(
+      "Opened My greenhouse from a scenario file; not saved yet.",
+    );
+    expect(said(page, "builder-draft")).toBe("My greenhouse (my_greenhouse), not saved");
+    const fields = [...page.querySelectorAll<HTMLInputElement>(".builder-run input")].map(
+      (input) => input.value,
+    );
+    expect(fields).toEqual(["2026-03-01", "12", "3"]);
+    // A run made of the draft is of a copy: the file's own can be run as it is.
+    expect(said(page, "builder-uploaded-note")).toContain("opened from a scenario file");
+    expect(
+      page.querySelector('[data-testid="builder-uploaded-note"] a')?.getAttribute("href"),
+    ).toBe("/#run=shared_box");
+    sessionStorage.clear();
+  });
+
+  it("says why an uploaded scenario cannot be opened, and shows the first form (P17.11)", async () => {
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      const url = String(input);
+      return url.includes("/installation")
+        ? answer({ error: "no such scenario" }, 404)
+        : answer(
+            url.startsWith("/api/drafts") ? [] : { error: "no" },
+            url.startsWith("/api/drafts") ? 200 : 404,
+          );
+    });
+    shown = render(<Builder hash="#scenario=gone" />);
+    await settled();
+
+    expect(said(shown.container, "builder-status")).toBe(
+      "The uploaded scenario cannot be opened: no such scenario",
+    );
+    expect(shown.container.querySelector(".builder-form")).not.toBeNull();
+  });
+
   it("does not leave with an edit made while the save was on its way (P17.11)", async () => {
     const saves = holdingSaves();
     const went: string[] = [];
@@ -546,5 +612,57 @@ describe("the setup builder (P12.2)", () => {
     expect(asked.some((each) => each.includes("/playback/start"))).toBe(false);
     expect(went).toEqual([]);
     expect(said(shown.container, "builder-status")).toBe("");
+  });
+  it("keeps the run settings of the draft opened while an uploaded scenario was on its way (P17.11)", async () => {
+    sessionStorage.setItem(
+      "greenhouse.uploaded.shared_box",
+      JSON.stringify({
+        start_date: "2026-03-01",
+        duration_days: 12,
+        random_seed: 3,
+        weather: "default",
+      }),
+    );
+    let arrives = () => {};
+    const slow = new Promise<void>((resolve) => {
+      arrives = resolve;
+    });
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === "/api/scenarios/shared_box/installation") {
+        await slow;
+        return answer(STARTING_HOUSE);
+      }
+      if (url.startsWith("/api/builder/assess")) {
+        return answer(STARTING_HOUSE);
+      }
+      return answer(
+        url.startsWith("/api/drafts") || url === "/api/scenarios" ? [] : { error: "no" },
+      );
+    });
+    shown = render(<Builder hash="#scenario=shared_box" />);
+    const page = shown.container;
+    await settled();
+
+    // A file imported while the scenario is on its way.
+    const input = page.querySelector<HTMLInputElement>(".builder-start input[type=file]");
+    Object.defineProperty(input, "files", {
+      value: [new File(["{}"], "mine.json", { type: "application/json" })],
+      configurable: true,
+    });
+    await act(async () => {
+      input?.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await settled();
+    arrives();
+    await settled();
+
+    expect(said(page, "builder-status")).toContain("Imported");
+    const fields = [...page.querySelectorAll<HTMLInputElement>(".builder-run input")].map(
+      (each) => each.value,
+    );
+    expect(fields).toEqual(["2026-04-01", "7", "0"]);
+    expect(page.querySelector('[data-testid="builder-uploaded-note"]')).toBeNull();
+    sessionStorage.clear();
   });
 });
