@@ -75,7 +75,10 @@ def import_installation(text: str) -> Installation:
         )
     try:
         document = json.loads(text, parse_constant=_not_json, parse_float=_finite)
-    except (json.JSONDecodeError, _NotJson) as error:
+    except json.JSONDecodeError:
+        # Its line and column say nothing to whoever was sent the file.
+        raise InstallationFileError([Problem(field="", message="not JSON")]) from None
+    except _NotJson as error:
         raise InstallationFileError([Problem(field="", message=f"not JSON: {error}")]) from None
     except RecursionError:
         raise InstallationFileError(
@@ -94,8 +97,8 @@ def import_installation(text: str) -> Installation:
                 Problem(
                     field=_VERSION_KEY,
                     message=(
-                        f"format {version!r}; this simulator reads formats {FIRST_FORMAT} "
-                        f"to {SCHEMA_VERSION}"
+                        f"{'no format named' if version is None else f'format {version!r}'}; "
+                        f"this simulator reads formats {FIRST_FORMAT} to {SCHEMA_VERSION}"
                     ),
                 )
             ]

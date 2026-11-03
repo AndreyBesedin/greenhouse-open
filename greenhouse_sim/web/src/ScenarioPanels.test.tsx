@@ -95,6 +95,23 @@ describe("a stored run's panels", () => {
     expect(said(container, "weather-offers")).toBe("0");
   });
 
+  it("says the moment as the replay's timeline does, and a view's as a view's", () => {
+    const at = {
+      kind: "scenario",
+      scenarioId: "box",
+      field: CLIMATE_FIELD,
+      time: 786_240,
+    } as const;
+
+    rendered = panels({ source: at, replayed: true });
+    expect(said(rendered.container, "climate-time")).toBe("Day 10, 02:24");
+    expect(said(rendered.container, "moment-summary")).toBe("Climate run: loading Day 10, 02:24…");
+    rendered.unmount();
+
+    rendered = panels({ source: at });
+    expect(said(rendered.container, "climate-time")).toBe("day 9, 2 h 24 min");
+  });
+
   it("makes a fork of levels once it is asked for, and not as a slider moves", () => {
     const onFork = vi.fn();
     const onPutBack = vi.fn();

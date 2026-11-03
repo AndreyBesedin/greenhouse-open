@@ -1,6 +1,6 @@
-"""What a worker's process builds its simulator with in the scheduler's tests:
-the climate box cut to two runs of a few days, since a worker starts from
-nothing and does not see the scenarios a test registers in its own process."""
+"""What the scheduler's tests run: the climate box cut to two runs of a few
+days, registered with a test's simulator, whose worker has them from the store;
+and a worker that ends at once, which a process imports by its name."""
 
 from typing import Final
 
@@ -13,8 +13,6 @@ LONG: Final = "climate_box_long"
 SHORT_DAYS: Final = 2
 LONG_DAYS: Final = 8
 
-MADE_BY: Final = "workers_support:short_simulator"
-
 
 def short_simulator() -> Simulator:
     made = Simulator()
@@ -23,3 +21,7 @@ def short_simulator() -> Simulator:
             SCENARIO_REGISTRY[BOX].model_copy(update=dict(greenhouse_id=name, duration_days=days))
         )
     return made
+
+
+def ends_at_once(root: str, run_id: str, epoch: int) -> None:
+    raise SystemExit(1)

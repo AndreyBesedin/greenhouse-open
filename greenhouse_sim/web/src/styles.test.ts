@@ -1,10 +1,21 @@
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-const STYLES = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+/** A stylesheet's text with each `@import` in its place, in the build's order. */
+function withImports(
+  path: string,
+  read: (path: string) => string = (file) => readFileSync(file, "utf8"),
+): string {
+  return read(path).replace(/^@import\s+"([^"]+)";[^\S\n]*$/gm, (_line, imported: string) =>
+    withImports(join(dirname(path), imported), read),
+  );
+}
+
+const STYLES = withImports(fileURLToPath(new URL("./styles.css", import.meta.url)));
 // What a panel's text or background may be: one of the theme's colours, or
 // none of its own. Anything else, a colour named, written in hex or made by
 // any function, stays the same whichever theme is chosen.
@@ -271,5 +282,171 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
       "to-come",
       "weather-day-row",
     ]);
+  });
+});
+
+// The stylesheet as the browser takes it, in each theme, by digest (P19.1). While
+// tokens replace written values (P19.2 to P19.5), this does not change: equal text
+// in equal order is an equal cascade, and custom properties stand on `:root` alone
+// (below), so that replacing each `var()` is what the browser computes.
+//
+// A pull request that means to change a style writes the digests the test
+// prints here, in its own diff, where review sees them; a token step must not.
+// It goes when selectors start to move (P19.6), and the page baselines hold.
+const RESOLVED_DIGESTS = {
+  dark: "787d415ab5699b007703e701156b35dbbf4b3c97f240542270a17d8a7ad1aa2a",
+  light: "3fe562ededfd568017bb8fcdc2ee0b57813e495cac5a7faadffb163b38f19389",
+};
+type ThemeName = keyof typeof RESOLVED_DIGESTS;
+const COMMENT = /\/\*[\s\S]*?\*\//g;
+const ROOT_BLOCK = /:root([^{]*)\{([^}]*)\}/g;
+const LIGHT_ROOT = /="light"\]\s*$/;
+const CUSTOM_PROPERTY = /(--[\w-]+)\s*:\s*([^;]*)/g;
+
+/** Each custom property's value in `theme`: `:root`'s, and the light block's over it. */
+function tokenValues(stylesheet: string, theme: ThemeName): Map<string, string> {
+  const blocks = [...stylesheet.matchAll(ROOT_BLOCK)].map(([, selector, body]) => ({
+    light: LIGHT_ROOT.test(selector ?? ""),
+    body: body ?? "",
+  }));
+  const applying = blocks.filter((block) => !block.light || theme === "light");
+  return new Map(
+    applying.flatMap(({ body }) =>
+      [...body.matchAll(CUSTOM_PROPERTY)].map(
+        ([, name, value]) => [name ?? "", value ?? ""] as [string, string],
+      ),
+    ),
+  );
+}
+
+/** `stylesheet` as `theme` has it: no comments or `:root` blocks, each `var()`
+ * replaced by its value, and any run of white space one space. */
+function resolved(stylesheet: string, theme: ThemeName): string {
+  const text = stylesheet.replace(COMMENT, "");
+  const values = tokenValues(text, theme);
+  const replaced = (written: string): string =>
+    written.replace(/var\((--[\w-]+)\)/g, (_use, name: string) => {
+      const value = values.get(name);
+      if (value === undefined) {
+        throw new Error(`${name} is used and never defined`);
+      }
+      return replaced(value);
+    });
+  return replaced(text.replace(ROOT_BLOCK, "")).replace(/\s+/g, " ").trim();
+}
+
+function digest(text: string): string {
+  return createHash("sha256").update(text).digest("hex");
+}
+
+/** What stands in `stylesheet`'s `:root` blocks but custom properties, and any
+ * custom property written outside them: a value replacing cannot account for. */
+function outsideTheTokens(stylesheet: string): string[] {
+  const text = stylesheet.replace(COMMENT, "");
+  const inRoot = [...text.matchAll(ROOT_BLOCK)].flatMap(([, , body]) =>
+    (body ?? "")
+      .split(";")
+      .map((declaration) => declaration.trim())
+      .filter((declaration) => declaration !== "" && !declaration.startsWith("--")),
+  );
+  const elsewhere = [...text.replace(ROOT_BLOCK, "").matchAll(/(?:^|[{;])\s*(--[\w-]+)\s*:/gm)].map(
+    ([, name]) => name ?? "",
+  );
+  return [...inRoot, ...elsewhere];
+}
+
+describe("the stylesheet with its tokens resolved (P19.1)", () => {
+  const written = `
+    /* What the page is drawn with. */
+    :root { --size: 8px; --ink: #111111; --deep: var(--ink); }
+    :root[data-theme="light"] { --ink: #eeeeee; }
+    .a { padding: var(--size) 12px; color: var(--deep); }
+    .b { gap: 4px; }
+  `;
+
+  it("is what it was", () => {
+    expect(
+      { dark: digest(resolved(STYLES, "dark")), light: digest(resolved(STYLES, "light")) },
+      "the stylesheet draws something else: a token step must not; a change of style writes these digests in RESOLVED_DIGESTS",
+    ).toEqual(RESOLVED_DIGESTS);
+  });
+
+  it("can be replaced by a substitution, as custom properties stand on :root alone", () => {
+    expect(outsideTheTokens(STYLES)).toEqual([]);
+  });
+
+  it("refuses what a substitution cannot account for", () => {
+    expect(
+      outsideTheTokens(":root { --a: 1px; color-scheme: dark; } .b { --c: 2px; color: red; }"),
+    ).toEqual(["color-scheme: dark", "--c"]);
+  });
+
+  it("gives each theme its values, nested ones too", () => {
+    expect(resolved(written, "dark")).toBe(
+      ".a { padding: 8px 12px; color: #111111; } .b { gap: 4px; }",
+    );
+    expect(resolved(written, "light")).toBe(
+      ".a { padding: 8px 12px; color: #eeeeee; } .b { gap: 4px; }",
+    );
+  });
+
+  it("does not see a value written as a token, a token's name, comments or white space", () => {
+    const same = `
+      :root { --space-3: 8px; --gap-small: 4px; --text: #111111; --pad: 12px; }
+      :root[data-panels="light"] { --text: #eeeeee; }
+      .a {
+        padding: var(--space-3) var(--pad);
+        /* Its colour. */
+        color: var(--text);
+      }
+      .b { gap: var(--gap-small); }
+    `;
+    for (const theme of ["dark", "light"] as const) {
+      expect(digest(resolved(same, theme))).toBe(digest(resolved(written, theme)));
+    }
+  });
+
+  it("sees a value moved by the least, in the theme it moved in", () => {
+    const original = {
+      dark: digest(resolved(written, "dark")),
+      light: digest(resolved(written, "light")),
+    };
+    const pixel = written.replace("--size: 8px", "--size: 9px");
+    expect(digest(resolved(pixel, "dark"))).not.toBe(original.dark);
+    expect(digest(resolved(pixel, "light"))).not.toBe(original.light);
+
+    const onlyLight = written.replace("--ink: #eeeeee", "--ink: #eeeeef");
+    expect(digest(resolved(onlyLight, "dark"))).toBe(original.dark);
+    expect(digest(resolved(onlyLight, "light"))).not.toBe(original.light);
+
+    const raw = written.replace("gap: 4px", "gap: 5px");
+    expect(digest(resolved(raw, "dark"))).not.toBe(original.dark);
+  });
+
+  it("sees two rules change order, which changes the cascade", () => {
+    const swapped = `
+      :root { --size: 8px; --ink: #111111; --deep: var(--ink); }
+      :root[data-theme="light"] { --ink: #eeeeee; }
+      .b { gap: 4px; }
+      .a { padding: var(--size) 12px; color: var(--deep); }
+    `;
+    expect(digest(resolved(swapped, "dark"))).not.toBe(digest(resolved(written, "dark")));
+  });
+
+  it("refuses a token used and never defined", () => {
+    expect(() => resolved(".a { color: var(--gone); }", "dark")).toThrow("--gone");
+  });
+
+  it("reads a stylesheet's imports in their place, in order, nested ones too", () => {
+    const files: Record<string, string> = {
+      "/s/styles.css":
+        '@import "./design/tokens.css";\n@import "./pages.css";\n.last { top: 0; }\n',
+      "/s/design/tokens.css": '@import "./colours.css";\n:root { --a: 1px; }\n',
+      "/s/design/colours.css": ":root { --b: 2px; }\n",
+      "/s/pages.css": ".page { gap: var(--a); }\n",
+    };
+    expect(withImports("/s/styles.css", (path) => files[path] ?? "")).toBe(
+      ":root { --b: 2px; }\n\n:root { --a: 1px; }\n\n.page { gap: var(--a); }\n\n.last { top: 0; }\n",
+    );
   });
 });
