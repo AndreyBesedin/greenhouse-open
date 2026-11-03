@@ -25,6 +25,9 @@ function state(more: Partial<PositionState> = {}): PositionState {
     seconds_per_day: 10,
     frontier_s: 3 * DAY_S,
     duration_s: 3 * DAY_S,
+    targets: [],
+    commands: [],
+    crop: [],
     ...more,
   };
 }
