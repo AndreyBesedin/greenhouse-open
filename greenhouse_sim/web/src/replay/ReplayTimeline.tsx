@@ -97,7 +97,7 @@ export function ReplayTimeline({
             className="replay-tick"
             style={{ left: `${fractionOf(day * DAY_S, span) * PERCENT}%` }}
           >
-            {day === 0 ? "day 0" : day}
+            {day === 0 ? "start" : day}
           </span>
         ))}
       </div>

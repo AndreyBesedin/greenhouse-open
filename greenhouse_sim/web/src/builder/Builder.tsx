@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { entityBounds, type OverlayPrimitive } from "../debug/overlays";
 import { followAddress } from "../landing/follow";
+import { HomeButton } from "../landing/HomeButton";
 import { BUILDER_PATH, LANDING_PATH, newRunAddress } from "../landing/paths";
 import { startRun } from "../landing/startRun";
 import { keptFields, uploadedScenario } from "../landing/uploaded";
@@ -673,7 +674,10 @@ export function Builder({
     <main className="builder">
       <div className="builder-side">
         <header className="builder-bar">
-          <h1>Setup builder</h1>
+          <div className="panel-head">
+            <HomeButton />
+            <h1>Setup builder</h1>
+          </div>
           {editing !== null && (
             <p data-testid="builder-draft">
               {editing.history.present.name} ({editing.history.present.installation_id}),{" "}

@@ -67,7 +67,9 @@ describe("the timeline over a stored run", () => {
     shown(0);
     const text = rendered?.container.textContent ?? "";
 
-    for (const label of ["day 0", "30", "60", "90", "120"]) {
+    // Each number the end of that day, as "Day 30, 24:00" stands on 30; before
+    // the first, its start, which "Day 1, 00:00" stands on.
+    for (const label of ["start", "30", "60", "90", "120"]) {
       expect(text).toContain(label);
     }
     expect(text).toContain("computed, can be played");

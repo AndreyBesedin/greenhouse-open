@@ -538,7 +538,7 @@ def test_a_worker_in_a_process_of_its_own_takes_a_change_through_the_store(tmp_p
         made.catalogue.register(
             SCENARIO_REGISTRY[BOX].model_copy(update=dict(greenhouse_id=LONG, duration_days=8))
         )
-        scheduler = Scheduler(made, tmp_path, limit=1, made_by=workers_support.MADE_BY)
+        scheduler = Scheduler(made, tmp_path, limit=1)
         made.scheduler = scheduler
         run = scheduler.start(LONG)
         epoch = EpochStore(FolderStore(tmp_path), run.run_id, run.epoch)
