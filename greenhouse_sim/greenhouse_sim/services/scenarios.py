@@ -199,7 +199,7 @@ def run_manifest(catalogue: Scenarios, scenario_id: str, weather: str | None = N
         crop_model=config.crop_model.value,
         variety=config.variety,
         airflow=config.airflow.kind,
-        weather=name.partition(SEED_MARK)[0].partition(WIND_MARK)[0].partition(CLOUDS_MARK)[0],
+        weather=weather_base(name),
         weather_kind=config.weather.kind,
         cloud_cover_pct=config.cloud_cover_pct,
         wind_from_deg=config.wind_from_deg,
@@ -303,6 +303,12 @@ def changed(catalogue: Scenarios, config: ScenarioConfig, changes: SceneChanges)
         changes,
         _moves(written) if marked else None,
     )
+
+
+def weather_base(name: str) -> str:
+    """The weather a name asks for, without the overrides it may end with
+    (`with_weather`)."""
+    return name.partition(SEED_MARK)[0].partition(WIND_MARK)[0].partition(CLOUDS_MARK)[0]
 
 
 def with_weather(config: ScenarioConfig, name: str) -> ScenarioConfig:

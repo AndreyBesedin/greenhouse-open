@@ -43,14 +43,19 @@ export function describeTime(seconds: number): string {
  * the moment drawn, as `ClimateTime` shows it, and the one asked for while
  * it is on its way or cannot be drawn, so that the line never takes a
  * moment still loading, or one that failed, for the one in the view. */
-export function describeClimateRun(time: number, shown: number | null, failed: boolean): string {
+export function describeClimateRun(
+  time: number,
+  shown: number | null,
+  failed: boolean,
+  describe: (seconds: number) => string = describeTime,
+): string {
   if (shown === time) {
-    return `Climate run: ${describeTime(time)}`;
+    return `Climate run: ${describe(time)}`;
   }
-  const drawn = shown === null ? "" : `${describeTime(shown)}; `;
+  const drawn = shown === null ? "" : `${describe(shown)}; `;
   return failed
-    ? `Climate run: ${drawn}${describeTime(time)} cannot be drawn`
-    : `Climate run: ${drawn}loading ${describeTime(time)}…`;
+    ? `Climate run: ${drawn}${describe(time)} cannot be drawn`
+    : `Climate run: ${drawn}loading ${describe(time)}…`;
 }
 
 /** How far play moves on from a moment, at a pace (`PACES`): at the first,
@@ -120,6 +125,7 @@ export function ClimateTime({
   failed = false,
   followed = false,
   followedNote = FOLLOWED_NOTE,
+  describe = describeTime,
   days,
   playing,
   onTime,
@@ -137,6 +143,8 @@ export function ClimateTime({
   followed?: boolean;
   /** What is said in place of this moment's controls, when it is followed. */
   followedNote?: string;
+  /** The words a moment is said in: a replay's are its timeline's. */
+  describe?: (seconds: number) => string;
   /** How many days the run lasts. */
   days: number;
   playing: boolean;
@@ -192,7 +200,7 @@ export function ClimateTime({
             />
           </>
         )}
-        <span data-testid="climate-time">{describeTime(shown ?? time)}</span>
+        <span data-testid="climate-time">{describe(shown ?? time)}</span>
       </div>
       {followed && (
         <p className="climate-time-note" data-testid="climate-followed">
@@ -208,13 +216,13 @@ export function ClimateTime({
           data-testid={waiting ? "climate-pending" : undefined}
           aria-hidden={waiting ? undefined : true}
         >
-          {playing ? "Playing: waiting for" : "Loading"} {describeTime(time)}… {waited} s
+          {playing ? "Playing: waiting for" : "Loading"} {describe(time)}… {waited} s
         </p>
       )}
       {failed && !arrived && (
         <p className="climate-time-note" data-testid="climate-failed" role="alert">
-          {sentence(describeTime(time))} cannot be drawn
-          {shown === null ? "" : `; ${describeTime(shown)} is shown`}.
+          {sentence(describe(time))} cannot be drawn
+          {shown === null ? "" : `; ${describe(shown)} is shown`}.
         </p>
       )}
       {days > 1 && !followed && (

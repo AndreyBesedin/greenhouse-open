@@ -34,6 +34,7 @@ from typing import TYPE_CHECKING, Final
 from pydantic import JsonValue, TypeAdapter
 
 from greenhouse_sim.climate.commands import TARGET_EVERY_S
+from greenhouse_sim.services import scenario_files
 from greenhouse_sim.services.checkpoints import upload_checkpoint
 from greenhouse_sim.services.climate_runs import run_schedule
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound, read_as
@@ -86,9 +87,11 @@ def fork(
     *,
     layout: str | None = None,
     changes: Sequence[Asked] = (),
+    seconds_per_day: float | None = None,
 ) -> EpochStore:
     """A new epoch, `queued`, forked from `epoch` of `run_id` at `at_s`, in its
-    `layout` from then on if given, with `changes` given at that moment.
+    `layout` from then on if given, with `changes` given at that moment, and
+    what a worker needs to run it (`scenario_files.carry`).
     Refused if the parent does not hold that moment, or the run ends there.
     Whoever starts epochs of one store does it one at a time, so that two are
     never given a number."""
@@ -131,6 +134,7 @@ def fork(
             first=len(entries),
         ),
     ]
+    scenario_file = scenario_files.carry(simulator.catalogue, objects, manifest.scenario_id)
     made.write_fork(
         EpochManifest(
             run_id=new_run,
@@ -150,6 +154,8 @@ def fork(
                 inherited=len(entries),
                 layout=chosen if moved else None,
             ),
+            scenario_file=scenario_file,
+            seconds_per_day=seconds_per_day,
         ),
         state=state,
         log=logged,

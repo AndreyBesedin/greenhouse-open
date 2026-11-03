@@ -16,7 +16,7 @@ import pytest
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.services import interrupted, leases
+from greenhouse_sim.services import interrupted, leases, scheduler
 from greenhouse_sim.services.run_store import EpochStore, FolderStore, Status, StoredRun
 from greenhouse_sim.services.scheduler import Scheduler
 from greenhouse_sim.services.simulator import Simulator
@@ -48,9 +48,7 @@ def _until(condition: Callable[[], bool], what: str) -> None:
 def simulator(tmp_path: Path) -> Iterator[Simulator]:
     with workers_support.short_simulator() as made:
         made.runs = FolderStore(tmp_path / "runs")
-        made.scheduler = Scheduler(
-            made, tmp_path / "runs", limit=2, made_by=workers_support.MADE_BY
-        )
+        made.scheduler = Scheduler(made, tmp_path / "runs", limit=2)
         yield made
 
 
@@ -117,14 +115,14 @@ def test_an_epoch_asked_to_be_resumed_wrongly_is_refused(
     assert done.manifest().status == Status.FINISHED
 
 
-def _workers_that_end_at_once(simulator: Simulator, tmp_path: Path) -> Scheduler:
-    """Workers that cannot build their simulator: each ends at once, having
-    taken up nothing."""
+def _workers_that_end_at_once(
+    simulator: Simulator, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Scheduler:
+    """Workers that each end at once, having taken up nothing."""
     assert simulator.scheduler is not None
     simulator.scheduler.close()
-    simulator.scheduler = Scheduler(
-        simulator, tmp_path / "runs", limit=1, made_by="no_such_module:no_such_function"
-    )
+    monkeypatch.setattr(scheduler, "work", workers_support.ends_at_once)
+    simulator.scheduler = Scheduler(simulator, tmp_path / "runs", limit=1)
     return simulator.scheduler
 
 
@@ -134,13 +132,13 @@ def _resume_path(kept: EpochStore) -> str:
 
 @pytest.mark.parametrize("days", [1, 0])
 def test_an_epoch_whose_resuming_worker_ends_before_taking_it_up_is_still_interrupted(
-    simulator: Simulator, tmp_path: Path, days: int
+    simulator: Simulator, tmp_path: Path, days: int, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     assert simulator.runs is not None
     kept = queued(simulator, simulator.runs, SHORT)
     assert execute(simulator, kept, Stepped([DAY_S][:days])) == Status.INTERRUPTED
     assert len(kept.commits()) == days
-    scheduling = _workers_that_end_at_once(simulator, tmp_path)
+    scheduling = _workers_that_end_at_once(simulator, tmp_path, monkeypatch)
 
     resumed = respond(simulator, "POST", _resume_path(kept))
 
@@ -168,7 +166,7 @@ def test_two_requests_to_resume_an_epoch_are_never_looking_for_its_producer_toge
     simulator.runs.put(
         f"{kept.run_id}/{kept.epoch}/manifest.json", running.model_dump_json().encode()
     )
-    _workers_that_end_at_once(simulator, tmp_path)
+    _workers_that_end_at_once(simulator, tmp_path, monkeypatch)
     # Each look for the producer takes a while, and counts who else is looking.
     looking = {"now": 0, "most": 0}
     counting = threading.Lock()

@@ -4,8 +4,9 @@ import type { SceneState } from "./scene/sceneLoad";
 import type { SceneSource } from "./scene/source";
 
 /** What a source draws; a scenario's scene is before its first day, unless
- * its crop is drawn on a later one (`day`). */
-function describeSource(source: SceneSource, day = 0): string {
+ * its crop is drawn on a later one (`day`), and null says nothing of its day, as
+ * of a scene that could not be drawn. */
+function describeSource(source: SceneSource, day: number | null = 0): string {
   switch (source.kind) {
     case "reference":
       return "empty grid";
@@ -49,13 +50,13 @@ export function SceneStatus({ source, state }: { source: SceneSource; state: Sce
     case "unavailable":
       return (
         <span data-testid="scene-status" role="alert">
-          The {describeSource(source)} is not available: {state.reason}.
+          The {describeSource(source, null)} is not available: {state.reason}.
         </span>
       );
     case "rejected":
       return (
         <span data-testid="scene-status" role="alert">
-          The {describeSource(source)} was rejected: {state.problems.join("; ")}.
+          The {describeSource(source, null)} was rejected: {state.problems.join("; ")}.
         </span>
       );
     case "loaded":
