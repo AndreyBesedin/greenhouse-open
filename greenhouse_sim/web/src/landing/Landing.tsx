@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BUILDER_PATH } from "../builder/Builder";
 import { GithubMark } from "../icons";
 import { loadScenarios, SCENARIOS_URL, type ScenariosState } from "../scenarios";
@@ -14,6 +14,7 @@ import {
   KEPT_SIZE_NOTE,
   keptText,
   loadStoredRuns,
+  RUNS_ASKED_EVERY_MS,
   runCounts,
   type StoredRun,
   type StoredRunsState,
@@ -45,11 +46,20 @@ export function Landing({
   hash?: string;
 }) {
   const scenarios = useLoad(SCENARIOS_URL, (_url, fetchFn) => loadScenarios(fetchFn));
-  // The runs kept are asked for again each time one is started or removed.
+  // The runs kept are asked for again each time one is started or removed, and
+  // while one is being computed, so that its progress and status move on.
   const [asked, setAsked] = useState(0);
   const runs = useLoad(asked, (_asked, fetchFn) => loadStoredRuns(fetchFn), {
     key: (each) => `runs-${each}`,
   });
+  // Counted from each answer, so that a slow one is never given up for the next.
+  useEffect(() => {
+    if (runs.status !== "loaded" || !runs.runs.some(isComputing)) {
+      return;
+    }
+    const next = setTimeout(() => setAsked((previous) => previous + 1), RUNS_ASKED_EVERY_MS);
+    return () => clearTimeout(next);
+  }, [runs]);
   const [opened, setOpened] = useState(() => newRunScenario(hash) ?? runsScenario(hash));
   const [form, setForm] = useState(() => newRunScenario(hash) !== null);
   const chosen =
