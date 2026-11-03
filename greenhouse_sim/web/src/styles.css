@@ -1809,6 +1809,23 @@ body {
   color: var(--panel-link);
 }
 
+.landing-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.landing-upload .landing-link-button {
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.landing-problem {
+  color: var(--panel-warn);
+}
+
 .landing-combobox {
   position: relative;
   display: grid;
