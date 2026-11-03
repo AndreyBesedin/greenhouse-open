@@ -699,16 +699,21 @@ class EpochStore:
         requests and answers, which no commit names. The names removed."""
         commits = self.commits()
         kept = {f"{self._home}/manifest.json", f"{self._home}/interventions.jsonl"}
-        kept.update(self.objects.names(f"{self._home}/requests/"))
-        kept.update(self.objects.names(f"{self._home}/answers/"))
         for commit in commits:
             kept.add(f"{self._home}/commits/{commit.seq:0{SEQ_DIGITS}d}.json")
             kept.update(f"{self._home}/segments/{commit.segment}/{kind}.parquet" for kind in Kind)
             if commit.checkpoint is not None:
                 kept.add(commit.checkpoint)
+        # By their folders and not by a listing, in which one asked meanwhile
+        # would be missing: the asker is in another process.
+        spared = (f"{self._home}/requests/", f"{self._home}/answers/")
         removed = []
         for name in self.objects.names(f"{self._home}/"):
-            if name not in kept and name != f"{self._home}/{leases.LEASE}":
+            if (
+                name not in kept
+                and name != f"{self._home}/{leases.LEASE}"
+                and not name.startswith(spared)
+            ):
                 self.objects.delete(name)
                 removed.append(name)
         return removed
