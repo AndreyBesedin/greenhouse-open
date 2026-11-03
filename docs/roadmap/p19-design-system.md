@@ -438,7 +438,11 @@ the status of a failed run reads the same with colour removed.
 
 ## Open questions
 
-One: whether the no-tolerance images stay stable as more of them are drawn. If the
-pinned container is not stable to the pixel for a page's text, the fallback is a
-comparison of computed styles per element: exact and with no images, but blind to
-layout.
+1. **Whether the no-tolerance images stay stable** as more of them are drawn. They
+   did over two runs of one commit. If the pinned container is not stable to the
+   pixel for a page's text, the fallback is a comparison of computed styles per
+   element: exact and with no images, but blind to layout.
+2. **A change of `font-weight` alone.** The pinned container draws 600 no
+   differently from normal in these images, so they may not see it, and the digest
+   that does goes at P19.6. To settle before P19.6: a test of the components'
+   computed weights, on the reference page, is the small answer.
