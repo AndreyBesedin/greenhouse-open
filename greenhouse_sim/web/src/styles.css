@@ -1678,6 +1678,23 @@ body {
   color: var(--panel-muted);
 }
 
+/* A scenario handed on as a file (P17.11). */
+.builder-share {
+  margin-top: 12px;
+}
+
+.builder-share button {
+  min-height: 44px;
+  margin-top: 8px;
+}
+
+.builder-share-recording {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
 .builder-view {
   position: relative;
   min-width: 0;
