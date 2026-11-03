@@ -55,6 +55,14 @@ interface Editing {
   saved: { draftId: string; revision: number; installation: Installation } | null;
 }
 
+/** A draft saved: its identifier, its revision and the house that revision
+ * holds. */
+interface Kept {
+  draftId: string;
+  revision: number;
+  house: Installation;
+}
+
 /** A scenario run from a draft, and where the viewer opens it. */
 interface Ran {
   scenarioId: string;
@@ -431,9 +439,9 @@ export function Builder({
     setEditing((now) => (now === null ? now : { ...now, history: move(now.history) }));
   }
 
-  /** The draft shown saved as its next revision: which revision, or none
-   * if it was not saved. */
-  async function save(): Promise<{ draftId: string; revision: number } | null> {
+  /** The draft shown saved as its next revision: which revision, and the
+   * house it holds, or none if it was not saved. */
+  async function save(): Promise<Kept | null> {
     if (editing === null) {
       return null;
     }
@@ -462,25 +470,40 @@ export function Builder({
     );
     setStatus(`Saved as revision ${draft.revision}.`);
     await refreshDrafts();
-    return { draftId: draft.draft_id, revision: draft.revision };
+    return { draftId: draft.draft_id, revision: draft.revision, house: sent };
   }
 
   /** The revision to run: the one saved, or the draft saved now if it
    * holds what is not. */
-  async function saved(): Promise<{ draftId: string; revision: number } | null> {
+  async function saved(): Promise<Kept | null> {
     if (editing === null) {
       return null;
     }
     if (editing.saved !== null && madeOn(editing) !== null && !unsaved(editing)) {
-      return { draftId: editing.saved.draftId, revision: editing.saved.revision };
+      const { draftId, revision } = editing.saved;
+      return { draftId, revision, house: editing.history.present };
     }
     return save();
   }
 
+  /** Whether the draft shown is the house that was saved: an edit made while
+   * the save was on its way is kept unsaved, and no finishing action may
+   * leave without it. */
+  function stillSaved(kept: Kept): boolean {
+    return shown.current !== null && same(shown.current.history.present, kept.house);
+  }
+
   async function saveAndGoBack(): Promise<void> {
-    if ((await saved()) !== null) {
-      navigate(LANDING_PATH);
+    const asked = session.current;
+    const kept = await saved();
+    if (kept === null || session.current !== asked) {
+      return;
     }
+    if (!stillSaved(kept)) {
+      setStatus("The draft changed while it was being saved: save it again before leaving.");
+      return;
+    }
+    navigate(LANDING_PATH);
   }
 
   /** The draft saved, run as a scenario of its own under the settings of the
@@ -496,8 +519,17 @@ export function Builder({
     if (kept === null || session.current !== asked) {
       return;
     }
+    if (!stillSaved(kept)) {
+      setStatus("The draft changed while it was being saved: save it again to run it.");
+      return;
+    }
     setBusy(true);
     const registered = await runDraft(kept.draftId, kept.revision, settings);
+    // Left for another draft meanwhile: no run is started for this one.
+    if (session.current !== asked) {
+      setBusy(false);
+      return;
+    }
     if (!registered.ok) {
       setBusy(false);
       setStatus(`It does not run: ${registered.problem}`);
