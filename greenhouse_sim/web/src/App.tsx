@@ -223,7 +223,7 @@ export function App({
     onClockMoved: stopClimatePlay,
   });
   // What a change in a replay's panels forks from: the moment they show.
-  const forkFrom = forkMoment(fieldProgress.shown?.field.timeS, replay?.momentS ?? null);
+  const forkFrom = forkMoment(fieldName, fieldProgress.shown?.field.timeS, replay?.momentS ?? null);
   // A running epoch's plan grows while it is replayed: the scene follows it.
   const replayedSource = replay?.source;
   useEffect(() => {
