@@ -46,6 +46,12 @@ restart, a new epoch of the scenario's own run, cancels what is pending and
 forgets the plans, and a run played to its end cancels what is left of
 them. Started over with its equipment moved, the run keeps its target
 changes, each at its moment: the same run, rearranged (decision 0049).
+
+A change given to a run kept in the store is the epoch's own (P17.8, decision
+0065): it is written to the epoch's log, at the moment of the clock it is given
+at, before it is acted on, so that applying the log again gives the same epoch.
+One asked of an epoch a worker in another process works reaches it through the
+store (`take_changes`), the only channel there is between them.
 """
 
 import gzip
@@ -54,7 +60,7 @@ import logging
 import math
 import threading
 from bisect import bisect_right
-from collections import OrderedDict
+from collections import OrderedDict, deque
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass, replace
@@ -83,7 +89,7 @@ from greenhouse_protocol.contracts.gateway import STARTED_OVER, GatewayLimits, P
 from greenhouse_protocol.contracts.memory_gateway import InMemoryGateway
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
-from greenhouse_protocol.outcome import ActionOutcome, OutcomeStatus
+from greenhouse_protocol.outcome import RAN, ActionOutcome, OutcomeStatus
 from greenhouse_protocol.plan import (
     ActionKey,
     ActionState,
@@ -95,7 +101,7 @@ from greenhouse_protocol.plan import (
     PlannedAction,
     Principal,
 )
-from pydantic import BaseModel, ConfigDict, TypeAdapter
+from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
 
 from greenhouse_sim.climate.commands import TARGET_EVERY_S
 from greenhouse_sim.core.clock import DAY_S, run_day
@@ -108,17 +114,33 @@ from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.gateway import (
     LOCAL_OPERATOR,
     UNLIMITED,
+    Carried,
     RunExecutor,
     run_items,
     run_kinds,
     run_unhonoured,
 )
 from greenhouse_sim.services.heat_log import heat_records
+from greenhouse_sim.services.interventions import (
+    ASKED,
+    LOGGED,
+    ActionsCancelled,
+    Logged,
+    PlanCancelled,
+    PlanGiven,
+    TargetsAsked,
+    TargetsChanged,
+    principal_of,
+    spelled,
+)
 from greenhouse_sim.services.policy_context import run_context
 from greenhouse_sim.services.run_store import (
+    Answer,
     EpochManifest,
     EpochStore,
     FolderStore,
+    Kind,
+    LogEntry,
     ObjectStore,
     Status,
     compress,
@@ -441,6 +463,16 @@ class Playback:
         self._stored_days = 0
         self._stored_outcomes = 0
         self._store_ended = False
+        # How many entries its epoch's log holds, those logged to be applied
+        # again when the clock reaches them, whether they are being applied up
+        # to where the epoch is kept, and the requests taken from the store.
+        self._logged = 0
+        self._due: deque[LogEntry] = deque()
+        self._replaying = False
+        self._taken: set[str] | None = None
+        self._taking = threading.Lock()
+        # The stored outcomes that have told what a crop action did.
+        self._outcomes_told: set[int] = set()
         self._time_s = 0.0
         self._playing = False
         self._seconds_per_day = seconds_per_day
@@ -484,6 +516,7 @@ class Playback:
         )
         self._gateway.epoch = self._epoch
         if targets:
+            self._log(min(t[0] for t in targets), TargetsChanged(changes=tuple(targets)))
             self._plan_targets(targets)
         self._stopped = threading.Event()
         self._failure: Exception | None = None
@@ -522,7 +555,12 @@ class Playback:
         the epoch's next commits. Only for a playback with an epoch, before it
         has begun or stepped; the state the days after start from is the
         checkpoint the epoch's last commit names, restored in the simulator
-        first (`workers.resume`)."""
+        first (`workers.resume`).
+
+        Its log is applied again, by its sequence numbers, each entry at the
+        moment it was given: those up to `time_s` now, so that its gateway and
+        its plan stand as they stood there, and any past it, logged before a
+        crash and named by no commit, as the clock reaches them."""
         days = round(time_s / DAY_S)
         if days * DAY_S != time_s or not 0 <= days <= round(self.end_s / DAY_S):
             raise InvalidRequest(f"an epoch is carried on from a day's end, not {time_s:.15g} s")
@@ -531,7 +569,175 @@ class Playback:
                 raise Conflict(f"the playback of {self.run_id} has begun or keeps no epoch")
             self._worked = [(_NOTHING, _NOTHING)] * days
             self._stored_days = days
-            self._time_s = self._gateway_to(time_s)
+            logged = self._store.logged()
+            self._logged = len(logged)
+            self._due = deque(logged)
+            self._replaying = True
+            try:
+                self._time_s = self._gateway_to(time_s)
+                self._carry_kept(time_s)
+                self._gateway.advance(self._executor.instant(time_s))
+            finally:
+                self._replaying = False
+            self._check_outcomes_kept()
+            self._stored_outcomes = sum(
+                commit.counts[Kind.OUTCOMES] for commit in self._store.commits()
+            )
+
+    def planned_by(self, epoch: int, logged: Sequence[LogEntry]) -> RunPlan:
+        """The plan an epoch's log makes of this run, which has not begun: what
+        a reader of the epoch draws it under. Nothing is written or worked out,
+        and what it holds at a moment is its log's up to then."""
+        with self._lock:
+            self._epoch = self._gateway.epoch = epoch
+            self._replaying = True
+            for entry in logged:
+                self._gateway.advance(self._executor.instant(entry.given_s))
+                self._apply(entry)
+            self._replaying = False
+            return self._executor.plan()
+
+    def _carry_kept(self, before_s: float) -> None:
+        """What the run made of crop actions on the days before `before_s`,
+        which are not worked out again: as their outcomes in the store say. One
+        not yet ended there, its crew still at it, is not said by anything kept,
+        and the epoch cannot be carried on from there."""
+        assert self._store is not None
+        waiting = self._executor.crop_waiting_before(self._executor.instant(before_s))
+        if not waiting:
+            return
+        kept = self._store.outcomes().records
+        carried = {}
+        for assignment in waiting:
+            # Two plans may ask for the same action at one moment: their outcomes
+            # are in the order they were given in, and each tells of one.
+            told = next(
+                (
+                    index
+                    for index, outcome in enumerate(kept)
+                    if index not in self._outcomes_told and _ended_as(outcome, assignment)
+                ),
+                None,
+            )
+            if told is None:
+                raise Conflict(
+                    f"the crop action {assignment.ref} of {self.run_id} was still being carried "
+                    "out at the epoch's last commit, which does not say what it did"
+                )
+            self._outcomes_told.add(told)
+            ended = kept[told]
+            carried[assignment.assignment_id] = Carried(
+                effect=ended.effect,
+                event_id=ended.event_id,
+                refusal=None if ended.status in RAN else ended.reason,
+            )
+        self._executor.carried_out(carried)
+
+    def _check_outcomes_kept(self) -> None:
+        """The outcomes the log gives when applied again are those the epoch
+        kept: a log that gives others is not this epoch's."""
+        assert self._store is not None
+        kept = self._store.outcomes().records
+        if not kept:
+            return
+        given = self._gateway.outcomes(0, len(kept)).outcomes
+        if tuple(kept) != tuple(given):
+            raise Conflict(
+                f"the log of epoch {self._epoch} of {self.run_id}, applied again, does not give "
+                "the outcomes it kept"
+            )
+
+    def take_changes(self) -> None:
+        """Takes the changes asked of its epoch through the store and not yet
+        taken, in the order they were asked: each logged and acted on as if it
+        were given here, or, if it is refused, answered with why. A request
+        named by its log, or answered, was taken before a crash and is not
+        taken again. Asked of whichever process works the epoch, between its
+        moments. None is taken while entries logged before a crash wait for
+        the clock to reach them: a change is given after those given before it."""
+        store = self._store
+        if store is None or self._due:
+            return
+        asked = store.requests()
+        if not asked:
+            return
+        with self._taking:
+            if self._taken is None:
+                self._taken = {entry.request for entry in store.logged() if entry.request}
+                self._taken |= {answer.request for answer in store.answers()}
+            for request in asked:
+                if request not in self._taken:
+                    self._taken.add(request)
+                    self._take(store, request)
+
+    def _take(self, store: EpochStore, request: str) -> None:
+        refused: Receipt | None = None
+        try:
+            match ASKED.validate_json(store.request(request) or b""):
+                case TargetsAsked(targets=targets):
+                    self.set_targets(targets, request=request)
+                case PlanGiven(plan=plan):
+                    refused = self.submit(plan, request=request)
+                case ActionsCancelled(keys=keys):
+                    refused = self.cancel(keys, request=request)
+                case PlanCancelled(plan_id=plan_id, revision=revision, epoch=epoch):
+                    refused = self.cancel_plan(
+                        plan_id, revision=revision, epoch=epoch, request=request
+                    )
+        except ServiceError as error:
+            store.answer(Answer(request=request, reason=error.message))
+        except ValidationError as error:
+            store.answer(
+                Answer(request=request, reason=f"not a change: {error.errors()[0]['msg']}")
+            )
+        else:
+            if refused is not None and not refused.accepted:
+                store.answer(Answer(request=request, reason="; ".join(refused.errors)))
+
+    def _log(
+        self,
+        at_s: float,
+        what: Logged,
+        *,
+        by: Principal = LOCAL_OPERATOR,
+        request: str | None = None,
+    ) -> None:
+        """Writes a change to its epoch's log, if it keeps one, before it is
+        acted on (decision 0065)."""
+        if self._store is None:
+            return
+        self._store.append_log(
+            LogEntry(
+                seq=self._logged,
+                at_s=at_s,
+                given_s=self._time_s,
+                by=spelled(by),
+                what=what.model_dump(mode="json"),
+                request=request,
+            )
+        )
+        self._logged += 1
+
+    def _apply(self, entry: LogEntry) -> None:
+        """Acts on an entry of its log again, as it was acted on when it was
+        given. What was refused then is refused now, and changes nothing."""
+        by = principal_of(entry.by)
+        try:
+            match LOGGED.validate_python(entry.what):
+                case TargetsChanged(changes=changes):
+                    self._plan_targets(changes)
+                case PlanGiven(plan=plan):
+                    self._given(plan, by=by)
+                case ActionsCancelled(keys=keys):
+                    self._written(lambda: self._gateway.cancel(keys, by=by))
+                case PlanCancelled(plan_id=plan_id, revision=revision, epoch=epoch):
+                    self._written(
+                        lambda: self._gateway.cancel_plan(
+                            plan_id, revision=revision, epoch=epoch, by=by
+                        )
+                    )
+        except InvalidRequest:
+            logger.info("entry %d of the log of %s is refused again", entry.seq, self.run_id)
 
     def step_to(self, time_s: float) -> PlaybackState:
         """Works its run out to `time_s` into it and moves its clock there,
@@ -722,6 +928,7 @@ class Playback:
                     assigned = self._executor.crop_actions_on(day)
                     self._changed.clear()
                 self._keep_closed_days()
+                self.take_changes()
                 if day >= days:
                     # Every day worked out, until a change has some worked again.
                     self._changed.wait(WAIT_STEP_S)
@@ -771,13 +978,18 @@ class Playback:
             closed = min(passed, len(self._worked))
             first, run = self._stored_days, self._run()
             todo = list(enumerate(self._worked))[first:closed]
-            outcomes = self._outcomes_until(closed * DAY_S) if todo else []
+            # Each day's by its own end, however many days are written at once,
+            # which depends on the pace: an epoch's commits do not.
+            outcomes: list[list[ActionOutcome]] = []
+            position = self._stored_outcomes
+            for day, _ in todo:
+                outcomes.append(self._outcomes_until((day + 1) * DAY_S, position))
+                position += len(outcomes[-1])
         if failed:
             self._end_store(Status.FAILED, store)
             return
         try:
-            for day, (observed, happened) in todo:
-                kept = outcomes if day == todo[-1][0] else []
+            for (day, (observed, happened)), kept in zip(todo, outcomes, strict=True):
                 store.commit(
                     day * DAY_S,
                     (day + 1) * DAY_S,
@@ -795,16 +1007,15 @@ class Playback:
         with self._lock:
             if self._store is store:
                 self._stored_days = closed
-                self._stored_outcomes += len(outcomes)
+                self._stored_outcomes += sum(map(len, outcomes))
         if closed == days and todo:
             self._end_store(Status.FINISHED, store)
 
-    def _outcomes_until(self, until_s: float) -> list[ActionOutcome]:
-        """The outcomes in its gateway's log not yet written to the store
-        that were delivered by `until_s` into the run, in the log's order."""
+    def _outcomes_until(self, until_s: float, position: int) -> list[ActionOutcome]:
+        """The outcomes in its gateway's log after `position` that were
+        delivered by `until_s` into the run, in the log's order."""
         limit = self.start + timedelta(seconds=until_s)
         found: list[ActionOutcome] = []
-        position = self._stored_outcomes
         while True:
             batch = self._gateway.outcomes(position, READ_OUTCOMES_AT_ONCE)
             for outcome in batch.outcomes:
@@ -927,7 +1138,24 @@ class Playback:
         changes = self._changes
         end = self._executor.instant(to_s)
         while True:
+            given_now = self._due and self._due[0].given_s <= self._executor.seconds(
+                self._executor.now
+            )
+            if self._replaying and not given_now:
+                # What it is told of ends at the moment it reached, as it did when
+                # its day was worked out then, and not at the next one; once all
+                # that was given at that moment is given, as it was before then.
+                self._carry_kept(to_s)
+                self._gateway.advance(self._executor.now)
             at = self._gateway.next_moment(end) or end
+            if self._due and self._executor.instant(self._due[0].given_s) <= at:
+                # An entry of its log, at the moment it was given.
+                at = self._executor.instant(self._due[0].given_s)
+                self._gateway.advance(at)
+                self._apply(self._due.popleft())
+                if self._changes != changes:
+                    return max(self._time_s, min(self._executor.seconds(at), self._worked_out_s()))
+                continue
             self._gateway.advance(at)
             if self._changes != changes:
                 return max(self._time_s, min(self._executor.seconds(at), self._worked_out_s()))
@@ -992,6 +1220,8 @@ class Playback:
                             self._store.set_status(Status.RUNNING)
                             self._stored_days = self._stored_outcomes = 0
                             self._store_ended = False
+                            self._logged = 0
+                            self._taken = None
                         self._time_s = 0.0
                         self._playing = True
                         # The scenario's own run again: what was pending is
@@ -1003,7 +1233,9 @@ class Playback:
                 return self._state()
         return successor.command(command)
 
-    def set_targets(self, targets: Mapping[str, float]) -> PlaybackState:
+    def set_targets(
+        self, targets: Mapping[str, float], *, request: str | None = None
+    ) -> PlaybackState:
         """Changes its run's targets from the clock's next minute on, in the
         same run and epoch (decision 0043): its records from then on are
         worked out again under them, the clock waiting at that minute until
@@ -1026,18 +1258,25 @@ class Playback:
                     self._simulator.catalogue,
                     replace(self._run(), plan=RunPlan.model_construct(actions=(*planned, *asked))),
                 )
+                self._log(moment, TargetsChanged(changes=changes), request=request)
                 self._plan_targets(changes)
                 return self._state()
-        return successor.set_targets(targets)
+        return successor.set_targets(targets, request=request)
 
     def _work_again_from(self, moment_s: float) -> None:
         """Has its records from `moment_s` on worked out again, the clock
-        waiting there meanwhile."""
+        waiting there meanwhile; unless its log is being applied up to where
+        the epoch is kept, whose days are not worked out again, and whose days
+        after are not worked out yet."""
+        if self._replaying:
+            return
         self._changes += 1
         self._again_from = moment_s if self._again_from is None else min(self._again_from, moment_s)
         self._changed.set()
 
-    def submit(self, plan: Plan, *, by: Principal = LOCAL_OPERATOR) -> Receipt:
+    def submit(
+        self, plan: Plan, *, by: Principal = LOCAL_OPERATOR, request: str | None = None
+    ) -> Receipt:
         """Gives its gateway a plan, or a revision of one, by `by`, the local
         operator unless said: its actions from the clock's moment on are the
         run's, each carried out or refused as the gateway and the run decide.
@@ -1046,10 +1285,18 @@ class Playback:
             successor = self._successor
             if successor is None:
                 self._advance()
+                if not self._gateway.finished:
+                    self._log(self._time_s, PlanGiven(plan=plan), by=by, request=request)
                 return self._given(plan, by=by)
-        return successor.submit(plan, by=by)
+        return successor.submit(plan, by=by, request=request)
 
-    def cancel(self, keys: Sequence[ActionKey], *, by: Principal = LOCAL_OPERATOR) -> Receipt:
+    def cancel(
+        self,
+        keys: Sequence[ActionKey],
+        *,
+        by: Principal = LOCAL_OPERATOR,
+        request: str | None = None,
+    ) -> Receipt:
         """Cancels chosen actions of its plans, by `by`, by the keys they
         stood under when seen: what waits for one is cancelled too, unless
         its plan says to proceed. A stale key, or one `by` may not cancel,
@@ -1059,11 +1306,21 @@ class Playback:
             successor = self._successor
             if successor is None:
                 self._advance()
+                if not self._gateway.finished:
+                    self._log(
+                        self._time_s, ActionsCancelled(keys=tuple(keys)), by=by, request=request
+                    )
                 return self._written(lambda: self._gateway.cancel(keys, by=by))
-        return successor.cancel(keys, by=by)
+        return successor.cancel(keys, by=by, request=request)
 
     def cancel_plan(
-        self, plan_id: str, *, revision: int, epoch: int, by: Principal = LOCAL_OPERATOR
+        self,
+        plan_id: str,
+        *,
+        revision: int,
+        epoch: int,
+        by: Principal = LOCAL_OPERATOR,
+        request: str | None = None,
     ) -> Receipt:
         """Cancels a whole plan, by `by`, as its `revision` in `epoch` stood:
         every action of it not started. Once replaced, the one in its place
@@ -1072,12 +1329,21 @@ class Playback:
             successor = self._successor
             if successor is None:
                 self._advance()
+                if not self._gateway.finished:
+                    self._log(
+                        self._time_s,
+                        PlanCancelled(plan_id=plan_id, revision=revision, epoch=epoch),
+                        by=by,
+                        request=request,
+                    )
                 return self._written(
                     lambda: self._gateway.cancel_plan(
                         plan_id, revision=revision, epoch=epoch, by=by
                     )
                 )
-        return successor.cancel_plan(plan_id, revision=revision, epoch=epoch, by=by)
+        return successor.cancel_plan(
+            plan_id, revision=revision, epoch=epoch, by=by, request=request
+        )
 
     def actions(
         self,
@@ -1217,6 +1483,16 @@ class Playback:
             [events for _, events in worked], after, limit, state.time_s
         )
         return RecordsAfter(records=records, next=next_, has_more=more, state=state)
+
+
+def _ended_as(outcome: ActionOutcome, assignment: Assignment) -> bool:
+    """Whether an outcome is the end of what `assignment` was given to do."""
+    return (
+        outcome.ref == assignment.ref
+        and outcome.action == assignment.action
+        and assignment.at in (outcome.started_at, outcome.due)
+        and (outcome.status in RAN or outcome.status == OutcomeStatus.REFUSED)
+    )
 
 
 def check_pace(seconds_per_day: float) -> None:
