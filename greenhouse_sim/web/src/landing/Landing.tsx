@@ -19,6 +19,7 @@ import {
   type StoredRunsState,
   startedText,
 } from "./storedRuns";
+import { UploadScenario } from "./UploadScenario";
 
 /** How many of the latest runs the page lists. */
 const RECENT_RUNS = 5;
@@ -102,6 +103,7 @@ export function Landing({
             <a href={BUILDER_PATH} className="landing-link-button landing-primary">
               Open the builder
             </a>
+            <UploadScenario navigate={navigate} />
           </section>
         </div>
         <section aria-labelledby="landing-recent">

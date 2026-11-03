@@ -1732,6 +1732,32 @@ body {
   color: var(--panel-muted);
 }
 
+/* A scenario handed on as a file, and the two ways out of the builder
+ * (P17.11). */
+.builder-share,
+.builder-finish {
+  margin-top: 12px;
+}
+
+.builder-share button,
+.builder-finish button {
+  min-height: 44px;
+  margin-top: 8px;
+}
+
+.builder-share-recording {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.builder-finish-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .builder-view {
   position: relative;
   min-width: 0;
@@ -1835,6 +1861,23 @@ body {
 .landing-primary {
   border-color: var(--panel-link);
   color: var(--panel-link);
+}
+
+.landing-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.landing-upload .landing-link-button {
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.landing-problem {
+  color: var(--panel-warn);
 }
 
 .landing-combobox {

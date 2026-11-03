@@ -212,7 +212,7 @@ export function App({
     momentS: replay?.momentS ?? null,
     source,
     setSource,
-    drawingField: fieldName !== null,
+    field: fieldName,
     fieldShownMoment: fieldProgress.shown?.field.timeS ?? null,
     fieldFailed: failed(fieldProgress.latest),
     onClockMoved: stopClimatePlay,

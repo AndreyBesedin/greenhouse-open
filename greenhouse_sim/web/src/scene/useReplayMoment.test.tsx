@@ -11,7 +11,7 @@ const SOURCE: SceneSource = { kind: "scenario", scenarioId: "climate_box", field
 interface Props {
   momentS: number | null;
   source?: SceneSource;
-  drawingField?: boolean;
+  field?: string | null;
   fieldShownMoment?: number | null;
   fieldFailed?: boolean;
 }
@@ -25,7 +25,7 @@ describe("the moment a replay draws", () => {
       momentS: props.momentS,
       source: props.source ?? SOURCE,
       setSource: props.setSource,
-      drawingField: props.drawingField ?? false,
+      field: props.field ?? null,
       fieldShownMoment: props.fieldShownMoment ?? null,
       fieldFailed: props.fieldFailed ?? false,
       onClockMoved: props.onMoved,
@@ -68,7 +68,7 @@ describe("the moment a replay draws", () => {
     const waiting = shown({
       momentS: 7200,
       source: { ...SOURCE, time: 3600 } as SceneSource,
-      drawingField: true,
+      field: "climate",
       fieldShownMoment: 0,
     });
     expect(waiting.setSource).not.toHaveBeenCalled();
@@ -77,7 +77,7 @@ describe("the moment a replay draws", () => {
     const arrived = shown({
       momentS: 7200,
       source: { ...SOURCE, time: 3600 } as SceneSource,
-      drawingField: true,
+      field: "climate",
       fieldShownMoment: 3600,
     });
     expect(arrived.setSource).toHaveBeenCalledOnce();
@@ -87,12 +87,29 @@ describe("the moment a replay draws", () => {
     const failed = shown({
       momentS: 7200,
       source: { ...SOURCE, time: 3600 } as SceneSource,
-      drawingField: true,
+      field: "climate",
       fieldShownMoment: 0,
       fieldFailed: true,
     });
 
     expect(failed.setSource).toHaveBeenCalledOnce();
+  });
+
+  it("is not held by a field that is not the climate's, which says no moment", () => {
+    // A prescribed field or the shear is the layout's, drawn at its time 0
+    // whatever the moment: waiting for its moment would wait for ever.
+    for (const field of ["shear", "prescribed"]) {
+      const held = shown({
+        momentS: 7200,
+        source: { ...SOURCE, field, time: 3600 } as SceneSource,
+        field,
+        fieldShownMoment: 0,
+      });
+
+      expect(held.setSource).toHaveBeenCalledOnce();
+      expect(held.onMoved).toHaveBeenCalledOnce();
+      rendered?.unmount();
+    }
   });
 
   it("changes only a scenario's source", () => {
