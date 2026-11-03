@@ -1,0 +1,432 @@
+# P19: The viewer's design system
+
+**Status:** proposed: the design below, with decision
+[0068](../decisions/0068-the-viewers-design-system-is-its-own-tokens-and-components.md),
+for review before any of it is built. Part of the
+[simulator roadmap](README.md).
+
+## Goal
+
+Every colour and size in the viewer has a name that says what it is for, every
+repeated control has one definition, and a test refuses what departs from them.
+This organises what exists. It adds no new look, and it does not touch how the
+scene is drawn.
+
+## The audit
+
+**Method.** At commit `28701e05`, in `greenhouse_sim/web/src`. Stylesheet figures
+are from `styles.css`, comments removed: values compared as written, per
+declaration, and outside the two `:root` blocks unless said. Source figures are
+from the 217 handwritten `.ts` and `.tsx` files (no tests, no `generated/`),
+with each opening tag read up to its own `>`. Sizes of controls were measured
+in Chromium at 1280 by 800 with every fold open, against the running simulator.
+Contrast is WCAG's ratio; a translucent panel is composed over white and over
+black, and the lower is given. Weights are `vite build`'s, on a copy of the
+viewer; the prototypes were not run, only weighed.
+
+**The stylesheet:** 2,395 lines, 358 rules, 242 classes, 1,067 declarations.
+
+| What | Found | Where it stands |
+| --- | --- | --- |
+| Hex colours | 35 distinct: 29 in `:root`, 7 outside, used 15 times (one is in both) | A bare search finds 49: 14 are issue numbers in comments |
+| `rgb()` colours | 6, all in `:root` | |
+| Custom properties | 22, 20 redefined in the light theme, all on `:root` | Named by place: `--panel-*` 9, `--chart-*` 8, `--landing-*` 2, `--replay-*` 2, `--label-*` 1 |
+| Font sizes | 14 distinct, 41 uses | 13 px has 15 of them; each page sets its own base: panels 13, builder 14, replay 14, landing 15 |
+| Radii | 13 distinct, 29 uses | 8, 6 and 4 px have 15 of them |
+| Paddings, gaps | 31 and 17 distinct, 63 and 60 uses | |
+| Font weights | 1, `600` | Family once, `z-index` once: neither needs a token |
+| Motion | No `transition`, `animation` or `@keyframes`; no `prefers-reduced-motion` | Nothing to reduce today |
+| Media queries | 1 | |
+| Classes by first word | `landing` 41, `replay` 27, `builder` 25, `timeline` 10, `panel` 6 | As selector occurrences: 62, 34, 40, 10, 30 |
+
+**The raw colours** the guard misses, because it reads `color` and `background`
+alone: `#c0392b` (4 uses), `#2b7bb9` (4), `#ff8c1a` (2), `#0072b2` (2), `#2e86c1`,
+`#e6a800`, `#2e8b57`, in `stroke`, `fill` and one `border`: chart lines, which
+are the same in both themes. Two also stand in TypeScript: `WIND_COLOR` and
+`SUN_COLOR` (`weather/weather.ts`), so a panel and the scene can drift apart.
+
+**The sources:**
+
+| Element | Count | How it is made today |
+| --- | --- | --- |
+| `<button>` | 82 in 33 files | 64 with no class, drawn by the browser (a contextual rule gives some a margin or a height); the rest carry 13 classes among them |
+| `<a>` styled as a button | 9 of 16 | `.landing-link-button` 7, `.home-button`, `.replay-back` |
+| Rules naming a button | 10 | Plus contextual ones such as `.builder-share button` |
+| `<label>`, `<input>`, `<select>` | 55, 54, 20 | 49 inputs, all selects and 26 labels with no class; `.landing-field`, `.builder-field`, `.builder-give-field` |
+| `<details>` | 19 in 14 files | 8 fold classes, listed together in three rules; `folds.ts` keeps their state |
+| `role="alert"`, `role="status"` | 29 in 21 files, 6 in 4 | 17 are a bare `<p role="alert">`, in the text's colour |
+| `<input type="range">` | 8 in 6 files | Native; the replay's timeline is one `role="slider"` of its own |
+| `<dialog>` | 1 | `RunsDialog.tsx` |
+| Cards | 4 looks | `.landing-card` (radius 12, padding 24), `PanelCard` (4 uses in one file, title on its outline), `.builder-chosen` (radius 4, padding 8), the panels over the view (radius 6, one selector list) |
+| Status chip | 1 | `StatusChip` in `landing/RunParts.tsx`, in words |
+| `<svg>` | 14 in 10 files | 5 icons in 2 files (`HomeButton`, `ReplayTransport`), 9 charts in 8 |
+| `style=` | 13 in 9 files | All computed; see below |
+| Colour literals in TypeScript | 55 in 16 files, 47 distinct | The scene's palette; see below |
+
+**Inline styles, all 13 computed:** a position or size from data (`ReplayTimeline`
+4, `ClimateSchedule`, `CameraView`, the moved `Hud`) or a colour that is the
+scene's or a scale's, in a legend (`CategoryLegend`, `CfdLegend`, `ScalarLegend`,
+`FieldLegend`, `SeenInTheView`, `CameraView`). None holds a design value, and
+none needs to go.
+
+**Controls' heights,** the same in both themes:
+
+| Page | Controls | Under 44 px | Under 24 px | Typical |
+| --- | --- | --- | --- | --- |
+| Landing | 5 | 0 | 0 | 44, its search 48 |
+| Builder, first step | 20 | 20 | 20 | inputs and buttons 21, selects 19 |
+| Viewer, reference greenhouse, folds open | 63 | 60 | 59 | buttons 21, selects 19, summaries 16, ranges 16, checkboxes 13 |
+
+The replay's own controls are 44 px by their rules, and were not measured here.
+One browser test holds a target today: `e2e/home.spec.ts`, the Home link.
+
+**Contrast, at the worst backdrop:**
+
+| Tokens today | Dark | Light | Against |
+| --- | --- | --- | --- |
+| `--panel-text`, `-muted-strong`, `-muted`, `-warn`, `-link` | 11.00, 8.12, 6.19, 7.66, 6.64 | 15.97, 7.41, 5.67, 5.88, 4.63 | 4.5, passes |
+| `--panel-accent` | 4.81 | 4.63 | 4.5, passes |
+| `--chart-soft`, as text in a key | 4.36 | 2.64 | 4.5, fails |
+| `--panel-rule`, the only outline of every bordered button | 1.49 | 1.22 | 3, if it is what identifies the control; the button's words do |
+| Chart lines, the same in both themes | `#c0392b` 2.46, `#0072b2` 2.58, `#2b7bb9` 2.96 | `#e6a800` 1.60, `#ff8c1a` 1.77 | 3, fails |
+
+**Tests that would feel a change of class name:** about 110 lines in 29 test
+files select by class, 28 of them in `e2e/builder.spec.ts`.
+
+**Screenshots:** 27 baselines, all of QA pages, at `threshold: 0.2` and 100
+pixels' tolerance (`playwright.visual.config.ts`), which a small change of a
+caption's colour can pass. Of the stylesheet they see the captions, the legends
+and the labels over the scene, in the light theme (`main.tsx` sets it for QA
+pages). They see no landing page, builder, replay or panel.
+
+**Theme.** There are not two mechanisms: `panelTheme.ts` writes `data-panels` on
+the document, and the stylesheet's second `:root` block reads it. What is
+scattered is around it: the name says *panels* though it colours every page; the
+control is only in the info panel (`InfoPanel.tsx`), so the landing page and the
+builder only read the stored choice (`main.tsx`); and `color-scheme:
+var(--panel-scheme)` is written in five rules. The scene does not follow it, by
+design (#208).
+
+## Why not a library, or modules
+
+Each weighed the same way: a button, a dialog, a slider, a text field and a chip
+or their nearest, in an empty React page, with what React alone weighs (219.2 kB)
+taken away.
+
+| | Scripts added | Styles added |
+| --- | --- | --- |
+| Material UI 9.5 | 226.5 kB | in its scripts |
+| Chakra UI 3.37 | 127.1 kB | in its scripts |
+| Mantine 9.7 | 124.5 kB | 248.4 kB |
+| React Aria Components 1.22 | 98.4 kB | none, nor a look |
+| Radix dialog and slider | 59.3 kB | none, nor a look |
+| Prototype of the seven components below | 1.36 kB | moved, not added |
+| Its reference page | 1.71 kB | |
+
+The viewer: 1,739.86 kB of scripts against 1,750, 28.40 kB of styles against 29.
+
+CSS modules, the viewer's 242 classes in one module and its 330 static
+`className` sites reading it (16 dynamic ones left):
+
+| | Scripts | Styles | Against the budget |
+| --- | --- | --- | --- |
+| Plain classes, today | 1,739.86 kB | 28.40 kB | |
+| Modules, Vite's default names | + 11.89 kB | + 5.42 kB | 1.75 kB over |
+| Modules, 5-character names | + 7.05 kB | − 3.66 kB | 3.09 kB left |
+
+A module's map of names has to ship as script. Short names repay most of the
+total, but take 70% of the room in scripts, leave a page's classes unreadable,
+and hash what the tests select by. What modules would add is scope, and the
+naming guard already holds that each class has an owner and a use. So: plain
+classes.
+
+## Design
+
+### Tokens
+
+In `src/design/tokens.css`, on `:root`, the only place a custom property is
+defined. A scale is what the stylesheet mostly uses already, so that the first
+steps replace values and do not change them.
+
+**Colour, by role.**
+
+| Token | Is | Today | Dark | Light |
+| --- | --- | --- | --- | --- |
+| `--surface-page` | a page's ground | `--landing-bg` | `#0b1220` | `#f4f6f3` |
+| `--surface-panel` | a panel, a card, a header | `--panel-bg` | `rgb(17 24 39 / 90%)` | `rgb(255 255 255 / 88%)` |
+| `--surface-label` | a label over the scene | `--label-bg` | `rgb(17 24 39 / 85%)` | `rgb(255 255 255 / 85%)` |
+| `--surface-backdrop` | behind a dialog | `--landing-backdrop` | `rgb(0 0 0 / 60%)` | `rgb(20 30 25 / 50%)` |
+| `--text` | text | `--panel-text` | `#e5e9f0` | `#000000` |
+| `--text-soft` | secondary text | `--panel-muted-strong` | `#c3cad6` | `#444444` |
+| `--text-muted` | notes | `--panel-muted` | `#a7b1c2` | `#555555` |
+| `--border` | a rule, an outline | `--panel-rule` | `#3d4a5f` | `#cccccc` |
+| `--action` | a link, a primary control, what is computed | `--panel-link` | `#8cb8ff` | `#1f5fbf` |
+| `--warn` | a problem | `--panel-warn` | `#ffb380` | `#8a3b12` |
+| `--mark` | a stripe under the pointer, a dashed QA outline | `--panel-accent` | `#e277b5` | `#aa3377` |
+| `--scheme` | the browser's own controls | `--panel-scheme` | `dark` | `light` |
+| `--chart-*` | a chart's face, ring and neutral lines | as named: `face`, `ring`, `neutral`, `strong`, `soft`, `off`, `faint`, `blue-text` | as today | as today |
+| `--data-*` | a chart's coloured lines, the same in both themes, named by hue, since what red means is each chart's | the raw colours above: `red`, `blue`, `sky`, `navy`, `amber`, `orange`, `green` | | |
+
+`--replay-track` and `--replay-hatch`, each used once, go back into their rules.
+
+**Sizes.**
+
+| Group | Tokens | px |
+| --- | --- | --- |
+| Type | `--font-xs`, `sm`, `md`, `lg`, `xl`, `2xl`, `3xl`, `4xl` | 12, 13, 14, 15, 16, 18, 22, 28 |
+| Spacing | `--space-1` to `--space-9` | 2, 4, 6, 8, 12, 16, 24, 32, 64 |
+| Radii | `--radius-sm`, `md`, `lg`, `xl`, `pill` | 4, 6, 8, 12, 999 |
+| Target | `--target` | 44 |
+| Focus | `--focus-width`, `--focus-offset` | 3, 2, in `--action` |
+
+On a copy, these replace 288 of the 333 such values written in pixels: 224 of
+254 spacings, 35 of 38 font sizes, 18 of 27 radii, 11 of 14 minimum sizes. Of
+the other 45, 5 are hairlines and offsets (below), and 40 are off the scale (10,
+14, 18 and 20 px of spacing; radii of 1, 2, 3, 7 and 14): these stay as they are,
+listed, until a visual step moves them. The stylesheet then weighs 31.16 kB,
+2.76 kB more (0.25 kB gzipped), over the budget of 29 kB: the budget goes to
+32 kB in the step that crosses it.
+
+**Motion:** none exists, so no token does. The first `transition` or `animation`
+adds its token, and a `prefers-reduced-motion: reduce` block in `tokens.css`
+that sets it to no time; a test requires the block once any `--motion-*` exists.
+
+### Components
+
+In `src/design/`, one file each, their rules in `src/design/components.css`. Their
+classes begin `ds-`, added to the naming guard as one first word; `field` and
+`timeline` are already features' words. Only `src/design/` may write a `.ds-`
+selector, so that no page restyles a component. A page places one (margin, grid
+area) through its own wrapper or its own class beside it.
+
+| Component | Why | Takes |
+| --- | --- | --- |
+| `Button`, `LinkButton` | 82 buttons and 9 links, in four families repeating one box | `tone` (plain, primary, danger), `size` (`target` 44 px by default, `compact`) |
+| `IconButton` | the replay's three transport buttons, and whatever comes | a required `label`, its name; a `src/icons/` icon inside |
+| `Field` | a label, its control, a note or a problem: `.landing-field`, `.builder-field`, `.builder-give-field` | a required `label`, `hint`, `problem`, the control |
+| `StatusChip` | exists, moves from `landing/RunParts.tsx` | a `tone`, and its words as a required string |
+| `Notice` | 35 alerts and statuses | `problem` or `status`, which sets the role |
+| `Fold` | 19 `<details>`, 8 of their classes listed in three rules | its summary; `folds.ts` keeps its state |
+
+**Not extracted, on the same audit:**
+
+- **`Dialog`:** one `<dialog>`, whose behaviour is the browser's. It is extracted
+  by the pull request that adds a second, as the new-run form may.
+- **`Card`:** four looks that share neither radius nor padding, and no behaviour.
+  `PanelCard` stays; the others stay classes.
+- **`Slider`:** eight native ranges, styled by a class on two of them, and one
+  timeline whose pointer logic is its own.
+- **Charts and tables:** 9 charts, 4 tables, each with its own marks. A chart
+  helper is not this project's.
+- **Icons:** `src/icons/`, as #472 adds it, is the one way to draw one. It stays
+  where it is, and the replay's four inline ones move into it. Its comment that
+  an icon alone "is not made with this" gives way to `IconButton`, whose `label`
+  names the button while its icon stays decoration.
+
+### Page layouts
+
+Each page's own stylesheet beside it, holding its grid and places, using tokens
+and components: no layout component. `.ds-page`, one class, gives a page its
+ground, text and scheme, which `.landing`, `.builder-side` and `.replay` each
+write out today. The panels stay in one sheet until their step.
+
+### Files
+
+```
+src/styles.css            imports only, in the cascade's order: main.tsx's one import
+src/design/tokens.css     every custom property, in both themes
+src/design/base.css       html, body, the focus ring, .visually-hidden
+src/design/components.css every .ds- rule
+src/design/*.tsx          the components, and theme.ts
+src/icons/                as #472 adds it
+src/landing/landing.css, src/builder/builder.css, src/replay/replay.css
+src/viewer.css            the panels: what is left of today's stylesheet, 1,522 lines
+src/qa/QaDesign.tsx       the reference page
+```
+
+Components do not import their CSS: the order of imports through the module graph
+would become the cascade's. Tried on a copy, this cut through `@import` builds
+to the same stylesheet, byte for byte. `@layer` is not used: it would change how
+today's contested rules resolve, and the order and the guard do its work.
+
+### Light and dark
+
+One mechanism: `src/design/theme.ts` (today's `panelTheme.ts`) writes `data-theme`
+on the document (today's `data-panels`), and `tokens.css` holds each colour once
+per theme. The key a person's choice is stored under, `greenhouse-sim.panels`,
+does not change, so that nobody's choice is lost. Dark stays the default, and QA
+pages stay light, as `main.tsx` sets them, so that their baselines stay.
+
+**The scene needs no token.** Three.js takes colours as values, not CSS, and
+`src/` reads no custom property from a script. The scene's background, materials,
+overlays and colour scales (55 literals in 16 files) stay in TypeScript, the same
+in both themes (#208). The flow is one way: a legend shows a scale's colour through
+`style`. Where a chart in a panel and the scene show one thing, wind and sun, a
+test holds `--data-blue` equal to `WIND_COLOR` and `--data-amber` to `SUN_COLOR`.
+
+### Accessibility
+
+| Rule | Today | Held by |
+| --- | --- | --- |
+| **Every control has a name** | 110 `aria-label`s by hand; icons `aria-hidden` (#472) | `label` is a required prop of `IconButton` and `Field`; a browser test asks each control on the reference page for its accessible name |
+| **Contrast:** text 4.5:1 on each surface it sits on; control outlines and chart lines 3:1 | Not stated, not checked; failures above | A test in `styles.test.ts` reads `tokens.css` and computes the declared pairs in both themes, translucent surfaces over white and black; today's failures are listed in it and removed by their visual step |
+| **Target size:** `size="target"` is 44 px; `compact` is for dense panels | 44 on landing and replay only | A browser test measures every control on the reference page; `home.spec.ts` stays |
+| **Focus:** one `:focus-visible` ring in `base.css` | On 2 controls; the browser's elsewhere | The guard refuses `outline: none` and any other `:focus-visible` rule; the reference page's baseline draws one focused |
+| **A status is never a colour alone** | `StatusChip` in words | Its words are a required string, and `Notice` holds text; the runs and findings use these |
+| **Reduced motion** | Nothing moves | The test above |
+
+`axe-core` is left out: a development dependency for what the types and these
+tests check, to weigh again if a page's structure starts to slip through.
+
+### The guard
+
+`styles.test.ts` is extended and reads every stylesheet through the entry. Each
+rule has a test that it can fail, as the file's rules do today.
+
+- **Colours:** no hex, colour function or colour name in any declaration, not just
+  `color` and `background`, outside `tokens.css`.
+- **Custom properties** are defined on `:root` in `tokens.css` only.
+- **Sizes:** `font-size`, `border-radius`, `gap`, `padding*`, `margin*`,
+  `min-height`, `min-width` and `outline*` are a token, or an allowed value.
+- **Sources:** `style=` holds no literal colour or pixel size, and a colour literal
+  stands only in the files listed.
+- **`.ds-`** selectors stand only in `src/design/`.
+
+Its exceptions, named in the test:
+
+- `0`, `auto`, `inherit`, `none`, `transparent`, `currentColor`, percentages;
+- `em` values, which follow their text (7 today, such as `.panel-card-title`'s);
+- 1 px hairlines and negative offsets that centre a mark (5);
+- a chart's geometry: `stroke-width`, `stroke-dasharray`, and text in a viewBox's
+  units (`.wind-compass-north`);
+- a place or size in a layout, unheld: `width`, `height`, `top`, `left`, `inset`,
+  `max-width`, a border's width;
+- the pattern of the replay's track;
+- the 13 computed `style=`, which hold no literal;
+- the palette's files in TypeScript, listed with what each draws;
+- `OFF_SCALE`, the values above by selector and property. It can only shrink: an
+  entry no longer in the stylesheet fails too.
+
+### The reference page
+
+**Yes: `/qa/design`,** `src/qa/QaDesign.tsx`, one more QA page, unlinked, taking
+its theme from its address. It shows each token and each component in each tone,
+size and state: disabled, a problem, one focused, every status.
+
+It earns its 1.71 kB because it is what CI can draw of a component with no
+simulator and no fixture: two baselines, one per theme, show every state a page
+reaches only with data. It is also where a browser test measures targets and
+names, and where a contributor looks first. It is not a second documentation, and
+no prose is kept on it. Storybook would weigh nothing in the bundle, but it is a
+second toolchain and build for what one page does, and decision 0014's pinned
+screenshots would still have to reach it.
+
+### How the first steps are held to no pixel
+
+Two proofs, merged before anything moves, so that a step cannot change the proof
+it is judged by.
+
+1. **The resolved digest.** A test replaces every `var()` with its value, for each
+   theme, drops the `:root` blocks and comments, and compares the digest of what
+   is left, in the entry's order, with a constant. With custom properties only on
+   `:root`, a substitution is exactly what the browser computes, and equal text in
+   equal order is an equal cascade. A token step's diff leaves the constant alone.
+   Tried on a copy: the 288 values, written as tokens, resolve to today's stylesheet
+   byte for byte. A change of the stylesheet meanwhile updates the constant in its
+   own diff. The test goes when selectors start to move (P19.6).
+2. **Page baselines at no tolerance.** `e2e/visual/pages.spec.ts`, 10 new images
+   drawn by CI: the landing page, the runs dialog, the builder's first step, the
+   replay and the viewer on `/view?scene=example`, each dark and light, with
+   `threshold: 0`, `maxDiffPixels: 0` and the canvas hidden, since the scene is
+   the other baselines' and CSS does not draw it. The visual job has no simulator,
+   so the page's few requests (`/api/scenarios`, `/api/runs`, `/api/drafts`, a
+   position) are answered from small committed fixtures (decision 0063, rule 3).
+   A page's image with no scene in it was about 65 kB here. They take over from the
+   digest for the component steps, whose selectors change and whose pixels must not.
+
+**What is disturbed.** Tokens, the split and the components disturb no baseline:
+if one moves, the step is wrong. Of the 27 QA baselines, only a visual step that
+reaches the captions, the legends or the scene's labels can move any: the caption's
+values (13 px, radius 6, padding 4 and 8) are on the scale, while the legend's
+swatches (radius 2), the label's radius (3) and `#ff8c1a` are the ones to watch.
+Each visual step redraws what it moves in CI, as decision 0014 says.
+
+## Steps
+
+Each under 500 lines by the risk gate's count, where a moved line counts twice, so
+a large cut goes in parts. A step that says *neutral* passes with no baseline and
+no digest changed.
+
+| Step | Scope | Proof | Status |
+| --- | --- | --- | --- |
+| P19.1 | The proofs: the resolved digest, page baselines and their fixtures. No style changes. The job is run twice, to show the no-tolerance images are stable. | adds them | Proposed |
+| P19.2 | `design/tokens.css` and `base.css` cut out behind `styles.css`'s imports; the 7 raw colours become `--data-*`, with the test against `WIND_COLOR` and `SUN_COLOR`; the guard on colours everywhere. | neutral | Proposed |
+| P19.3 | Colour tokens take their role names. | neutral | Proposed |
+| P19.4 | Type, radii and `--target`; the guard on them, with `OFF_SCALE`; the styles' budget raised. | neutral | Proposed |
+| P19.5 | Spacing, and the guard on it. Theme: `data-theme` and `design/theme.ts`. | neutral | Proposed |
+| P19.6 | `Button`, `LinkButton`, `IconButton`, `.ds-` rules and the guard on them; the reference page, its two baselines and its browser test; the contrast test with today's failures listed. The digest test goes. | neutral: nothing yet uses them | Proposed |
+| P19.7 | `Field`, `StatusChip`, `Notice`, `Fold`, on the reference page. | neutral | Proposed |
+| P19.8 | The landing page: its stylesheet moved in two parts, then its controls moved to components. **After the changes in progress to `RunsDialog.tsx` and the new-run form have merged,** since they touch the same lines. | neutral | Proposed |
+| P19.9 | The builder: its stylesheet, then its controls, `compact`. Selectors `e2e/builder.spec.ts` reads change with it, to roles where they can. | neutral | Proposed |
+| P19.10 | The replay: its stylesheet, its transport to `IconButton`, its four icons to `src/icons/`. | neutral | Proposed |
+| P19.11 | The viewer's panels, a folder a pull request; `Fold` first. Baselines of a run's panels are added first, with a fixture of one scenario's answers, as `/view?scene=example` shows few. | neutral | Proposed |
+| P19.12 | The named visual changes below, one pull request each, each taken or not on its own. | names what moves | Proposed |
+
+### Named visual changes
+
+Separate from the above, each seen in review, none required by it:
+
+| Change | Moves |
+| --- | --- |
+| Off-scale values onto the scale (`OFF_SCALE`, 40) | Page baselines; `renderer` and others with a legend or label |
+| One focus ring on every control | Keyboard focus only; the reference page |
+| `compact` at 24 px at least (WCAG 2.2's 2.5.8), from 13 to 21 | Panels and builder grow taller: 59 of 63 and 20 of 20 controls |
+| The four button families' differences: padding 12 or 18, a page's ground or none | Landing, replay |
+| `Button` drawn from tokens on the builder and panels, not by the browser | All panels: the largest change here |
+| Alerts in `--warn`: the 17 bare ones | Panels, when each shows |
+| Contrast: `--chart-soft`'s text, chart lines under 3:1 | Charts |
+| A first visit follows `prefers-color-scheme`, not always dark | First visit only |
+| `color-scheme` set once on `:root`, not in five rules | Scrollbars and controls outside those rules |
+
+## What must stay stable
+
+The scene's drawing, the 27 QA baselines, a person's stored theme, the bundle
+budget's check, and the viewer's behaviour and roles, which browser tests read.
+
+## Out of scope
+
+The scene's rendering and palette; any new visual design beyond the changes named
+above; the charts' drawing; a component library published for others; a new page.
+
+## Acceptance criteria
+
+- `styles.test.ts` fails on a raw colour or size anywhere outside the tokens, its
+  exceptions named, and `OFF_SCALE` holds only what is still there.
+- P19.1's digest and the page baselines are unchanged from before P19.2 to after
+  P19.5, and the page baselines through P19.11.
+- A control on the reference page has a name and its target, in both themes.
+- The contrast test computes every declared pair in both themes, and lists its
+  failures by name.
+- One mechanism sets the theme, and `panelTheme.ts` and `data-panels` are gone.
+- Scripts and styles stay within budget, and any raise says why.
+
+## Final QA scenario
+
+On the built viewer, in both themes: walk the landing page, the runs dialog, the
+builder and the replay, and open each panel of the reference greenhouse, by mouse
+and by keyboard alone. Each looks as before P19.2, but for the visual changes taken;
+focus is visible at each step; `/qa/design` shows each component in each state; and
+the status of a failed run reads the same with colour removed.
+
+## Open questions
+
+1. **The compact size.** Panels and the builder's forms hold most controls and are
+   far under 44 px. The design keeps two sizes, 44 for pages and `compact` for
+   density, with 24 px as a visual step; the builder's forms could instead take 44,
+   at the cost of about twice the height over 15 rows.
+2. **Is the panels' browser-drawn look kept?** Only 18 of 82 buttons have a class
+   of their own, so the panels and builder look unlike the landing page. Keeping
+   this is the neutral path. Drawing them from tokens is the largest visual step.
+3. **No-tolerance images in CI.** If the pinned container is not stable to the
+   pixel for a page's text, which P19.1 finds out, the fallback is a comparison of
+   computed styles per element: exact and with no images, but blind to layout.
