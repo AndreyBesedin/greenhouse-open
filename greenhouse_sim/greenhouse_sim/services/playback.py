@@ -106,6 +106,7 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
 from greenhouse_sim.climate.commands import TARGET_EVERY_S
 from greenhouse_sim.core.clock import DAY_S, run_day
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
+from greenhouse_sim.services import scenario_files
 from greenhouse_sim.services.checkpoints import make_checkpoint
 from greenhouse_sim.services.climate_runs import checked_actions, run_schedule
 from greenhouse_sim.services.crop_log import CropActionDone, crop_actions_done, crop_records
@@ -533,7 +534,16 @@ class Playback:
         )
 
     def _open_epoch(self, epochs: Epochs, fork: ForkOf | None = None) -> EpochStore:
-        """The epoch it is starting, in the run store."""
+        """The epoch it is starting, in the run store, with its scenario's file,
+        so that a worker can carry it on. A scenario that cannot be written as
+        one still plays here, and its epoch says it keeps none."""
+        try:
+            scenario_file = scenario_files.carry(
+                self._simulator.catalogue, epochs.objects, self.scenario_id
+            )
+        except ServiceError as error:
+            logger.warning("the epoch of %s keeps no scenario file: %s", self.run_id, error)
+            scenario_file = None
         return epochs.open(
             EpochManifest(
                 run_id=self.run_id,
@@ -544,6 +554,7 @@ class Playback:
                 duration_s=self.end_s,
                 created_at=datetime.now(UTC),
                 fork=fork,
+                scenario_file=scenario_file,
             )
         )
 

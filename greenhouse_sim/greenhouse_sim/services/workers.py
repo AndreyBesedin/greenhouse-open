@@ -26,6 +26,11 @@ given (`Playback.resume_at`).
 
 A change asked of the epoch reaches its worker through the store: the worker
 looks between its moments (`Playback.take_changes`).
+
+An epoch is started with what its worker needs (decision 0067): its scenario's
+file, if the scenario is not packaged, and its pace. One written before it kept
+them is given them when it is asked to go on, if this simulator still knows the
+run it is (`scenario_file_of`).
 """
 
 import json
@@ -37,6 +42,7 @@ from datetime import UTC, datetime
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
+from greenhouse_sim.services import scenario_files
 from greenhouse_sim.services.checkpoints import upload_checkpoint
 from greenhouse_sim.services.errors import Conflict, InvalidRequest
 from greenhouse_sim.services.fields import air_through_a_run
@@ -99,16 +105,19 @@ def queued(
     *,
     layout: str | None = None,
     seed: int | None = None,
+    seconds_per_day: float | None = None,
 ) -> EpochStore:
     """A new epoch of the run of `scenario_id` at `layout` and `seed`, in
-    `objects`, `queued`: the run's next epoch, its manifest written. A
-    scenario, a layout or a seed refused starts nothing. Whoever starts
-    epochs of one store does it one at a time, so that two are never given a
-    number."""
+    `objects`, `queued`: the run's next epoch, its manifest written last, with
+    all a worker in another process needs to run it. A scenario, a layout or a
+    seed refused starts nothing, as does a scenario that cannot be written as a
+    file. Whoever starts epochs of one store does it one at a time, so that two
+    are never given a number."""
     config = scenario(simulator.catalogue, scenario_id)
     chosen = layout_name(layout or DEFAULT_LAYOUT)
     _, run_id = air_through_a_run(simulator, RunRequest(scenario_id, layout=chosen, seed=seed))
     started = stored_epochs(objects, run_id)
+    scenario_file = scenario_files.carry(simulator.catalogue, objects, scenario_id)
     return EpochStore.create(
         objects,
         EpochManifest(
@@ -119,6 +128,8 @@ def queued(
             layout=chosen,
             duration_s=config.duration_days * DAY_S,
             created_at=datetime.now(UTC),
+            scenario_file=scenario_file,
+            seconds_per_day=seconds_per_day,
         ),
     )
 
@@ -162,6 +173,35 @@ def check_resumable(epoch: EpochStore) -> float:
             "from which to carry it on"
         )
     return last.end_s
+
+
+def scenario_file_of(simulator: Simulator, epoch: EpochStore) -> str | None:
+    """The scenario file a worker of this epoch is to read: the one it names,
+    which must be there, or none if its scenario is packaged. An epoch started
+    before epochs named one is given it now if this simulator knows its
+    scenario as the run it is, so that its id never moves; else a worker could
+    not run it, and it is refused, saying why."""
+    manifest = epoch.manifest()
+    which = f"epoch {epoch.epoch} of {epoch.run_id}"
+    if manifest.scenario_file is not None:
+        if epoch.objects.size(scenario_files.kept_name(manifest.scenario_file)) is None:
+            raise Conflict(f"{which}: the scenario file it names is gone from the store")
+        return manifest.scenario_file
+    entry = simulator.catalogue.entry(manifest.scenario_id)
+    if entry is None:
+        raise Conflict(
+            f"{which} keeps no file of its scenario {manifest.scenario_id!r}, which this "
+            "simulator does not know: upload the scenario's file to carry it on"
+        )
+    if entry.packaged:
+        return None
+    asked = RunRequest(manifest.scenario_id, layout=manifest.layout, seed=manifest.seed)
+    if air_through_a_run(simulator, asked)[1] != manifest.run_id:
+        raise Conflict(
+            f"{which} keeps no file of its scenario {manifest.scenario_id!r}, which this "
+            "simulator knows as another run"
+        )
+    return scenario_files.carry(simulator.catalogue, epoch.objects, manifest.scenario_id)
 
 
 def resume(

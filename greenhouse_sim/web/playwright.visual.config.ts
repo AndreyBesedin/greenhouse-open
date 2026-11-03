@@ -27,8 +27,9 @@ export default defineConfig({
   testDir: "e2e/visual",
   snapshotPathTemplate: "{testDir}/__screenshots__/{arg}-{platform}{ext}",
   // A comparison never overwrites a baseline unless asked to
-  // (--update-snapshots). A missing one is drawn into the test's results and
-  // the test fails, which is how CI hands over a first baseline.
+  // (--update-snapshots). A missing one is written, and its comparison passes;
+  // `pages.spec.ts` fails it, so that CI hands over what it drew. The other specs
+  // do not: a missing baseline of theirs passes unseen.
   updateSnapshots: "missing",
   expect: {
     timeout: SETTLE_TIMEOUT_MS,
