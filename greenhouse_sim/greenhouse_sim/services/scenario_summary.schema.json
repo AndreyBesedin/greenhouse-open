@@ -109,10 +109,6 @@
       ],
       "default": null,
       "title": "Thermostat"
-    },
-    "packaged": {
-      "title": "Packaged",
-      "type": "boolean"
     }
   },
   "required": [
@@ -127,8 +123,7 @@
     "opening_day",
     "layouts",
     "weathers",
-    "thermostat",
-    "packaged"
+    "thermostat"
   ],
   "title": "ScenarioSummary",
   "type": "object"

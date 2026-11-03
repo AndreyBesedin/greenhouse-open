@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { entityBounds, type OverlayPrimitive } from "../debug/overlays";
-import { followAddress } from "../landing/follow";
 import { HomeButton } from "../landing/HomeButton";
-import { BUILDER_PATH, LANDING_PATH, newRunAddress } from "../landing/paths";
-import { startRun } from "../landing/startRun";
+import { BUILDER_PATH, LANDING_PATH, newRunAddress, replayAddress } from "../landing/paths";
+import { DEFAULT_PACE_S, startRun } from "../landing/startRun";
 import { keptFields, uploadedScenario } from "../landing/uploaded";
 import { greenhouseExtent, qaGreenhousePose } from "../qa/greenhouseViews";
 import type { ScenarioSummary, ScenariosState } from "../scenarios";
@@ -547,7 +546,10 @@ export function Builder({
       setStatus(`It does not run: ${registered.problem}`);
       return;
     }
-    const started = await startRun(registered.value.id);
+    const started = await startRun(registered.value.id, {
+      seed: "",
+      secondsPerDay: DEFAULT_PACE_S,
+    });
     setBusy(false);
     if (session.current !== asked) {
       return;
@@ -559,7 +561,7 @@ export function Builder({
       );
       return;
     }
-    navigate(followAddress(registered.value.id, started.value.layout));
+    navigate(replayAddress(started.value.run_id, started.value.epoch, true));
   }
 
   function exportFile(): void {
@@ -828,9 +830,10 @@ export function Builder({
             {ran !== null && <ShareScenario key={ran.scenarioId} scenarioId={ran.scenarioId} />}
             {editing.from !== undefined && (
               <p className="builder-note" data-testid="builder-uploaded-note">
-                This draft was opened from a scenario file. A run made here is of a copy of its
-                house under the default weather and site, not the file's. To run the file as it is,{" "}
-                <a href={newRunAddress(editing.from)}>start a run of it</a>.
+                This draft was opened from a scenario file. While its identifier is the file's, a
+                run made here keeps the file's weather and site, unless the run step names others.
+                Given another identifier, it runs under the default weather and site. To run the
+                file as it is, <a href={newRunAddress(editing.from)}>start a run of it</a>.
               </p>
             )}
             <FinishStep

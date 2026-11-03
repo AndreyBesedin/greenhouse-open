@@ -24,7 +24,6 @@ from greenhouse_sim.scenarios.manifest_files import (
     manifest_ids,
     opening_day,
 )
-from greenhouse_sim.services.scenarios import scenario_summary
 
 # How many threads register the same scenario at once.
 REGISTERING = 8
@@ -83,9 +82,6 @@ def test_a_registered_scenario_is_known_after_the_packaged_ones() -> None:
     assert catalogue.entry("drafted_box") is entry
     assert catalogue.entry("climate_box") is PACKAGED.entry("climate_box")
     assert catalogue.ids() == [*manifest_ids(), "drafted_box"]
-    # What a client reads to know that no worker can run it.
-    assert not scenario_summary(catalogue, "drafted_box").packaged
-    assert scenario_summary(catalogue, "climate_box").packaged
 
 
 def test_the_same_scenario_registered_again_is_the_one_known() -> None:

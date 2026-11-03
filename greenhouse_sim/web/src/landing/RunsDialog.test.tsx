@@ -5,9 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DAY_S } from "../clock";
 import type { ScenarioSummary } from "../scenarios";
 import { button, click, enter, type Rendered, render } from "../testing/render";
-import { followAddress } from "./follow";
 import { replayAddress, viewerAddress } from "./paths";
-import { runKey } from "./playing";
 import { RunsDialog } from "./RunsDialog";
 import type { StoredRun } from "./storedRuns";
 
@@ -19,10 +17,7 @@ const SCENARIO: ScenarioSummary = {
   duration_days: 120,
   layouts: ["default"],
 };
-/** One built or uploaded, which no worker can run. */
-const BUILT: ScenarioSummary = { ...SCENARIO, packaged: false };
 const RUN_ID = "reference_greenhouse-climate-abc";
-const PLAYBACK_URL = "/api/scenarios/reference_greenhouse/playback";
 
 function run(more: Partial<StoredRun>): StoredRun {
   return {
@@ -44,34 +39,11 @@ function run(more: Partial<StoredRun>): StoredRun {
   };
 }
 
-/** A scenario's playback, as the simulator answers for it. */
-function playback(runId: string, epoch: number, layout = "default") {
-  return {
-    scenario_id: "reference_greenhouse",
-    run_id: runId,
-    layout,
-    epoch,
-    greenhouse_id: "reference_greenhouse",
-    started_at: "2026-02-28T23:00:00Z",
-    simulated_now: "2026-03-02T11:00:30Z",
-    time_s: 0,
-    day: 0,
-    playing: true,
-    seconds_per_day: 10,
-    worked_out_s: 86_400,
-    every_s: 300,
-    targets: [],
-    commands: [],
-    crop: [],
-  };
-}
-
 type Asked = { url: string; method: string | undefined };
 type Answer = { status: number; body: unknown };
 
 /** The simulator, stood in for: every request is kept, and answered by
- * `answers` (by its method and address), else by `fallback`; a playback not
- * started is not found. */
+ * `answers` (by its method and address), else by `fallback`; */
 function simulator(
   answers: Record<string, Answer> = {},
   fallback: Answer = { status: 200, body: {} },
@@ -82,9 +54,7 @@ function simulator(
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       asked.push({ url, method: init?.method });
-      const answer =
-        answers[`${init?.method ?? "GET"} ${url}`] ??
-        (url === PLAYBACK_URL ? { status: 404, body: { error: "no playback" } } : fallback);
+      const answer = answers[`${init?.method ?? "GET"} ${url}`] ?? fallback;
       return new Response(JSON.stringify(answer.body), { status: answer.status });
     }),
   );
@@ -98,20 +68,14 @@ describe("the runs of a scenario, in a dialog", () => {
     vi.unstubAllGlobals();
   });
 
-  function shown(
-    runs: StoredRun[],
-    newRun = false,
-    followed: ReadonlySet<string> = new Set(),
-    scenario = SCENARIO,
-  ) {
+  function shown(runs: StoredRun[], newRun = false) {
     const onClose = vi.fn();
     const onChanged = vi.fn();
     const navigate = vi.fn();
     const rendered = render(
       <RunsDialog
-        scenario={scenario}
+        scenario={SCENARIO}
         runs={runs}
-        followed={followed}
         newRun={newRun}
         navigate={navigate}
         onClose={onClose}
@@ -146,7 +110,7 @@ describe("the runs of a scenario, in a dialog", () => {
     expect(container.querySelector(`a[href="${viewerAddress(SCENARIO.id)}"]`)).not.toBeNull();
   });
 
-  it("lists each run in words, and follows one computing in the viewer only if its playback plays it", () => {
+  it("lists each run in words, and follows one computing in its replay", () => {
     const playing = run({
       epoch: 2,
       seed: 2,
@@ -156,11 +120,11 @@ describe("the runs of a scenario, in a dialog", () => {
       layout: "default~heater:-1:0.5",
     });
     const replaced = run({ epoch: 1, seed: null, status: "running", progress: 0.5 });
-    const { rows } = shown(
-      [playing, replaced, run({ epoch: 0, size_bytes: 400 * 1024, created_at: null })],
-      false,
-      new Set([runKey(playing)]),
-    );
+    const { rows } = shown([
+      playing,
+      replaced,
+      run({ epoch: 0, size_bytes: 400 * 1024, created_at: null }),
+    ]);
     const texts = rows().map((row) => row.textContent);
 
     expect(texts[0]).toContain("Seed 2");
@@ -170,10 +134,9 @@ describe("the runs of a scenario, in a dialog", () => {
     expect(texts[1]).toContain("The scenario's seed");
     expect(texts[2]).toContain("epoch 0 · 400 kB");
     expect(texts[2]).toContain("Finished");
-    // A run computing is followed in the viewer only if the playback is on that
-    // epoch; the second, which no playback plays, in its replay. A finished one is not.
+    // A finished one has no newest day to follow.
     expect(follows().map((a) => a.getAttribute("href"))).toEqual([
-      followAddress(SCENARIO.id, "default~heater:-1:0.5"),
+      replayAddress(RUN_ID, 2, true),
       replayAddress(RUN_ID, 1, true),
     ]);
   });
@@ -274,108 +237,6 @@ describe("the runs of a scenario, in a dialog", () => {
     });
   });
 
-  it("starts a run of a built scenario by its playback, and says where to follow it", async () => {
-    const asked = simulator({
-      "POST /api/scenarios/reference_greenhouse/playback/start?seconds_per_day=4&seed=75": {
-        status: 200,
-        body: playback("reference_greenhouse-climate-seeded", 0),
-      },
-    });
-    const { container, field, navigate, onChanged } = shown([], true, new Set(), BUILT);
-
-    enter(field("Seed"), "7x5");
-    enter(field("Seconds per simulated day"), "4");
-    expect(field("Seed").value).toBe("75");
-    click(button(container, "Start run"));
-
-    await vi.waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
-    expect(asked).toEqual([
-      { url: PLAYBACK_URL, method: undefined },
-      {
-        url: "/api/scenarios/reference_greenhouse/playback/start?seconds_per_day=4&seed=75",
-        method: "POST",
-      },
-    ]);
-    expect(container.querySelector("form")).toBeNull();
-    expect(container.querySelector('[role="status"]')?.textContent).toContain(
-      "Run started, as epoch 0.",
-    );
-    expect(container.querySelector(`a[href="${followAddress(SCENARIO.id)}"]`)?.textContent).toBe(
-      "Follow it in the viewer",
-    );
-    expect(navigate).not.toHaveBeenCalled();
-  });
-
-  it("asks for the scenario's own seed when none is entered, not for the playback's", async () => {
-    const asked = simulator({
-      "POST /api/scenarios/reference_greenhouse/playback/start?seconds_per_day=10&seed=default": {
-        status: 200,
-        body: playback("reference_greenhouse-climate-own", 0),
-      },
-    });
-    const { container, onChanged } = shown([], true, new Set(), BUILT);
-
-    click(button(container, "Start run"));
-
-    await vi.waitFor(() => expect(onChanged).toHaveBeenCalled());
-    expect(asked.at(-1)?.url).toBe(
-      "/api/scenarios/reference_greenhouse/playback/start?seconds_per_day=10&seed=default",
-    );
-  });
-
-  it("does not call a run started that the playback was already playing, and offers a new epoch", async () => {
-    const playing = playback(RUN_ID, 3);
-    const asked = simulator({
-      [`GET ${PLAYBACK_URL}`]: { status: 200, body: playing },
-      "POST /api/scenarios/reference_greenhouse/playback/start?seconds_per_day=10&seed=1": {
-        status: 200,
-        body: playing,
-      },
-      "POST /api/scenarios/reference_greenhouse/playback/restart": {
-        status: 200,
-        body: playback(RUN_ID, 4),
-      },
-    });
-    const { container, field, onChanged } = shown([run({ epoch: 3 })], true, new Set(), BUILT);
-
-    enter(field("Seed"), "1");
-    click(button(container, "Start run"));
-
-    await vi.waitFor(() =>
-      expect(container.querySelector('[role="status"]')?.textContent).toContain(
-        "That run is the one playing already, as epoch 3",
-      ),
-    );
-    expect(container.querySelector('[role="status"]')?.textContent).not.toContain("Run started");
-
-    click(button(container, "Start it again as a new epoch"));
-
-    await vi.waitFor(() =>
-      expect(container.querySelector('[role="status"]')?.textContent).toContain(
-        "Run started, as epoch 4.",
-      ),
-    );
-    expect(asked.at(-1)).toEqual({
-      url: "/api/scenarios/reference_greenhouse/playback/restart",
-      method: "POST",
-    });
-    expect(onChanged).toHaveBeenCalledTimes(2);
-  });
-
-  it("says why when the simulator refuses a run, and does not say it started", async () => {
-    simulator({}, { status: 404, body: { error: "there is no scenario 'reference_greenhouse'" } });
-    const { container, onChanged } = shown([], true, new Set(), BUILT);
-
-    click(button(container, "Start run"));
-
-    await vi.waitFor(() => expect(container.querySelector('[role="alert"]')).not.toBeNull());
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
-      "there is no scenario",
-    );
-    expect(container.querySelector('[role="status"]')).toBeNull();
-    expect(onChanged).not.toHaveBeenCalled();
-  });
-
   it("removes a run only once it is confirmed, and not when it is kept", async () => {
     const asked = simulator();
     const { container, onChanged } = shown([run({ epoch: 3, seed: 5 })]);
@@ -411,20 +272,6 @@ describe("the runs of a scenario, in a dialog", () => {
       "The run with seed 1, epoch 0 is still being computed: stop it, then delete it.",
     );
     expect(onChanged).not.toHaveBeenCalled();
-  });
-
-  it("says to wait, not to stop, when deleting a running run no worker has", async () => {
-    simulator({}, { status: 409, body: { error: "being computed" } });
-    const { container } = shown([run({ status: "running" })], false, new Set(), BUILT);
-
-    click(button(container, "Delete the run with seed 1, epoch 0"));
-    click(button(container, "Delete the run with seed 1, epoch 0"));
-
-    await vi.waitFor(() =>
-      expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-        "The run with seed 1, epoch 0 is still being computed: wait for it to end, then delete it.",
-      ),
-    );
   });
 
   it("offers to stop a run computing or waiting and to resume one interrupted, and nothing else", () => {
@@ -490,23 +337,6 @@ describe("the runs of a scenario, in a dialog", () => {
       "epoch 3 · forked from epoch 2 at Day 2, 01:00 · Oct 28",
     );
     expect(rows()[1]?.textContent).not.toContain("forked");
-  });
-
-  it("offers neither on a scenario no worker can run", () => {
-    const { rows } = shown(
-      [run({ epoch: 1, status: "running" }), run({ epoch: 0, status: "interrupted" })],
-      false,
-      new Set(),
-      BUILT,
-    );
-
-    expect(
-      rows().flatMap((row) =>
-        [...row.querySelectorAll("button")].filter((each) =>
-          ["Stop", "Resume"].includes(each.textContent ?? ""),
-        ),
-      ),
-    ).toEqual([]);
   });
 
   it("stops a run through the epoch's route, and asks for the runs again", async () => {
@@ -607,7 +437,6 @@ describe("the runs of a scenario, in a dialog", () => {
       <RunsDialog
         scenario={SCENARIO}
         runs={[run({ status: "interrupted" })]}
-        followed={new Set()}
         navigate={vi.fn()}
         onClose={vi.fn()}
         onChanged={vi.fn()}
