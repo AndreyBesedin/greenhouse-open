@@ -62,9 +62,11 @@ const FEATURES = new Set([
   "hud",
   "legends",
   "build",
-  // The setup builder's page (P12.2), and the page before it (P17.5).
+  // The setup builder's page (P12.2), and the page before it (P17.5), and the
+  // way back to it from the viewer.
   "builder",
   "landing",
+  "home",
   "debug",
   "select",
   // Choosing what is shown, and how.
@@ -111,7 +113,8 @@ const FEATURES = new Set([
   "move",
   "qa",
 ]);
-const STATES = new Set(["applied", "at-the-end", "folded", "refused", "stale"]);
+// `visually-hidden` is said to whoever hears the page and not shown.
+const STATES = new Set(["applied", "at-the-end", "folded", "refused", "stale", "visually-hidden"]);
 const KEBAB = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
 /** The classes a stylesheet's selectors name, once each: read from each
