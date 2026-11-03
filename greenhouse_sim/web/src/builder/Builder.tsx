@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { entityBounds, type OverlayPrimitive } from "../debug/overlays";
+import { followAddress } from "../landing/follow";
 import { LANDING_PATH, newRunAddress } from "../landing/paths";
+import { startRun } from "../landing/startRun";
 import { greenhouseExtent, qaGreenhousePose } from "../qa/greenhouseViews";
 import type { ScenarioSummary, ScenariosState } from "../scenarios";
 import { loadScenarios } from "../scenarios";
@@ -22,6 +24,7 @@ import {
 import { CopyScenario } from "./CopyScenario";
 import { type Crop, withCrop } from "./edits";
 import { type Assessment, Findings } from "./Findings";
+import { FinishStep } from "./FinishStep";
 import type { Installation } from "./generated/assessedTypes";
 import type { BasicSetup } from "./generated/basicTypes";
 import type { DraftListed } from "./generated/draftsTypes";
@@ -33,7 +36,7 @@ import { Inspector } from "./Inspector";
 import { Items } from "./Items";
 import { drawnAs } from "./palette";
 import { RowCrops } from "./RowCrops";
-import { RunStep } from "./RunStep";
+import { FIRST_RUN, type RunFields, RunStep, settingsOf } from "./RunStep";
 import { ShareScenario } from "./ShareScenario";
 import { offerFile } from "./scenarioFile";
 
@@ -52,6 +55,14 @@ interface Editing {
   saved: { draftId: string; revision: number; installation: Installation } | null;
 }
 
+/** A draft saved: its identifier, its revision and the house that revision
+ * holds. */
+interface Kept {
+  draftId: string;
+  revision: number;
+  house: Installation;
+}
+
 /** A scenario run from a draft, and where the viewer opens it. */
 interface Ran {
   scenarioId: string;
@@ -61,6 +72,11 @@ interface Ran {
 const same = (a: Installation, b: Installation) => JSON.stringify(a) === JSON.stringify(b);
 
 function ignore(): void {}
+
+/** Goes to an address, a page of its own. */
+function goTo(address: string): void {
+  location.assign(address);
+}
 
 /** The revision a save of `editing` is made on: its latest saved, if it is
  * the same draft, by its identifier; none, a new draft, if it is not. */
@@ -101,7 +117,7 @@ function cancelledBy(controller: AbortController): typeof fetch {
  * answer marks what was saved, keeping any edit made while it was on its
  * way.
  */
-export function Builder() {
+export function Builder({ navigate = goTo }: { navigate?: (address: string) => void }) {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [assessment, setAssessment] = useState<Assessment>({ status: "asked" });
   const [snapshot, setSnapshot] = useState<SceneSnapshot | null>(null);
@@ -111,6 +127,8 @@ export function Builder() {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [ran, setRan] = useState<Ran | null>(null);
+  // What the run step holds, kept while the draft is shown.
+  const [runFields, setRunFields] = useState<RunFields>(FIRST_RUN);
   // The items chosen, in the list or the view, by their identifiers.
   const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set());
   const importer = useRef<HTMLInputElement>(null);
@@ -309,6 +327,7 @@ export function Builder() {
     setEditing(null);
     setChosen(new Set());
     setRan(null);
+    setRunFields(FIRST_RUN);
     setStatus("");
   }
 
@@ -378,9 +397,11 @@ export function Builder() {
     setEditing((now) => (now === null ? now : { ...now, history: move(now.history) }));
   }
 
-  async function save(): Promise<void> {
+  /** The draft shown saved as its next revision: which revision, and the
+   * house it holds, or none if it was not saved. */
+  async function save(): Promise<Kept | null> {
     if (editing === null) {
-      return;
+      return null;
     }
     const asked = session.current;
     const sent = editing.history.present;
@@ -392,11 +413,11 @@ export function Builder() {
     );
     setBusy(false);
     if (session.current !== asked) {
-      return;
+      return null;
     }
     if (!answer.ok) {
       setStatus(`It is not saved: ${answer.problem}`);
-      return;
+      return null;
     }
     const { installation, draft } = answer.value;
     // What was saved, whatever was edited while it was on its way.
@@ -407,6 +428,84 @@ export function Builder() {
     );
     setStatus(`Saved as revision ${draft.revision}.`);
     await refreshDrafts();
+    return { draftId: draft.draft_id, revision: draft.revision, house: sent };
+  }
+
+  /** The revision to run: the one saved, or the draft saved now if it
+   * holds what is not. */
+  async function saved(): Promise<Kept | null> {
+    if (editing === null) {
+      return null;
+    }
+    if (editing.saved !== null && madeOn(editing) !== null && !unsaved(editing)) {
+      const { draftId, revision } = editing.saved;
+      return { draftId, revision, house: editing.history.present };
+    }
+    return save();
+  }
+
+  /** Whether the draft shown is the house that was saved: an edit made while
+   * the save was on its way is kept unsaved, and no finishing action may
+   * leave without it. */
+  function stillSaved(kept: Kept): boolean {
+    return shown.current !== null && same(shown.current.history.present, kept.house);
+  }
+
+  async function saveAndGoBack(): Promise<void> {
+    const asked = session.current;
+    const kept = await saved();
+    if (kept === null || session.current !== asked) {
+      return;
+    }
+    if (!stillSaved(kept)) {
+      setStatus("The draft changed while it was being saved: save it again before leaving.");
+      return;
+    }
+    navigate(LANDING_PATH);
+  }
+
+  /** The draft saved, run as a scenario of its own under the settings of the
+   * run step, and a run of it started and followed. */
+  async function saveAndStartRun(): Promise<void> {
+    const settings = settingsOf(runFields);
+    if (settings === null) {
+      setStatus("The run step holds no run: give a date, whole days of one or more and a seed.");
+      return;
+    }
+    const asked = session.current;
+    const kept = await saved();
+    if (kept === null || session.current !== asked) {
+      return;
+    }
+    if (!stillSaved(kept)) {
+      setStatus("The draft changed while it was being saved: save it again to run it.");
+      return;
+    }
+    setBusy(true);
+    const registered = await runDraft(kept.draftId, kept.revision, settings);
+    // Left for another draft meanwhile: no run is started for this one.
+    if (session.current !== asked) {
+      setBusy(false);
+      return;
+    }
+    if (!registered.ok) {
+      setBusy(false);
+      setStatus(`It does not run: ${registered.problem}`);
+      return;
+    }
+    const started = await startRun(registered.value.id);
+    setBusy(false);
+    if (session.current !== asked) {
+      return;
+    }
+    if (!started.ok) {
+      setRan({ scenarioId: registered.value.id, name: registered.value.name });
+      setStatus(
+        `Its run is registered as ${registered.value.id}, but not started: ${started.problem}`,
+      );
+      return;
+    }
+    navigate(followAddress(registered.value.id, started.value.layout));
   }
 
   function exportFile(): void {
@@ -506,6 +605,16 @@ export function Builder() {
           : assessment.findings.some((found) => found.severity === "error")
             ? "Its errors stop it running."
             : "";
+
+  // Starting a run saves first, so only what stops a run for good stops it.
+  const startWhy =
+    assessment.status !== "assessed"
+      ? "It is not assessed yet."
+      : assessment.findings.some((found) => found.severity === "error")
+        ? "Its errors stop it running."
+        : settingsOf(runFields) === null
+          ? "The run step holds no run: give a date, whole days of one or more and a seed."
+          : "";
 
   return (
     <main className="builder">
@@ -655,9 +764,17 @@ export function Builder() {
               weathers={listed[0]?.weathers ?? []}
               disabled={runWhy !== "" || busy}
               why={runWhy}
+              fields={runFields}
+              onFields={setRunFields}
               onRun={(settings) => void run(settings)}
             />
             {ran !== null && <ShareScenario key={ran.scenarioId} scenarioId={ran.scenarioId} />}
+            <FinishStep
+              busy={busy}
+              startWhy={startWhy}
+              onGoBack={() => void saveAndGoBack()}
+              onStartRun={() => void saveAndStartRun()}
+            />
           </>
         )}
       </div>

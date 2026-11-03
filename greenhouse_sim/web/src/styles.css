@@ -1726,12 +1726,15 @@ body {
   color: var(--panel-muted);
 }
 
-/* A scenario handed on as a file (P17.11). */
-.builder-share {
+/* A scenario handed on as a file, and the two ways out of the builder
+ * (P17.11). */
+.builder-share,
+.builder-finish {
   margin-top: 12px;
 }
 
-.builder-share button {
+.builder-share button,
+.builder-finish button {
   min-height: 44px;
   margin-top: 8px;
 }
@@ -1741,6 +1744,12 @@ body {
   align-items: center;
   gap: 8px;
   min-height: 44px;
+}
+
+.builder-finish-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .builder-view {
