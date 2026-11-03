@@ -5,6 +5,7 @@ import { loadScenarios, SCENARIOS_URL, type ScenariosState } from "../scenarios"
 import { useLoad } from "../useLoad";
 import { newRunScenario, REPOSITORY_URL, replayAddress, runsScenario } from "./paths";
 import { loadPlaying, runKey } from "./playing";
+import { RunControls } from "./RunControls";
 import { FollowLink, RunProgress, StatusChip } from "./RunParts";
 import { RunsDialog } from "./RunsDialog";
 import { ScenarioCombobox } from "./ScenarioCombobox";
@@ -73,6 +74,12 @@ export function Landing({
       ? scenarios.scenarios.filter((each) => each.packaged === false).map((each) => each.id)
       : [],
   );
+  // One packaged has a worker to stop and resume its runs.
+  const byWorker = new Set(
+    scenarios.status === "loaded"
+      ? scenarios.scenarios.filter((each) => each.packaged !== false).map((each) => each.id)
+      : [],
+  );
   const computing =
     runs.status === "loaded"
       ? [
@@ -132,7 +139,13 @@ export function Landing({
         </div>
         <section aria-labelledby="landing-recent">
           <h3 id="landing-recent">Recent runs</h3>
-          <RecentRuns runs={runs} names={names} followed={followed} />
+          <RecentRuns
+            runs={runs}
+            names={names}
+            followed={followed}
+            byWorker={byWorker}
+            onChanged={() => setAsked((previous) => previous + 1)}
+          />
         </section>
       </main>
       {chosen !== undefined && (
@@ -193,11 +206,16 @@ function RecentRuns({
   runs,
   names,
   followed,
+  byWorker,
+  onChanged,
 }: {
   runs: StoredRunsState | { status: "none" };
   names: ReadonlyMap<string, string>;
   /** The stored epochs that their scenarios' playbacks are playing. */
   followed: ReadonlySet<string>;
+  /** The scenarios whose runs a worker computes. */
+  byWorker: ReadonlySet<string>;
+  onChanged: () => void;
 }) {
   if (runs.status === "unavailable") {
     return <p role="alert">The runs kept cannot be listed: {runs.reason}.</p>;
@@ -216,7 +234,14 @@ function RecentRuns({
       </p>
       <ul className="landing-runs">
         {runs.runs.slice(0, RECENT_RUNS).map((run) => (
-          <RunRow key={runKey(run)} run={run} name={names.get(run.scenario_id)} played={followed} />
+          <RunRow
+            key={runKey(run)}
+            run={run}
+            name={names.get(run.scenario_id)}
+            played={followed}
+            byWorker={byWorker.has(run.scenario_id)}
+            onChanged={onChanged}
+          />
         ))}
       </ul>
     </>
@@ -227,10 +252,14 @@ function RunRow({
   run,
   name,
   played,
+  byWorker,
+  onChanged,
 }: {
   run: StoredRun;
   name: string | undefined;
   played: ReadonlySet<string>;
+  byWorker: boolean;
+  onChanged: () => void;
 }) {
   const started = startedText(run);
   const whose = name ?? run.scenario_id;
@@ -249,6 +278,14 @@ function RunRow({
         Replay
       </a>
       <FollowLink run={run} played={played} />
+      {byWorker && (
+        <RunControls
+          key={run.status}
+          run={run}
+          name={`the run of ${whose}`}
+          onChanged={onChanged}
+        />
+      )}
     </li>
   );
 }
