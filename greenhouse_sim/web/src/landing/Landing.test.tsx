@@ -8,7 +8,7 @@ import { type Rendered, render } from "../testing/render";
 import { followAddress } from "./follow";
 import { Landing } from "./Landing";
 import { REPOSITORY_URL } from "./paths";
-import type { StoredRun } from "./storedRuns";
+import { RUNS_ASKED_EVERY_MS, type StoredRun } from "./storedRuns";
 
 // What the simulator sends of a scenario besides its name: how it grows its
 // crop, its daily commands, openings and weathers, its opening day and heater.
@@ -384,6 +384,50 @@ describe("the page where a person decides what to do", () => {
         .find((each) => each.textContent === "Follow")
         ?.getAttribute("href"),
     ).toBe(followAddress("reference_greenhouse", "default~heater:-1:0.5"));
+  });
+
+  it("moves a run being computed on by itself, and stops asking once none is", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const answers = [
+        [run({ status: "running", frontier_s: DAY_S, progress: 1 / 120 })],
+        [run({ status: "running", frontier_s: 2 * DAY_S, progress: 2 / 120 })],
+        [run({})],
+      ];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL) => {
+          const url = String(input);
+          const body =
+            url === "/api/scenarios"
+              ? SCENARIOS
+              : url === "/api/runs"
+                ? (answers.shift() ?? [run({})])
+                : playing("reference_greenhouse-climate-abc", 0);
+          return new Response(JSON.stringify(body));
+        }),
+      );
+      page = render(<Landing navigate={vi.fn()} />);
+      const { container } = page;
+      const asked = () =>
+        vi.mocked(fetch).mock.calls.filter(([url]) => String(url) === "/api/runs").length;
+
+      await vi.waitFor(() => expect(container.textContent).toContain("1 of 120 days"));
+      expect(container.textContent).toContain("Running");
+
+      await act(() => vi.advanceTimersByTimeAsync(RUNS_ASKED_EVERY_MS));
+      await vi.waitFor(() => expect(container.textContent).toContain("2 of 120 days"));
+
+      await act(() => vi.advanceTimersByTimeAsync(RUNS_ASKED_EVERY_MS));
+      await vi.waitFor(() => expect(container.textContent).toContain("Finished"));
+      const whenDone = asked();
+      expect(whenDone).toBe(3);
+
+      await act(() => vi.advanceTimersByTimeAsync(3 * RUNS_ASKED_EVERY_MS));
+      expect(asked()).toBe(whenDone);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("lists no more than the latest few", async () => {
