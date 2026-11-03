@@ -3,7 +3,7 @@ import { replayAddress } from "../landing/paths";
 import { STATUS_LABEL } from "../landing/storedRuns";
 import { whyNoFork } from "./fork";
 import type { PositionState } from "./position";
-import { dayLabel } from "./timeline";
+import { forkedText } from "./timeline";
 
 /** The run, in words: whose it is, at which seed, and which epoch. The
  * store keeps every epoch whole until a store can keep only the present. */
@@ -11,9 +11,7 @@ export function runSubtitle(position: PositionState): string {
   const seed = position.seed === null ? "the scenario's seed" : `seed ${position.seed}`;
   const kept = `${seed} · epoch ${position.epoch} · everything kept`;
   const fork = position.fork;
-  return fork === null
-    ? kept
-    : `${kept} · forked from epoch ${fork.epoch} at ${dayLabel(fork.at_s)}`;
+  return fork === null ? kept : `${kept} · ${forkedText(fork)}`;
 }
 
 /**

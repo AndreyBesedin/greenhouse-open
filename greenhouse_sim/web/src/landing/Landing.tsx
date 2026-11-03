@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BUILDER_PATH } from "../builder/Builder";
 import { GithubMark } from "../icons";
+import { forkedText } from "../replay/timeline";
 import { loadScenarios, SCENARIOS_URL, type ScenariosState } from "../scenarios";
 import { useLoad } from "../useLoad";
 import { newRunScenario, REPOSITORY_URL, runsScenario } from "./paths";
@@ -285,6 +286,7 @@ function RunRow({
         <strong>{whose}</strong>
         <span>
           {run.seed === null ? "the scenario's seed" : `seed ${run.seed}`} · epoch {run.epoch}
+          {run.fork === null ? "" : ` · ${forkedText(run.fork)}`}
           {started === "" ? "" : ` · ${started}`}
         </span>
       </div>

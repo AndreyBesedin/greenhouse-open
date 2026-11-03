@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 
 import { refusal } from "../builder/api";
+import { forkedText } from "../replay/timeline";
 import type { ScenarioSummary } from "../scenarios";
 import { loadPlayback, parsePlayback } from "../scene/playback";
 import { followAddress } from "./follow";
@@ -274,6 +275,7 @@ export function RunsDialog({
                   <strong>{run.seed === null ? "The scenario's seed" : `Seed ${run.seed}`}</strong>
                   <span>
                     epoch {run.epoch}
+                    {run.fork === null ? "" : ` · ${forkedText(run.fork)}`}
                     {when === "" ? "" : ` · ${when}`} · {sizeText(run.size_bytes)}
                   </span>
                 </div>
