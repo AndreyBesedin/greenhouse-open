@@ -254,6 +254,7 @@ class CrashingStore(FolderStore):
         super().put(name, data)
 
 
+@pytest.mark.slow
 def test_a_crash_between_the_log_and_the_commit_applies_the_entry_once(
     tmp_path: Path, steered: EpochStore
 ) -> None:
@@ -277,6 +278,7 @@ def test_a_crash_between_the_log_and_the_commit_applies_the_entry_once(
     epoch.verify()
 
 
+@pytest.mark.slow
 def test_a_crash_after_a_commit_that_names_the_entry_and_before_the_next_segment(
     tmp_path: Path, steered: EpochStore
 ) -> None:
@@ -317,6 +319,7 @@ def _played_with_change(root: Path, simulator: Simulator, *, until_s: float | No
     return store
 
 
+@pytest.mark.slow
 def test_an_entry_past_the_last_commit_is_applied_at_the_moment_it_was_given(
     tmp_path: Path,
 ) -> None:
@@ -364,6 +367,7 @@ def _plant(simulator: Simulator) -> str:
     return plant_ids(scenario(simulator.catalogue, REFERENCE_SHORT))[0]
 
 
+@pytest.mark.slow
 def test_targets_and_crop_actions_are_applied_again_as_the_epoch_is_carried_on(
     tmp_path: Path,
 ) -> None:
@@ -390,6 +394,7 @@ def test_targets_and_crop_actions_are_applied_again_as_the_epoch_is_carried_on(
     assert cut.outcomes().records == whole.outcomes().records
 
 
+@pytest.mark.slow
 def test_the_days_kept_are_not_worked_again_when_the_log_is_applied(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, steered: EpochStore
 ) -> None:
@@ -467,6 +472,7 @@ def _read(response: Response) -> dict[str, Any]:
     return response.body
 
 
+@pytest.mark.slow
 def test_a_change_is_asked_of_a_queued_epoch_over_the_api_and_taken_by_its_worker(
     served: Simulator, tmp_path: Path
 ) -> None:
@@ -531,6 +537,7 @@ def test_what_the_server_forbids_is_refused_though_a_worker_would_take_it(
     assert epoch.requests() == []
 
 
+@pytest.mark.slow
 def test_a_worker_in_a_process_of_its_own_takes_a_change_through_the_store(tmp_path: Path) -> None:
     """Nothing but the store between the API and the worker: the worker's own
     process logs the change, and a later commit names it."""
@@ -565,6 +572,7 @@ def _until(condition: Callable[[], bool], what: str) -> None:
         time.sleep(0.05)
 
 
+@pytest.mark.slow
 def test_a_change_waits_for_those_logged_before_a_crash(tmp_path: Path) -> None:
     with _simulator() as before:
         epoch = _played_with_change(tmp_path, before, until_s=1.5 * DAY_S)
@@ -596,6 +604,7 @@ def _inspections(epoch: EpochStore, simulator: Simulator, *, last: int = DAYS) -
         yield (each + 1) * DAY_S
 
 
+@pytest.mark.slow
 def test_crop_actions_due_as_they_are_given_are_told_apart_and_end_at_their_moment(
     tmp_path: Path,
 ) -> None:

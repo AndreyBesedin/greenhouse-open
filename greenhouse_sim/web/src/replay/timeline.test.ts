@@ -81,6 +81,13 @@ describe("the days", () => {
       0, 1, 2, 3, 4, 5,
     ]);
   });
+
+  it("always label the timeline's end, in place of a tick too near it", () => {
+    const of = (days: number) => dayTicks({ startS: 0, frontierS: DAY_S, endS: days * DAY_S });
+
+    expect(of(10)).toEqual([0, 7, 10]);
+    expect(of(8)).toEqual([0, 8]);
+  });
 });
 
 describe("the keys", () => {

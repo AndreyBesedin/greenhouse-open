@@ -18,6 +18,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Final
 
+import pytest
+
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.manifest_files import manifest_digest
 from greenhouse_sim.services.climate_readings import house_air_at
@@ -33,6 +35,7 @@ KEPT_DAYS: Final = 3
 BRANCH: Final = ((DAY_S + 3600.0, "heater", 0.0),)
 
 
+@pytest.mark.slow
 def test_the_reference_runs_first_days_replay_to_the_digests_kept(simulator: Simulator) -> None:
     kept = json.loads(FIXTURE.read_text())
 

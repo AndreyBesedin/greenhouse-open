@@ -4,6 +4,7 @@ import {
   LANDING_PATH,
   newRunAddress,
   newRunScenario,
+  opensFramed,
   pageAt,
   REPLAY_PATH,
   replayAddress,
@@ -13,6 +14,14 @@ import {
   VIEWER_PATH,
   viewerAddress,
 } from "./paths";
+
+describe("the addresses that open a scenario framed", () => {
+  it("are the viewer's and a replay's, not a link from before the landing page", () => {
+    expect(opensFramed(VIEWER_PATH)).toBe(true);
+    expect(opensFramed(REPLAY_PATH)).toBe(true);
+    expect(opensFramed("/")).toBe(false);
+  });
+});
 
 describe("the viewer's addresses", () => {
   it("shows the landing page at the bare address, with or without its slash", () => {

@@ -278,6 +278,7 @@ def test_a_target_set_while_the_run_plays_steers_it_from_the_next_minute(
     assert played.command(PlaybackCommand.RESTART).targets == []
 
 
+@pytest.mark.slow
 def test_a_run_started_over_with_moves_keeps_its_target_changes(
     played_on: Simulator, tmp_path: Path
 ) -> None:

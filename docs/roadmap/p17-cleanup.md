@@ -16,9 +16,10 @@ takes one checks first that it is still there.
 
 - [x] **The builder has no way home.** Its only ways out are "Save and go back",
   which saves, and a link that appears after a run. The viewer has a Home button.
-- [ ] **A scene opened without following a run is not framed on the house.** The
+- [x] **A scene opened without following a run is not framed on the house.** The
   camera stays at its default (5.2, -5.2, 5.2) and the house runs off under the View
-  panel. Whether this came before the landing page is not known.
+  panel. It came before the landing page: the presets have looked at the world's
+  origin since the viewer's first camera, and only a followed run was framed.
 - [ ] **A house with no equipment has no climate run.** It has no climate field and
   gets fixed light, not the sun. Whether it should have a climate run, and at what
   cost, is open.
@@ -40,7 +41,7 @@ takes one checks first that it is still there.
 - [ ] A saved draft is not on the start page.
 - [ ] `GET /playback` shows a red 404 in the console on a first run.
 - [ ] Close drops the keyboard focus.
-- [ ] `/#runs=x` stays in the address, and `/#run=no_such` shows nothing.
+- [x] `/#runs=x` stays in the address, and `/#run=no_such` shows nothing.
 - [ ] Run rows are not aligned, and their links keep the browser's default colour.
 
 **Builder**
@@ -60,18 +61,19 @@ takes one checks first that it is still there.
 
 **Replay**
 
-- [ ] Play at the end does nothing.
-- [ ] `aria-valuenow` can be fractional.
-- [ ] The legend says "not computed yet" on a finished run.
-- [ ] At phone width the panel covers the scene, and the last tick is missing.
+- [x] Play at the end does nothing.
+- [x] `aria-valuenow` can be fractional.
+- [x] The legend says "not computed yet" on a finished run.
+- [ ] At phone width the panel covers the scene. The last tick is labelled now.
 
 ### From a second walk
 
 A walk of the merged pages at commit `2db9f3b7`, on the same setup, with forks and the
 panels in a replay.
 
-- [ ] **Medium: forks cannot be told apart on the start page or in the runs dialog.**
-  They read as rows of "Seed 143 · epoch N".
+- [x] **Medium: forks cannot be told apart on the start page or in the runs dialog.**
+  They read as rows of "Seed 143 · epoch N". A fork's row now says what it came from,
+  as its replay's header does.
 - [ ] **Low to medium: a fork's controls stay enabled at a run's end.** "Fork from here
   with these levels" and the targets form can still be used, and the refusal gives the
   end in seconds ("the run ends at 1209600 s").

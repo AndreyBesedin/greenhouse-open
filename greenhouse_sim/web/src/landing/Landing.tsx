@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { BUILDER_PATH } from "../builder/Builder";
 import { GithubMark } from "../icons";
+import { forkedText } from "../replay/timeline";
 import { loadScenarios, SCENARIOS_URL, type ScenariosState } from "../scenarios";
 import { useLoad } from "../useLoad";
 import { newRunScenario, REPOSITORY_URL, runsScenario } from "./paths";
-import { loadPlaying, runKey } from "./playing";
 import { RunControls } from "./RunControls";
 import { FollowLink, ReplayLink, RunProgress, StatusChip } from "./RunParts";
 import { RunsDialog } from "./RunsDialog";
@@ -16,6 +16,7 @@ import {
   loadStoredRuns,
   RUNS_ASKED_EVERY_MS,
   runCounts,
+  runKey,
   type StoredRun,
   type StoredRunsState,
   startedText,
@@ -25,11 +26,17 @@ import { UploadScenario } from "./UploadScenario";
 /** How many of the latest runs the page lists. */
 const RECENT_RUNS = 5;
 
-const NOT_PLAYING: ReadonlySet<string> = new Set();
-
 /** Goes to an address, a page of its own. */
 function goTo(address: string): void {
   location.assign(address);
+}
+
+/** The address without what asked for a dialog that has closed, so that a reload
+ * does not open it again. */
+function leaveAddress(): void {
+  if (location.hash !== "") {
+    history.replaceState(null, "", `${location.pathname}${location.search}`);
+  }
 }
 
 /**
@@ -67,35 +74,6 @@ export function Landing({
       ? scenarios.scenarios.find((each) => each.id === opened)
       : undefined;
   const counts = runs.status === "loaded" ? runCounts(runs.runs) : null;
-  // Only a scenario no worker can run has a playback to ask after: asking one
-  // that has none is a 404, each time the runs are asked for.
-  const byPlayback = new Set(
-    scenarios.status === "loaded"
-      ? scenarios.scenarios.filter((each) => each.packaged === false).map((each) => each.id)
-      : [],
-  );
-  // One packaged has a worker to stop and resume its runs.
-  const byWorker = new Set(
-    scenarios.status === "loaded"
-      ? scenarios.scenarios.filter((each) => each.packaged !== false).map((each) => each.id)
-      : [],
-  );
-  const computing =
-    runs.status === "loaded"
-      ? [
-          ...new Set(
-            runs.runs
-              .filter(isComputing)
-              .map((run) => run.scenario_id)
-              .filter((id) => byPlayback.has(id)),
-          ),
-        ].sort()
-      : [];
-  const playing = useLoad(computing.length === 0 ? null : computing, loadPlaying, {
-    // Asked again with the runs, since a start changes which epoch plays.
-    key: (ids) => `${asked}:${ids.join(",")}`,
-  });
-  const followed = playing.status === "loaded" ? playing.epochs : NOT_PLAYING;
   const names = new Map(
     scenarios.status === "loaded" ? scenarios.scenarios.map((s) => [s.id, s.name]) : [],
   );
@@ -127,6 +105,11 @@ export function Landing({
               }}
               onBuild={() => navigate(BUILDER_PATH)}
             />
+            {opened !== null && scenarios.status === "loaded" && chosen === undefined && (
+              <p role="alert" className="landing-problem">
+                This address asks for the scenario {opened}, which the simulator does not have.
+              </p>
+            )}
           </section>
           <section className="landing-card" aria-labelledby="landing-build">
             <h3 id="landing-build">Build a scenario</h3>
@@ -142,8 +125,6 @@ export function Landing({
           <RecentRuns
             runs={runs}
             names={names}
-            followed={followed}
-            byWorker={byWorker}
             onChanged={() => setAsked((previous) => previous + 1)}
           />
         </section>
@@ -155,10 +136,12 @@ export function Landing({
           runs={
             runs.status === "loaded" ? runs.runs.filter((run) => run.scenario_id === chosen.id) : []
           }
-          followed={followed}
           newRun={form}
           navigate={navigate}
-          onClose={() => setOpened(null)}
+          onClose={() => {
+            setOpened(null);
+            leaveAddress();
+          }}
           onChanged={() => setAsked((previous) => previous + 1)}
         />
       )}
@@ -205,16 +188,10 @@ function ScenarioChoice({
 function RecentRuns({
   runs,
   names,
-  followed,
-  byWorker,
   onChanged,
 }: {
   runs: StoredRunsState | { status: "none" };
   names: ReadonlyMap<string, string>;
-  /** The stored epochs that their scenarios' playbacks are playing. */
-  followed: ReadonlySet<string>;
-  /** The scenarios whose runs a worker computes. */
-  byWorker: ReadonlySet<string>;
   onChanged: () => void;
 }) {
   if (runs.status === "unavailable") {
@@ -238,8 +215,6 @@ function RecentRuns({
             key={runKey(run)}
             run={run}
             name={names.get(run.scenario_id)}
-            played={followed}
-            byWorker={byWorker.has(run.scenario_id)}
             onChanged={onChanged}
           />
         ))}
@@ -251,14 +226,10 @@ function RecentRuns({
 function RunRow({
   run,
   name,
-  played,
-  byWorker,
   onChanged,
 }: {
   run: StoredRun;
   name: string | undefined;
-  played: ReadonlySet<string>;
-  byWorker: boolean;
   onChanged: () => void;
 }) {
   const started = startedText(run);
@@ -269,21 +240,15 @@ function RunRow({
         <strong>{whose}</strong>
         <span>
           {run.seed === null ? "the scenario's seed" : `seed ${run.seed}`} · epoch {run.epoch}
+          {run.fork === null ? "" : ` · ${forkedText(run.fork)}`}
           {started === "" ? "" : ` · ${started}`}
         </span>
       </div>
       <StatusChip run={run} />
       <RunProgress run={run} name={`the run of ${whose}`} />
       <ReplayLink run={run} />
-      <FollowLink run={run} played={played} />
-      {byWorker && (
-        <RunControls
-          key={run.status}
-          run={run}
-          name={`the run of ${whose}`}
-          onChanged={onChanged}
-        />
-      )}
+      <FollowLink run={run} />
+      <RunControls key={run.status} run={run} name={`the run of ${whose}`} onChanged={onChanged} />
     </li>
   );
 }
