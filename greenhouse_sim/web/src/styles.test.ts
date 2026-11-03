@@ -22,6 +22,8 @@ const STYLES = withImports(fileURLToPath(new URL("./styles.css", import.meta.url
 // none of its own. Anything else, a colour named, written in hex or made by
 // any function, stays the same whichever theme is chosen.
 const THEMED = /^(?:var\(--[\w-]+\)|none|transparent|inherit|currentcolor|initial|unset)$/i;
+// Or a pattern drawn in the theme's colours, such as the replay's hatching.
+const THEMED_PATTERN = /^repeating-linear-gradient\(/;
 
 /** The text and background colours in `stylesheet`, outside the theme's
  * own `:root` blocks, that are not the theme's. */
@@ -30,7 +32,11 @@ function unthemed(stylesheet: string): string[] {
   // Each declaration, at a line's start or after another, or a rule's `{`.
   return [...rules.matchAll(/(?:^|[{;])\s*(color|background(?:-color)?)\s*:\s*([^;}]*)/gm)]
     .map(([, property, value]) => [property, (value ?? "").trim()])
-    .filter(([, value]) => !THEMED.test(value ?? ""))
+    .filter(
+      ([, value]) =>
+        !THEMED.test(value ?? "") &&
+        !(THEMED_PATTERN.test(value ?? "") && !RAW_COLOUR.test(value ?? "")),
+    )
     .map(([property, value]) => `${property}: ${value};`);
 }
 
@@ -102,6 +108,8 @@ describe("the stylesheet", () => {
       .newer { color: oklch(0.7 0.1 200); background: color-mix(in srgb, red, blue); }
       .mixed { background: var(--panel-bg) url("x.png"); }
       .none { background: none; color: currentColor; }
+      .hatched { background: repeating-linear-gradient(135deg, var(--ink) 0 3px, transparent 3px 6px); }
+      .written-hatch { background: repeating-linear-gradient(135deg, #ccc 0 3px, transparent 3px 6px); }
     `;
     expect(unthemed(written)).toEqual([
       "background: white;",
@@ -111,6 +119,7 @@ describe("the stylesheet", () => {
       "color: oklch(0.7 0.1 200);",
       "background: color-mix(in srgb, red, blue);",
       'background: var(--panel-bg) url("x.png");',
+      "background: repeating-linear-gradient(135deg, #ccc 0 3px, transparent 3px 6px);",
     ]);
   });
 });

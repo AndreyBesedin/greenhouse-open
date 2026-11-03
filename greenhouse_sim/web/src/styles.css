@@ -2247,7 +2247,10 @@
   cursor: pointer;
   touch-action: none;
   border-radius: 7px;
-  background: var(--replay-track);
+  /* What is not computed yet, hatched in the rule's colour in either theme. */
+  background:
+    repeating-linear-gradient(135deg, var(--panel-rule) 0 6px, transparent 6px 12px) center / 100%
+    14px no-repeat;
 }
 
 .replay-computed {
@@ -2329,7 +2332,7 @@
 }
 
 .replay-swatch-pending {
-  background: var(--replay-hatch);
+  background: repeating-linear-gradient(135deg, var(--panel-rule) 0 3px, transparent 3px 6px);
 }
 
 .replay-notice {
