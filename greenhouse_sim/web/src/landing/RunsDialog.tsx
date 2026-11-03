@@ -6,7 +6,7 @@ import { loadPlayback, parsePlayback } from "../scene/playback";
 import { followAddress } from "./follow";
 import { replayAddress, viewerAddress } from "./paths";
 import { RunControls } from "./RunControls";
-import { FollowLink, RunProgress, StatusChip } from "./RunParts";
+import { FollowLink, ReplayLink, RunProgress, StatusChip } from "./RunParts";
 import { startWorkerRun } from "./startRun";
 import { type StoredRun, sizeText, startedText } from "./storedRuns";
 
@@ -279,13 +279,7 @@ export function RunsDialog({
                 </div>
                 <StatusChip run={run} />
                 <RunProgress run={run} name={`the run with ${who}`} />
-                <a
-                  href={replayAddress(run.run_id, run.epoch)}
-                  className="landing-link-button"
-                  aria-label={`Replay the run with ${who}`}
-                >
-                  Replay
-                </a>
+                <ReplayLink run={run} label={`Replay the run with ${who}`} />
                 <FollowLink run={run} played={followed} />
                 {byWorker && (
                   <RunControls

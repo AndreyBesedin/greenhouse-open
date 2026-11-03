@@ -3,10 +3,10 @@ import { BUILDER_PATH } from "../builder/Builder";
 import { GithubMark } from "../icons";
 import { loadScenarios, SCENARIOS_URL, type ScenariosState } from "../scenarios";
 import { useLoad } from "../useLoad";
-import { newRunScenario, REPOSITORY_URL, replayAddress, runsScenario } from "./paths";
+import { newRunScenario, REPOSITORY_URL, runsScenario } from "./paths";
 import { loadPlaying, runKey } from "./playing";
 import { RunControls } from "./RunControls";
-import { FollowLink, RunProgress, StatusChip } from "./RunParts";
+import { FollowLink, ReplayLink, RunProgress, StatusChip } from "./RunParts";
 import { RunsDialog } from "./RunsDialog";
 import { ScenarioCombobox } from "./ScenarioCombobox";
 import {
@@ -274,9 +274,7 @@ function RunRow({
       </div>
       <StatusChip run={run} />
       <RunProgress run={run} name={`the run of ${whose}`} />
-      <a href={replayAddress(run.run_id, run.epoch)} className="landing-link-button">
-        Replay
-      </a>
+      <ReplayLink run={run} />
       <FollowLink run={run} played={played} />
       {byWorker && (
         <RunControls

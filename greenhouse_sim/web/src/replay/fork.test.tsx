@@ -19,6 +19,7 @@ const RUN = {
   progress: 1 / 3,
   created_at: null,
   size_bytes: 10,
+  damaged: false,
   start_s: DAY_S,
   fork: {
     run_id: "run-1",
