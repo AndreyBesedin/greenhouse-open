@@ -40,7 +40,7 @@ async function start(page: Page, seed: string): Promise<{ runId: string; epoch: 
 function rowOf(within: Page | Locator, seed: string): Locator {
   return within
     .locator(".landing-run")
-    .filter({ hasText: new RegExp(`seed ${seed}\\b`, "i") })
+    .filter({ hasText: new RegExp(`seed ${seed}(?!\\d)`, "i") })
     .first();
 }
 
