@@ -2,7 +2,10 @@
 each sensor's readings against what it truly sampled, and each day's walk
 through the crop against each plant as its crop model measures it."""
 
+import sys
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from greenhouse_protocol.enums import ObservationType, SourceType
@@ -13,7 +16,6 @@ from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.evaluation.observation_accuracy import observation_accuracy
 from greenhouse_sim.ground_truth import GroundTruth, ground_truth
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
-from greenhouse_sim.scenarios.catalogue import PACKAGED, Catalogue
 from greenhouse_sim.scenarios.crop_parameters import CropWalk
 from greenhouse_sim.services import sensors
 from greenhouse_sim.services.crop_log import _walk, crop_records, walked_truly
@@ -23,8 +25,16 @@ from greenhouse_sim.services.runs import RunPlan, RunRequest
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import HOUR_S
 
+sys.path.insert(0, str(Path(__file__).parent))
+
+from short_runs import cut, simulator_of
+
 SCENARIO = "climate_box"
 RUN = RunRequest(SCENARIO)
+# Each scenario cut to what scoring reads: the sensors these tests name, whose
+# samples are most of a run's time here.
+BOX = cut(SCENARIO, sensors=("temperature_front", "temperature_back", "station_wind_direction"))
+HEATED_HOUSE = cut("reference_greenhouse", sensors=("temperature_front",))
 # A day and a half: the walks of its first two days, at noon.
 UNTIL_S = 1.5 * DAY_S
 WALK_KINDS = {
@@ -53,6 +63,12 @@ def _observed(simulator: Simulator, until_s: float, clean: bool = False) -> list
 
 
 @pytest.fixture(scope="module")
+def simulator() -> Iterator[Simulator]:
+    with simulator_of(BOX, HEATED_HOUSE) as made:
+        yield made
+
+
+@pytest.fixture(scope="module")
 def scored(simulator: Simulator) -> tuple[list[Observation], GroundTruth]:
     """The run's observation log and its truth, worked out once."""
     return _observed(simulator, UNTIL_S), ground_truth(simulator, RUN, UNTIL_S)
@@ -76,15 +92,14 @@ def test_clean_sensors_and_an_exact_walk_read_the_truth() -> None:
     """Each reading is held to its own truth: a clean sensor's is its truth
     exactly, and an exact walk's within the tenth its mass and height are
     written to."""
-    config = SCENARIO_REGISTRY[SCENARIO]
-    exact = config.model_copy(
+    exact = BOX.model_copy(
         update={
             "crop_walk": CropWalk(
                 fruit_count_noise_probability=0.0, ripe_mass_noise_pct=0.0, height_noise_cm=0.0
             )
         }
     )
-    with Simulator(Catalogue(PACKAGED.with_config(exact))) as without_errors:
+    with simulator_of(exact) as without_errors:
         observations = _observed(without_errors, UNTIL_S, clean=True)
         report = observation_accuracy(observations, ground_truth(without_errors, RUN, UNTIL_S))
 

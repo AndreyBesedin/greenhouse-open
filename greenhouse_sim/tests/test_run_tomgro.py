@@ -6,7 +6,9 @@ checkpoint and carry on from it; and ask nothing of it they ask of plants.
 
 import math
 import re
+import sys
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Final
 
 import pytest
@@ -17,7 +19,6 @@ from greenhouse_sim.biology.tomato.tomgro.parameters import INITIAL_STATE, Tomgr
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.scopes import AreaBasis
 from greenhouse_sim.ground_truth import ground_truth
-from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import Catalogue
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scene.snapshot import SceneEntityKind
@@ -33,14 +34,20 @@ from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.scopes import converted, row_scopes
 
-# The climate box, its rows growing Reduced-State TOMGRO.
-CONFIG: Final = ScenarioConfig.model_validate(
-    SCENARIO_REGISTRY["climate_box"].model_dump()
-    | {
-        "greenhouse_id": "tomgro_box",
-        "crop_model": "reduced_tomgro",
-        "crop": {"kind": "reduced_tomgro"},
-    }
+sys.path.insert(0, str(Path(__file__).parent))
+
+from short_runs import cut
+
+# The climate box, its rows growing Reduced-State TOMGRO, in its air the whole
+# house's as the TOMGRO house's is; and one sensor, to tell a sensor's truth
+# from a plant's.
+CONFIG: Final = cut(
+    "climate_box",
+    days=5,
+    sensors=("temperature_front",),
+    greenhouse_id="tomgro_box",
+    crop_model="reduced_tomgro",
+    crop={"kind": "reduced_tomgro"},
 )
 RUN: Final = RunRequest("tomgro_box")
 ROWS: Final = [scope.scope_id for scope in row_scopes(CONFIG.layout, CONFIG.envelope)]
