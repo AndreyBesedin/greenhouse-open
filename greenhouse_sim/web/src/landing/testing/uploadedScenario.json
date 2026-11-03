@@ -1,0 +1,13 @@
+{
+  "scenario": {
+    "id": "shared_box",
+    "name": "Shared box"
+  },
+  "settings": {
+    "start_date": "2026-01-01",
+    "duration_days": 14,
+    "random_seed": 1201,
+    "weather": "default"
+  },
+  "missing_weather": null
+}

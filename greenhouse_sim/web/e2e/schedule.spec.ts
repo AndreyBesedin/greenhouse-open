@@ -37,7 +37,8 @@ test("schedule: the equipment switches on its own, and an override holds from it
     await expect(commands).toHaveCount(3);
     await expect(page.getByTestId("equipment-fan")).toHaveText("off");
     await expect(heater).toHaveText("off");
-    await expect(reading).toHaveText(/^climate: 0\.00 m\/s/);
+    // The reading is the field's, which arrives as a moment of the run does.
+    await expect(reading).toHaveText(/^climate: 0\.00 m\/s/, { timeout: ARRIVES_MS });
   });
 
   await test.step("three minutes in, all three run, as scheduled", async () => {

@@ -15,18 +15,27 @@ The driver decides how the epoch advances:
   is in the caller's process, since the barriers come from the caller.
 
 The epoch ends `finished`, `failed` or `interrupted`, as a played run's does.
+
+An epoch `interrupted` can be carried on (`resume`, P17.9): the same epoch,
+from the checkpoint its last commit names. Runs are deterministic, so the
+epoch it ends as is the one that was never interrupted, and the trajectory
+digests of the two are equal. It is carried on from the checkpoint and not
+from the start because that is what a checkpoint is for (decision 0065), and
+it needs nothing else: the log of changes given to an epoch is empty until
+interventions exist (P17.8), and an epoch that has any is refused.
 """
 
+import json
 import logging
 import threading
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Final
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
-from greenhouse_sim.services.errors import Conflict
+from greenhouse_sim.services.checkpoints import upload_checkpoint
+from greenhouse_sim.services.errors import Conflict, InvalidRequest
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.playback import (
     DEFAULT_SECONDS_PER_DAY,
@@ -36,16 +45,22 @@ from greenhouse_sim.services.playback import (
     PlaybackCommand,
     check_pace,
 )
-from greenhouse_sim.services.run_store import EpochManifest, EpochStore, ObjectStore, Status
+from greenhouse_sim.services.run_store import (
+    CHECKPOINT_TYPE,
+    ENDED,
+    EpochManifest,
+    EpochStore,
+    Kind,
+    ObjectStore,
+    Status,
+    decompress,
+)
 from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import layout_name, scenario
 from greenhouse_sim.services.simulator import Simulator
 
 logger = logging.getLogger(__name__)
-
-# The statuses an epoch does not leave.
-ENDED: Final = frozenset({Status.FINISHED, Status.FAILED, Status.INTERRUPTED})
 
 
 @dataclass(frozen=True)
@@ -115,12 +130,92 @@ def execute(
 ) -> Status:
     """Works `epoch` out into its store as `driver` advances it, and says how
     it ended. Told to `stop` between moments, it ends `interrupted`. An epoch
-    is executed once: one that has begun is refused (resuming is another
-    step), as is one whose run is not the one its manifest names."""
-    driver = Free() if driver is None else driver
+    is executed once: one that has begun is refused (`resume` carries it on),
+    as is one whose run is not the one its manifest names."""
     manifest = epoch.manifest()
     if manifest.status != Status.QUEUED or epoch.commits():
         raise Conflict(f"epoch {epoch.epoch} of {epoch.run_id} has begun: it is {manifest.status}")
+    return _drive(simulator, epoch, Free() if driver is None else driver, stop, 0.0)
+
+
+def check_resumable(epoch: EpochStore) -> float:
+    """How far the epoch is kept, in seconds, if it can be carried on from
+    there; else why it cannot, as a conflict. An epoch is carried on from the
+    checkpoint of its last commit, which must be one this build reads, for the
+    run its scenario still is; the changes given to it while it ran must be
+    none, since the log holds none that can be applied again yet (P17.8), and
+    no plan has answered with outcomes."""
+    status = epoch.manifest().status
+    if status not in (Status.INTERRUPTED, Status.QUEUED):
+        raise Conflict(
+            f"epoch {epoch.epoch} of {epoch.run_id} is {status}: only an interrupted one resumes"
+        )
+    if epoch.worked():
+        raise Conflict(f"epoch {epoch.epoch} of {epoch.run_id} is worked by a process still")
+    commits = epoch.commits()
+    if not commits:
+        return 0.0
+    last = commits[-1]
+    if last.checkpoint is None or last.checkpoint_type != CHECKPOINT_TYPE:
+        raise Conflict(
+            f"epoch {epoch.epoch} of {epoch.run_id} keeps no checkpoint at its frontier, "
+            "from which to carry it on"
+        )
+    if last.log_position or any(commit.counts[Kind.OUTCOMES] for commit in commits):
+        raise Conflict(
+            f"epoch {epoch.epoch} of {epoch.run_id} was given changes while it ran, "
+            "which cannot be applied again yet"
+        )
+    return last.end_s
+
+
+def resume(
+    simulator: Simulator,
+    epoch: EpochStore,
+    driver: Driver | None = None,
+    *,
+    stop: threading.Event | None = None,
+) -> Status:
+    """Carries an `interrupted` epoch on to its end, as `execute` would have
+    had it go: from the checkpoint of its last commit, after what a crash left
+    past that commit is removed. One with nothing committed begins again. The
+    epoch is the same epoch, the same run: its trajectory is the one it would
+    have had. A model that keeps no checkpoint at the frontier cannot be
+    carried on from it, and the epoch is refused (`check_resumable`), its
+    run to be asked for again as a new epoch. A caller's barriers are in the
+    caller's process, which is not here to be asked for them again."""
+    chosen = Free() if driver is None else driver
+    if isinstance(chosen, Stepped):
+        raise InvalidRequest("an epoch stepped by a caller is carried on by that caller")
+    frontier_s = check_resumable(epoch)
+    removed = epoch.discard_uncommitted()
+    if removed:
+        logger.warning("%d objects past the last commit of %s removed", len(removed), epoch.run_id)
+    if frontier_s:
+        # The checkpoint is checked against its commit as it is read.
+        data = epoch.checkpoint_at(frontier_s)
+        assert data is not None  # check_resumable saw the last commit name one
+        end_s = scenario(simulator.catalogue, epoch.manifest().scenario_id).duration_days * DAY_S
+        if frontier_s >= end_s:
+            # Its last day was committed and the crash came before the epoch
+            # was told it finished: nothing is left to work out.
+            epoch.set_status(Status.FINISHED)
+            return Status.FINISHED
+        upload_checkpoint(simulator, json.loads(decompress(data[0])))
+    epoch.set_status(Status.QUEUED)
+    return _drive(simulator, epoch, chosen, stop, frontier_s)
+
+
+def _drive(
+    simulator: Simulator,
+    epoch: EpochStore,
+    driver: Driver,
+    stop: threading.Event | None,
+    from_s: float,
+) -> Status:
+    """Works `epoch`, `queued`, out from `from_s` into its run, which is the
+    end of its last commit, and says how it ended."""
+    manifest = epoch.manifest()
     stopping = threading.Event() if stop is None else stop
     run = Playback(
         simulator,
@@ -132,13 +227,18 @@ def execute(
         else DEFAULT_SECONDS_PER_DAY,
         epoch=epoch,
     )
+    if from_s:
+        run.resume_at(from_s)
     epoch.set_status(Status.RUNNING)
     try:
         if isinstance(driver, Paced):
             _paced(run, epoch, stopping)
         else:
             _stepped(
-                run, epoch, _days(run) if isinstance(driver, Free) else driver.barriers, stopping
+                run,
+                epoch,
+                _days(run, from_s) if isinstance(driver, Free) else driver.barriers,
+                stopping,
             )
     except Exception:
         logger.exception("the epoch %s of %s failed", epoch.epoch, epoch.run_id)
@@ -150,9 +250,13 @@ def execute(
     return status
 
 
-def _days(run: Playback) -> Iterable[float]:
-    """The moments a free epoch is worked out to: the end of each day."""
-    return (min((day + 1) * DAY_S, run.end_s) for day in range(round(run.end_s / DAY_S)))
+def _days(run: Playback, after_s: float = 0.0) -> Iterable[float]:
+    """The moments a free epoch is worked out to: the end of each day after
+    `after_s`."""
+    return (
+        min((day + 1) * DAY_S, run.end_s)
+        for day in range(round(after_s / DAY_S), round(run.end_s / DAY_S))
+    )
 
 
 def _stepped(

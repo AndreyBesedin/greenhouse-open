@@ -30,13 +30,20 @@ function describeSource(source: SceneSource, day = 0): string {
   }
 }
 
-/** What is drawn, and if a scene could not be drawn, exactly why: one line,
- * the "Show" chooser's while it is folded (#201), so that it says what is
- * shown, or why nothing is, as it stands open or not. */
+/** What is drawn, and if a scene could not be drawn, exactly why: one line in
+ * the "Show" chooser's summary (#201). A person sees it when it has
+ * something to tell: a scene on its way, or one that could not be drawn.
+ * What is drawn is already in front of them, so that line is not shown; it
+ * is still announced, politely, for whoever hears the page, and read by the
+ * tests. */
 export function SceneStatus({ source, state }: { source: SceneSource; state: SceneState }) {
   switch (state.status) {
     case "none":
-      return <span data-testid="scene-status">Showing the {describeSource(source)}.</span>;
+      return (
+        <span data-testid="scene-status" role="status" className="visually-hidden">
+          Showing the {describeSource(source)}.
+        </span>
+      );
     case "loading":
       return <span data-testid="scene-status">Loading the {describeSource(source)}…</span>;
     case "unavailable":
@@ -53,7 +60,7 @@ export function SceneStatus({ source, state }: { source: SceneSource; state: Sce
       );
     case "loaded":
       return (
-        <span data-testid="scene-status">
+        <span data-testid="scene-status" role="status" className="visually-hidden">
           Showing the {describeSource(source, state.snapshot.simulated_day)}:{" "}
           {state.snapshot.greenhouse_id}, day {state.snapshot.simulated_day},{" "}
           {state.snapshot.entities.length} entities.

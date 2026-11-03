@@ -13,14 +13,18 @@ import { type SceneSource, searchFor, shownBy, sourceFromSearch } from "./source
  * Another scene, scenario, layout or the plant lab (`shownBy`) is a new page
  * in the browser's history, and Back returns to the view before it, as its
  * address held it (#201); any other change replaces the current page.
+ *
+ * A page that draws a source of its own, a replay's (P17.6), gives it as
+ * `own`: it starts there, and the address is that page's, never written.
  */
-export function useSource(): [SceneSource, (change: SetSource) => void] {
-  const [source, setSource] = useState<SceneSource>(() => sourceFromSearch(location.search));
+export function useSource(own?: SceneSource): [SceneSource, (change: SetSource) => void] {
+  const [source, setSource] = useState<SceneSource>(() => own ?? sourceFromSearch(location.search));
+  const owned = own !== undefined;
   // The source the address holds.
   const addressed = useRef(source);
 
   useEffect(() => {
-    if (source === addressed.current) {
+    if (owned || source === addressed.current) {
       return;
     }
     const search = withQaMode(searchFor(source), qaModeFrom(location.search));
@@ -31,9 +35,12 @@ export function useSource(): [SceneSource, (change: SetSource) => void] {
       history.pushState(null, "", address);
     }
     addressed.current = source;
-  }, [source]);
+  }, [source, owned]);
 
   useEffect(() => {
+    if (owned) {
+      return;
+    }
     const returned = () => {
       const restored = sourceFromSearch(location.search);
       addressed.current = restored;
@@ -41,7 +48,7 @@ export function useSource(): [SceneSource, (change: SetSource) => void] {
     };
     window.addEventListener("popstate", returned);
     return () => window.removeEventListener("popstate", returned);
-  }, []);
+  }, [owned]);
 
   return [source, setSource];
 }

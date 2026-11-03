@@ -47,6 +47,8 @@ from greenhouse_protocol.outcome import ActionOutcome
 from greenhouse_protocol.provenance import RecordSource
 from pydantic import BaseModel, ConfigDict, JsonValue
 
+from greenhouse_sim.services import leases
+
 FORMAT: Final = "run-store-1"
 CHECKPOINT_TYPE: Final = "application/json+zstd"
 # An instant is written in a name as whole microseconds, zero-padded, so that
@@ -71,6 +73,10 @@ class Status(StrEnum):
     FAILED = "failed"
     # Stopped before its end: a restart, or the producer stopping.
     INTERRUPTED = "interrupted"
+
+
+# The statuses an epoch is told when it is no longer worked.
+ENDED: Final = frozenset({Status.FINISHED, Status.FAILED, Status.INTERRUPTED})
 
 
 class Kind(StrEnum):
@@ -450,8 +456,20 @@ class EpochStore:
         return EpochManifest.model_validate_json(data)
 
     def set_status(self, status: Status) -> None:
-        manifest = self.manifest().model_copy(update={"status": status})
+        """Says what the epoch is. One said to run is held by this process
+        (`leases`) until it is said to have ended, by whoever says it."""
+        before = self.manifest()
+        manifest = before.model_copy(update={"status": status})
         self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
+        if status == Status.RUNNING:
+            if before.status != Status.RUNNING:
+                leases.hold(self.objects, self._home)
+        elif status in ENDED:
+            leases.release(self.objects, self._home)
+
+    def worked(self, *, now: float | None = None) -> bool:
+        """Whether a process holds the epoch's lease."""
+        return leases.alive(self.objects, self._home, now=now)
 
     def commits(self, after: int = 0) -> list[Commit]:
         """The commits in order, from number `after` (a reader that has the
@@ -610,6 +628,31 @@ class EpochStore:
         """Checks every commit's digest against the objects it names."""
         for commit in self.commits():
             self._verify_commit(commit)
+
+    def discard_uncommitted(self) -> list[str]:
+        """Removes what a crash left past the last commit, which names what
+        the epoch holds: segments and checkpoints written for a commit that
+        was never made, a commit past a gap, and log entries given after the
+        last commit. The next commit writes over those of its own span; the
+        rest, of another span, would stay. The names removed."""
+        commits = self.commits()
+        kept = {f"{self._home}/manifest.json", f"{self._home}/interventions.jsonl"}
+        for commit in commits:
+            kept.add(f"{self._home}/commits/{commit.seq:0{SEQ_DIGITS}d}.json")
+            kept.update(f"{self._home}/segments/{commit.segment}/{kind}.parquet" for kind in Kind)
+            if commit.checkpoint is not None:
+                kept.add(commit.checkpoint)
+        removed = []
+        for name in self.objects.names(f"{self._home}/"):
+            if name not in kept and name != f"{self._home}/{leases.LEASE}":
+                self.objects.delete(name)
+                removed.append(name)
+        position = commits[-1].log_position if commits else 0
+        held = self.objects.get(f"{self._home}/interventions.jsonl")
+        if held is not None and len(held.splitlines()) > position:
+            self.objects.put(f"{self._home}/interventions.jsonl", self._log_bytes(position))
+            removed.append(f"{self._home}/interventions.jsonl")
+        return removed
 
     def _verify_commit(self, commit: Commit) -> None:
         previous = GENESIS

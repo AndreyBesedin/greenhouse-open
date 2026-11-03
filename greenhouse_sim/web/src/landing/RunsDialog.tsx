@@ -4,7 +4,7 @@ import { refusal } from "../builder/api";
 import type { ScenarioSummary } from "../scenarios";
 import { loadPlayback, parsePlayback } from "../scene/playback";
 import { followAddress } from "./follow";
-import { viewerAddress } from "./paths";
+import { replayAddress, viewerAddress } from "./paths";
 import { runKey } from "./playing";
 import { RunProgress, StatusChip } from "./RunParts";
 import { type StoredRun, sizeText, startedText } from "./storedRuns";
@@ -227,6 +227,13 @@ export function RunsDialog({
                 </div>
                 <StatusChip run={run} />
                 <RunProgress run={run} name={`the run with ${who}`} />
+                <a
+                  href={replayAddress(run.run_id, run.epoch)}
+                  className="landing-link-button"
+                  aria-label={`Replay the run with ${who}`}
+                >
+                  Replay
+                </a>
                 {followed.has(runKey(run)) && (
                   <a
                     href={followAddress(run.scenario_id, run.layout)}

@@ -74,6 +74,7 @@ export function SourceChooser({
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary>
+        <span className="chooser-label">Choose what to show</span>
         <SceneStatus source={source} state={scene} />
       </summary>
       <input

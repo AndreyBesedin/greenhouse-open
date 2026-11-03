@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 
 import type { BuildInfo } from "./buildInfo";
+import { HomeButton } from "./landing/HomeButton";
 import type { PanelTheme } from "./panelTheme";
-import { SceneFailures } from "./SceneStatus";
+import { SceneFailures, SceneStatus } from "./SceneStatus";
 import { SourceChooser } from "./SourceChooser";
 import type { ScenariosState } from "./scenarios";
 import type { SceneState } from "./scene/sceneLoad";
@@ -15,6 +16,7 @@ export function InfoPanel({
   scene,
   failures = [],
   chooseFirst = false,
+  embedded = false,
   theme = "dark",
   onTheme,
   onSource,
@@ -28,6 +30,9 @@ export function InfoPanel({
   failures?: readonly string[];
   /** Whether nothing has been chosen yet, so that the choice starts open. */
   chooseFirst?: boolean;
+  /** Whether a page of its own holds the viewer (a replay's): it has its own
+   * way home, and no other scene is chosen, for it would not be the run. */
+  embedded?: boolean;
   /** How the panels look, and how to change it (#208), if they can be. */
   theme?: PanelTheme;
   onTheme?: (theme: PanelTheme) => void;
@@ -37,14 +42,24 @@ export function InfoPanel({
 }) {
   return (
     <aside className="info-panel">
-      <h1>greenhouse-sim viewer</h1>
-      <SourceChooser
-        scenarios={scenarios}
-        source={source}
-        scene={scene}
-        initiallyOpen={chooseFirst}
-        onSource={onSource}
-      />
+      {embedded ? (
+        // A scene on its way, or one that could not be drawn, still says so.
+        <SceneStatus source={source} state={scene} />
+      ) : (
+        <>
+          <div className="panel-head">
+            <HomeButton />
+            <h1>greenhouse-sim viewer</h1>
+          </div>
+          <SourceChooser
+            scenarios={scenarios}
+            source={source}
+            scene={scene}
+            initiallyOpen={chooseFirst}
+            onSource={onSource}
+          />
+        </>
+      )}
       <SceneFailures failures={failures} />
       {children}
       {/* What the viewer was built from, last, in a line: QA mode's run

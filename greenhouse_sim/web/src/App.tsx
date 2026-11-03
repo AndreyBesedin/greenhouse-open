@@ -63,6 +63,7 @@ import { useDrawnSnapshot } from "./scene/useDrawnSnapshot";
 import { useFollow, withoutRunChanges } from "./scene/useFollow";
 import { useFollowFraming } from "./scene/useFollowFraming";
 import { useMoveDrag } from "./scene/useMoveDrag";
+import { useReplayMoment } from "./scene/useReplayMoment";
 import { useSceneLoads } from "./scene/useSceneLoads";
 import { type SetSource, useSource } from "./scene/useSource";
 import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
@@ -81,8 +82,17 @@ import type { Point3 } from "./world";
 // a crop's height.
 const DEFAULT_PROBE_HEIGHT_M = 1;
 const EMPTY_PROBES: Point3[] = [];
-export function App({ build = buildInfo }: { build?: BuildInfo }) {
-  const [addressed, setAddressed] = useSource();
+export function App({
+  build = buildInfo,
+  replay,
+}: {
+  build?: BuildInfo;
+  /** A stored run replayed (P17.6): the scene it draws, which the page owns
+   * and the address never holds, and the moment its position stands at. The
+   * scenes to choose from are not offered, for another would not be the run. */
+  replay?: { source: SceneSource; momentS: number | null };
+}) {
+  const [addressed, setAddressed] = useSource(replay?.source);
   // Opened with nothing chosen, at the bare address, the viewer starts with
   // the choice of what to show open (#201).
   const [chooseFirst] = useState(() => searchFor(addressed) === "");
@@ -193,6 +203,16 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
     addressed,
     setSource,
     drawingField: fieldName !== null,
+    fieldShownMoment: fieldProgress.shown?.field.timeS ?? null,
+    fieldFailed: failed(fieldProgress.latest),
+    onClockMoved: stopClimatePlay,
+  });
+  // A run replayed from the store is drawn at the moment its position stands at.
+  useReplayMoment({
+    momentS: replay?.momentS ?? null,
+    source,
+    setSource,
+    field: fieldName,
     fieldShownMoment: fieldProgress.shown?.field.timeS ?? null,
     fieldFailed: failed(fieldProgress.latest),
     onClockMoved: stopClimatePlay,
@@ -348,7 +368,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
   }
 
   return (
-    <main className="viewer">
+    <main className={replay === undefined ? "viewer" : "viewer viewer-embedded"}>
       <Viewport
         snapshot={snapshot}
         presetRequest={presetRequest}
@@ -388,6 +408,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
             scene={scene.status === "loaded" && snapshot !== null ? { ...scene, snapshot } : scene}
             failures={failures}
             chooseFirst={chooseFirst}
+            embedded={replay !== undefined}
             theme={panelTheme}
             onTheme={setPanelTheme}
             onSource={chooseSource}
@@ -468,6 +489,7 @@ export function App({ build = buildInfo }: { build?: BuildInfo }) {
                 placing={placingProbes}
                 probeHeight={probeHeight}
                 playingClimate={playingClimate}
+                replayed={replay !== undefined}
                 onSource={setSource}
                 onProbes={setProbes}
                 onPlacing={setPlacingProbes}
