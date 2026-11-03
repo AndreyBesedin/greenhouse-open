@@ -195,6 +195,12 @@ def resume(
         # The checkpoint is checked against its commit as it is read.
         data = epoch.checkpoint_at(frontier_s)
         assert data is not None  # check_resumable saw the last commit name one
+        end_s = scenario(simulator.catalogue, epoch.manifest().scenario_id).duration_days * DAY_S
+        if frontier_s >= end_s:
+            # Its last day was committed and the crash came before the epoch
+            # was told it finished: nothing is left to work out.
+            epoch.set_status(Status.FINISHED)
+            return Status.FINISHED
         upload_checkpoint(simulator, json.loads(decompress(data[0])))
     epoch.set_status(Status.QUEUED)
     return _drive(simulator, epoch, chosen, stop, frontier_s)
