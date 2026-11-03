@@ -130,6 +130,32 @@ describe("the page where a person decides what to do", () => {
     expect(link(container, "Open the builder")?.getAttribute("href")).toBe("/builder");
   });
 
+  it("says how many runs are kept and what their objects hold, above the list, once", async () => {
+    const MB = 1024 * 1024;
+    const { container } = await shown(
+      {
+        "/api/scenarios": SCENARIOS,
+        "/api/runs": [run({ size_bytes: 8 * MB }), run({ epoch: 1, size_bytes: 4 * MB })],
+      },
+      "2 runs kept",
+    );
+
+    const kept = container.querySelector('[data-testid="landing-kept"]');
+    expect(kept?.textContent).toContain("2 runs kept, 12.0 MB");
+    expect(kept?.getAttribute("title")).toContain("not of the disk");
+    expect(kept?.textContent).toContain("not of the disk");
+  });
+
+  it("says nothing of volume when no run is kept, only that none is", async () => {
+    const { container } = await shown(
+      { "/api/scenarios": SCENARIOS, "/api/runs": [] },
+      "No run has been kept yet",
+    );
+
+    expect(container.querySelector('[data-testid="landing-kept"]')).toBeNull();
+    expect(container.textContent).not.toContain("runs kept");
+  });
+
   it("opens the runs of the scenario that is chosen in a dialog, and the builder in a page", async () => {
     const { container, navigate } = await shown(
       { "/api/scenarios": SCENARIOS, "/api/runs": [run({})] },

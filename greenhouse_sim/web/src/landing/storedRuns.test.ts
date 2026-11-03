@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { DAY_S } from "../clock";
 import {
   isComputing,
+  KEPT_SIZE_NOTE,
+  keptText,
   loadStoredRuns,
   parseStoredRuns,
   progressShare,
@@ -88,6 +90,30 @@ describe("the runs the simulator has kept", () => {
         isComputing(run({ status })),
       ),
     ).toEqual([true, true, false, false, false]);
+  });
+
+  it("says how many runs are kept and the size of their objects in all", () => {
+    const MB = 1024 * 1024;
+    const runs = [
+      run({ size_bytes: 8 * MB }),
+      run({ epoch: 1, size_bytes: 4 * MB + MB / 2 }),
+      run({ epoch: 2, size_bytes: 0 }),
+    ];
+
+    expect(keptText(runs)).toBe("3 runs kept, 12.5 MB");
+  });
+
+  it("says one run kept in the singular, and its size in the unit that reads best", () => {
+    expect(keptText([run({ size_bytes: 1500 })])).toBe("1 run kept, 1 kB");
+    expect(keptText([run({ size_bytes: 12 })])).toBe("1 run kept, 12 B");
+  });
+
+  it("says nothing when none is kept, which the list says in its own words", () => {
+    expect(keptText([])).toBeNull();
+  });
+
+  it("says that the size is of the runs' objects, not of the disk", () => {
+    expect(KEPT_SIZE_NOTE).toContain("not of the disk");
   });
 
   it("writes sizes and start days the same wherever they are read", () => {

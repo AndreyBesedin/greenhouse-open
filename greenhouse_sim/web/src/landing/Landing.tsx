@@ -11,6 +11,8 @@ import { RunsDialog } from "./RunsDialog";
 import { ScenarioCombobox } from "./ScenarioCombobox";
 import {
   isComputing,
+  KEPT_SIZE_NOTE,
+  keptText,
   loadStoredRuns,
   runCounts,
   type StoredRun,
@@ -179,16 +181,22 @@ function RecentRuns({
     return <p>No run has been kept yet. Open a scenario to start one.</p>;
   }
   return (
-    <ul className="landing-runs">
-      {runs.runs.slice(0, RECENT_RUNS).map((run) => (
-        <RunRow
-          key={runKey(run)}
-          run={run}
-          name={names.get(run.scenario_id)}
-          following={followed.has(runKey(run))}
-        />
-      ))}
-    </ul>
+    <>
+      <p className="landing-kept" data-testid="landing-kept" title={KEPT_SIZE_NOTE}>
+        {keptText(runs.runs)}
+        <span className="visually-hidden"> {KEPT_SIZE_NOTE}</span>
+      </p>
+      <ul className="landing-runs">
+        {runs.runs.slice(0, RECENT_RUNS).map((run) => (
+          <RunRow
+            key={runKey(run)}
+            run={run}
+            name={names.get(run.scenario_id)}
+            following={followed.has(runKey(run))}
+          />
+        ))}
+      </ul>
+    </>
   );
 }
 
