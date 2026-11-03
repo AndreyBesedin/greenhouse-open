@@ -159,6 +159,12 @@ test("builder: a draft saved and a run of it started in one step, followed in th
 
   await expect(page).toHaveURL(new RegExp(`/view\\?scenario=${id}_r1.*follow=1`), ARRIVES);
   await expect(page.getByTestId("scene-status")).toContainText(`${id}_r1`, ARRIVES);
+  // A house with no equipment has no climate field: the view draws none, and no
+  // moment of the run is said not to be drawn.
+  await expect(page).not.toHaveURL(/field=climate/, ARRIVES);
+  await expect(page.getByTestId("playback-status")).toContainText("Following run", ARRIVES);
+  await expect(page.getByTestId("climate-failed")).toHaveCount(0);
+  await expect(page.getByText("cannot be read")).toHaveCount(0);
 });
 
 test("builder: a draft saved and the start page reached in one step", async ({ page }) => {

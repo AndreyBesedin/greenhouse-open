@@ -34,6 +34,7 @@ export function canFollow(position: PositionState): boolean {
  */
 export function ReplayTransport({
   position,
+  refused = null,
   onPlay,
   onPause,
   onFollow,
@@ -41,6 +42,8 @@ export function ReplayTransport({
   onPace,
 }: {
   position: PositionState;
+  /** Why the latest move did nothing, if it was refused. */
+  refused?: string | null;
   onPlay: () => void;
   onPause: () => void;
   onFollow: () => void;
@@ -54,6 +57,11 @@ export function ReplayTransport({
     : [...PACES_S, position.seconds_per_day].sort((a, b) => a - b);
   return (
     <section className="replay-transport" aria-label="Move through the run">
+      {refused !== null && (
+        <p role="alert" className="replay-refused">
+          That did not reach the run: {refused}. Reload the page to open it again.
+        </p>
+      )}
       <div className="replay-controls">
         <div className="replay-buttons">
           <button

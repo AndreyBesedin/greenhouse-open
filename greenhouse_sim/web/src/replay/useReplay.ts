@@ -40,6 +40,8 @@ function isComputing(status: string): boolean {
  */
 export function useReplay(runId: string, epoch: number, fetchFn: typeof fetch = fetch) {
   const [load, setLoad] = useState<PositionLoad>(LOADING);
+  // Why the latest seek, command or pace did nothing, if it was refused.
+  const [refused, setRefused] = useState<string | null>(null);
   // Counts what has been asked of the replay shown: each change of the replay,
   // and each seek, command or pace. An answer counts only if nothing was asked
   // after the question it answers.
@@ -58,6 +60,7 @@ export function useReplay(runId: string, epoch: number, fetchFn: typeof fetch = 
     asked.current += 1;
     waiting.current = 0;
     setLoad(LOADING);
+    setRefused(null);
     // Not aborted once asked: a position the simulator has opened is closed,
     // however late its answer comes.
     void openPosition(runId, epoch, fetchFn).then((answer) => {
@@ -117,14 +120,23 @@ export function useReplay(runId: string, epoch: number, fetchFn: typeof fetch = 
     const ticket = asked.current;
     void answered.then((answer) => {
       waiting.current = Math.max(0, waiting.current - 1);
-      // A refused command leaves the position where it stood.
-      if (answer.status === "loaded" && asked.current === ticket) {
+      if (asked.current !== ticket) {
+        return;
+      }
+      // A refused command leaves the position where it stood, and says so:
+      // the simulator has let the position go, or cannot be reached, and a
+      // control that only did nothing would look broken.
+      if (answer.status === "loaded") {
         setLoad(answer);
+        setRefused(null);
+      } else if (answer.status === "unavailable") {
+        setRefused(answer.reason);
       }
     });
   }, []);
   return {
     load,
+    refused,
     command: (command: PositionCommand) => {
       if (positionId !== null) {
         keep(commandPosition(positionId, command, fetchFn));

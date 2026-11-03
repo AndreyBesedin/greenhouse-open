@@ -168,10 +168,8 @@ def import_scenario_file(text: str) -> ScenarioFile:
         or not isinstance(version, int)
         or not FIRST_FORMAT <= version <= SCHEMA_VERSION
     ):
-        raise ScenarioFileError(
-            _VERSION_KEY,
-            f"format {version!r}; this simulator reads formats {FIRST_FORMAT} to {SCHEMA_VERSION}",
-        )
+        said = "no format named" if version is None else f"format {version!r}"
+        raise ScenarioFileError(_VERSION_KEY, f"{said}; this simulator reads {_formats_read()}")
     if _NOT_IN_A_FILE in document:
         raise ScenarioFileError(_NOT_IN_A_FILE, "a scenario file has no kept opening day")
     scenario_id = document.get("greenhouse_id")
@@ -248,6 +246,13 @@ def _recording(config: ScenarioConfig, written: JsonValue) -> Recording | None:
     return Recording(weather.file, digest, content, carried)
 
 
+def _formats_read() -> str:
+    """The file formats this simulator reads, in words."""
+    if FIRST_FORMAT == SCHEMA_VERSION:
+        return f"format {SCHEMA_VERSION}"
+    return f"formats {FIRST_FORMAT} to {SCHEMA_VERSION}"
+
+
 class _NotJson(ValueError):
     """A constant Python reads as JSON, and JSON has not."""
 
@@ -286,7 +291,10 @@ def _parsed(text: str) -> dict[str, Any]:
         raise ScenarioFileError("", "not JSON this simulator reads: nested too deeply")
     try:
         document = json.loads(text, parse_constant=_not_json, parse_float=_finite)
-    except (json.JSONDecodeError, _NotJson) as error:
+    except json.JSONDecodeError:
+        # Its line and column say nothing to whoever was sent the file.
+        raise ScenarioFileError("", "not JSON") from None
+    except _NotJson as error:
         raise ScenarioFileError("", f"not JSON: {error}") from None
     except RecursionError:
         raise ScenarioFileError("", "not JSON this simulator reads: nested too deeply") from None
