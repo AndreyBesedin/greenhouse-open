@@ -62,8 +62,6 @@ DRAFT: Final = "built_house"
 WAIT_S: Final = 240.0
 # Slow enough that the first day is committed well before the second.
 SECONDS_PER_DAY: Final = 3
-# Slow enough to tell from a house's days, which take a fraction of it.
-PACE_S: Final = 1.5
 DAYS: Final = 2
 SITE: Final = Site(
     latitude_deg=-33.9,
@@ -510,13 +508,15 @@ def test_a_worker_goes_at_the_pace_its_epoch_names(tmp_path: Path) -> None:
     objects = FolderStore(tmp_path / "runs")
     with Simulator(drafts=DraftStore(tmp_path / "drafts.sqlite3"), runs=objects) as made:
         scenario_id = _built(made)
-        shown = respond(made, "POST", f"/api/scenarios/{scenario_id}/runs?seconds_per_day={PACE_S}")
+        shown = respond(
+            made, "POST", f"/api/scenarios/{scenario_id}/runs?seconds_per_day={SECONDS_PER_DAY}"
+        )
         assert isinstance(shown.body, dict)
         epoch = EpochStore(objects, str(shown.body["run_id"]), int(str(shown.body["epoch"])))
         _until(lambda: epoch.manifest().status == Status.FINISHED, "the epoch to end")
 
     first, second = sorted(objects.root.glob(f"{epoch.run_id}/{epoch.epoch}/commits/*.json"))
-    assert second.stat().st_mtime - first.stat().st_mtime > PACE_S / 2
+    assert second.stat().st_mtime - first.stat().st_mtime > SECONDS_PER_DAY / 2
 
 
 def test_a_draft_of_a_scenario_runs_under_the_site_and_weather_it_asks_for(tmp_path: Path) -> None:
