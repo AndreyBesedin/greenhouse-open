@@ -1,18 +1,16 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
+import { expect, WAITS_FOR_THE_SIMULATOR_MS } from "./arrives";
 import { unfold } from "./folds";
 
 // The climate box's fan, heater and dehumidifier switching on on their own,
 // a minute apart, with a probe in the fan's core.
 const SWITCHING_ON = "60:fan:1,120:heater:1,180:dehumidifier:1";
 const IN_THE_FANS_CORE = "3:3.2:2.8";
-// A moment of a run, with the fan running, can take CI's simulator a while,
-// behind the scene and the charts it is asked for beside it.
-const ARRIVES_MS = 40_000;
 
 test("schedule: the equipment switches on its own, and an override holds from its moment", async ({
   page,
 }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(WAITS_FOR_THE_SIMULATOR_MS);
   await page.goto(
     `/?scenario=climate_box&field=climate&schedule=${SWITCHING_ON}&probes=${IN_THE_FANS_CORE}`,
   );
@@ -38,12 +36,12 @@ test("schedule: the equipment switches on its own, and an override holds from it
     await expect(page.getByTestId("equipment-fan")).toHaveText("off");
     await expect(heater).toHaveText("off");
     // The reading is the field's, which arrives as a moment of the run does.
-    await expect(reading).toHaveText(/^climate: 0\.00 m\/s/, { timeout: ARRIVES_MS });
+    await expect(reading).toHaveText(/^climate: 0\.00 m\/s/);
   });
 
   await test.step("three minutes in, all three run, as scheduled", async () => {
     await slider.fill("180");
-    await expect(moment).toHaveText("3 min", { timeout: ARRIVES_MS });
+    await expect(moment).toHaveText("3 min");
     await expect(page.getByTestId("equipment-fan")).toHaveText("100%, 1 m³/s");
     await expect(heater).toHaveText("100%, 10 kW");
     await expect(page.getByTestId("equipment-dehumidifier")).toHaveText("100%, 1 kg/h");
@@ -54,7 +52,7 @@ test("schedule: the equipment switches on its own, and an override holds from it
 
   await test.step("switched off ten minutes in, the heater is off from then on", async () => {
     await slider.fill("600");
-    await expect(moment).toHaveText("10 min", { timeout: ARRIVES_MS });
+    await expect(moment).toHaveText("10 min");
     await expect(heater).toHaveText("100%, 10 kW");
     await unfold(page, "Equipment");
     await page
@@ -67,7 +65,7 @@ test("schedule: the equipment switches on its own, and an override holds from it
     await expect(commands).toHaveCount(4);
     await expect(heater).toHaveText("off");
     await slider.fill("540");
-    await expect(moment).toHaveText("9 min", { timeout: ARRIVES_MS });
+    await expect(moment).toHaveText("9 min");
     await expect(heater).toHaveText("100%, 10 kW");
     await expect(summary).toHaveText("Schedule: 4 commands. Next at 10 min: heater off.");
   });
@@ -78,7 +76,7 @@ test("schedule: the equipment switches on its own, and an override holds from it
     await expect(page).toHaveURL(/&schedule=60:fan:1,120:heater:1,180:dehumidifier:1(&|$)/);
     await schedule.getByRole("button", { name: "Go to heater 100% at 2 min" }).click();
     await expect(page).toHaveURL(/&t=120(&|$)/);
-    await expect(moment).toHaveText("2 min", { timeout: ARRIVES_MS });
+    await expect(moment).toHaveText("2 min");
     await expect(heater).toHaveText("100%, 10 kW");
   });
 
