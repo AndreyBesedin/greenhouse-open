@@ -2277,6 +2277,11 @@ body {
   color: var(--panel-muted-strong);
 }
 
+.replay-refused {
+  margin: 0 0 10px;
+  color: var(--panel-warn);
+}
+
 .replay-pace {
   display: inline-flex;
   align-items: center;
