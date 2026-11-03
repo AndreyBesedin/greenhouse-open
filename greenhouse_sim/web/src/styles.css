@@ -1847,6 +1847,7 @@ body {
 .landing-link-button {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   align-self: flex-start;
   box-sizing: border-box;
   min-height: 44px;
