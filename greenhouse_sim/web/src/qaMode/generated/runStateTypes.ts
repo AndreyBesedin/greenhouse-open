@@ -24,7 +24,7 @@ export interface RunState {
   time_s: number;
   day: number;
   at: string;
-  house_air: HouseAirNow | null;
+  house_air: HouseAirNow;
   crop_model: string;
   plants: number;
   days_lived: number;

@@ -67,7 +67,7 @@ def timeline(
         )
     processes = RunProcesses(
         schedule=run_schedule(catalogue, run),
-        air_step_s=STEP_S if config.layout.equipment else None,
+        air_step_s=STEP_S,
         plants=plant_ids(config),
         sensors=[sensor for sensor in config.layout.sensors if isinstance(sensor, PointSensor)],
         cameras=[sensor for sensor in config.layout.sensors if isinstance(sensor, Camera)],

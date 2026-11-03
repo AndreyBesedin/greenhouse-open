@@ -19,9 +19,13 @@ takes one checks first that it is still there.
 - [ ] **A scene opened without following a run is not framed on the house.** The
   camera stays at its default (5.2, -5.2, 5.2) and the house runs off under the View
   panel. Whether this came before the landing page is not known.
-- [ ] **A house with no equipment has no climate run.** It has no climate field and
-  gets fixed light, not the sun. Whether it should have a climate run, and at what
-  cost, is open.
+- [x] **A house with no equipment has no climate run.** It has no climate field and
+  gets fixed light, not the sun. It now has one, as any other house has: its crop
+  already lived in that run's house air, so the field's grid run is what is added,
+  about 6 to 12 s on tomato_compartment for the first moment drawn in an hour of the
+  run. Its sensors and its run's id stay its own airflow's, so that no run or record
+  changes: what a sensor reads there differs from the climate drawn, by about 10 °C
+  in tomato_compartment's air.
 
 ### Low to medium
 
@@ -74,7 +78,7 @@ panels in a replay.
 - [ ] **Low to medium: a fork's controls stay enabled at a run's end.** "Fork from here
   with these levels" and the targets form can still be used, and the refusal gives the
   end in seconds ("the run ends at 1209600 s").
-- [ ] Each page load of a followed house with no climate sends one burst of 404s before
+- [x] Each page load of a followed house with no climate sends one burst of 404s before
   the list of fields answers.
 - [ ] A mid-day fork opens at its day's start, while its subtitle names the fork's moment.
 - [ ] A fork of a deleted parent keeps a "The run it came from" link that ends in a
