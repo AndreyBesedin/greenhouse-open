@@ -1,10 +1,39 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 import { FOLDS, type FoldName, unfold } from "./folds";
 
 // A scenario followed, as the scenarios table opens one (#245): the run
 // played back, its moment, and every group of the info panel beside them.
 const FOLLOWED = "/?scenario=climate_box&field=climate&follow=1";
+
+/** Its run played back, as this test's own playback says it: given nothing.
+ * The simulator's is shared, and keeps what other tests give it: follow.spec's
+ * level set draws a schedule in this panel, which then no longer fits, for as
+ * long as the simulator runs and on any retry. */
+async function followsAPlainRun(page: Page): Promise<void> {
+  await page.route("**/api/scenarios/climate_box/playback", (route) =>
+    route.fulfill({
+      json: {
+        scenario_id: "climate_box",
+        run_id: "climate_box-climate-00000000",
+        layout: "default",
+        epoch: 0,
+        greenhouse_id: "climate_box",
+        started_at: "2026-03-01T00:00:00Z",
+        simulated_now: "2026-03-01T00:00:00Z",
+        time_s: 0,
+        day: 0,
+        playing: false,
+        seconds_per_day: 10,
+        worked_out_s: 0,
+        every_s: 300,
+        targets: [],
+        commands: [],
+        crop: [],
+      },
+    }),
+  );
+}
 // The info panel's sections, by their names in `folds.ts`, folded at first
 // but the climate run's moment (#273).
 const FOLDED: readonly FoldName[] = [
@@ -41,6 +70,7 @@ test("info panel: every group a section folded to its line, the panel fitting a 
 }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1280, height: 720 });
+  await followsAPlainRun(page);
   await page.goto(FOLLOWED);
   const panel = page.locator(".info-panel");
   await expect(page.getByRole("region", { name: "Run played back" })).toBeVisible({
@@ -94,6 +124,7 @@ test("info panel: every group a section folded to its line, the panel fitting a 
 
 test("info panel: the sections sit in titled cards by topic (#306)", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
+  await followsAPlainRun(page);
   await page.goto(FOLLOWED);
   await expect(page.getByTestId("climate-time")).toBeVisible({ timeout: 20_000 });
   const panel = page.locator(".info-panel");
