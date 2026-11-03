@@ -146,10 +146,11 @@ test("builder: a draft saved and a run of it started in one step, followed in th
   test.setTimeout(120_000);
   const id = `finish_${Date.now()}`;
   await page.goto("/builder");
-  const copy = page.locator(".builder-copy");
-  await copy.getByLabel("Scenario").selectOption({ label: "Climate box" });
-  await copy.getByLabel("The copy's identifier").fill(id);
-  await copy.getByRole("button", { name: "Copy its house" }).click();
+  // A house of its own name: the scenario this registers is listed by the start
+  // page, whose searches the other specs make by a packaged scenario's name.
+  await field(page, "Identifier").fill(id);
+  await field(page, "Name").fill("Finishing house");
+  await page.getByRole("button", { name: "Draft this house" }).click();
   await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
 
   // The run step's days are kept for the run the one step makes.
