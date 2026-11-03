@@ -1923,6 +1923,13 @@ body {
   font-weight: 600;
 }
 
+/* How many runs are kept and what they hold, above the list of them. */
+.landing-kept {
+  margin: 0;
+  color: var(--panel-muted-strong);
+  font-size: 13px;
+}
+
 .landing-runs {
   margin: 8px 0 0;
   padding: 0;

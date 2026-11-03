@@ -86,6 +86,21 @@ export function sizeText(bytes: number): string {
   return bytes >= KILOBYTE ? `${Math.round(bytes / KILOBYTE)} kB` : `${bytes} B`;
 }
 
+/** What the runs kept hold, in a line: how many, and the size of their
+ * objects in all (`size_bytes` of each); nothing when none is kept, which the
+ * list says in its own words. */
+export function keptText(runs: readonly StoredRun[]): string | null {
+  if (runs.length === 0) {
+    return null;
+  }
+  const bytes = runs.reduce((total, run) => total + run.size_bytes, 0);
+  return `${runs.length === 1 ? "1 run" : `${runs.length} runs`} kept, ${sizeText(bytes)}`;
+}
+
+/** What that size is and is not, said where the line is. */
+export const KEPT_SIZE_NOTE =
+  "The size of the runs' own objects (their records and checkpoints), not of the disk they are on.";
+
 /** The day a run was started, in UTC so that it reads the same wherever it is
  * read; nothing when its start is not known. */
 export function startedText(run: StoredRun): string {

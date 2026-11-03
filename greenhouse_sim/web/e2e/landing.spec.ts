@@ -30,6 +30,11 @@ test("the bare address is the page where a person decides what to do", async ({ 
     "href",
     "/builder",
   );
+  // The runs kept are told, with what their objects hold, or that none is
+  // kept (the specs share a simulator, so which of the two is not asked).
+  await expect(
+    page.getByText(/No run has been kept yet|\d+ runs? kept, [\d.]+ (B|kB|MB)/),
+  ).toBeVisible();
   expect(errors).toEqual([]);
 });
 
