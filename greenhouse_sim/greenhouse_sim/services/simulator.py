@@ -27,6 +27,7 @@ from greenhouse_sim.services import (
     checkpoints,
     climate_runs,
     crop,
+    interrupted,
     kept_states,
     scenario_files,
     sunlight,
@@ -91,6 +92,9 @@ class Simulator:
         # The scenarios uploaded as files beside the run store are known
         # again (P17.11).
         scenario_files.restore(self)
+        # Epochs a producer that crashed left `running` are interrupted, and
+        # can be resumed (P17.9).
+        interrupted.mark(self)
 
     @property
     def closed(self) -> bool:

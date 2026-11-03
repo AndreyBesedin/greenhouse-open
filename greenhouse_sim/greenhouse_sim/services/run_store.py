@@ -47,6 +47,8 @@ from greenhouse_protocol.outcome import ActionOutcome
 from greenhouse_protocol.provenance import RecordSource
 from pydantic import BaseModel, ConfigDict, JsonValue
 
+from greenhouse_sim.services import leases
+
 FORMAT: Final = "run-store-1"
 CHECKPOINT_TYPE: Final = "application/json+zstd"
 # An instant is written in a name as whole microseconds, zero-padded, so that
@@ -71,6 +73,10 @@ class Status(StrEnum):
     FAILED = "failed"
     # Stopped before its end: a restart, or the producer stopping.
     INTERRUPTED = "interrupted"
+
+
+# The statuses an epoch is told when it is no longer worked.
+ENDED: Final = frozenset({Status.FINISHED, Status.FAILED, Status.INTERRUPTED})
 
 
 class Kind(StrEnum):
@@ -450,8 +456,20 @@ class EpochStore:
         return EpochManifest.model_validate_json(data)
 
     def set_status(self, status: Status) -> None:
-        manifest = self.manifest().model_copy(update={"status": status})
+        """Says what the epoch is. One said to run is held by this process
+        (`leases`) until it is said to have ended, by whoever says it."""
+        before = self.manifest()
+        manifest = before.model_copy(update={"status": status})
         self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
+        if status == Status.RUNNING:
+            if before.status != Status.RUNNING:
+                leases.hold(self.objects, self._home)
+        elif status in ENDED:
+            leases.release(self.objects, self._home)
+
+    def worked(self, *, now: float | None = None) -> bool:
+        """Whether a process holds the epoch's lease."""
+        return leases.alive(self.objects, self._home, now=now)
 
     def commits(self, after: int = 0) -> list[Commit]:
         """The commits in order, from number `after` (a reader that has the

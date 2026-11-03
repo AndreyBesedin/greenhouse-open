@@ -73,7 +73,8 @@ def delete_epoch(simulator: Simulator, run_id: str, epoch: int) -> dict[str, Jso
     works on it: a worker in a process of its own is seen by no playback here.
     Nor is one a replaced producer is still writing, whatever the store says
     yet. A run left running by a producer that is gone stays so until it is
-    marked interrupted (P17.9)."""
+    found interrupted, as a simulator starts or when it is asked to resume
+    (`interrupted`, P17.9)."""
     objects = _objects(simulator)
     if epoch not in stored_epochs(objects, run_id):
         raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
