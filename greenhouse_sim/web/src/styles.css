@@ -1,68 +1,6 @@
-/* The panels' colours (#208): dark by default, light if chosen
- * (`panelTheme.ts`). The 3D scene, its legends' colour scales and the
- * charts' coloured lines are the same in both. */
-:root {
-  --panel-scheme: dark;
-  --panel-bg: rgb(17 24 39 / 90%);
-  --panel-text: #e5e9f0;
-  --panel-muted: #a7b1c2;
-  --panel-muted-strong: #c3cad6;
-  --panel-rule: #3d4a5f;
-  --panel-warn: #ffb380;
-  --panel-link: #8cb8ff;
-  --panel-accent: #e277b5;
-  --label-bg: rgb(17 24 39 / 85%);
-  --landing-bg: #0b1220;
-  --landing-backdrop: rgb(0 0 0 / 60%);
-  /* What is not computed yet, hatched in the panels' rule colour, on the
-   * replay's track and in its legend: the same in either theme, as the rule is. */
-  --replay-track:
-    repeating-linear-gradient(135deg, var(--panel-rule) 0 6px, transparent 6px 12px) center / 100%
-    14px no-repeat;
-  --replay-hatch: repeating-linear-gradient(135deg, var(--panel-rule) 0 3px, transparent 3px 6px);
-  --chart-face: #1e293b;
-  --chart-ring: #6b7a90;
-  --chart-neutral: #b8c2d1;
-  --chart-strong: #e5e9f0;
-  --chart-soft: #8794a8;
-  --chart-off: #8794a8;
-  --chart-faint: #5d6b80;
-  --chart-blue-text: #5aa9e6;
-}
-
-:root[data-panels="light"] {
-  --panel-scheme: light;
-  --panel-bg: rgb(255 255 255 / 88%);
-  --panel-text: #000000;
-  --panel-muted: #555555;
-  --panel-muted-strong: #444444;
-  --panel-rule: #cccccc;
-  --panel-warn: #8a3b12;
-  --panel-link: #1f5fbf;
-  --panel-accent: #aa3377;
-  --label-bg: rgb(255 255 255 / 85%);
-  --landing-bg: #f4f6f3;
-  --landing-backdrop: rgb(20 30 25 / 50%);
-  --chart-face: #ffffff;
-  --chart-ring: #999999;
-  --chart-neutral: #555555;
-  --chart-strong: #333333;
-  --chart-soft: #888888;
-  --chart-off: #7f8c8d;
-  --chart-faint: #bbbbbb;
-  --chart-blue-text: #0072b2;
-}
-
-html,
-body,
-#root {
-  height: 100%;
-  margin: 0;
-}
-
-body {
-  font-family: system-ui, sans-serif;
-}
+/* Every stylesheet, in the order of the cascade (decision 0068). */
+@import "./design/tokens.css";
+@import "./design/base.css";
 
 /* The 3D view fills the window; panels float over it. */
 .viewer {
@@ -609,7 +547,7 @@ body {
   left: 0;
   padding: 1px 4px;
   background: var(--label-bg);
-  border: 1px solid #ff8c1a;
+  border: 1px solid var(--data-orange);
   border-radius: 3px;
   font-size: 12px;
   white-space: nowrap;
@@ -835,11 +773,11 @@ body {
 }
 
 .weather-day-chart .day-temperature {
-  stroke: #c0392b;
+  stroke: var(--data-red);
 }
 
 .weather-day-chart .day-humidity {
-  stroke: #2e86c1;
+  stroke: var(--data-sky);
 }
 
 .weather-day-chart .day-wind {
@@ -847,11 +785,11 @@ body {
 }
 
 .weather-day-chart .day-sunshine {
-  stroke: #e6a800;
+  stroke: var(--data-amber);
 }
 
 .weather-day-now {
-  stroke: #ff8c1a;
+  stroke: var(--data-orange);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
@@ -873,12 +811,12 @@ body {
 }
 
 .wind-compass-needle {
-  stroke: #2b7bb9;
+  stroke: var(--data-blue);
   stroke-width: 2;
 }
 
 .wind-compass-head {
-  fill: #2b7bb9;
+  fill: var(--data-blue);
 }
 
 /* The house's air as one volume through the run, the run all off dashed. */
@@ -906,7 +844,7 @@ body {
 }
 
 .house-air-run {
-  stroke: #c0392b;
+  stroke: var(--data-red);
 }
 
 .house-air-off {
@@ -989,11 +927,11 @@ body {
 }
 
 .branch-a {
-  stroke: #2b7bb9;
+  stroke: var(--data-blue);
 }
 
 .branch-b {
-  stroke: #c0392b;
+  stroke: var(--data-red);
   stroke-dasharray: 3 2;
 }
 
@@ -1017,7 +955,7 @@ body {
 }
 
 .timeline-ticks {
-  stroke: #2b7bb9;
+  stroke: var(--data-blue);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
@@ -1036,13 +974,13 @@ body {
 /* A followed run's plan lane (P13.8): what ran, what did not, and what is
  * still to come; and each listed with its outcome. */
 .timeline-plan-ran {
-  stroke: #2e8b57;
+  stroke: var(--data-green);
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
 }
 
 .timeline-plan-not-ran {
-  stroke: #c0392b;
+  stroke: var(--data-red);
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
 }
@@ -1080,7 +1018,7 @@ body {
 
 .probe-chart .probe-charts-controlled,
 .probe-charts-key .probe-charts-controlled {
-  stroke: #0072b2;
+  stroke: var(--data-navy);
   color: var(--chart-blue-text);
 }
 
@@ -1237,7 +1175,7 @@ body {
 }
 
 .sensor-chart-reading {
-  fill: #0072b2;
+  fill: var(--data-navy);
 }
 
 .sensor-truth {
@@ -2309,7 +2247,10 @@ body {
   cursor: pointer;
   touch-action: none;
   border-radius: 7px;
-  background: var(--replay-track);
+  /* What is not computed yet, hatched in the rule's colour in either theme. */
+  background:
+    repeating-linear-gradient(135deg, var(--panel-rule) 0 6px, transparent 6px 12px) center / 100%
+    14px no-repeat;
 }
 
 .replay-computed {
@@ -2391,7 +2332,7 @@ body {
 }
 
 .replay-swatch-pending {
-  background: var(--replay-hatch);
+  background: repeating-linear-gradient(135deg, var(--panel-rule) 0 3px, transparent 3px 6px);
 }
 
 .replay-notice {
