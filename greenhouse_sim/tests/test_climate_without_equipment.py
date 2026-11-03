@@ -53,8 +53,7 @@ def test_a_layout_without_equipment_offers_and_draws_its_climate(
     listed = respond(simulator, "GET", _address(run, "fields"))
 
     assert listed.status == HTTPStatus.OK
-    assert isinstance(listed.body, dict)
-    assert "climate" in listed.body["fields"]
+    assert "climate" in fields.FieldNames.model_validate(listed.body).fields
     assert _climate(simulator, run, 0.0).field_id.endswith("_climate")
 
 
