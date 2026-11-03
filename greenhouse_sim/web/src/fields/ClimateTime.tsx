@@ -94,6 +94,11 @@ function sentence(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+const FOLLOWED_NOTE =
+  "The run played back moves this moment on with its clock: play and pause it there. Stop following to choose the moment here, or play it.";
+/** What a replay says there: the timeline under the view moves the moment. */
+export const REPLAYED_NOTE = "The replay's timeline under the view moves this moment.";
+
 /**
  * How far into its climate run a scenario's climate is drawn: a slider over
  * the moment's day, a minute at a time; through a run of several days, a
@@ -114,6 +119,7 @@ export function ClimateTime({
   shown,
   failed = false,
   followed = false,
+  followedNote = FOLLOWED_NOTE,
   days,
   playing,
   onTime,
@@ -129,6 +135,8 @@ export function ClimateTime({
   /** Whether the view follows the run played back, whose clock then moves
    * the moment on in place of this play. */
   followed?: boolean;
+  /** What is said in place of this moment's controls, when it is followed. */
+  followedNote?: string;
   /** How many days the run lasts. */
   days: number;
   playing: boolean;
@@ -188,8 +196,7 @@ export function ClimateTime({
       </div>
       {followed && (
         <p className="climate-time-note" data-testid="climate-followed">
-          The run played back moves this moment on with its clock: play and pause it there. Stop
-          following to choose the moment here, or play it.
+          {followedNote}
         </p>
       )}
       {/* While the run plays, or the view follows it, the line keeps its place

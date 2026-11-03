@@ -20,6 +20,7 @@ import { QaSolar } from "./qa/QaSolar";
 import { QA_RENDERER_PATH } from "./qa/qaPage";
 import { QA_REFERENCE_PATH } from "./qa/referencePage";
 import { QA_SOLAR_PATH } from "./qa/solarPage";
+import { Replay } from "./replay/Replay";
 import "./styles.css";
 
 const root = document.getElementById("root");
@@ -49,6 +50,8 @@ const page =
     <Builder />
   ) : pageAt(location.pathname, location.search) === "landing" ? (
     <Landing />
+  ) : pageAt(location.pathname, location.search) === "replay" ? (
+    <Replay />
   ) : (
     <App />
   );
@@ -58,7 +61,7 @@ const page =
 // theme chosen. Set before the first render, so that the panels never show
 // the other first.
 showPanels(
-  page.type === App || page.type === Builder || page.type === Landing
+  page.type === App || page.type === Builder || page.type === Landing || page.type === Replay
     ? storedPanelTheme()
     : "light",
 );

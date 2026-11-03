@@ -8,7 +8,7 @@ import { CheckpointsPanel } from "./checkpoints/CheckpointsPanel";
 import { type CheckpointSummary, restored } from "./checkpoints/checkpoints";
 import { EquipmentControls, equipmentIn } from "./EquipmentControls";
 import { ClimateSchedule } from "./fields/ClimateSchedule";
-import { ClimateTime, describeClimateRun } from "./fields/ClimateTime";
+import { ClimateTime, describeClimateRun, REPLAYED_NOTE } from "./fields/ClimateTime";
 import type { FieldView, Slice } from "./fields/display";
 import { describeAirField, FieldControls, useFieldNames } from "./fields/FieldControls";
 import { describeProbes, FieldProbes } from "./fields/FieldProbes";
@@ -82,6 +82,7 @@ export function ScenarioPanels({
   placing,
   probeHeight,
   playingClimate,
+  replayed = false,
   thermostat = null,
   setpoints,
   onTargets,
@@ -113,6 +114,8 @@ export function ScenarioPanels({
   placing: boolean;
   probeHeight: number;
   playingClimate: boolean;
+  /** Whether a replay of a stored run moves the moment, and not this panel. */
+  replayed?: boolean;
   /** The thermostat that runs its heater at the moment drawn, if one does. */
   thermostat?: ThermostatAt | null;
   /** Its thermostat at the moment drawn, whether or not it runs its heater
@@ -224,7 +227,8 @@ export function ScenarioPanels({
                 time={time}
                 shown={shownTime}
                 failed={momentFailed}
-                followed={source.follow === true}
+                followed={source.follow === true || replayed}
+                {...(replayed ? { followedNote: REPLAYED_NOTE } : {})}
                 days={days}
                 playing={playingClimate}
                 onTime={setTime}

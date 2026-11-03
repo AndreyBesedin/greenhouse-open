@@ -6,7 +6,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DAY_S } from "../clock";
 import { searchFor, sourceFromSearch } from "../scene/source";
 import { button, render, said, select } from "../testing/render";
-import { ClimateTime, describeClimateRun, describeTime, onDay, playStep } from "./ClimateTime";
+import {
+  ClimateTime,
+  describeClimateRun,
+  describeTime,
+  onDay,
+  playStep,
+  REPLAYED_NOTE,
+} from "./ClimateTime";
 import { fieldUrl } from "./source";
 
 const ignore = () => undefined;
@@ -300,6 +307,25 @@ describe("a climate run's moment, in a view that follows the run played back", (
       />
     );
   }
+
+  it("leaves its controls to a replay's timeline, and says that one in the run's place (P17.6)", () => {
+    const view = render(
+      <ClimateTime
+        time={DAY_S}
+        shown={DAY_S}
+        followed
+        followedNote={REPLAYED_NOTE}
+        days={14}
+        playing={false}
+        onTime={ignore}
+        onPlaying={ignore}
+      />,
+    );
+
+    expect(view.container.querySelectorAll("button, input, select")).toHaveLength(0);
+    expect(said(view.container, "climate-followed")).toBe(REPLAYED_NOTE);
+    expect(REPLAYED_NOTE).not.toContain("Stop following");
+  });
 
   it("leaves play, the sliders, the day steps and the pace to the run played back, and says so", () => {
     // The playback's play and pause are the view's (#270): a play of the

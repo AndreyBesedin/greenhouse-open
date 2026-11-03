@@ -76,7 +76,8 @@ test("a run is started at a seed from a scenario's dialog, listed, and not remov
   await expect(dialog.getByRole("heading")).toContainText("Solar");
 
   await dialog.getByRole("button", { name: "New run" }).click();
-  await dialog.getByLabel("Seed").fill("7");
+  // Exactly: the runs of the scenario that other specs have started have labels that say a seed.
+  await dialog.getByLabel("Seed", { exact: true }).fill("7");
   await dialog.getByLabel("Seconds per simulated day").fill("1");
   await dialog.getByRole("button", { name: "Start run" }).click();
 

@@ -2125,6 +2125,12 @@ body {
   min-height: 0;
 }
 
+/* The viewer in a page that has its own header and controls: it fills what
+ * is left of the page, not the window. */
+.viewer-embedded {
+  position: absolute;
+}
+
 .replay-header,
 .replay-transport {
   background: var(--panel-bg);
