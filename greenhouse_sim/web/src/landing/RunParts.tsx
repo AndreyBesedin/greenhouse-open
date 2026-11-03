@@ -1,6 +1,4 @@
-import { followAddress } from "./follow";
 import { replayAddress } from "./paths";
-import { runKey } from "./playing";
 import {
   isComputing,
   progressShare,
@@ -41,19 +39,6 @@ export function RunProgress({ run, name }: { run: StoredRun; name: string }) {
   );
 }
 
-/** Where a run is followed, if it can be: in the viewer if a playback plays it
- * (`loadPlaying`), else in its replay, at the newest day, while it is computed.
- * One with files missing has nothing whole to show. */
-export function followHref(run: StoredRun, played: ReadonlySet<string>): string | null {
-  if (run.damaged) {
-    return null;
-  }
-  if (played.has(runKey(run))) {
-    return followAddress(run.scenario_id, run.layout);
-  }
-  return isComputing(run) ? replayAddress(run.run_id, run.epoch, true) : null;
-}
-
 /** A link to a run's replay, unless it has files missing. `label` names the run
  * for whoever hears the link, if the list does not. */
 export function ReplayLink({ run, label }: { run: StoredRun; label?: string }) {
@@ -70,12 +55,13 @@ export function ReplayLink({ run, label }: { run: StoredRun; label?: string }) {
   );
 }
 
-/** A link to follow a run, if it can be followed. */
-export function FollowLink({ run, played }: { run: StoredRun; played: ReadonlySet<string> }) {
-  const href = followHref(run, played);
+/** A link to a run's replay at the newest day, while it is computed: one with
+ * files missing has nothing whole to show. */
+export function FollowLink({ run }: { run: StoredRun }) {
   return (
-    href !== null && (
-      <a href={href} className="landing-link-button">
+    isComputing(run) &&
+    !run.damaged && (
+      <a href={replayAddress(run.run_id, run.epoch, true)} className="landing-link-button">
         Follow
       </a>
     )

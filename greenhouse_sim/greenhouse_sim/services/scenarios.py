@@ -86,9 +86,6 @@ class ScenarioSummary(BaseModel):
     # The heater a thermostat runs by the house's air, if it has one
     # (`climate.thermostat`).
     thermostat: str | None = None
-    # Whether it is packaged with the simulator, and not registered with this
-    # one: a worker builds a simulator that knows only the packaged ones.
-    packaged: bool
 
 
 class RunManifest(BaseModel):
@@ -163,7 +160,6 @@ def _summary(entry: CatalogueEntry) -> ScenarioSummary:
         layouts=list(entry.layouts),
         weathers=weather_names(),
         thermostat=None if entry.config.thermostat is None else entry.config.thermostat.actuator_id,
-        packaged=entry.packaged,
     )
 
 

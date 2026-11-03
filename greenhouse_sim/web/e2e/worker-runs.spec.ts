@@ -168,9 +168,8 @@ test("a run is stopped with what it computed, resumed as the same epoch, and del
   }
 });
 
-test("a scenario no worker can run starts by its playback, and says where to follow it", async ({
-  page,
-}) => {
+test("an uploaded scenario is run, stopped and resumed by a worker too", async ({ page }) => {
+  test.setTimeout(360_000);
   const id = `built_${Date.now()}`;
   const file = await page.request.get("/api/scenarios/sensor_lab/file");
   const scenario = JSON.parse((await file.json()).text);
@@ -183,18 +182,26 @@ test("a scenario no worker can run starts by its playback, and says where to fol
   });
   expect(uploaded.ok()).toBe(true);
 
-  await page.goto(`/#run=${id}`);
-  const dialog = page.getByRole("dialog");
-  await expect(dialog.getByText("replaces the one now playing")).toBeVisible();
-  await dialog.getByRole("button", { name: "Start run" }).click();
+  await page.goto(`/#runs=${id}`);
+  const started = await start(page, "74");
+  try {
+    await page.goto("about:blank");
+    await page.goto(`/#runs=${id}`);
+    const dialog = page.getByRole("dialog");
+    const row = rowOf(dialog, "74");
+    await expect(row).toContainText("Running", WORKS);
+    await expect.poll(() => daysIn(row), WORKS).toBeGreaterThan(0);
+    await expect(row).not.toContainText("Failed");
 
-  // The page stays, the run is computing, and it has not failed for want of a worker.
-  await expect(dialog.getByRole("link", { name: "Follow it in the viewer" })).toBeVisible();
-  await expect(page).toHaveURL(new RegExp(`#run=${id}$`));
-  const row = dialog.locator(".landing-run").first();
-  await expect(row).toContainText(/Running/, WORKS);
-  await expect.poll(() => daysIn(row), WORKS).toBeGreaterThan(0);
-  await expect(row).not.toContainText("Failed");
-  // No worker has it, so that neither control would do anything.
-  await expect(row.getByRole("button", { name: /^(Stop|Resume) / })).toHaveCount(0);
+    await row.getByRole("button", { name: /^Stop the run/ }).click();
+    await expect(row).toContainText("Interrupted", WORKS);
+    const kept = await daysIn(row);
+    await row.getByRole("button", { name: /^Resume the run/ }).click();
+    await expect.poll(() => daysIn(row), WORKS).toBeGreaterThan(kept);
+    await expect(row).not.toContainText("Failed");
+  } finally {
+    await page.request.post(
+      `/api/runs/${encodeURIComponent(started.runId)}/epochs/${started.epoch}/stop`,
+    );
+  }
 });
