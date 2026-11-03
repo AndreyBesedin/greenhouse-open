@@ -156,6 +156,12 @@ export const CONTRACTS: readonly Contract[] = [
     "STORED_RUN_SCHEMA",
   ),
   contract(
+    `${SERVICES}/scenario_download.schema.json`,
+    "ScenarioDownload",
+    ["src/builder", "scenarioDownload"],
+    "SCENARIO_DOWNLOAD_SCHEMA",
+  ),
+  contract(
     `${SERVICES}/position.schema.json`,
     "PositionState",
     ["src/scene", "position"],
