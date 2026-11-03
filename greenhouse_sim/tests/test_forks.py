@@ -665,3 +665,12 @@ def test_a_plan_its_parent_refused_as_another_epochs_is_not_given_by_its_fork(
         assert fork.manifest().fork.inherited == 0  # type: ignore[union-attr]
         assert _worked(made, fork) == Status.FINISHED
         assert fork.outcomes().records == []
+
+
+def test_a_playback_at_another_seed_is_another_run_and_no_fork(tmp_path: Path) -> None:
+    with _simulator(tmp_path) as made:
+        playback.start(made, SHORT, hold=True)
+        other = playback.start(made, SHORT, hold=True, seed=7)
+        kept = EpochStore(FolderStore(tmp_path), other.run_id, other.epoch)
+        assert kept.manifest().seed == 7
+        assert kept.manifest().fork is None

@@ -809,22 +809,27 @@ class Playback:
                 every_s=self.every_s,
                 clock=self._clock,
                 epochs=self._epochs,
-                # A fork of the epoch it replaces, at its start (#271): that
-                # epoch stays in the store, and is served as it was.
-                fork=None
-                if self._epochs is None
-                else ForkOf(
-                    run_id=self.run_id,
-                    epoch=self._epoch,
-                    at_s=0.0,
-                    start_s=0.0,
-                    # The target changes it takes, an entry of its log.
-                    inherited=1 if self._executor.plan().targeted() else 0,
-                    layout=layout_name(layout),
-                ),
+                fork=self._forked_as(layout, seed),
             )
             self._successor = replacing
         return replacing
+
+    def _forked_as(self, layout: str, seed: int | None) -> ForkOf | None:
+        """What the run in its place is of it: a fork of its epoch, at its start,
+        if it is the same run rearranged (#271), which leaves this epoch in the
+        store as it was; nothing if it is at another seed, another run asked for."""
+        same_seed = seed is None or seed == self.seed
+        if self._epochs is None or not same_seed or layout_name(layout) == self.layout:
+            return None
+        return ForkOf(
+            run_id=self.run_id,
+            epoch=self._epoch,
+            at_s=0.0,
+            start_s=0.0,
+            # The target changes it takes, an entry of its log.
+            inherited=1 if self._executor.plan().targeted() else 0,
+            layout=layout_name(layout),
+        )
 
     def stop(self, *, wait: bool = True) -> None:
         """Stops working days out, the one under way left at its next moment:
