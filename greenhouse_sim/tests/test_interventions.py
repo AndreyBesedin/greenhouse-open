@@ -5,7 +5,7 @@ again, once, when the epoch is carried on."""
 from collections.abc import Iterable, Iterator
 from datetime import timedelta
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 import pytest
 from greenhouse_protocol.actions import Action, Harvest, HarvestScope, SetLevel
@@ -14,6 +14,7 @@ from pydantic import JsonValue
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.services.errors import Conflict
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR
 from greenhouse_sim.services.playback import Epochs, Playback
 from greenhouse_sim.services.run_store import EpochStore, FolderStore, Kind, Status
@@ -368,3 +369,41 @@ def test_targets_and_crop_actions_are_applied_again_as_the_epoch_is_carried_on(
 
     assert _digests(cut) == _digests(whole)
     assert cut.outcomes().records == whole.outcomes().records
+
+
+def test_the_days_kept_are_not_worked_again_when_the_log_is_applied(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, steered: EpochStore
+) -> None:
+    with _simulator() as before:
+        epoch = queued(before, FolderStore(tmp_path), SHORT)
+        barriers = _barriers(epoch, before, last=2)
+        assert execute(before, epoch, Stepped(barriers)) == Status.INTERRUPTED
+    worked: list[int] = []
+    work_day = Playback._work_day
+
+    def counted(self: Playback, day: int, *given: Any) -> bool:
+        worked.append(day)
+        return work_day(self, day, *given)
+
+    monkeypatch.setattr(Playback, "_work_day", counted)
+    with _simulator() as after:
+        assert resume(after, epoch, Free()) == Status.FINISHED
+
+    # The change lies on a day committed, and only the day after it is worked.
+    assert worked == [2]
+    assert _digests(epoch) == _digests(steered)
+
+
+def test_a_log_that_does_not_give_the_outcomes_kept_is_not_carried_on(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with _simulator() as before:
+        epoch = queued(before, FolderStore(tmp_path), SHORT)
+        barriers = _barriers(epoch, before, day=0, last=2)
+        assert execute(before, epoch, Stepped(barriers)) == Status.INTERRUPTED
+    assert epoch.outcomes().records
+
+    # As a build whose gateway answered otherwise would apply it.
+    monkeypatch.setattr(Playback, "_apply", lambda _self, _entry: None)
+    with _simulator() as after, pytest.raises(Conflict, match="does not give"):
+        resume(after, epoch, Free())
