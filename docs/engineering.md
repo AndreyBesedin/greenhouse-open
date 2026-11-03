@@ -428,6 +428,12 @@ lowest-dependencies job skip their work. A rename counts both its paths.
 A push to main checks everything. The pre-push hook does the same for the
 commits it pushes (`uv run check --fast --pushed`).
 
+A pull request's parts skip the tests marked `slow`, as the pre-push hook does;
+a push to main runs them all, so that what only they catch is found on main, after
+the merge. A test is marked `slow` when it takes 30 s or more; one that must be that
+long to prove what it claims is kept beside a short test of the same logic, which
+runs on every pull request.
+
 For a change to the viewer, run the steps CI runs in its `viewer checks` and
 `browser tests` jobs:
 
