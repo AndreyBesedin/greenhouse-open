@@ -17,8 +17,9 @@ export interface BundleWeight {
  * the runs dialog, 24.1 kB, with 1,708 kB of scripts; its scripts again by
  * the follow rule and the outcomes of a start, 1,710.2 kB; and by the
  * scenario file's share card and the builder's two endings (P17.11), 1,722 kB.
+ * Its styles again by the replay's timeline and transport (P17.6), 28 kB.
  */
-export const BUNDLE_BUDGET_KB: BundleWeight = { js: 1730, css: 26 };
+export const BUNDLE_BUDGET_KB: BundleWeight = { js: 1730, css: 29 };
 
 const BYTES_PER_KB = 1000;
 

@@ -1,0 +1,104 @@
+import { describe, expect, it } from "vitest";
+
+import { DAY_S } from "../clock";
+import {
+  clamp,
+  computedShare,
+  computedText,
+  dayAway,
+  dayLabel,
+  dayTicks,
+  fractionOf,
+  momentAt,
+  movedByKey,
+  type Span,
+} from "./timeline";
+
+const RUN: Span = { startS: 0, frontierS: 41 * DAY_S, endS: 120 * DAY_S };
+
+describe("the timeline's reach", () => {
+  it("is drawn across the whole run, and computed to the frontier", () => {
+    expect(fractionOf(30 * DAY_S, RUN)).toBeCloseTo(0.25);
+    expect(computedShare(RUN)).toBeCloseTo(41 / 120);
+  });
+
+  it("is drawn across what is computed when the end is not known", () => {
+    expect(computedShare({ startS: 0, frontierS: 5 * DAY_S, endS: null })).toBe(1);
+  });
+
+  it("starts at what is kept, not at the run's start", () => {
+    const window: Span = { startS: 10 * DAY_S, frontierS: 14 * DAY_S, endS: null };
+    expect(fractionOf(12 * DAY_S, window)).toBeCloseTo(0.5);
+    expect(momentAt(0, window)).toBe(10 * DAY_S);
+  });
+});
+
+describe("a place across the timeline", () => {
+  it("is a whole minute", () => {
+    expect(momentAt(0.1234, RUN) % 60).toBe(0);
+  });
+
+  it("is never past what is computed", () => {
+    expect(momentAt(1, RUN)).toBe(41 * DAY_S);
+    expect(momentAt(0.9, RUN)).toBe(41 * DAY_S);
+    expect(momentAt(-1, RUN)).toBe(0);
+  });
+
+  it("holds any moment to the part of the run that can be played", () => {
+    expect(clamp(-5, RUN)).toBe(0);
+    expect(clamp(99 * DAY_S, RUN)).toBe(41 * DAY_S);
+  });
+});
+
+describe("the days", () => {
+  it("moves a day on or back at the same time of day, held to what is computed", () => {
+    const six = 17 * DAY_S + 6 * 3600;
+    expect(dayAway(six, 1, RUN)).toBe(18 * DAY_S + 6 * 3600);
+    expect(dayAway(six, -1, RUN)).toBe(16 * DAY_S + 6 * 3600);
+    expect(dayAway(100, -1, RUN)).toBe(0);
+    expect(dayAway(41 * DAY_S - 100, 1, RUN)).toBe(41 * DAY_S);
+  });
+
+  it("are counted from 1 in a label", () => {
+    expect(dayLabel(0)).toBe("Day 1, 00:00");
+    expect(dayLabel(17 * DAY_S + 6 * 3600)).toBe("Day 18, 06:00");
+  });
+
+  it("give a day's last moment as its midnight", () => {
+    expect(dayLabel(DAY_S)).toBe("Day 1, 24:00");
+    expect(dayLabel(DAY_S + 60)).toBe("Day 2, 00:01");
+  });
+
+  it("are computed once their last moment is", () => {
+    expect(computedText(RUN)).toBe("Computed to day 41 of 120");
+    expect(computedText({ ...RUN, frontierS: 41 * DAY_S - 1 })).toBe("Computed to day 40 of 120");
+    expect(computedText({ startS: 0, frontierS: 3 * DAY_S, endS: null })).toBe("Computed to day 3");
+  });
+
+  it("are ticked at a step that reads well", () => {
+    expect(dayTicks(RUN)).toEqual([0, 30, 60, 90, 120]);
+    expect(dayTicks({ startS: 0, frontierS: 3 * DAY_S, endS: 5 * DAY_S })).toEqual([
+      0, 1, 2, 3, 4, 5,
+    ]);
+  });
+});
+
+describe("the keys", () => {
+  const at = 10 * DAY_S;
+
+  it("move the handle an hour, or a day, and hold it to what is computed", () => {
+    expect(movedByKey("ArrowRight", at, RUN)).toBe(at + 3600);
+    expect(movedByKey("ArrowLeft", at, RUN)).toBe(at - 3600);
+    expect(movedByKey("PageUp", at, RUN)).toBe(at + DAY_S);
+    expect(movedByKey("ArrowRight", 41 * DAY_S, RUN)).toBe(41 * DAY_S);
+  });
+
+  it("take the handle to the ends of what is computed", () => {
+    expect(movedByKey("Home", at, RUN)).toBe(0);
+    expect(movedByKey("End", at, RUN)).toBe(41 * DAY_S);
+  });
+
+  it("leave any other key alone", () => {
+    expect(movedByKey("a", at, RUN)).toBeNull();
+  });
+});
