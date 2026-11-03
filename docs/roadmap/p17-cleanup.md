@@ -44,17 +44,18 @@ takes one checks first that it is still there.
 
 **Builder**
 
-- [ ] "Run this revision" with an empty seed gives no feedback beside the button.
+- [x] "Run this revision" with an empty seed gives no feedback beside the button.
 - [ ] Some text is too pale in the dark theme.
-- [ ] `builder/portable.py` words its refusals as "format None" and "not JSON:
+- [x] `builder/portable.py` words its refusals as "format None" and "not JSON:
   Expecting value…".
 
 **Viewer**
 
 - [ ] The green test cube shows behind an error.
-- [ ] "before day one is not available" is awkward wording.
+- [x] "before day one is not available" is awkward wording.
 - [ ] The wind label shows through the light panel.
-- [ ] The console reports a 404 for `favicon.ico` and the deprecation of `THREE.Clock`.
+- [ ] The console reports the deprecation of `THREE.Clock`, from `@react-three/fiber`.
+- [x] The console reports a 404 for `favicon.ico`.
 
 **Replay**
 

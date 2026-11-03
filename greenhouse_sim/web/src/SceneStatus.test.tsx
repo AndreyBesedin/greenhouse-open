@@ -41,7 +41,7 @@ describe("what the viewer says of the scene it draws", () => {
 
     expect(said.className).not.toContain("visually-hidden");
     expect(said.getAttribute("role")).toBe("alert");
-    expect(said.textContent).toContain("was rejected: no greenhouse");
+    expect(said.textContent).toBe("The scenario climate_box was rejected: no greenhouse.");
   });
 
   it("shows why a scene is not available, as an alert", () => {
@@ -49,5 +49,8 @@ describe("what the viewer says of the scene it draws", () => {
 
     expect(said.className).not.toContain("visually-hidden");
     expect(said.getAttribute("role")).toBe("alert");
+    expect(said.textContent).toBe(
+      "The scenario climate_box is not available: the simulator could not be reached.",
+    );
   });
 });
