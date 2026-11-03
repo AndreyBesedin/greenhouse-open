@@ -425,7 +425,7 @@ def test_a_fork_starts_through_the_scheduler_in_a_process_of_its_own(tmp_path: P
     objects = FolderStore(tmp_path)
     with workers_support.short_simulator() as made:
         made.runs = objects
-        made.scheduler = Scheduler(made, tmp_path, limit=1, made_by=workers_support.MADE_BY)
+        made.scheduler = Scheduler(made, tmp_path, limit=1)
         parent = queued(made, objects, workers_support.SHORT)
         assert execute(made, parent, Free()) == Status.FINISHED
 
