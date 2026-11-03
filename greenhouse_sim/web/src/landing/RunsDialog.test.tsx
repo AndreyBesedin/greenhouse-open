@@ -39,6 +39,7 @@ function run(more: Partial<StoredRun>): StoredRun {
     size_bytes: 24 * 1024 * 1024,
     start_s: 0,
     fork: null,
+    damaged: false,
     ...more,
   };
 }
@@ -441,6 +442,30 @@ describe("the runs of a scenario, in a dialog", () => {
     );
 
     expect(words).toEqual([["Stop"], ["Stop"], ["Resume"], [], []]);
+  });
+
+  it("calls a run with files missing damaged: no way in, and still a way to delete it", () => {
+    const { rows, container } = shown([
+      run({ epoch: 1, status: "finished", damaged: true }),
+      run({ epoch: 0, status: "interrupted", damaged: true }),
+    ]);
+    const [finished, interrupted] = rows();
+
+    expect(finished?.querySelector(".landing-status")?.textContent).toContain("Damaged");
+    expect(finished?.textContent).toContain("cannot be read whole");
+    expect(finished?.textContent).not.toContain("Finished");
+    expect(interrupted?.textContent).not.toContain("Interrupted");
+    expect(container.querySelector('a[aria-label^="Replay"]')).toBeNull();
+    expect(follows()).toHaveLength(0);
+    expect(container.querySelector('button[aria-label^="Resume"]')).toBeNull();
+    expect(button(container, "Delete the run with seed 1, epoch 1")).toBeDefined();
+  });
+
+  it("can still stop a damaged run a worker is computing", () => {
+    const { container } = shown([run({ status: "running", damaged: true })]);
+
+    expect(button(container, "Stop the run with seed 1, epoch 0")).toBeDefined();
+    expect(follows()).toHaveLength(0);
   });
 
   it("offers neither on a scenario no worker can run", () => {
