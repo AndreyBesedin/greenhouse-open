@@ -3,8 +3,10 @@ cold spring day, once with nothing running and once heated through the
 nights and vented with the fan on through the middle of the day, its roof
 vent opened and shut by its schedule."""
 
-from collections.abc import Callable
+import sys
+from collections.abc import Callable, Iterator
 from http import HTTPStatus
+from pathlib import Path
 
 import pytest
 
@@ -13,6 +15,10 @@ from greenhouse_sim.climate.house import HouseTrace
 from greenhouse_sim.services import climate_readings, sensors
 from greenhouse_sim.services.runs import RunPlan, RunRequest
 from greenhouse_sim.services.simulator import Simulator
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+from short_runs import cut, simulator_of
 
 HOUR_S = 3600.0
 SPRING = "cold_spring_day"
@@ -29,6 +35,14 @@ SCHEDULE = (
 HEATED = {"heater": 1.0}
 
 
+@pytest.fixture(scope="module")
+def whole_house() -> Iterator[Simulator]:
+    """A simulator of the box, its air the whole house's: what a door or a vent
+    passes follows its commands, whichever model works its air out."""
+    with simulator_of(cut("climate_box", season=True)) as made:
+        yield made
+
+
 def _controlled(simulator: Simulator, until_s: float) -> HouseTrace:
     return climate_readings.house_air(
         simulator,
@@ -39,11 +53,10 @@ def _controlled(simulator: Simulator, until_s: float) -> HouseTrace:
     )
 
 
-@pytest.mark.slow
-def test_a_schedule_opens_and_shuts_a_vent(simulator: Simulator) -> None:
+def test_a_schedule_opens_and_shuts_a_vent(whole_house: Simulator) -> None:
     def opened(moment: float) -> dict[str, float]:
         at = climate_readings.openings(
-            simulator,
+            whole_house,
             RunRequest(
                 "climate_box",
                 levels=HEATED,
@@ -117,7 +130,7 @@ def test_both_runs_replay_exactly(simulator: Simulator, afresh: Callable[[], Non
     ],
 )
 def test_the_api_takes_commands_to_doors_and_vents(
-    simulator: Simulator, schedule: str, status: HTTPStatus
+    whole_house: Simulator, schedule: str, status: HTTPStatus
 ) -> None:
     path = f"/api/scenarios/climate_box/climate/openings?schedule={schedule}&t=4000"
-    assert respond(simulator, "GET", path).status == status
+    assert respond(whole_house, "GET", path).status == status
