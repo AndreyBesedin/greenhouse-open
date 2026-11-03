@@ -34,6 +34,13 @@ export function parseStoredRuns(body: unknown): StoredRun[] {
   });
 }
 
+/** The run in a response body, checked rather than trusted; null if it is not
+ * one. */
+export function parseStoredRun(body: unknown): StoredRun | null {
+  const checked = checkRun(body);
+  return checked.ok ? checked.value : null;
+}
+
 /** Asks the simulator for the runs it has kept; any failure becomes
  * `unavailable`. */
 export async function loadStoredRuns(fetchFn: typeof fetch = fetch): Promise<StoredRunsState> {

@@ -607,9 +607,37 @@ class EpochStore:
         commits = self.commits()
         return commits[-1].end_s if commits else self.start_s()
 
-    def size_bytes(self) -> int:
-        """How many bytes the epoch's objects hold."""
-        return sum(self.objects.size(name) or 0 for name in self.objects.names(f"{self._home}/"))
+    def size_bytes(self, listed: Iterable[str] | None = None) -> int:
+        """How many bytes the epoch's objects hold, those `listed` of it if
+        they have just been."""
+        names = self.objects.names(f"{self._home}/") if listed is None else listed
+        return sum(self.objects.size(name) or 0 for name in names)
+
+    def lacks(
+        self, manifest: EpochManifest, commits: Sequence[Commit], listed: Iterable[str]
+    ) -> bool:
+        """Whether an object that `commits` name, or the state a fork inherits,
+        is missing from what was `listed` of the epoch after they were read. A
+        writer puts up what a commit names before the commit, so that an epoch
+        being worked is never told so. No object is read: `verify` says whether
+        those held are what their commits name."""
+        held = set(listed)
+        wanted = {
+            f"{self._home}/segments/{commit.segment}/{kind}.parquet"
+            for commit in commits
+            for kind in Kind
+        }
+        wanted.update(commit.checkpoint for commit in commits if commit.checkpoint is not None)
+        if commits and commits[-1].log_position:
+            wanted.add(f"{self._home}/interventions.jsonl")
+        if manifest.fork is not None and manifest.fork.checkpoint_sha256 is not None:
+            wanted.add(self._inherited_name(manifest.fork))
+        if not wanted <= held:
+            return True
+        # `commits` stops at a gap: a commit listed past the next one, which is not.
+        written = sum(name.startswith(f"{self._home}/commits/") for name in held)
+        next_commit = f"{self._home}/commits/{len(commits):0{SEQ_DIGITS}d}.json"
+        return written > len(commits) and next_commit not in held
 
     def log(self) -> list[LogEntry]:
         """The changes given to the epoch up to the last commit."""
@@ -933,13 +961,20 @@ class StoredRun(BaseModel):
     # Where what it holds begins, and for a fork where it comes from.
     start_s: float = 0.0
     fork: ForkOf | None = None
+    # Whether an object its commits name is missing, so that it cannot be read
+    # whole. Said from the names of its objects, not from their contents.
+    damaged: bool = False
 
 
 def stored_run(objects: ObjectStore, run_id: str, epoch_number: int) -> StoredRun:
-    """One epoch as a list of them shows it. Only its own folder is read."""
+    """One epoch as a list of them shows it. Only its own folder is read, and
+    no more of it than its size asks: its commits, and the names of its objects,
+    which are listed after the commits so that all they name are there."""
     epoch = EpochStore(objects, run_id, epoch_number)
     manifest = epoch.manifest()
-    frontier = epoch.frontier_s()
+    commits = epoch.commits()
+    frontier = commits[-1].end_s if commits else epoch.start_s()
+    listed = objects.names(f"{run_id}/{epoch_number}/")
     return StoredRun(
         run_id=run_id,
         epoch=manifest.epoch,
@@ -951,9 +986,10 @@ def stored_run(objects: ObjectStore, run_id: str, epoch_number: int) -> StoredRu
         duration_s=manifest.duration_s,
         progress=None if not manifest.duration_s else frontier / manifest.duration_s,
         created_at=manifest.created_at,
-        size_bytes=epoch.size_bytes(),
+        size_bytes=epoch.size_bytes(listed),
         start_s=0.0 if manifest.fork is None else manifest.fork.start_s,
         fork=manifest.fork,
+        damaged=epoch.lacks(manifest, commits, listed),
     )
 
 

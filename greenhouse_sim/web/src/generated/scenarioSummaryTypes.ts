@@ -16,6 +16,7 @@ export interface ScenarioSummary {
   layouts: string[];
   weathers: string[];
   thermostat: string | null;
+  packaged: boolean;
 }
 /**
  * Set one piece of equipment to a level at a time of day, every day of

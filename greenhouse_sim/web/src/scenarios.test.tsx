@@ -14,6 +14,7 @@ const SENT = {
   weathers: ["default"],
   opening_day: null,
   thermostat: null,
+  packaged: true,
 };
 const DEMO: ScenarioSummary = {
   ...SENT,

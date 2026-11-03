@@ -1,5 +1,11 @@
 import { expect, type Page, test } from "@playwright/test";
-import { LANDING_PATH, REPOSITORY_URL, VIEWER_PATH } from "../src/landing/paths";
+import {
+  LANDING_PATH,
+  REPOSITORY_URL,
+  replayTarget,
+  runsAddress,
+  VIEWER_PATH,
+} from "../src/landing/paths";
 
 /** Everything the page reports as an error, so a test can insist on none. */
 function collectErrors(page: Page): string[] {
@@ -102,17 +108,26 @@ test("a run is started at a seed from a scenario's dialog, listed, and not remov
   await dialog.getByRole("button", { name: "New run" }).click();
   // Exactly: the runs of the scenario that other specs have started have labels that say a seed.
   await dialog.getByLabel("Seed", { exact: true }).fill("7");
-  await dialog.getByLabel("Seconds per simulated day").fill("1");
+  // Long enough not to end while this looks at it; it is stopped at the end.
+  await dialog.getByLabel("Seconds per simulated day").fill("10");
   await dialog.getByRole("button", { name: "Start run" }).click();
 
-  await expect(dialog.getByRole("link", { name: "Follow it in the viewer" })).toBeVisible();
-  const row = dialog.locator(".landing-run").filter({ hasText: "Seed 7" });
-  await expect(row).toBeVisible();
-  await row.getByRole("button", { name: /^Delete the run with seed 7/ }).click();
-  await dialog.getByRole("button", { name: /^Delete the run with seed 7/ }).click();
-  await expect(dialog.getByRole("alert")).toContainText("being computed");
-  await expect(row).toBeVisible();
+  await expect(page).toHaveURL(/\/replay\?run=.*&follow=1$/);
+  const started = replayTarget(new URL(page.url()).search);
+  try {
+    await page.goto(runsAddress("solar_lab"));
+    const row = dialog.locator(".landing-run").filter({ hasText: "Seed 7" }).first();
+    await expect(row).toBeVisible();
+    await row.getByRole("button", { name: /^Delete the run with seed 7/ }).click();
+    await dialog.getByRole("button", { name: /^Delete the run with seed 7/ }).click();
+    await expect(dialog.getByRole("alert")).toContainText("being computed");
+    await expect(row).toBeVisible();
 
-  await dialog.getByRole("button", { name: "Close" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+    await dialog.getByRole("button", { name: "Close" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  } finally {
+    await page.request.post(
+      `/api/runs/${encodeURIComponent(started?.runId ?? "")}/epochs/${started?.epoch}/stop`,
+    );
+  }
 });

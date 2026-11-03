@@ -2094,6 +2094,15 @@
   gap: 8px;
 }
 
+/* Room for a run's controls on one line, at a dialog's width. */
+.landing-dialog .landing-run {
+  column-gap: 12px;
+}
+
+.landing-dialog .landing-run-name {
+  flex-basis: 150px;
+}
+
 .landing-dialog .landing-runs {
   margin: 0;
   border: 0;
