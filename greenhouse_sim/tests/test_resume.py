@@ -289,3 +289,29 @@ def test_what_a_crash_left_past_the_last_commit_is_removed_before_it_is_carried_
             f"{home}/requests/{request}.json",
         }
         assert epoch.logged() == [entry]
+
+
+def test_a_request_asked_as_the_epoch_is_tidied_up_is_not_removed(tmp_path: Path) -> None:
+    """The asker is in another process, and may ask between any two listings."""
+
+    class AskingWhileListing(FolderStore):
+        def __init__(self, root: Path) -> None:
+            super().__init__(root)
+            self.asked: list[str] = []
+            self.epoch: EpochStore | None = None
+
+        def names(self, prefix: str = "") -> list[str]:
+            # As the epoch's whole folder is listed, whatever was listed before.
+            if self.epoch is not None and prefix == f"{self.epoch.run_id}/{self.epoch.epoch}/":
+                self.asked.append(self.epoch.ask({"kind": "targets", "targets": {}}))
+            return super().names(prefix)
+
+    with _simulator() as simulator:
+        store = AskingWhileListing(tmp_path)
+        epoch = _epoch(simulator, tmp_path)
+        again = EpochStore(store, epoch.run_id, epoch.epoch)
+        store.epoch = again
+
+        again.discard_uncommitted()
+
+    assert again.requests() == store.asked
