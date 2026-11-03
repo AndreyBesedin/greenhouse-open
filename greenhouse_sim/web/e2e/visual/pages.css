@@ -1,0 +1,22 @@
+/* What the pages' baselines leave out, since the stylesheet does not draw it or
+ * it differs between two drawings. Each keeps its place, for what stands round it.
+ *
+ * The scene is the graphics card's, and the QA pages' baselines hold it. */
+canvas,
+.debug-label {
+  visibility: hidden;
+}
+
+/* The viewer in a replay: its panels are the viewer's baseline's, and here its
+ * scene is refused (`pageAnswers.ts`). */
+.replay-scene {
+  visibility: hidden;
+}
+
+/* This machine's measurements, and the commit built from: one line, whatever they say. */
+.hud dd,
+.build-line {
+  height: 1lh;
+  contain: size;
+  visibility: hidden;
+}
