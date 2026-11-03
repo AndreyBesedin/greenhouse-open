@@ -282,6 +282,34 @@ describe("the page where a person decides what to do", () => {
     await vi.waitFor(() => expect(asks()).toBe(3));
   });
 
+  it("says so when the address asks for a scenario the simulator does not have", async () => {
+    simulator({ "/api/scenarios": SCENARIOS, "/api/runs": [] });
+    page = render(<Landing hash="#run=no_such" navigate={vi.fn()} />);
+    const { container } = page;
+
+    await vi.waitFor(() =>
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain("no_such"),
+    );
+    expect(container.querySelector("dialog")).toBeNull();
+  });
+
+  it("leaves the address that asked for a dialog once the dialog is closed", async () => {
+    history.replaceState(null, "", "/#runs=tomgro_house");
+    simulator({ "/api/scenarios": SCENARIOS, "/api/runs": [] });
+    page = render(<Landing navigate={vi.fn()} />);
+    const { container } = page;
+    await vi.waitFor(() => expect(container.querySelector("dialog")).not.toBeNull());
+
+    const close = [...container.querySelectorAll("dialog button")].find(
+      (each) => each.textContent === "Close",
+    ) as HTMLButtonElement;
+    act(() => close.click());
+
+    expect(container.querySelector("dialog")).toBeNull();
+    expect(location.hash).toBe("");
+    expect(location.pathname).toBe("/");
+  });
+
   it("opens a scenario's form for a new run when the address asks for it", async () => {
     simulator({ "/api/scenarios": SCENARIOS, "/api/runs": [] });
     page = render(<Landing hash="#run=tomgro_house" navigate={vi.fn()} />);

@@ -31,6 +31,14 @@ function goTo(address: string): void {
   location.assign(address);
 }
 
+/** The address without what asked for a dialog that has closed, so that a reload
+ * does not open it again. */
+function leaveAddress(): void {
+  if (location.hash !== "") {
+    history.replaceState(null, "", `${location.pathname}${location.search}`);
+  }
+}
+
 /**
  * The page where a person decides what to do (P17.5, decision 0065): open a
  * scenario, or build one, or pick up a run where it was left. The scenarios
@@ -98,6 +106,11 @@ export function Landing({
               }}
               onBuild={() => navigate(BUILDER_PATH)}
             />
+            {opened !== null && scenarios.status === "loaded" && chosen === undefined && (
+              <p role="alert" className="landing-problem">
+                This address asks for the scenario {opened}, which the simulator does not have.
+              </p>
+            )}
           </section>
           <section className="landing-card" aria-labelledby="landing-build">
             <h3 id="landing-build">Build a scenario</h3>
@@ -122,7 +135,10 @@ export function Landing({
           }
           followed={followed}
           newRun={form}
-          onClose={() => setOpened(null)}
+          onClose={() => {
+            setOpened(null);
+            leaveAddress();
+          }}
           onChanged={() => setAsked((previous) => previous + 1)}
         />
       )}

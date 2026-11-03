@@ -39,7 +39,7 @@ takes one checks first that it is still there.
 - [ ] A saved draft is not on the start page.
 - [ ] `GET /playback` shows a red 404 in the console on a first run.
 - [ ] Close drops the keyboard focus.
-- [ ] `/#runs=x` stays in the address, and `/#run=no_such` shows nothing.
+- [x] `/#runs=x` stays in the address, and `/#run=no_such` shows nothing.
 - [ ] Run rows are not aligned, and their links keep the browser's default colour.
 
 **Builder**
