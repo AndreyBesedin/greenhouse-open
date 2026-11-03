@@ -94,7 +94,7 @@ class Simulator:
         scenario_files.restore(self)
         # Epochs a producer that crashed left `running` are interrupted, and
         # can be resumed (P17.9).
-        interrupted.mark(self)
+        interrupted.watch(self)
 
     @property
     def closed(self) -> bool:
