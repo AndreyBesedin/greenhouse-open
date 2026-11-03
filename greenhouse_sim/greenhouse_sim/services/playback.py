@@ -475,6 +475,8 @@ class Playback:
         self._replaying = False
         self._taken: set[str] | None = None
         self._taking = threading.Lock()
+        # The stored outcomes that have told what a crop action did.
+        self._outcomes_told: set[int] = set()
         self._time_s = 0.0
         self._playing = False
         self._seconds_per_day = seconds_per_day
@@ -597,19 +599,6 @@ class Playback:
                 commit.counts[Kind.OUTCOMES] for commit in self._store.commits()
             )
 
-    def planned_by(self, epoch: int, logged: Sequence[LogEntry]) -> RunPlan:
-        """The plan an epoch's log makes of this run, which has not begun: what
-        a reader of the epoch draws it under. Nothing is written or worked out,
-        and what it holds at a moment is its log's up to then."""
-        with self._lock:
-            self._epoch = self._gateway.epoch = epoch
-            self._replaying = True
-            for entry in logged:
-                self._gateway.advance(self._executor.instant(entry.given_s))
-                self._apply(entry)
-            self._replaying = False
-            return self._executor.plan()
-
     def _carry_kept(self, before_s: float) -> None:
         """What the run made of crop actions on the days before `before_s`,
         which are not worked out again: as their outcomes in the store say. One
@@ -622,12 +611,23 @@ class Playback:
         kept = self._store.outcomes_kept()
         carried = {}
         for assignment in waiting:
-            ended = next((o for o in reversed(kept) if _ended_as(o, assignment)), None)
-            if ended is None:
+            # Two plans may ask for the same action at one moment: their outcomes
+            # are in the order they were given in, and each tells of one.
+            told = next(
+                (
+                    index
+                    for index, outcome in enumerate(kept)
+                    if index not in self._outcomes_told and _ended_as(outcome, assignment)
+                ),
+                None,
+            )
+            if told is None:
                 raise Conflict(
                     f"the crop action {assignment.ref} of {self.run_id} was still being carried "
                     "out at the epoch's last commit, which does not say what it did"
                 )
+            self._outcomes_told.add(told)
+            ended = kept[told]
             carried[assignment.assignment_id] = Carried(
                 effect=ended.effect,
                 event_id=ended.event_id,
@@ -655,9 +655,10 @@ class Playback:
         were given here, or, if it is refused, answered with why. A request
         named by its log, or answered, was taken before a crash and is not
         taken again. Asked of whichever process works the epoch, between its
-        moments."""
+        moments. None is taken while entries logged before a crash wait for
+        the clock to reach them: a change is given after those given before it."""
         store = self._store
-        if store is None:
+        if store is None or self._due:
             return
         asked = store.requests()
         if not asked:
@@ -1163,8 +1164,15 @@ class Playback:
         changes = self._changes
         end = self._executor.instant(to_s)
         while True:
-            if self._replaying:
+            given_now = self._due and self._due[0].given_s <= self._executor.seconds(
+                self._executor.now
+            )
+            if self._replaying and not given_now:
+                # What it is told of ends at the moment it reached, as it did when
+                # its day was worked out then, and not at the next one; once all
+                # that was given at that moment is given, as it was before then.
                 self._carry_kept(to_s)
+                self._gateway.advance(self._executor.now)
             at = self._gateway.next_moment(end) or end
             if self._due and self._executor.instant(self._due[0].given_s) <= at:
                 # An entry of its log, at the moment it was given.

@@ -49,6 +49,7 @@ from greenhouse_sim.services.interventions import (
     PlanGiven,
     TargetsAsked,
     TargetsChanged,
+    check_allowed,
     levels_plan,
     spelled,
 )
@@ -102,6 +103,8 @@ def fork(
         )
     if manifest.duration_s is not None and at_s >= manifest.duration_s:
         raise Conflict(f"the run ends at {at_s:.15g} s: there is nothing to fork from there")
+    for change in changes:
+        check_allowed(simulator, change)
     chosen = layout_name(layout or manifest.layout)
     moved = chosen != manifest.layout
     request = RunRequest(manifest.scenario_id, layout=chosen, seed=manifest.seed)
@@ -164,40 +167,45 @@ def _state(checkpoint: bytes, layout: str) -> bytes:
 
 
 def _inherited_log(parent: EpochStore, at_s: float, run_id: str, number: int) -> list[LogEntry]:
-    """The entries of a parent's log given by `at_s`, numbered as they were,
-    each named for the run and epoch that now holds it. A plan given in another
-    epoch than the parent's was refused there, and stays another's."""
-    was = parent.epoch
-    return [
-        entry.model_copy(
-            update={"request": None, "what": _renamed(entry.what, was, run_id, number)}
-        )
-        for entry in parent.logged()
-        if entry.given_s <= at_s
-    ]
+    """The entries of a parent's log given by `at_s`, each named for the run and
+    epoch that now holds it, and numbered there. One that named another's was
+    refused as stale when it was given, did nothing, and is left behind: renamed
+    or not, it could be accepted here."""
+    found: list[LogEntry] = []
+    for entry in parent.logged():
+        if entry.given_s > at_s:
+            continue
+        what = _renamed(entry.what, parent, run_id, number)
+        if what is not None:
+            found.append(
+                entry.model_copy(update={"seq": len(found), "request": None, "what": what})
+            )
+    return found
 
 
 def _renamed(
-    what: dict[str, JsonValue], was: int, run_id: str, number: int
-) -> dict[str, JsonValue]:
-    change = LOGGED.validate_python(what)
+    what: dict[str, JsonValue], parent: EpochStore, run_id: str, number: int
+) -> dict[str, JsonValue] | None:
+    """What an entry says, as the fork gives it, if it was the parent's to give."""
+    was = parent.epoch
+    change: Logged = LOGGED.validate_python(what)
     match change:
-        case PlanGiven(plan=plan) if plan.epoch == was:
-            renamed: Logged = PlanGiven(
-                plan=plan.model_copy(update={"run_id": run_id, "epoch": number})
-            )
+        case PlanGiven(plan=plan):
+            if (plan.run_id, plan.epoch) != (parent.run_id, was):
+                return None
+            change = PlanGiven(plan=plan.model_copy(update={"run_id": run_id, "epoch": number}))
         case ActionsCancelled(keys=keys):
-            renamed = ActionsCancelled(
-                keys=tuple(
-                    key.model_copy(update={"epoch": number}) if key.epoch == was else key
-                    for key in keys
-                )
-            )
-        case PlanCancelled(epoch=epoch) if epoch == was:
-            renamed = change.model_copy(update={"epoch": number})
-        case _:
-            renamed = change
-    return renamed.model_dump(mode="json")
+            kept = tuple(k.model_copy(update={"epoch": number}) for k in keys if k.epoch == was)
+            if not kept:
+                return None
+            change = ActionsCancelled(keys=kept)
+        case PlanCancelled(epoch=epoch):
+            if epoch != was:
+                return None
+            change = change.model_copy(update={"epoch": number})
+        case TargetsChanged():
+            pass
+    return change.model_dump(mode="json")
 
 
 def _changes_at(

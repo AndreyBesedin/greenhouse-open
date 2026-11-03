@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Final
 
 import pytest
-from greenhouse_protocol.actions import Action, Harvest, HarvestScope, SetLevel
+from greenhouse_protocol.actions import Action, Harvest, HarvestScope, Inspect, SetLevel
 from greenhouse_protocol.authorisation import AuthorisationConfig
 from greenhouse_protocol.plan import At, Plan, PlannedAction
 from pydantic import JsonValue
@@ -563,3 +563,104 @@ def _until(condition: Callable[[], bool], what: str) -> None:
     while not condition():
         assert time.monotonic() < deadline, f"waited for {what}"
         time.sleep(0.05)
+
+
+def test_a_change_waits_for_those_logged_before_a_crash(tmp_path: Path) -> None:
+    with _simulator() as before:
+        epoch = _played_with_change(tmp_path, before, until_s=1.5 * DAY_S)
+        request = epoch.ask(_given(_plan(epoch, before, 2.5 * DAY_S, plan_id="later")))
+    epoch.set_status(Status.INTERRUPTED)
+
+    with _simulator() as after:
+        assert resume(after, epoch, Free()) == Status.FINISHED
+
+    # In the order they were given, so that a commit's prefix of them is what
+    # its span was worked out under.
+    first, second = epoch.logged()
+    assert (first.given_s, first.request) == (1.5 * DAY_S, None)
+    assert second.request == request
+    assert second.given_s >= first.given_s
+    epoch.verify()
+
+
+def _inspections(epoch: EpochStore, simulator: Simulator, *, last: int = DAYS) -> Iterable[float]:
+    """Two plans, on the second day's start, each asking for the same action
+    under the same identifier, due at once."""
+    plant = _plant(simulator)
+    for each in range(last):
+        if each == 1:
+            for plan_id in ("one", "two"):
+                action = Inspect(plant_id=plant, reason="seen")
+                plan = _plan(epoch, simulator, DAY_S, action=action, plan_id=plan_id)
+                epoch.ask(_given(plan))
+        yield (each + 1) * DAY_S
+
+
+def test_crop_actions_due_as_they_are_given_are_told_apart_and_end_at_their_moment(
+    tmp_path: Path,
+) -> None:
+    with _simulator() as made:
+        whole = queued(made, FolderStore(tmp_path / "whole"), REFERENCE_SHORT)
+        assert execute(made, whole, Stepped(_inspections(whole, made))) == Status.FINISHED
+    one, two = whole.outcomes().records
+    assert one.event_id != two.event_id
+    assert one.resolved_at == two.resolved_at
+
+    with _simulator() as before:
+        cut = queued(before, FolderStore(tmp_path / "cut"), REFERENCE_SHORT)
+        barriers = _inspections(cut, before, last=2)
+        assert execute(before, cut, Stepped(barriers)) == Status.INTERRUPTED
+    assert cut.frontier_s() == 2 * DAY_S
+
+    with _simulator() as after:
+        assert resume(after, cut, Free()) == Status.FINISHED
+
+    assert cut.outcomes().records == whole.outcomes().records
+    assert _digests(cut) == _digests(whole)
+
+
+def test_a_reader_draws_what_the_epoch_did_whoever_may_do_what_on_its_own_simulator(
+    tmp_path: Path, steered: EpochStore
+) -> None:
+    """Its worker's grants were not its reader's: what was done stays done."""
+    nobody = AuthorisationConfig(version=1, groups=())
+    with Simulator(authorisation=nobody) as reader:
+        reader.catalogue.register(
+            SCENARIO_REGISTRY[BOX].model_copy(update=dict(greenhouse_id=SHORT, duration_days=DAYS))
+        )
+        held = StoredEpoch(reader, steered.objects, steered.run_id, steered.epoch)
+        assert held.plan().commanded() == ((DAY_S + MINUTE_S, "heater", 0.5),)
+
+
+def test_a_reader_draws_an_action_a_prerequisite_let_go_after_the_last_change(
+    tmp_path: Path, simulator: Simulator
+) -> None:
+    objects = FolderStore(tmp_path)
+    epoch = queued(simulator, objects, SHORT)
+    start = run_start(simulator.catalogue, SHORT)
+    first = PlannedAction(
+        action_id="first",
+        action=SetLevel(device_id="heater", level=0.5),
+        timing=At(at=start + timedelta(seconds=MINUTE_S)),
+        proposed_by=LOCAL_OPERATOR,
+    )
+    second = PlannedAction(
+        action_id="second",
+        action=SetLevel(device_id="fan", level=0.5),
+        timing=At(at=start + timedelta(seconds=DAY_S)),
+        after=("first",),
+        proposed_by=LOCAL_OPERATOR,
+    )
+    plan = Plan(
+        plan_id="both",
+        run_id=epoch.run_id,
+        epoch=epoch.epoch,
+        revision=1,
+        actions=(first, second),
+    )
+    epoch.ask(_given(plan))
+
+    assert execute(simulator, epoch, Free()) == Status.FINISHED
+
+    held = StoredEpoch(simulator, objects, epoch.run_id, epoch.epoch)
+    assert [device for _, device, _ in held.plan().commanded()] == ["heater", "fan"]

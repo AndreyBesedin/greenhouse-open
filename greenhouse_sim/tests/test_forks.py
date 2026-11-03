@@ -14,7 +14,8 @@ from pathlib import Path
 from typing import Any, Final
 
 import pytest
-from greenhouse_protocol.actions import Harvest, HarvestScope
+from greenhouse_protocol.actions import Harvest, HarvestScope, SetLevel
+from greenhouse_protocol.authorisation import AuthorisationConfig
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.plan import At, Plan, PlannedAction
 
@@ -599,3 +600,68 @@ def test_a_fork_is_told_what_its_parents_crop_actions_before_its_state_did(tmp_p
     # Its outcome is its parent's, before the fork begins.
     assert fork.outcomes().records == []
     assert [c.start_s for c in fork.commits()] == [2 * DAY_S]
+
+
+def test_a_fork_asks_of_the_server_what_a_worker_would_not_refuse(tmp_path: Path) -> None:
+    objects = FolderStore(tmp_path)
+    with _simulator(tmp_path) as made:
+        parent = queued(made, objects, SHORT)
+        assert execute(made, parent, Stepped([DAY_S])) == Status.INTERRUPTED
+        before = set(objects.children(parent.run_id))
+        made.authorisation = AuthorisationConfig(version=1, groups=())
+
+        with pytest.raises(InvalidRequest, match="may not set heater"):
+            forks.fork(
+                made,
+                objects,
+                parent.run_id,
+                parent.epoch,
+                DAY_S,
+                changes=[LevelsAsked(levels={"heater": 0.5})],
+            )
+        assert set(objects.children(parent.run_id)) == before
+
+
+def test_a_plan_its_parent_refused_as_another_epochs_is_not_given_by_its_fork(
+    tmp_path: Path,
+) -> None:
+    objects = FolderStore(tmp_path)
+    with _simulator(tmp_path) as made:
+        parent = queued(made, objects, SHORT)
+        start = run_start(made.catalogue, SHORT)
+        fork_number = parent.epoch + 1
+
+        def stale(plan_id: str, *, run_id: str, epoch: int) -> Plan:
+            return Plan(
+                plan_id=plan_id,
+                run_id=run_id,
+                epoch=epoch,
+                revision=1,
+                actions=(
+                    PlannedAction(
+                        action_id="on",
+                        action=SetLevel(device_id="heater", level=0.5),
+                        timing=At(at=start + timedelta(seconds=DAY_S)),
+                        proposed_by=LOCAL_OPERATOR,
+                    ),
+                ),
+            )
+
+        # One names the epoch the fork will have; the other another run, in the
+        # parent's own: both are refused as they are given.
+        for plan in (
+            stale("next", run_id=parent.run_id, epoch=fork_number),
+            stale("other", run_id="another-run", epoch=parent.epoch),
+        ):
+            parent.ask({"kind": "plan", "plan": plan.model_dump(mode="json")})
+        assert execute(made, parent, Stepped([DAY_S])) == Status.INTERRUPTED
+        assert len(parent.logged()) == 2
+        assert len(parent.answers()) == 2
+
+        fork = forks.fork(made, objects, parent.run_id, parent.epoch, DAY_S)
+
+        assert fork.epoch == fork_number
+        assert fork.logged() == []
+        assert fork.manifest().fork.inherited == 0  # type: ignore[union-attr]
+        assert _worked(made, fork) == Status.FINISHED
+        assert fork.outcomes().records == []

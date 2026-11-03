@@ -185,11 +185,13 @@ def ask(simulator: Simulator, run_id: str, epoch: int, body: bytes) -> ChangeAsk
             f"epoch {epoch} of {run_id} is {status}: it takes no more changes; a fork acts "
             "from a moment of it"
         )
-    _check_allowed(simulator, asked)
+    check_allowed(simulator, asked)
     return ChangeAsked(request=kept.ask(ASKED.dump_python(asked, mode="json")))
 
 
-def _check_allowed(simulator: Simulator, asked: Asked) -> None:
+def check_allowed(simulator: Simulator, asked: Asked) -> None:
+    """Refuses what the server's authorisation forbids the local operator: a
+    worker has its own simulator, with no such file to read."""
     allowed = simulator.authorisation.allows
     match asked:
         case TargetsAsked(targets=targets):
