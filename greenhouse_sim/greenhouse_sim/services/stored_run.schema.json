@@ -178,6 +178,11 @@
         }
       ],
       "default": null
+    },
+    "damaged": {
+      "default": false,
+      "title": "Damaged",
+      "type": "boolean"
     }
   },
   "required": [
@@ -193,7 +198,8 @@
     "created_at",
     "size_bytes",
     "start_s",
-    "fork"
+    "fork",
+    "damaged"
   ],
   "title": "StoredRun",
   "type": "object"

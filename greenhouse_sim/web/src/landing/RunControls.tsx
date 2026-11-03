@@ -20,7 +20,8 @@ export function RunControls({
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const stopping = isComputing(run);
-  if (!stopping && run.status !== "interrupted") {
+  // One with files missing cannot be carried on: what it would go on from is gone.
+  if (!stopping && (run.status !== "interrupted" || run.damaged)) {
     return null;
   }
 

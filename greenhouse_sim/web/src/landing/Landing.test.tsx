@@ -83,6 +83,7 @@ function run(more: Partial<StoredRun>): StoredRun {
     size_bytes: 1024,
     start_s: 0,
     fork: null,
+    damaged: false,
     ...more,
   };
 }
@@ -508,6 +509,16 @@ describe("the page where a person decides what to do", () => {
       container.querySelector('button[aria-label="Resume the run of Reference greenhouse"]'),
     ).not.toBeNull();
     expect(container.querySelector('button[aria-label="Resume the run of My house"]')).toBeNull();
+  });
+
+  it("calls a run with files missing damaged, with no replay to open", async () => {
+    const { container } = await shown(
+      { "/api/scenarios": SCENARIOS, "/api/runs": [run({ damaged: true })] },
+      "Damaged",
+    );
+
+    expect(container.textContent).not.toContain("Finished");
+    expect(link(container, "Replay")).toBeUndefined();
   });
 
   it("lists no more than the latest few", async () => {

@@ -4,6 +4,7 @@ last commit names, and a digest that tells a changed object."""
 
 import json
 import os
+from collections import Counter
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Final
@@ -47,6 +48,7 @@ from greenhouse_sim.services.run_store import (
     decompress,
     epochs,
     instant_name,
+    stored_run,
 )
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
@@ -415,6 +417,105 @@ def test_a_checkpoint_replaced_by_another_valid_one_is_refused_on_read(tmp_path:
     FolderStore(tmp_path).delete(name)
     with pytest.raises(StoreCorrupt, match="gone"):
         store.checkpoint_at(100.0)
+
+
+def _whole_epoch(root: Path) -> EpochStore:
+    """An epoch of two commits, each with its checkpoint, finished."""
+    store = _epoch(root)
+    store.commit(0.0, 100.0, observations=_observations(1), checkpoint=b"first")
+    store.commit(100.0, 200.0, observations=_observations(1, 1), checkpoint=b"second")
+    store.set_status(Status.FINISHED)
+    return store
+
+
+@pytest.mark.parametrize(
+    "part", ["observations.parquet", "events.parquet", "checkpoints/", "commits/00000000"]
+)
+def test_an_epoch_with_a_file_missing_is_listed_damaged(tmp_path: Path, part: str) -> None:
+    _whole_epoch(tmp_path)
+    objects = FolderStore(tmp_path)
+    assert not stored_run(objects, "run_a", 0).damaged
+
+    objects.delete(next(name for name in objects.names("run_a/0/") if part in name))
+
+    assert stored_run(objects, "run_a", 0).damaged
+
+
+def test_what_is_listed_damaged_is_what_cannot_be_read_whole(tmp_path: Path) -> None:
+    store = _whole_epoch(tmp_path)
+    objects = FolderStore(tmp_path)
+    store.verify()
+
+    objects.delete(next(name for name in objects.names("run_a/0/") if "events.parquet" in name))
+
+    assert stored_run(objects, "run_a", 0).damaged
+    with pytest.raises(StoreCorrupt, match="gone"):
+        store.verify()
+
+
+def test_an_epoch_being_written_is_not_damaged(tmp_path: Path) -> None:
+    """What a commit will name is written before it, and a commit not yet made
+    is nothing missing: neither a segment ahead of its commit, nor a commit
+    listed after the commits were read."""
+    store = _epoch(tmp_path)
+    store.commit(0.0, 100.0, observations=_observations(1), checkpoint=b"first")
+    objects = FolderStore(tmp_path)
+    objects.put("run_a/0/segments/0000000000100000-0000000000200000/events.parquet", b"ahead")
+    assert not stored_run(objects, "run_a", 0).damaged
+
+    assert not store.lacks(
+        store.manifest(),
+        store.commits(),
+        [*objects.names("run_a/0/"), "run_a/0/commits/00000001.json"],
+    )
+
+
+def test_a_commit_made_while_an_epoch_is_listed_is_nothing_missing(tmp_path: Path) -> None:
+    """Its worker goes on as a list reads it: the commits are read before the
+    names are listed, so that all they name are there."""
+    store = _epoch(tmp_path)
+    store.commit(0.0, 100.0, observations=_observations(1), checkpoint=b"first")
+
+    class Busy(FolderStore):
+        commits_left = 1
+
+        def names(self, prefix: str = "") -> list[str]:
+            listed = super().names(prefix)
+            if prefix == "run_a/0/" and self.commits_left:
+                self.commits_left -= 1
+                store.commit(100.0, 200.0, observations=_observations(1, 1), checkpoint=b"second")
+            return listed
+
+    assert not stored_run(Busy(tmp_path), "run_a", 0).damaged
+
+
+def test_listing_an_epoch_reads_no_more_objects_for_saying_it_is_damaged(
+    tmp_path: Path,
+) -> None:
+    """A list of many runs is slow already: the check is made from what it read."""
+    _whole_epoch(tmp_path)
+
+    asked: Counter[str] = Counter()
+
+    class Counted(FolderStore):
+        def get(self, name: str) -> bytes | None:
+            asked["get"] += 1
+            return super().get(name)
+
+        def names(self, prefix: str = "") -> list[str]:
+            asked["names"] += 1
+            return super().names(prefix)
+
+        def size(self, name: str) -> int | None:
+            asked["size"] += 1
+            return super().size(name)
+
+    stored_run(Counted(tmp_path), "run_a", 0)
+
+    listed = len(FolderStore(tmp_path).names("run_a/0/"))
+    # The manifest, each commit, the commits' listing and the epoch's, and each
+    # object's size: what a list asked before the check was made from them.
+    assert asked == {"get": 1 + 2, "names": 2, "size": listed}
 
 
 def test_listing_walks_only_the_folder_a_prefix_names(
