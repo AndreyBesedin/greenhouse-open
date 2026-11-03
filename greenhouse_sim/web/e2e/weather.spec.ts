@@ -1,7 +1,10 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import type { CameraPose } from "../src/camera.ts";
+import { expect, WAITS_FOR_THE_SIMULATOR_MS } from "./arrives";
 import { selectAt } from "./view";
 import { openWeather } from "./weather.ts";
+
+test.describe.configure({ timeout: WAITS_FOR_THE_SIMULATOR_MS });
 
 function cameraText({ position, target }: CameraPose): string {
   return [position, target].map(({ x, y, z }) => `${x}:${y}:${z}`).join(",");
@@ -34,7 +37,7 @@ test("weather: a scenario's panel shows the weather outside it, and its site", a
 
 test("weather: the panel follows a climate run's moment, in a calm", async ({ page }) => {
   await page.goto("/?scenario=climate_box&field=climate&t=600");
-  await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
+  await expect(page.getByTestId("climate-time")).toHaveText("10 min");
   const weather = page.getByRole("region", { name: "Weather" });
 
   await expect(weather.getByTestId("weather-summary")).toHaveText(
@@ -45,7 +48,7 @@ test("weather: the panel follows a climate run's moment, in a calm", async ({ pa
 
 test("weather: a scenario runs under a preset day, charted through the day", async ({ page }) => {
   await page.goto("/?scenario=climate_box&field=climate&t=600");
-  await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
+  await expect(page.getByTestId("climate-time")).toHaveText("10 min");
   const weather = page.getByRole("region", { name: "Weather" });
   await expect(weather.getByTestId("weather-summary")).toHaveText(
     "Outside at 1 Jan 2026, 00:10: 8.0 °C, wind calm.",
@@ -74,7 +77,7 @@ test("weather: a scenario runs under a preset day, charted through the day", asy
   );
   await expect(weather.getByTestId("weather-day-now")).toHaveCount(4);
   // The run carries on at the same moment, under the new weather.
-  await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
+  await expect(page.getByTestId("climate-time")).toHaveText("10 min");
 
   await weather.getByRole("combobox", { name: "Weather to run under" }).selectOption({
     label: "its own",
@@ -95,21 +98,19 @@ test("weather: the weather station reads the weather outside", async ({ page }) 
   await page.goto(
     `/?scenario=climate_box&weather=cold_spring_day&field=climate&t=600&qa=1&camera=${cameraText(BEFORE_THE_STATION)}`,
   );
-  await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
+  await expect(page.getByTestId("climate-time")).toHaveText("10 min");
 
   await selectAt(page, STATION_FACE, "climate_box_station_temperature", BEFORE_THE_STATION);
   await expect(page.getByTestId("property-sensor_kind")).toHaveText("outside_temperature");
   // Its reading errs by its noise about the spring day's 7.95 °C. The log is
   // read once the sensor is selected, behind the run's other loads.
-  await expect(page.getByTestId("sensor-reading")).toHaveText("8.10 °C at 10 min", {
-    timeout: 20_000,
-  });
+  await expect(page.getByTestId("sensor-reading")).toHaveText("8.10 °C at 10 min");
   await expect(page.getByTestId("sensor-truth")).toHaveText("7.95 °C at 10 min");
 });
 
 test("weather: a recorded day replays from the run's start", async ({ page }) => {
   await page.goto("/?scenario=climate_box&field=climate&t=600");
-  await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 20_000 });
+  await expect(page.getByTestId("climate-time")).toHaveText("10 min");
   const weather = page.getByRole("region", { name: "Weather" });
   await openWeather(page);
   await weather.getByRole("combobox", { name: "Weather to run under" }).selectOption({
