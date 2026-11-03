@@ -63,6 +63,29 @@ takes one checks first that it is still there.
 - [ ] The legend says "not computed yet" on a finished run.
 - [ ] At phone width the panel covers the scene, and the last tick is missing.
 
+### From a second walk
+
+A walk of the merged pages at commit `2db9f3b7`, on the same setup, with forks and the
+panels in a replay.
+
+- [ ] **Medium: forks cannot be told apart on the start page or in the runs dialog.**
+  They read as rows of "Seed 143 · epoch N".
+- [ ] **Low to medium: a fork's controls stay enabled at a run's end.** "Fork from here
+  with these levels" and the targets form can still be used, and the refusal gives the
+  end in seconds ("the run ends at 1209600 s").
+- [ ] Each page load of a followed house with no climate sends one burst of 404s before
+  the list of fields answers.
+- [ ] A mid-day fork opens at its day's start, while its subtitle names the fork's moment.
+- [ ] A fork of a deleted parent keeps a "The run it came from" link that ends in a
+  "cannot be replayed" notice.
+- [ ] With equipment set in a replay, the slider stands at full while its label says
+  "off", until the fork is made.
+- [ ] Keys pressed faster than the answers move from the old position: Home then PageUp
+  landed from the old place.
+
+This walk did not repeat the phone width, and did not see the fork panels in the light
+theme.
+
 ## Not covered by the walk
 
 About 75 of its 101 screenshots were not opened. The whole browser suite was not run
