@@ -1,0 +1,96 @@
+import { useMemo } from "react";
+
+import { App } from "../App";
+import { HomeButton } from "../landing/HomeButton";
+import { replayTarget, runsAddress } from "../landing/paths";
+import { loadScenarios, SCENARIOS_URL } from "../scenarios";
+import { replayedMoment } from "../scene/useReplayMoment";
+import { useLoad } from "../useLoad";
+import { ReplayHeader } from "./ReplayHeader";
+import { ReplayTransport } from "./ReplayTransport";
+import { replaySource } from "./replaySource";
+import { useReplay } from "./useReplay";
+
+/**
+ * The replay of a stored run (P17.6, decision 0065): a page whose address
+ * names the run and its epoch. A position is opened over the epoch, the
+ * viewer draws the scene at its moment, and the transport and the timeline
+ * move the position through what the epoch has computed, while a worker
+ * may still be computing it.
+ */
+export function Replay({ search = location.search }: { search?: string }) {
+  const target = replayTarget(search);
+  if (target === null) {
+    return (
+      <Notice>
+        <p>This address names no run to replay: it wants a run and an epoch.</p>
+      </Notice>
+    );
+  }
+  return <ReplayOf runId={target.runId} epoch={target.epoch} />;
+}
+
+function ReplayOf({ runId, epoch }: { runId: string; epoch: number }) {
+  const { load, command, seek, pace } = useReplay(runId, epoch);
+  const scenarios = useLoad(SCENARIOS_URL, (_url, fetchFn) => loadScenarios(fetchFn));
+  const position = load.status === "loaded" ? load.position : null;
+  // The scene is the epoch's own run, which no moment of the position changes.
+  const scenarioId = position?.scenario_id;
+  const layout = position?.layout;
+  const seed = position?.seed;
+  const source = useMemo(
+    () =>
+      scenarioId === undefined || layout === undefined || seed === undefined
+        ? null
+        : replaySource({ scenario_id: scenarioId, layout, seed }),
+    [scenarioId, layout, seed],
+  );
+
+  if (position === null || source === null) {
+    return (
+      <Notice>
+        <p role={load.status === "unavailable" ? "alert" : "status"} data-testid="replay-notice">
+          {load.status === "unavailable"
+            ? `This run cannot be replayed: ${load.reason}.`
+            : "Opening the run…"}
+        </p>
+      </Notice>
+    );
+  }
+  const name =
+    scenarios.status === "loaded"
+      ? (scenarios.scenarios.find((each) => each.id === position.scenario_id)?.name ?? null)
+      : null;
+  return (
+    <div className="replay">
+      <ReplayHeader
+        name={name}
+        position={position}
+        otherRunsHref={runsAddress(position.scenario_id)}
+      />
+      <div className="replay-scene">
+        <App replay={{ source, momentS: replayedMoment(position.time_s) }} />
+      </div>
+      <ReplayTransport
+        position={position}
+        onPlay={() => command("play")}
+        onPause={() => command("pause")}
+        onFollow={() => command("follow")}
+        onSeek={seek}
+        onPace={pace}
+      />
+    </div>
+  );
+}
+
+/** What the page says while there is no run to show, with the way home. */
+function Notice({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="replay">
+      <header className="replay-header">
+        <HomeButton />
+      </header>
+      <div className="replay-notice">{children}</div>
+    </div>
+  );
+}

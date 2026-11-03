@@ -4,7 +4,7 @@ import { BUILDER_PATH } from "../builder/Builder";
 import { loadScenarios, SCENARIOS_URL, type ScenariosState } from "../scenarios";
 import { useLoad } from "../useLoad";
 import { followAddress } from "./follow";
-import { newRunScenario, REPOSITORY_URL } from "./paths";
+import { newRunScenario, REPOSITORY_URL, replayAddress, runsScenario } from "./paths";
 import { loadPlaying, runKey } from "./playing";
 import { RunProgress, StatusChip } from "./RunParts";
 import { RunsDialog } from "./RunsDialog";
@@ -48,7 +48,7 @@ export function Landing({
   const runs = useLoad(asked, (_asked, fetchFn) => loadStoredRuns(fetchFn), {
     key: (each) => `runs-${each}`,
   });
-  const [opened, setOpened] = useState(() => newRunScenario(hash));
+  const [opened, setOpened] = useState(() => newRunScenario(hash) ?? runsScenario(hash));
   const [form, setForm] = useState(() => newRunScenario(hash) !== null);
   const chosen =
     opened !== null && scenarios.status === "loaded"
@@ -214,6 +214,9 @@ function RunRow({
       </div>
       <StatusChip run={run} />
       <RunProgress run={run} name={`the run of ${whose}`} />
+      <a href={replayAddress(run.run_id, run.epoch)} className="landing-link-button">
+        Replay
+      </a>
       {following && (
         <a href={followAddress(run.scenario_id, run.layout)} className="landing-link-button">
           Follow

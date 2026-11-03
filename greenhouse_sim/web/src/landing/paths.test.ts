@@ -5,6 +5,11 @@ import {
   newRunAddress,
   newRunScenario,
   pageAt,
+  REPLAY_PATH,
+  replayAddress,
+  replayTarget,
+  runsAddress,
+  runsScenario,
   VIEWER_PATH,
   viewerAddress,
 } from "./paths";
@@ -30,6 +35,36 @@ describe("the viewer's addresses", () => {
   it("writes an address that names the scenario, its identifier made safe", () => {
     expect(viewerAddress("climate_box")).toBe("/view?scenario=climate_box");
     expect(viewerAddress("a b&c")).toBe("/view?scenario=a%20b%26c");
+  });
+
+  it("shows the replay at its own address, even with a query", () => {
+    expect(pageAt(REPLAY_PATH, "?run=r&epoch=0")).toBe("replay");
+    expect(pageAt(`${REPLAY_PATH}/`, "")).toBe("replay");
+  });
+
+  it("names a replayed run by its run and its epoch, made safe", () => {
+    expect(replayAddress("climate_box-abc", 2)).toBe("/replay?run=climate_box-abc&epoch=2");
+    expect(replayAddress("a b&c", 0)).toBe("/replay?run=a%20b%26c&epoch=0");
+    expect(replayTarget("?run=a%20b%26c&epoch=3")).toEqual({ runId: "a b&c", epoch: 3 });
+  });
+
+  it("asks for no replay unless a run and a whole epoch are named", () => {
+    expect(replayTarget("")).toBeNull();
+    expect(replayTarget("?run=r")).toBeNull();
+    expect(replayTarget("?epoch=1")).toBeNull();
+    expect(replayTarget("?run=&epoch=1")).toBeNull();
+    expect(replayTarget("?run=r&epoch=-1")).toBeNull();
+    expect(replayTarget("?run=r&epoch=1.5")).toBeNull();
+    expect(replayTarget("?run=r&epoch=x")).toBeNull();
+  });
+
+  it("asks the landing page for a scenario's runs by a fragment, still the bare address", () => {
+    expect(runsAddress("my house/1")).toBe("/#runs=my%20house%2F1");
+    expect(runsScenario("#runs=my%20house%2F1")).toBe("my house/1");
+    expect(runsScenario("#run=x")).toBeNull();
+    expect(runsScenario("#runs=")).toBeNull();
+    expect(runsScenario("#runs=%E0%A4%A")).toBeNull();
+    expect(pageAt("/", "")).toBe("landing");
   });
 
   it("asks the landing page for a scenario's new-run form by a fragment, which is still the bare address", () => {

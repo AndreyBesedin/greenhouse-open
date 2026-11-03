@@ -1,12 +1,15 @@
 import { expect, test } from "@playwright/test";
-import { LANDING_PATH, viewerAddress } from "../src/landing/paths";
+import { LANDING_PATH, VIEWER_PATH } from "../src/landing/paths";
 
 const MIN_TARGET_PX = 44;
+// A scene the viewer has in its own files: these tests ask the simulator for
+// no run, so that they leave none working beside the other specs.
+const EXAMPLE_SCENE = "/view?scene=example";
 
 test("the viewer has a Home button at the top left that opens the landing page", async ({
   page,
 }) => {
-  await page.goto(viewerAddress("climate_box"));
+  await page.goto(VIEWER_PATH);
 
   const home = page.getByRole("link", { name: "Home" });
   await expect(home).toBeVisible();
@@ -22,11 +25,11 @@ test("the viewer has a Home button at the top left that opens the landing page",
   await expect(page.getByRole("heading", { name: "What would you like to do?" })).toBeVisible();
 });
 
-test("the viewer does not show the line that says which scenario is shown", async ({ page }) => {
-  await page.goto(viewerAddress("climate_box"));
+test("the viewer does not show the line that says which scene is shown", async ({ page }) => {
+  await page.goto(EXAMPLE_SCENE);
   const status = page.getByTestId("scene-status");
-  // The scene has arrived: it is announced, in the status, for whoever hears the page.
-  await expect(status).toContainText("climate_box, day 0");
+  // The scene is drawn: it is announced, in the status, for whoever hears the page.
+  await expect(status).toContainText("Showing the example scene:");
   await expect(status).toHaveAttribute("role", "status");
 
   // And not shown: the text is clipped to a point.

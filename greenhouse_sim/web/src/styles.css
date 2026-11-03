@@ -2157,6 +2157,29 @@ body {
 
 /* The replay of a stored run (P17.6): a header, the scene, and what moves a
  * position over the run. */
+.replay {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--landing-bg);
+  color: var(--panel-text);
+  color-scheme: var(--panel-scheme);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.replay-scene {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* The viewer in a page that has its own header and controls: it fills what
+ * is left of the page, not the window. */
+.viewer-embedded {
+  position: absolute;
+}
+
 .replay-header,
 .replay-transport {
   background: var(--panel-bg);
@@ -2356,4 +2379,10 @@ body {
 
 .replay-swatch-pending {
   background: var(--replay-hatch);
+}
+
+.replay-notice {
+  padding: 32px 24px;
+  text-align: center;
+  color: var(--panel-muted-strong);
 }
