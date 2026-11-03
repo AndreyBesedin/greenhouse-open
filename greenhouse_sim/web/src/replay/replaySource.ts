@@ -42,9 +42,15 @@ export function replaySource(
 }
 
 /** The moment a change in the panels forks from: the one the scene shows, which
- * stays behind the position while a field is on its way, else the one asked. */
-export function forkMoment(shownS: number | null | undefined, askedS: number | null): number {
-  return shownS ?? askedS ?? 0;
+ * stays behind the position while the climate field is on its way, else the one
+ * asked. Only the climate field says a moment (`fieldUrl`): any other is the
+ * layout's, at its time 0 whatever the moment. */
+export function forkMoment(
+  field: string | null,
+  shownS: number | null | undefined,
+  askedS: number | null,
+): number {
+  return (field === CLIMATE_FIELD ? shownS : null) ?? askedS ?? 0;
 }
 
 /** What identifies the plan of a replay's scene: a running epoch's grows. */
