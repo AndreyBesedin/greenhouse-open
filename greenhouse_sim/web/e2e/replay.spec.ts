@@ -25,8 +25,8 @@ function collectErrors(page: Page): string[] {
 // computed while it is replayed.
 const SCENARIO = "solar_lab";
 
-/** Starts a run of the scenario at a seed, through the landing page, and opens
- * its replay from the dialog's list. */
+/** Starts a run of the scenario at a seed, through the landing page, which
+ * opens its replay at the newest day, and opens that again from its start. */
 async function replayOfANewRun(page: Page, seed: string): Promise<void> {
   await page.goto(LANDING_PATH);
   const search = page.getByRole("combobox", { name: "Scenario" });
@@ -37,13 +37,8 @@ async function replayOfANewRun(page: Page, seed: string): Promise<void> {
   await dialog.getByLabel("Seed", { exact: true }).fill(seed);
   await dialog.getByLabel("Seconds per simulated day").fill("1");
   await dialog.getByRole("button", { name: "Start run" }).click();
-  const row = dialog.locator(".landing-run").filter({ hasText: `Seed ${seed}` });
-  // A test retried finds its own run of before, and a fork of it, beside this one.
-  await row
-    .getByRole("link", { name: /^Replay/ })
-    .first()
-    .click();
-  await expect(page).toHaveURL(new RegExp(`${REPLAY_PATH}\\?run=`));
+  await expect(page).toHaveURL(new RegExp(`${REPLAY_PATH}\\?run=.*&follow=1$`));
+  await page.goto(page.url().replace("&follow=1", ""));
 }
 
 test("a stored run is replayed: its header, its scene and a timeline over what is computed", async ({
@@ -55,7 +50,7 @@ test("a stored run is replayed: its header, its scene and a timeline over what i
   const errors = collectErrors(page);
 
   await expect(page.getByTestId("replay-subtitle")).toHaveText(/^seed 41 · epoch \d+ · /);
-  await expect(page.getByTestId("replay-status")).toHaveText(/Running|Finished/);
+  await expect(page.getByTestId("replay-status")).toHaveText(/Queued|Running|Finished/);
   await expect(page.locator("canvas")).toBeVisible();
   // One way home, not two: the house, and no back link besides.
   await expect(page.getByRole("link", { name: "Home" })).toHaveCount(1);

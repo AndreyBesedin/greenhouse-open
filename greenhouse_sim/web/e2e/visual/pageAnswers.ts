@@ -33,6 +33,7 @@ const SCENARIOS: ScenarioSummary[] = [
     layouts: ["default"],
     weathers: ["default"],
     thermostat: null,
+    packaged: true,
   },
 ];
 
@@ -50,6 +51,7 @@ const RUN: StoredRun = {
   size_bytes: BYTES_KEPT,
   start_s: 0,
   fork: null,
+  damaged: false,
 };
 
 // Every state a run's status is told in, since each has its own colours.

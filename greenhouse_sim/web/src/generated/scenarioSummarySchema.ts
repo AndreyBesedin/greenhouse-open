@@ -112,6 +112,10 @@ export const SCENARIO_SUMMARY_SCHEMA = {
       ],
       "default": null,
       "title": "Thermostat"
+    },
+    "packaged": {
+      "title": "Packaged",
+      "type": "boolean"
     }
   },
   "required": [
@@ -126,7 +130,8 @@ export const SCENARIO_SUMMARY_SCHEMA = {
     "opening_day",
     "layouts",
     "weathers",
-    "thermostat"
+    "thermostat",
+    "packaged"
   ],
   "title": "ScenarioSummary",
   "type": "object"
