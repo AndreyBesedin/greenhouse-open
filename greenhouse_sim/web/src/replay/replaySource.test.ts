@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { scenarioRun } from "../scene/run";
 import type { SceneSource } from "../scene/source";
-import { planKey, replaySource, withPlanOf } from "./replaySource";
+import { forkMoment, planKey, replaySource, withPlanOf } from "./replaySource";
 
 const NO_PLAN = { targets: [], commands: [], crop: [] };
 
@@ -78,5 +78,17 @@ describe("a replay's plan", () => {
 
   it("has a key that changes with the plan", () => {
     expect(planKey(none)).not.toBe(planKey(planned));
+  });
+});
+
+describe("the moment a panel forks from", () => {
+  it("is the one the scene shows, and not the one the position has gone on to", () => {
+    expect(forkMoment(3_600, 7_200)).toBe(3_600);
+    expect(forkMoment(0, 7_200)).toBe(0);
+  });
+
+  it("is the one asked for while nothing is shown yet", () => {
+    expect(forkMoment(undefined, 7_200)).toBe(7_200);
+    expect(forkMoment(null, null)).toBe(0);
   });
 });

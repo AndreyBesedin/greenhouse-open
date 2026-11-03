@@ -41,6 +41,12 @@ export function replaySource(
   };
 }
 
+/** The moment a change in the panels forks from: the one the scene shows, which
+ * stays behind the position while a field is on its way, else the one asked. */
+export function forkMoment(shownS: number | null | undefined, askedS: number | null): number {
+  return shownS ?? askedS ?? 0;
+}
+
 /** What identifies the plan of a replay's scene: a running epoch's grows. */
 export function planKey(position: Pick<PositionState, "targets" | "commands" | "crop">): string {
   return JSON.stringify([position.targets, position.commands, position.crop]);

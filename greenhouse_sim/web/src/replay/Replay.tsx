@@ -87,8 +87,9 @@ function ReplayOf({ runId, epoch }: { runId: string; epoch: number }) {
           replay={{
             source,
             momentS: replayedMoment(position.time_s),
-            forkWith: (change) => void fork({ timeS: position.time_s, changes: [change] }),
-            forkInLayout: (forkLayout) => fork({ timeS: position.time_s, layout: forkLayout }),
+            seek,
+            forkWith: (change, timeS) => void fork({ timeS, changes: [change] }),
+            forkInLayout: (forkLayout, timeS) => fork({ timeS, layout: forkLayout }),
           }}
         />
       </div>

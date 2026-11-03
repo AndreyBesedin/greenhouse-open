@@ -116,4 +116,17 @@ describe("a stored run's panels", () => {
     click(button(rendered.container, "Put them back"));
     expect(onPutBack).toHaveBeenCalledOnce();
   });
+
+  it("goes to one of a stored run's commands by moving its position", () => {
+    const onSeek = vi.fn();
+    const onSource = vi.fn();
+    rendered = panels({ replayed: true, onSeek, onSource });
+
+    const goTo = rendered.container.querySelector<HTMLButtonElement>('button[aria-label^="Go to"]');
+    expect(goTo).not.toBeNull();
+    click(goTo as HTMLButtonElement);
+
+    expect(onSeek).toHaveBeenCalledWith(60);
+    expect(onSource).not.toHaveBeenCalled();
+  });
 });

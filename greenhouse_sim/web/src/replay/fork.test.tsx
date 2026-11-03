@@ -116,11 +116,16 @@ describe("a replay's fork", () => {
     const fetchFn = answering(200, RUN);
     const controls = hook(fetchFn, vi.fn());
 
+    let second: string | null = null;
     await act(async () => {
-      await Promise.all([controls().fork({ timeS: 1 }), controls().fork({ timeS: 2 })]);
+      const first = controls().fork({ timeS: 1 });
+      second = await controls().fork({ timeS: 2 });
+      await first;
     });
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
+    // Told so, and not as if it had been made: its asker would wait for the page.
+    expect(second).toBe("another fork is on its way");
   });
 
   it("stays, says why and can be asked again if it was refused", async () => {

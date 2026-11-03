@@ -44,7 +44,7 @@ import { QaPanel } from "./qaMode/QaPanel";
 import { useQaLoads } from "./qaMode/useQaLoads";
 import type { ViewSample } from "./readouts";
 import type { ForkChange } from "./replay/fork";
-import { withPlanOf } from "./replay/replaySource";
+import { forkMoment, withPlanOf } from "./replay/replaySource";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { WhatAmISeeing } from "./SeenInTheView";
 import { DEFAULT_LAYOUT, loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
@@ -95,11 +95,13 @@ export function App({
   replay?: {
     source: SceneSource;
     momentS: number | null;
+    /** Moves the position, which is what moves the moment in a replay. */
+    seek: (timeS: number) => void;
     /** A change in the panels, which draws another run than the one replayed
      * if it is drawn here: it makes a fork of it from the moment shown. */
-    forkWith: (change: ForkChange) => void;
+    forkWith: (change: ForkChange, timeS: number) => void;
     /** Moves applied, as a fork in their layout; why not, if it could not be. */
-    forkInLayout: (layout: string) => Promise<string | null>;
+    forkInLayout: (layout: string, timeS: number) => Promise<string | null>;
   };
 }) {
   const [addressed, setAddressed] = useSource(replay?.source);
@@ -220,6 +222,8 @@ export function App({
     fieldFailed: failed(fieldProgress.latest),
     onClockMoved: stopClimatePlay,
   });
+  // What a change in a replay's panels forks from: the moment they show.
+  const forkFrom = forkMoment(fieldProgress.shown?.field.timeS, replay?.momentS ?? null);
   // A running epoch's plan grows while it is replayed: the scene follows it.
   const replayedSource = replay?.source;
   useEffect(() => {
@@ -327,7 +331,9 @@ export function App({
     source,
     setSource,
     followed,
-    ...(replay === undefined ? {} : { applyLayout: replay.forkInLayout }),
+    ...(replay === undefined
+      ? {}
+      : { applyLayout: (layout: string) => replay.forkInLayout(layout, forkFrom) }),
     onPlayback: setPlayback,
     sceneLoading: sceneProgress.latest.status === "loading",
     snapshot,
@@ -481,7 +487,7 @@ export function App({
                 }
                 onTargets={(targets) => {
                   if (replay !== undefined) {
-                    replay.forkWith({ kind: "targets", targets });
+                    replay.forkWith({ kind: "targets", targets }, forkFrom);
                     return;
                   }
                   if (followed !== null) {
@@ -508,7 +514,8 @@ export function App({
                   : {
                       forkLevels: {
                         asked: replayLevels,
-                        onFork: () => replay.forkWith({ kind: "levels", levels: replayLevels }),
+                        onFork: () =>
+                          replay.forkWith({ kind: "levels", levels: replayLevels }, forkFrom),
                         onPutBack: () => setReplayLevels({}),
                       },
                     })}
@@ -530,6 +537,7 @@ export function App({
                 probeHeight={probeHeight}
                 playingClimate={playingClimate}
                 replayed={replay !== undefined}
+                {...(replay === undefined ? {} : { onSeek: replay.seek })}
                 onSource={setSource}
                 onProbes={setProbes}
                 onPlacing={setPlacingProbes}

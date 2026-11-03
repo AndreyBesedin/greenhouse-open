@@ -3,6 +3,10 @@ import { useRef, useState } from "react";
 import { replayAddress } from "../landing/paths";
 import { type ForkAsked, forkEpoch } from "./fork";
 
+// What asks for a fork while one is under way is told so, and can ask again:
+// that one may yet be refused, and the page stay.
+const ONE_AT_A_TIME = "another fork is on its way";
+
 /**
  * Forking the epoch a replay shows (P17.8, decision 0065): one at a time, and
  * once one is started the page goes to it, since it is what the person asked
@@ -21,8 +25,11 @@ export function useFork(
   const underWay = useRef(false);
 
   async function fork(asked: ForkAsked): Promise<string | null> {
-    if (epoch === null || underWay.current) {
+    if (epoch === null) {
       return null;
+    }
+    if (underWay.current) {
+      return ONE_AT_A_TIME;
     }
     underWay.current = true;
     setForking(true);

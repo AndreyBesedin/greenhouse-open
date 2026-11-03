@@ -112,6 +112,7 @@ export function ScenarioPanels({
   probeHeight,
   playingClimate,
   replayed = false,
+  onSeek,
   thermostat = null,
   setpoints,
   onTargets,
@@ -146,6 +147,8 @@ export function ScenarioPanels({
   playingClimate: boolean;
   /** Whether a replay of a stored run moves the moment, and not this panel. */
   replayed?: boolean;
+  /** In a replay: moves the position, which is what moves the moment. */
+  onSeek?: (timeS: number) => void;
   /** The thermostat that runs its heater at the moment drawn, if one does. */
   thermostat?: ThermostatAt | null;
   /** Its thermostat at the moment drawn, whether or not it runs its heater
@@ -355,7 +358,7 @@ export function ScenarioPanels({
             time={time}
             days={days}
             fixed={replayed}
-            onTime={setTime}
+            onTime={onSeek ?? setTime}
             onRemove={(index) => onSource(withoutCommand(source, index))}
             onRepeat={(index) => onSource(withRepeated(source, index))}
             onRemoveDaily={(index) => onSource(withoutDaily(source, index))}
