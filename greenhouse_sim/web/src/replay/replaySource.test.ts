@@ -83,12 +83,20 @@ describe("a replay's plan", () => {
 
 describe("the moment a panel forks from", () => {
   it("is the one the scene shows, and not the one the position has gone on to", () => {
-    expect(forkMoment(3_600, 7_200)).toBe(3_600);
-    expect(forkMoment(0, 7_200)).toBe(0);
+    expect(forkMoment("climate", 3_600, 7_200)).toBe(3_600);
+    expect(forkMoment("climate", 0, 7_200)).toBe(0);
   });
 
   it("is the one asked for while nothing is shown yet", () => {
-    expect(forkMoment(undefined, 7_200)).toBe(7_200);
-    expect(forkMoment(null, null)).toBe(0);
+    expect(forkMoment("climate", undefined, 7_200)).toBe(7_200);
+    expect(forkMoment(null, null, null)).toBe(0);
+  });
+
+  it("is the one asked for under a field that says no moment, or none", () => {
+    // A prescribed field or the shear is the layout's, at its time 0 whatever
+    // the moment: taken for the moment shown, it would fork from the run's start.
+    expect(forkMoment("shear", 0, 7_200)).toBe(7_200);
+    expect(forkMoment("uniform", 0, 7_200)).toBe(7_200);
+    expect(forkMoment(null, undefined, 7_200)).toBe(7_200);
   });
 });
