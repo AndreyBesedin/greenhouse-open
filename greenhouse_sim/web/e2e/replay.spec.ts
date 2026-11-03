@@ -38,7 +38,11 @@ async function replayOfANewRun(page: Page, seed: string): Promise<void> {
   await dialog.getByLabel("Seconds per simulated day").fill("1");
   await dialog.getByRole("button", { name: "Start run" }).click();
   const row = dialog.locator(".landing-run").filter({ hasText: `Seed ${seed}` });
-  await row.getByRole("link", { name: /^Replay/ }).click();
+  // A test retried finds its own run of before, and a fork of it, beside this one.
+  await row
+    .getByRole("link", { name: /^Replay/ })
+    .first()
+    .click();
   await expect(page).toHaveURL(new RegExp(`${REPLAY_PATH}\\?run=`));
 }
 
@@ -131,7 +135,7 @@ test("a stored run is forked from the moment shown, and stays there to go back t
   // A new epoch, at an address of its own, naming where it comes from.
   await expect(page).not.toHaveURL(parent);
   await expect(page.getByTestId("replay-subtitle")).toContainText(
-    "forked from epoch 0 at Day 1, 24:00",
+    /forked from epoch \d+ at Day 1, 24:00/,
   );
   await expect(page.getByTestId("replay-moment")).toHaveText("Day 1, 24:00");
   await expect(page.locator("canvas")).toBeVisible();
