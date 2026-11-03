@@ -617,3 +617,50 @@ def test_crop_actions_due_as_they_are_given_are_told_apart_and_end_at_their_mome
 
     assert cut.outcomes().records == whole.outcomes().records
     assert _digests(cut) == _digests(whole)
+
+
+def test_a_reader_draws_what_the_epoch_did_whoever_may_do_what_on_its_own_simulator(
+    tmp_path: Path, steered: EpochStore
+) -> None:
+    """Its worker's grants were not its reader's: what was done stays done."""
+    nobody = AuthorisationConfig(version=1, groups=())
+    with Simulator(authorisation=nobody) as reader:
+        reader.catalogue.register(
+            SCENARIO_REGISTRY[BOX].model_copy(update=dict(greenhouse_id=SHORT, duration_days=DAYS))
+        )
+        held = StoredEpoch(reader, steered.objects, steered.run_id, steered.epoch)
+        assert held.plan().commanded() == ((DAY_S + MINUTE_S, "heater", 0.5),)
+
+
+def test_a_reader_draws_an_action_a_prerequisite_let_go_after_the_last_change(
+    tmp_path: Path, simulator: Simulator
+) -> None:
+    objects = FolderStore(tmp_path)
+    epoch = queued(simulator, objects, SHORT)
+    start = run_start(simulator.catalogue, SHORT)
+    first = PlannedAction(
+        action_id="first",
+        action=SetLevel(device_id="heater", level=0.5),
+        timing=At(at=start + timedelta(seconds=MINUTE_S)),
+        proposed_by=LOCAL_OPERATOR,
+    )
+    second = PlannedAction(
+        action_id="second",
+        action=SetLevel(device_id="fan", level=0.5),
+        timing=At(at=start + timedelta(seconds=DAY_S)),
+        after=("first",),
+        proposed_by=LOCAL_OPERATOR,
+    )
+    plan = Plan(
+        plan_id="both",
+        run_id=epoch.run_id,
+        epoch=epoch.epoch,
+        revision=1,
+        actions=(first, second),
+    )
+    epoch.ask(_given(plan))
+
+    assert execute(simulator, epoch, Free()) == Status.FINISHED
+
+    held = StoredEpoch(simulator, objects, epoch.run_id, epoch.epoch)
+    assert [device for _, device, _ in held.plan().commanded()] == ["heater", "fan"]

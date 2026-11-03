@@ -17,7 +17,9 @@ kept states, so that those services take the state over instead of working the
 days before it out again; a checkpoint made by another version of the
 scenario or its models is not restored, and the days are worked out. The changes
 given to the epoch are in its log (P17.8), and its scene is drawn under the plan
-they make: each shows from its moment on, in a replay from the start too.
+they made, as the checkpoint at its frontier keeps it: what it carried out by
+then, whatever it was refused, and whoever may do what on the simulator reading
+it. A position stands at or before the frontier, so it needs no more than that.
 """
 
 import json
@@ -38,12 +40,7 @@ from pydantic import BaseModel, ConfigDict
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
-from greenhouse_sim.services.playback import (
-    DEFAULT_SECONDS_PER_DAY,
-    Playback,
-    check_pace,
-    delivered,
-)
+from greenhouse_sim.services.playback import DEFAULT_SECONDS_PER_DAY, check_pace, delivered
 from greenhouse_sim.services.run_store import (
     CHECKPOINT_TYPE,
     Commit,
@@ -129,19 +126,23 @@ class StoredEpoch:
         self._commits: list[Commit] = []
         # The outcomes read, and how many commits they were read at.
         self._outcomes: tuple[int, list[ActionOutcome]] = (-1, [])
-        # The plan its log makes, and how many entries it was made of.
+        # The plan through its frontier, and how many commits it was read at.
         self._plan: tuple[int, RunPlan] = (0, RunPlan())
 
     def plan(self) -> RunPlan:
-        """The plan the changes given to the epoch make."""
-        logged = self.store.logged()
+        """The plan it was worked out under up to its frontier, as the checkpoint
+        there keeps it; nothing to read if it was given no change."""
+        commits = len(self.commits())
         with self._lock:
-            if len(logged) == self._plan[0]:
+            if commits == self._plan[0]:
                 return self._plan[1]
-        played = Playback(self._simulator, self.scenario_id, layout=self.layout, seed=self.seed)
-        made = played.planned_by(self.epoch, logged)
+        made = RunPlan()
+        if self.store.logged():
+            found = self.store.checkpoint_at(self.frontier_s())
+            if found is not None and found[1] == CHECKPOINT_TYPE:
+                made = RunPlan.model_validate(json.loads(decompress(found[0])).get("plan", {}))
         with self._lock:
-            self._plan = (len(logged), made)
+            self._plan = (commits, made)
         return made
 
     def run(self) -> RunRequest:
