@@ -145,6 +145,7 @@ def test_the_scenario_list_is_the_registry(simulator: Simulator) -> None:
                 "example_day",
             ],
             "thermostat": None if config.thermostat is None else config.thermostat.actuator_id,
+            "packaged": True,
         }
 
 

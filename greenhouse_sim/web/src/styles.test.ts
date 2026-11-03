@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { SUN_COLOR, WIND_COLOR } from "./weather/weather";
+
 /** A stylesheet's text with each `@import` in its place, in the build's order. */
 function withImports(
   path: string,
@@ -20,6 +22,8 @@ const STYLES = withImports(fileURLToPath(new URL("./styles.css", import.meta.url
 // none of its own. Anything else, a colour named, written in hex or made by
 // any function, stays the same whichever theme is chosen.
 const THEMED = /^(?:var\(--[\w-]+\)|none|transparent|inherit|currentcolor|initial|unset)$/i;
+// Or a pattern drawn in the theme's colours, such as the replay's hatching.
+const THEMED_PATTERN = /^repeating-linear-gradient\(/;
 
 /** The text and background colours in `stylesheet`, outside the theme's
  * own `:root` blocks, that are not the theme's. */
@@ -28,13 +32,92 @@ function unthemed(stylesheet: string): string[] {
   // Each declaration, at a line's start or after another, or a rule's `{`.
   return [...rules.matchAll(/(?:^|[{;])\s*(color|background(?:-color)?)\s*:\s*([^;}]*)/gm)]
     .map(([, property, value]) => [property, (value ?? "").trim()])
-    .filter(([, value]) => !THEMED.test(value ?? ""))
+    .filter(
+      ([, value]) =>
+        !THEMED.test(value ?? "") &&
+        !(THEMED_PATTERN.test(value ?? "") && !RAW_COLOUR.test(value ?? "")),
+    )
     .map(([property, value]) => `${property}: ${value};`);
+}
+
+// A colour in a value: written in hex, made by a function, or named. `color-mix`
+// is not one by itself: what it mixes is read as any other value, so that the
+// text's own colour may be mixed and a written one may not.
+const RAW_COLOUR = new RegExp(
+  [
+    "#[0-9a-f]{3,8}\\b",
+    "\\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|light-dark)\\(",
+    "(?<![\\w-])(?:black|silver|gr[ae]y|white|maroon|red|purple|fuchsia|magenta|green|lime|olive|yellow|navy|blue|teal|aqua|cyan|orange|pink|brown)(?![\\w-])",
+  ].join("|"),
+  "i",
+);
+
+/** Every declaration in `stylesheet`, outside the tokens' `:root` blocks, that
+ * writes a colour rather than naming a token. */
+function rawColours(stylesheet: string): string[] {
+  const rules = stylesheet.replace(/\/\*[\s\S]*?\*\//g, "").replace(/:root[^{]*\{[^}]*\}/g, "");
+  return [...rules.matchAll(/(?:^|[{;])\s*([a-z-]+)\s*:\s*([^;{}]*)/gm)]
+    .map(([, property, value]) => [property, (value ?? "").trim()])
+    .filter(([, value]) => RAW_COLOUR.test(value ?? ""))
+    .map(([property, value]) => `${property}: ${value};`);
+}
+
+// What a colour token may be, by the role it has: a new one is added here, where
+// review sees it (decision 0068).
+const COLOUR_ROLE =
+  /^--(?:surface-\w+|text(?:-\w+)?|border|action|warn|mark|scheme|chart-[\w-]+|data-\w+)$/;
+
+function misnamedTokens(names: Iterable<string>): string[] {
+  return [...names].filter((name) => !COLOUR_ROLE.test(name));
 }
 
 describe("the stylesheet", () => {
   it("colours every panel's text and background from the panels' theme (#208)", () => {
     expect(unthemed(STYLES)).toEqual([]);
+  });
+
+  it("writes a colour nowhere but in the tokens (P19.2)", () => {
+    expect(rawColours(STYLES)).toEqual([]);
+  });
+
+  it("takes a colour for raw in any declaration, and not a name that holds one's word", () => {
+    const written = `
+      /* #111 in a comment, and red. */
+      :root { --ink: #111111; }
+      .a { stroke: #c0392b; fill: rgb(0 0 0 / 50%); border: 1px solid Red; }
+      .b { box-shadow: 0 0 2px oklch(0.7 0.1 200); outline-color: navy; }
+      .c { stroke: var(--data-red); color: var(--chart-blue-text); fill: none; }
+      .d { background: var(--replay-green-track); transition: color 1s; }
+      #root:hover .e { gap: 2px; }
+      .f { border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
+      .g { border-top: 1px solid color-mix(in srgb, #fff 25%, transparent); }
+    `;
+    expect(rawColours(written)).toEqual([
+      "stroke: #c0392b;",
+      "fill: rgb(0 0 0 / 50%);",
+      "border: 1px solid Red;",
+      "box-shadow: 0 0 2px oklch(0.7 0.1 200);",
+      "outline-color: navy;",
+      "border-top: 1px solid color-mix(in srgb, #fff 25%, transparent);",
+    ]);
+  });
+
+  it("names each colour for what it does, not where it stands (P19.3)", () => {
+    expect(misnamedTokens(tokenValues(STYLES, "dark").keys())).toEqual([]);
+  });
+
+  it("refuses a token named for a place", () => {
+    expect(misnamedTokens(["--text-soft", "--panel-text", "--landing-bg", "--textual"])).toEqual([
+      "--panel-text",
+      "--landing-bg",
+      "--textual",
+    ]);
+  });
+
+  it("gives a chart's wind and sun the colours the scene gives them", () => {
+    const tokens = tokenValues(STYLES, "dark");
+    expect(tokens.get("--data-blue")).toBe(WIND_COLOR);
+    expect(tokens.get("--data-amber")).toBe(SUN_COLOR);
   });
 
   it("takes a colour for the theme's only when it is one of the theme's", () => {
@@ -46,6 +129,8 @@ describe("the stylesheet", () => {
       .newer { color: oklch(0.7 0.1 200); background: color-mix(in srgb, red, blue); }
       .mixed { background: var(--panel-bg) url("x.png"); }
       .none { background: none; color: currentColor; }
+      .hatched { background: repeating-linear-gradient(135deg, var(--ink) 0 3px, transparent 3px 6px); }
+      .written-hatch { background: repeating-linear-gradient(135deg, #ccc 0 3px, transparent 3px 6px); }
     `;
     expect(unthemed(written)).toEqual([
       "background: white;",
@@ -55,6 +140,7 @@ describe("the stylesheet", () => {
       "color: oklch(0.7 0.1 200);",
       "background: color-mix(in srgb, red, blue);",
       'background: var(--panel-bg) url("x.png");',
+      "background: repeating-linear-gradient(135deg, #ccc 0 3px, transparent 3px 6px);",
     ]);
   });
 });
@@ -294,8 +380,8 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
 // prints here, in its own diff, where review sees them; a token step must not.
 // It goes when selectors start to move (P19.6), and the page baselines hold.
 const RESOLVED_DIGESTS = {
-  dark: "3c34a059cf8aea9e5ce5b759912b6ab4d44e377ae579eb4ced022e6576762ccb",
-  light: "680c2d0e9826251b941e1d9f1113de9307304e580a5557144f4e67ebcfed3f73",
+  dark: "787d415ab5699b007703e701156b35dbbf4b3c97f240542270a17d8a7ad1aa2a",
+  light: "3fe562ededfd568017bb8fcdc2ee0b57813e495cac5a7faadffb163b38f19389",
 };
 type ThemeName = keyof typeof RESOLVED_DIGESTS;
 const COMMENT = /\/\*[\s\S]*?\*\//g;

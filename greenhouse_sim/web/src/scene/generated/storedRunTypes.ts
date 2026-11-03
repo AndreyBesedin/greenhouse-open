@@ -21,6 +21,7 @@ export interface StoredRun {
   size_bytes: number;
   start_s: number;
   fork: ForkOf | null;
+  damaged: boolean;
 }
 /**
  * Where a fork comes from (decision 0065): its parent, the exact instant

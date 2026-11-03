@@ -5,26 +5,40 @@ import type { ScenarioSummary } from "../scenarios";
 import { loadPlayback, parsePlayback } from "../scene/playback";
 import { followAddress } from "./follow";
 import { replayAddress, viewerAddress } from "./paths";
-import { runKey } from "./playing";
-import { RunProgress, StatusChip } from "./RunParts";
+import { RunControls } from "./RunControls";
+import { FollowLink, ReplayLink, RunProgress, StatusChip } from "./RunParts";
+import { startWorkerRun } from "./startRun";
 import { type StoredRun, sizeText, startedText } from "./storedRuns";
 
 /** The pace a run is started at unless another is entered, in real seconds
  * for a simulated day. */
 const DEFAULT_PACE_S = "10";
 
-/** What starting a run did: made one, or found the scenario's playback
- * already playing that run and epoch, which starting it again only resumes. */
+/** How the simulator refuses to delete a run being computed. */
+const STILL_COMPUTED = 409;
+
+/** What starting a run of a scenario no worker can run did: made one, or found
+ * its playback already playing that run and epoch, which starting it again only
+ * resumes. */
 type Outcome = { kind: "started" | "resumed"; epoch: number; layout: string };
 
-/** The runs of a scenario the simulator has kept, with a way to start another
- * and to remove one (P17.5, decision 0065). A modal dialog: the browser keeps
- * the keyboard in it and closes it on Escape. */
+/** Who a run is, as a list of one scenario's says it. */
+function whoIs(run: StoredRun): string {
+  return `${run.seed === null ? "the scenario's seed" : `seed ${run.seed}`}, epoch ${run.epoch}`;
+}
+
+/** The runs of a scenario the simulator has kept, with a way to start another,
+ * to stop, resume and remove one (P17.5, decision 0065). A run started is a
+ * worker's, beside any others, and the page goes to its replay; one of a built
+ * or uploaded scenario, which a worker cannot run, is its playback's, and the
+ * page stays, with no worker to stop or resume it. A modal dialog: the browser
+ * keeps the keyboard in it and closes it on Escape. */
 export function RunsDialog({
   scenario,
   runs,
   followed,
   newRun = false,
+  navigate,
   onClose,
   onChanged,
 }: {
@@ -36,6 +50,8 @@ export function RunsDialog({
   followed: ReadonlySet<string>;
   /** Whether the form for a new run is open as the dialog opens. */
   newRun?: boolean;
+  /** Goes to another page. */
+  navigate: (address: string) => void;
   onClose: () => void;
   /** The runs kept have changed: ask for them again. */
   onChanged: () => void;
@@ -48,6 +64,9 @@ export function RunsDialog({
   const [problem, setProblem] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
+  // A second press of Start while the first is answered would be a second run.
+  const [starting, setStarting] = useState(false);
+  const byWorker = scenario.packaged !== false;
 
   useEffect(() => {
     const shown = dialog.current;
@@ -61,8 +80,29 @@ export function RunsDialog({
     }
   }, []);
 
-  async function startRun(event: FormEvent<HTMLFormElement>): Promise<void> {
+  async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    setStarting(true);
+    await (byWorker ? startForAWorker() : startPlayback());
+    setStarting(false);
+  }
+
+  async function startForAWorker(): Promise<void> {
+    const answer = await startWorkerRun(scenario.id, { seed, secondsPerDay: pace });
+    if (!answer.ok) {
+      setProblem(answer.problem);
+      return;
+    }
+    setProblem(null);
+    // The form goes as the page does: no second press on the way, and none
+    // left open on the page a person comes back to.
+    setFormOpen(false);
+    setSeed("");
+    onChanged();
+    navigate(replayAddress(answer.value.run_id, answer.value.epoch, true));
+  }
+
+  async function startPlayback(): Promise<void> {
     // An empty seed asks for the scenario's own: none would keep the seed
     // of the playback now in place.
     const query = new URLSearchParams({
@@ -123,6 +163,11 @@ export function RunsDialog({
       },
     ).catch(() => null);
     setConfirming(null);
+    if (response?.status === STILL_COMPUTED) {
+      const then = byWorker ? "stop it, then delete it" : "wait for it to end, then delete it";
+      setProblem(`The run with ${whoIs(run)} is still being computed: ${then}.`);
+      return;
+    }
     if (response === null || !response.ok) {
       setProblem(
         response === null ? "The simulator could not be reached." : await refusal(response),
@@ -156,7 +201,7 @@ export function RunsDialog({
       </header>
 
       {formOpen && (
-        <form className="landing-form" onSubmit={(event) => void startRun(event)}>
+        <form className="landing-form" onSubmit={(event) => void submit(event)}>
           <label className="landing-field">
             <span>Seed</span>
             <input
@@ -175,16 +220,23 @@ export function RunsDialog({
               type="number"
               min={1}
               step={1}
-              required
+              required={!byWorker}
+              placeholder={byWorker ? "As fast as it computes" : undefined}
               value={pace}
               onChange={(event) => setPace(event.target.value)}
             />
           </label>
-          <button type="submit" className="landing-button landing-button-primary">
+          <button
+            type="submit"
+            className="landing-button landing-button-primary"
+            disabled={starting}
+          >
             Start run
           </button>
           <p className="landing-note">
-            Starting a run replaces the one now playing for this scenario, which stays in the list.
+            {byWorker
+              ? "A worker computes it beside the runs already going, or it waits for one. Its replay opens at the newest day."
+              : "Starting a run replaces the one now playing for this scenario, which stays in the list."}
           </p>
         </form>
       )}
@@ -214,7 +266,7 @@ export function RunsDialog({
         <ul className="landing-runs">
           {runs.map((run) => {
             const key = `${run.run_id}/${run.epoch}`;
-            const who = `${run.seed === null ? "the scenario's seed" : `seed ${run.seed}`}, epoch ${run.epoch}`;
+            const who = whoIs(run);
             const when = startedText(run);
             return (
               <li key={key} className="landing-run">
@@ -227,20 +279,15 @@ export function RunsDialog({
                 </div>
                 <StatusChip run={run} />
                 <RunProgress run={run} name={`the run with ${who}`} />
-                <a
-                  href={replayAddress(run.run_id, run.epoch)}
-                  className="landing-link-button"
-                  aria-label={`Replay the run with ${who}`}
-                >
-                  Replay
-                </a>
-                {followed.has(runKey(run)) && (
-                  <a
-                    href={followAddress(run.scenario_id, run.layout)}
-                    className="landing-link-button"
-                  >
-                    Follow
-                  </a>
+                <ReplayLink run={run} label={`Replay the run with ${who}`} />
+                <FollowLink run={run} played={followed} />
+                {byWorker && (
+                  <RunControls
+                    key={run.status}
+                    run={run}
+                    name={`the run with ${who}`}
+                    onChanged={onChanged}
+                  />
                 )}
                 {confirming === key ? (
                   <span className="landing-confirm">

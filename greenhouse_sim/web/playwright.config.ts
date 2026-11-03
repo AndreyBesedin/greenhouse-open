@@ -53,6 +53,8 @@ const ONE_BY_ONE = [
   "reference-schedule.spec.ts",
   // A replay waits for a stored run's first days to be computed (P17.6).
   "replay.spec.ts",
+  // Two workers at once, which is all a simulator runs by default.
+  "worker-runs.spec.ts",
   // P09.9's demo walks through the whole final QA, last of all.
   "demo.spec.ts",
 ];
