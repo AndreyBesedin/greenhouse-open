@@ -78,7 +78,7 @@ changes course is a new record that supersedes the old one.
 | [0065](0065-a-run-is-a-scenario-at-a-seed-kept-in-a-store-and-played-from-it.md) | A run is a scenario at a seed, kept in a store and played from it | Accepted |
 | [0066](0066-run-records-are-parquet-segments-read-and-written-with-duckdb.md) | Run records are Parquet segments, read and written with DuckDB | Accepted |
 | [0067](0067-a-runs-resources-are-counted-and-limited-and-all-it-needs-is-in-the-store.md) | A run's resources are counted and limited, and all it needs is in the store | Accepted |
-| [0068](0068-the-viewers-design-system-is-its-own-tokens-and-components.md) | The viewer's design system is its own tokens and components | Proposed |
+| [0068](0068-the-viewers-design-system-is-its-own-tokens-and-components.md) | The viewer's design system is its own tokens and components | Accepted |
 
 ## Template
 

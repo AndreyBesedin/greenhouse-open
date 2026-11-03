@@ -67,7 +67,7 @@ def simulator(tmp_path: Path) -> Iterator[Simulator]:
     objects = FolderStore(tmp_path)
     with workers_support.short_simulator() as made:
         made.runs = objects
-        made.scheduler = Scheduler(made, tmp_path, limit=2, made_by=workers_support.MADE_BY)
+        made.scheduler = Scheduler(made, tmp_path, limit=2)
         yield made
 
 
@@ -124,7 +124,7 @@ def test_several_runs_of_one_scenario_are_executed_at_once_in_processes_of_their
 def test_runs_beyond_the_limit_wait_for_a_worker_in_the_order_they_were_asked_for(
     simulator: Simulator, objects: FolderStore
 ) -> None:
-    scheduling = Scheduler(simulator, objects.root, limit=1, made_by=workers_support.MADE_BY)
+    scheduling = Scheduler(simulator, objects.root, limit=1)
     try:
         first, second, third = (scheduling.start(LONG, seed=s) for s in (1, 2, 3))
         assert scheduling.waiting() == [(second.run_id, 0), (third.run_id, 0)]
@@ -149,7 +149,7 @@ def test_runs_beyond_the_limit_wait_for_a_worker_in_the_order_they_were_asked_fo
 def test_a_killed_worker_leaves_its_epoch_interrupted_where_it_was_committed(
     simulator: Simulator, objects: FolderStore
 ) -> None:
-    scheduling = Scheduler(simulator, objects.root, limit=1, made_by=workers_support.MADE_BY)
+    scheduling = Scheduler(simulator, objects.root, limit=1)
     try:
         killed, next_ = scheduling.start(LONG, seed=1), scheduling.start(LONG, seed=2)
         _until(lambda: _frontier(objects, killed) >= DAY_S, "a day to be committed")
@@ -198,7 +198,7 @@ def test_closing_the_simulator_ends_its_workers_and_tells_the_epochs(
     objects = FolderStore(tmp_path)
     with workers_support.short_simulator() as simulator:
         simulator.runs = objects
-        scheduling = Scheduler(simulator, tmp_path, limit=1, made_by=workers_support.MADE_BY)
+        scheduling = Scheduler(simulator, tmp_path, limit=1)
         simulator.scheduler = scheduling
         running, waiting = scheduling.start(LONG), scheduling.start(LONG, seed=9)
         _until(lambda: _frontier(objects, running) >= DAY_S, "a day to be committed")
@@ -214,9 +214,10 @@ def test_closing_the_simulator_ends_its_workers_and_tells_the_epochs(
 
 
 def test_a_worker_that_cannot_begin_leaves_its_epoch_failed(
-    simulator: Simulator, objects: FolderStore
+    simulator: Simulator, objects: FolderStore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    broken = Scheduler(simulator, objects.root, limit=1, made_by="workers_support:no_such_function")
+    monkeypatch.setattr(scheduler, "work", workers_support.ends_at_once)
+    broken = Scheduler(simulator, objects.root, limit=1)
     try:
         shown = broken.start(SHORT)
         _until(lambda: _status(objects, shown) == Status.FAILED, "the epoch to be told")
@@ -331,7 +332,7 @@ def test_a_worker_that_cannot_be_started_leaves_its_epoch_failed_and_the_queue_g
     """The epoch is told, nothing is left of it in the scheduler, and the next
     run asked for is given a worker."""
     _refusing_once(monkeypatch)
-    scheduling = Scheduler(simulator, objects.root, limit=1, made_by=workers_support.MADE_BY)
+    scheduling = Scheduler(simulator, objects.root, limit=1)
     try:
         refused = scheduling.start(SHORT, seed=1)
         assert _status(objects, refused) == Status.FAILED
@@ -346,7 +347,7 @@ def test_a_worker_that_cannot_be_started_leaves_its_epoch_failed_and_the_queue_g
 def test_a_worker_that_cannot_be_started_by_the_watcher_does_not_end_it(
     simulator: Simulator, objects: FolderStore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    scheduling = Scheduler(simulator, objects.root, limit=1, made_by=workers_support.MADE_BY)
+    scheduling = Scheduler(simulator, objects.root, limit=1)
     try:
         running = scheduling.start(LONG, seed=1)
         waiting, behind = scheduling.start(SHORT, seed=2), scheduling.start(SHORT, seed=3)
