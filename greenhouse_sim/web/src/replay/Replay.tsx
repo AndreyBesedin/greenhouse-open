@@ -55,7 +55,11 @@ function ReplayOf({ runId, epoch }: { runId: string; epoch: number }) {
         : replaySource(planned.current),
     [scenarioId, layout, seed, plan],
   );
-  const { forking, refused, fork } = useFork(useMemo(() => ({ runId, epoch }), [runId, epoch]));
+  const {
+    forking,
+    refused: forkRefused,
+    fork,
+  } = useFork(useMemo(() => ({ runId, epoch }), [runId, epoch]));
 
   if (position === null || source === null) {
     return (
@@ -79,7 +83,7 @@ function ReplayOf({ runId, epoch }: { runId: string; epoch: number }) {
         position={position}
         otherRunsHref={runsAddress(position.scenario_id)}
         forking={forking}
-        forkRefused={refused}
+        forkRefused={forkRefused}
         onFork={() => void fork({ timeS: position.time_s })}
       />
       <div className="replay-scene">
