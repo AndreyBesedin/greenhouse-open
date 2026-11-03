@@ -75,9 +75,10 @@ def test_the_sensors_read_a_daily_schedules_run() -> None:
         response = respond(simulator, "GET", path)
         assert response.status == HTTPStatus.OK, response.body
         assert isinstance(response.body, dict)
-        (sensor,) = response.body["sensors"]
-        assert isinstance(sensor, dict)
-        return sensor
+        sensors = response.body["sensors"]
+        assert isinstance(sensors, list) and len(sensors) == 1
+        assert isinstance(sensors[0], dict)
+        return sensors[0]
 
     box = cut("climate_box", days=2, sensors=("temperature_front",))
     first_evening_s, second_evening_s = 72_000.0, DAY_S + 72_000.0
