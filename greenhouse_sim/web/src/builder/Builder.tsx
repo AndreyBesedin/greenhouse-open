@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { entityBounds, type OverlayPrimitive } from "../debug/overlays";
 import { followAddress } from "../landing/follow";
-import { LANDING_PATH, newRunAddress } from "../landing/paths";
+import { BUILDER_PATH, LANDING_PATH, newRunAddress } from "../landing/paths";
 import { startRun } from "../landing/startRun";
+import { keptFields, uploadedScenario } from "../landing/uploaded";
 import { greenhouseExtent, qaGreenhousePose } from "../qa/greenhouseViews";
 import type { ScenarioSummary, ScenariosState } from "../scenarios";
 import { loadScenarios } from "../scenarios";
@@ -43,8 +44,7 @@ import { offerFile } from "./scenarioFile";
 /** What outlines an item an error names, on the house. */
 const FINDING_COLOR = "#e5484d";
 
-/** Where the builder lives: a page of its own beside the viewer. */
-export const BUILDER_PATH = "/builder";
+export { BUILDER_PATH };
 
 /** A draft being edited: its edits, the format a file of it is written in,
  * and its latest revision saved, under the identifier it was saved as, if
@@ -109,7 +109,14 @@ function cancelledBy(controller: AbortController): typeof fetch {
  * answer marks what was saved, keeping any edit made while it was on its
  * way.
  */
-export function Builder({ navigate = goTo }: { navigate?: (address: string) => void }) {
+export function Builder({
+  navigate = goTo,
+  hash = location.hash,
+}: {
+  navigate?: (address: string) => void;
+  /** The address's fragment, which can ask for an uploaded scenario. */
+  hash?: string;
+}) {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [assessment, setAssessment] = useState<Assessment>({ status: "asked" });
   const [snapshot, setSnapshot] = useState<SceneSnapshot | null>(null);
@@ -154,6 +161,16 @@ export function Builder({ navigate = goTo }: { navigate?: (address: string) => v
     void refreshDrafts();
     void listScenarios();
   }, [refreshDrafts, listScenarios]);
+
+  // An uploaded scenario the address names is opened once, as the start page
+  // sends it here.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: opened for the address the page was loaded at
+  useEffect(() => {
+    const uploaded = uploadedScenario(hash);
+    if (uploaded !== null) {
+      void openUploaded(uploaded);
+    }
+  }, []);
 
   // What the draft shown needs, each time it changes; a request for an
   // edit since replaced is cancelled.
@@ -291,6 +308,31 @@ export function Builder({ navigate = goTo }: { navigate?: (address: string) => v
       asked,
       { schemaVersion: schema_version, history: begun(copied), saved: null },
       `Copied ${scenario.name}'s house as ${draftId}; not saved yet.`,
+    );
+  }
+
+  /** An uploaded scenario's house, as the simulator registered it, opened as
+   * a draft not saved, with the run settings its file held. */
+  async function openUploaded(scenarioId: string): Promise<void> {
+    const asked = nextSession();
+    setBusy(true);
+    const answer = await scenarioHouse(scenarioId);
+    setBusy(false);
+    if (answer.status !== "loaded") {
+      if (session.current === asked) {
+        setStatus(`The uploaded scenario cannot be opened: ${answer.reason}`);
+      }
+      return;
+    }
+    const { installation, schema_version } = answer.value;
+    const fields = keptFields(scenarioId);
+    if (fields !== null) {
+      setRunFields(fields);
+    }
+    begin(
+      asked,
+      { schemaVersion: schema_version, history: begun(installation), saved: null },
+      `Opened ${installation.name} from a scenario file; not saved yet.`,
     );
   }
 

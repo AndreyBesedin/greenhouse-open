@@ -473,4 +473,63 @@ describe("the setup builder (P12.2)", () => {
     expect(page.querySelector(".builder-share")).not.toBeNull();
     expect(button(page, "Download scenario file")).toBeDefined();
   });
+  it("opens an uploaded scenario's house as a draft not saved, with the run settings its file held (P17.11)", async () => {
+    sessionStorage.setItem(
+      "greenhouse.uploaded.shared_box",
+      JSON.stringify({
+        start_date: "2026-03-01",
+        duration_days: 12,
+        random_seed: 3,
+        weather: "default",
+      }),
+    );
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      const url = String(input);
+      asked.push(url);
+      if (
+        url === "/api/scenarios/shared_box/installation" ||
+        url.startsWith("/api/builder/assess")
+      ) {
+        return answer(STARTING_HOUSE);
+      }
+      return answer(
+        url.startsWith("/api/drafts") || url === "/api/scenarios" ? [] : { error: "no" },
+        200,
+      );
+    });
+    shown = render(<Builder hash="#scenario=shared_box" />);
+    const page = shown.container;
+    await settled();
+
+    expect(asked).toContain("/api/scenarios/shared_box/installation");
+    expect(said(page, "builder-status")).toBe(
+      "Opened My greenhouse from a scenario file; not saved yet.",
+    );
+    expect(said(page, "builder-draft")).toBe("My greenhouse (my_greenhouse), not saved");
+    const fields = [...page.querySelectorAll<HTMLInputElement>(".builder-run input")].map(
+      (input) => input.value,
+    );
+    expect(fields).toEqual(["2026-03-01", "12", "3"]);
+    sessionStorage.clear();
+  });
+
+  it("says why an uploaded scenario cannot be opened, and shows the first form (P17.11)", async () => {
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      const url = String(input);
+      return url.includes("/installation")
+        ? answer({ error: "no such scenario" }, 404)
+        : answer(
+            url.startsWith("/api/drafts") ? [] : { error: "no" },
+            url.startsWith("/api/drafts") ? 200 : 404,
+          );
+    });
+    shown = render(<Builder hash="#scenario=gone" />);
+    await settled();
+
+    expect(said(shown.container, "builder-status")).toBe(
+      "The uploaded scenario cannot be opened: no such scenario",
+    );
+    expect(shown.container.querySelector(".builder-form")).not.toBeNull();
+  });
 });
