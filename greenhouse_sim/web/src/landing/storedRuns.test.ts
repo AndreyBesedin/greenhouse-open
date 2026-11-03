@@ -30,6 +30,8 @@ function run(more: Partial<StoredRun> = {}): StoredRun {
     progress: 41 / 120,
     created_at: "2026-10-28T09:30:00Z",
     size_bytes: 8 * 1024 * 1024,
+    start_s: 0,
+    fork: null,
     ...more,
   };
 }

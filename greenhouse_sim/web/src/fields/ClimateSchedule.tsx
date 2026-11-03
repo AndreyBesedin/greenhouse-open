@@ -74,6 +74,7 @@ export function ClimateSchedule({
   daily = [],
   time,
   days,
+  fixed = false,
   onTime,
   onRemove,
   onRepeat,
@@ -85,6 +86,8 @@ export function ClimateSchedule({
   time: number;
   /** How many days the run lasts: no command comes after its end. */
   days: number;
+  /** Whether these are a stored run's own, which cannot be taken back. */
+  fixed?: boolean;
   onTime: (seconds: number) => void;
   onRemove: (index: number) => void;
   /** One of the commands repeated every day, in its place. */
@@ -134,13 +137,15 @@ export function ClimateSchedule({
                   every day {describeTime(command.timeS)}
                 </button>{" "}
                 {describeCommand(command)}{" "}
-                <button
-                  type="button"
-                  aria-label={`Remove ${said}`}
-                  onClick={() => onRemoveDaily?.(index)}
-                >
-                  ×
-                </button>
+                {!fixed && (
+                  <button
+                    type="button"
+                    aria-label={`Remove ${said}`}
+                    onClick={() => onRemoveDaily?.(index)}
+                  >
+                    ×
+                  </button>
+                )}
               </li>
             );
           })}
@@ -157,7 +162,7 @@ export function ClimateSchedule({
                   {describeTime(command.timeS)}
                 </button>{" "}
                 {describeCommand(command)}{" "}
-                {onRepeat !== undefined && (
+                {onRepeat !== undefined && !fixed && (
                   <button
                     type="button"
                     aria-label={`Repeat ${said} every day`}
@@ -166,13 +171,25 @@ export function ClimateSchedule({
                     ↻
                   </button>
                 )}{" "}
-                <button type="button" aria-label={`Remove ${said}`} onClick={() => onRemove(index)}>
-                  ×
-                </button>
+                {!fixed && (
+                  <button
+                    type="button"
+                    aria-label={`Remove ${said}`}
+                    onClick={() => onRemove(index)}
+                  >
+                    ×
+                  </button>
+                )}
               </li>
             );
           })}
         </ol>
+        {fixed && (
+          <p className="targets-note" data-testid="schedule-fixed">
+            A stored run's commands are its own: what it was given stays, and a fork from a moment
+            before one goes on with what it has inherited up to there.
+          </p>
+        )}
       </details>
     </section>
   );

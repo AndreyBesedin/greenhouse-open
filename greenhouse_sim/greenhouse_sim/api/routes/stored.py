@@ -27,6 +27,21 @@ them (P17.4, decision 0065).
                                           running that no one works, carried on
                                           from its last commit by a worker: the
                                           same epoch, as the list shows it
+    POST /api/runs/{run}/epochs/{n}/changes
+                                          a change asked of an epoch waiting for
+                                          a worker or being executed, as its body
+                                          writes it: its worker logs it and acts
+                                          on it between its moments
+    GET /api/runs/{run}/epochs/{n}/changes
+                                          what has become of them: its log, those
+                                          refused, those waiting
+    POST /api/runs/{run}/epochs/{n}/forks?t=3600&layout=default&seconds_per_day=10
+                                          a fork of an epoch at t seconds into its
+                                          run, in that layout from then on, given
+                                          the changes its body lists, if any: a new
+                                          epoch, executed by a worker when one is
+                                          free; the epoch as the list shows it. The
+                                          epoch it came from stays as it was
     POST /api/runs/{run}/epochs/{n}/positions?seconds_per_day=10
                                           a position at the epoch's start
     GET /api/positions/{id}               where it stands: the moment, whether
@@ -51,7 +66,7 @@ from pydantic import BaseModel
 
 from greenhouse_sim.api.responses import JsonValue, Response
 from greenhouse_sim.api.routes.shared import Query, answer, last, pace, seconds, seed, whole
-from greenhouse_sim.services import runs_kept, scheduler
+from greenhouse_sim.services import forks, interventions, runs_kept, scheduler
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.simulator import Simulator
 
@@ -66,6 +81,8 @@ def get(simulator: Simulator, segments: list[str], query: Query) -> Response | N
             return answer(lambda: runs_kept.runs_of(simulator, scenario_id))
         case ["api", "runs", run_id, "epochs", number]:
             return answer(lambda: runs_kept.epoch_of(simulator, run_id, _epoch(number)))
+        case ["api", "runs", run_id, "epochs", number, "changes"]:
+            return answer(lambda: interventions.changes(simulator, run_id, _epoch(number)))
         case ["api", "runs", run_id, "epochs", number, kind] if kind in KINDS:
             return answer(lambda: _epoch_records(simulator, run_id, number, kind, query))
         case ["api", "positions", position_id]:
@@ -76,7 +93,7 @@ def get(simulator: Simulator, segments: list[str], query: Query) -> Response | N
             return None
 
 
-def post(simulator: Simulator, segments: list[str], query: Query, _body: bytes) -> Response | None:
+def post(simulator: Simulator, segments: list[str], query: Query, body: bytes) -> Response | None:
     match segments:
         case ["api", "scenarios", scenario_id, "runs"]:
             return answer(
@@ -94,6 +111,20 @@ def post(simulator: Simulator, segments: list[str], query: Query, _body: bytes) 
             return answer(
                 lambda: scheduler.resume(
                     simulator, run_id, _epoch(number), seconds_per_day=pace(query)
+                )
+            )
+        case ["api", "runs", run_id, "epochs", number, "changes"]:
+            return answer(lambda: interventions.ask(simulator, run_id, _epoch(number), body))
+        case ["api", "runs", run_id, "epochs", number, "forks"]:
+            return answer(
+                lambda: scheduler.fork(
+                    simulator,
+                    run_id,
+                    _epoch(number),
+                    _moment(query),
+                    layout=last(query, "layout"),
+                    changes=forks.asked(body),
+                    seconds_per_day=pace(query),
                 )
             )
         case ["api", "runs", run_id, "epochs", number, "delete"]:
@@ -125,7 +156,7 @@ def _epoch(text: str) -> int:
 
 def _moment(query: Query) -> float:
     if last(query, "t") is None:
-        raise InvalidRequest("seek wants t, the seconds into the run to move to")
+        raise InvalidRequest("this wants t, the seconds into the run")
     return seconds(query)
 
 

@@ -25,6 +25,11 @@ function state(more: Partial<PositionState> = {}): PositionState {
     seconds_per_day: 10,
     frontier_s: 3 * DAY_S,
     duration_s: 3 * DAY_S,
+    start_s: 0,
+    fork: null,
+    targets: [],
+    commands: [],
+    crop: [],
     ...more,
   };
 }
@@ -54,8 +59,16 @@ function simulator(first: Partial<PositionState> = {}) {
   return { fetchFn, calls };
 }
 
-function Probe({ fetchFn, runId = "run-1" }: { fetchFn: typeof fetch; runId?: string }) {
-  const replay = useReplay(runId, 0, fetchFn);
+function Probe({
+  fetchFn,
+  runId = "run-1",
+  following = false,
+}: {
+  fetchFn: typeof fetch;
+  runId?: string;
+  following?: boolean;
+}) {
+  const replay = useReplay(runId, 0, fetchFn, following);
   return (
     <div>
       <span data-testid="status">{replay.load.status}</span>
@@ -135,6 +148,88 @@ describe("a stored epoch replayed", () => {
     rendered.unmount();
     rendered = undefined;
     expect(calls.at(-1)).toEqual({ method: "POST", url: "/api/positions/p1/close" });
+  });
+
+  it("opens following the newest day when asked: never shown at the start on its way", async () => {
+    const frontier = 2 * DAY_S;
+    const asked: string[] = [];
+    let answerFollow: (response: Response) => void = () => undefined;
+    const fetchFn = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      asked.push(url);
+      if (url.endsWith("/follow")) {
+        return new Promise<Response>((resolve) => {
+          answerFollow = resolve;
+        });
+      }
+      return Promise.resolve(Response.json(state({ status: "running", frontier_s: frontier })));
+    }) as unknown as typeof fetch;
+    rendered = render(<Probe fetchFn={fetchFn} following />);
+    await settle();
+    await settle();
+
+    expect(asked).toEqual(["/api/runs/run-1/epochs/0/positions", "/api/positions/p1/follow"]);
+    expect(rendered.container.querySelector('[data-testid="status"]')?.textContent).toBe("loading");
+
+    await act(async () => {
+      answerFollow(
+        Response.json(
+          state({ status: "running", frontier_s: frontier, time_s: frontier, following: true }),
+        ),
+      );
+      await Promise.resolve();
+    });
+    await settle();
+    expect(shownTime(rendered.container)).toBe(String(frontier));
+  });
+
+  it("does not follow unless asked", async () => {
+    const { fetchFn, calls } = simulator({ status: "running" });
+    rendered = render(<Probe fetchFn={fetchFn} />);
+    await settle();
+
+    expect(calls.map((c) => c.url)).toEqual(["/api/runs/run-1/epochs/0/positions"]);
+  });
+
+  it("shows the run where it was opened, and says why, if it cannot follow", async () => {
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) =>
+      String(input).endsWith("/follow")
+        ? new Response(JSON.stringify({ error: "no such position" }), { status: 404 })
+        : Response.json(state({ status: "running" })),
+    ) as unknown as typeof fetch;
+    rendered = render(<Probe fetchFn={fetchFn} following />);
+    await settle();
+    await settle();
+    await settle();
+
+    expect(rendered.container.querySelector('[data-testid="status"]')?.textContent).toBe("loaded");
+    expect(rendered.container.querySelector('[data-testid="refused"]')?.textContent).toBe(
+      "no such position",
+    );
+  });
+
+  it("closes the position it was following into when the page is left on the way", async () => {
+    let answerFollow: (response: Response) => void = () => undefined;
+    const asked: string[] = [];
+    const fetchFn = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      asked.push(url);
+      if (url.endsWith("/follow")) {
+        return new Promise<Response>((resolve) => {
+          answerFollow = resolve;
+        });
+      }
+      return Promise.resolve(Response.json(state({ status: "running" })));
+    }) as unknown as typeof fetch;
+    rendered = render(<Probe fetchFn={fetchFn} following />);
+    await settle();
+    await settle();
+
+    rendered.unmount();
+    rendered = undefined;
+    expect(asked.at(-1)).toBe("/api/positions/p1/close");
+    answerFollow(Response.json(state({ status: "running", following: true })));
+    await settle();
   });
 
   it("closes the first of the two positions a strict page opens", async () => {

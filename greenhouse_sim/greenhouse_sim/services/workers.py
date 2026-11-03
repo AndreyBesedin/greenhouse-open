@@ -20,9 +20,12 @@ An epoch `interrupted` can be carried on (`resume`, P17.9): the same epoch,
 from the checkpoint its last commit names. Runs are deterministic, so the
 epoch it ends as is the one that was never interrupted, and the trajectory
 digests of the two are equal. It is carried on from the checkpoint and not
-from the start because that is what a checkpoint is for (decision 0065), and
-it needs nothing else: the log of changes given to an epoch is empty until
-interventions exist (P17.8), and an epoch that has any is refused.
+from the start because that is what a checkpoint is for (decision 0065), with
+the log of changes given to the epoch applied again, each at the moment it was
+given (`Playback.resume_at`).
+
+A change asked of the epoch reaches its worker through the store: the worker
+looks between its moments (`Playback.take_changes`).
 """
 
 import json
@@ -50,7 +53,6 @@ from greenhouse_sim.services.run_store import (
     ENDED,
     EpochManifest,
     EpochStore,
-    Kind,
     ObjectStore,
     Status,
     decompress,
@@ -142,9 +144,7 @@ def check_resumable(epoch: EpochStore) -> float:
     """How far the epoch is kept, in seconds, if it can be carried on from
     there; else why it cannot, as a conflict. An epoch is carried on from the
     checkpoint of its last commit, which must be one this build reads, for the
-    run its scenario still is; the changes given to it while it ran must be
-    none, since the log holds none that can be applied again yet (P17.8), and
-    no plan has answered with outcomes."""
+    run its scenario still is."""
     status = epoch.manifest().status
     if status not in (Status.INTERRUPTED, Status.QUEUED):
         raise Conflict(
@@ -154,17 +154,12 @@ def check_resumable(epoch: EpochStore) -> float:
         raise Conflict(f"epoch {epoch.epoch} of {epoch.run_id} is worked by a process still")
     commits = epoch.commits()
     if not commits:
-        return 0.0
+        return epoch.start_s()
     last = commits[-1]
     if last.checkpoint is None or last.checkpoint_type != CHECKPOINT_TYPE:
         raise Conflict(
             f"epoch {epoch.epoch} of {epoch.run_id} keeps no checkpoint at its frontier, "
             "from which to carry it on"
-        )
-    if last.log_position or any(commit.counts[Kind.OUTCOMES] for commit in commits):
-        raise Conflict(
-            f"epoch {epoch.epoch} of {epoch.run_id} was given changes while it ran, "
-            "which cannot be applied again yet"
         )
     return last.end_s
 
@@ -227,7 +222,7 @@ def _drive(
         else DEFAULT_SECONDS_PER_DAY,
         epoch=epoch,
     )
-    if from_s:
+    if from_s or epoch.logged():
         run.resume_at(from_s)
     epoch.set_status(Status.RUNNING)
     try:
@@ -268,6 +263,7 @@ def _stepped(
     for barrier in barriers:
         if stopping.is_set():
             return
+        run.take_changes()
         run.step_to(barrier)
         run.keep()
         if epoch.manifest().status in ENDED:
@@ -281,6 +277,7 @@ def _paced(run: Playback, epoch: EpochStore, stopping: threading.Event) -> None:
     try:
         run.command(PlaybackCommand.PLAY)
         while epoch.manifest().status not in ENDED and not stopping.is_set():
+            run.take_changes()
             stopping.wait(WAIT_STEP_S)
     finally:
         run.stop()

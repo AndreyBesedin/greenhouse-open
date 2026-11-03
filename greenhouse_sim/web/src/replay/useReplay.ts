@@ -29,7 +29,8 @@ function isComputing(status: string): boolean {
  * here changes nothing a consumer reads.
  *
  * A page that is shown twice, as the development server's strict mode does,
- * opens two positions and closes the first.
+ * opens two positions and closes the first. One asked to open `following` is
+ * shown first at the newest day computed, and not on its way there.
  *
  * What the simulator answers is taken in the order it was asked, never in
  * the order it arrives: a seek, a command or a pace is the page's latest
@@ -38,7 +39,12 @@ function isComputing(status: string): boolean {
  * longer the page's, is dropped. Dragging the handle asks for a seek at every
  * move; only the last one's answer is kept.
  */
-export function useReplay(runId: string, epoch: number, fetchFn: typeof fetch = fetch) {
+export function useReplay(
+  runId: string,
+  epoch: number,
+  fetchFn: typeof fetch = fetch,
+  following = false,
+) {
   const [load, setLoad] = useState<PositionLoad>(LOADING);
   // Why the latest seek, command or pace did nothing, if it was refused.
   const [refused, setRefused] = useState<string | null>(null);
@@ -63,16 +69,26 @@ export function useReplay(runId: string, epoch: number, fetchFn: typeof fetch = 
     setRefused(null);
     // Not aborted once asked: a position the simulator has opened is closed,
     // however late its answer comes.
-    void openPosition(runId, epoch, fetchFn).then((answer) => {
-      if (answer.status === "loaded") {
-        opened = answer.position.position_id;
-        if (left) {
-          void closePosition(opened, fetchFn);
-          return;
+    void openPosition(runId, epoch, fetchFn).then(async (answer) => {
+      if (answer.status !== "loaded") {
+        if (!left) {
+          setLoad(answer);
         }
+        return;
       }
-      if (!left) {
-        setLoad(answer);
+      opened = answer.position.position_id;
+      if (left) {
+        void closePosition(opened, fetchFn);
+        return;
+      }
+      const moved = following ? await commandPosition(opened, "follow", fetchFn) : answer;
+      if (left) {
+        return;
+      }
+      // Not following is no reason not to show the run, where it was opened.
+      setLoad(moved.status === "loaded" ? moved : answer);
+      if (moved.status === "unavailable") {
+        setRefused(moved.reason);
       }
     });
     return () => {
@@ -82,7 +98,7 @@ export function useReplay(runId: string, epoch: number, fetchFn: typeof fetch = 
         void closePosition(opened, fetchFn);
       }
     };
-  }, [runId, epoch, fetchFn]);
+  }, [runId, epoch, fetchFn, following]);
 
   useEffect(() => {
     if (positionId === null || !moving) {

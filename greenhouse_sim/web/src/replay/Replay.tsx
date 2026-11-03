@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 
 import { App } from "../App";
 import { HomeButton } from "../landing/HomeButton";
@@ -8,7 +8,8 @@ import { replayedMoment } from "../scene/useReplayMoment";
 import { useLoad } from "../useLoad";
 import { ReplayHeader } from "./ReplayHeader";
 import { ReplayTransport } from "./ReplayTransport";
-import { replaySource } from "./replaySource";
+import { planKey, replaySource } from "./replaySource";
+import { useFork } from "./useFork";
 import { useReplay } from "./useReplay";
 
 /**
@@ -16,7 +17,9 @@ import { useReplay } from "./useReplay";
  * names the run and its epoch. A position is opened over the epoch, the
  * viewer draws the scene at its moment, and the transport and the timeline
  * move the position through what the epoch has computed, while a worker
- * may still be computing it.
+ * may still be computing it. A change made here is a fork from the moment
+ * shown (P17.8): the epoch replayed is never changed, and the page goes to the
+ * fork.
  */
 export function Replay({ search = location.search }: { search?: string }) {
   const target = replayTarget(search);
@@ -27,24 +30,44 @@ export function Replay({ search = location.search }: { search?: string }) {
       </Notice>
     );
   }
-  return <ReplayOf runId={target.runId} epoch={target.epoch} />;
+  return <ReplayOf runId={target.runId} epoch={target.epoch} following={target.following} />;
 }
 
-function ReplayOf({ runId, epoch }: { runId: string; epoch: number }) {
-  const { load, refused, command, seek, pace } = useReplay(runId, epoch);
+function ReplayOf({
+  runId,
+  epoch,
+  following,
+}: {
+  runId: string;
+  epoch: number;
+  following: boolean;
+}) {
+  const { load, refused, command, seek, pace } = useReplay(runId, epoch, fetch, following);
   const scenarios = useLoad(SCENARIOS_URL, (_url, fetchFn) => loadScenarios(fetchFn));
   const position = load.status === "loaded" ? load.position : null;
   // The scene is the epoch's own run, which no moment of the position changes.
   const scenarioId = position?.scenario_id;
   const layout = position?.layout;
   const seed = position?.seed;
+  const plan = position === null ? null : planKey(position);
+  const planned = useRef(position);
+  planned.current = position;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the plan's text says when it changed.
   const source = useMemo(
     () =>
-      scenarioId === undefined || layout === undefined || seed === undefined
+      scenarioId === undefined ||
+      layout === undefined ||
+      seed === undefined ||
+      planned.current === null
         ? null
-        : replaySource({ scenario_id: scenarioId, layout, seed }),
-    [scenarioId, layout, seed],
+        : replaySource(planned.current),
+    [scenarioId, layout, seed, plan],
   );
+  const {
+    forking,
+    refused: forkRefused,
+    fork,
+  } = useFork(useMemo(() => ({ runId, epoch }), [runId, epoch]));
 
   if (position === null || source === null) {
     return (
@@ -67,9 +90,20 @@ function ReplayOf({ runId, epoch }: { runId: string; epoch: number }) {
         name={name}
         position={position}
         otherRunsHref={runsAddress(position.scenario_id)}
+        forking={forking}
+        forkRefused={forkRefused}
+        onFork={() => void fork({ timeS: position.time_s })}
       />
       <div className="replay-scene">
-        <App replay={{ source, momentS: replayedMoment(position.time_s) }} />
+        <App
+          replay={{
+            source,
+            momentS: replayedMoment(position.time_s),
+            seek,
+            forkWith: (change, timeS) => void fork({ timeS, changes: [change] }),
+            forkInLayout: (forkLayout, timeS) => fork({ timeS, layout: forkLayout }),
+          }}
+        />
       </div>
       <ReplayTransport
         position={position}
