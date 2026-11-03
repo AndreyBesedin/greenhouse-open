@@ -78,6 +78,8 @@ export function ReplayTransport({
             type="button"
             className="replay-button replay-play"
             aria-label={position.playing ? "Pause" : "Play"}
+            // At the run's end there is nothing to play: it would stop at once.
+            disabled={position.duration_s !== null && position.time_s >= position.duration_s}
             onClick={position.playing ? onPause : onPlay}
           >
             {position.playing ? (

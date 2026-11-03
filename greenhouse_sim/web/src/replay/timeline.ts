@@ -20,6 +20,8 @@ const TWO_DIGITS = 2;
 const FULL = 1;
 // How many labelled ticks a timeline has at most.
 const MOST_TICKS = 6;
+// A tick nearer the timeline's end than this share of a step gives way to it.
+const NEAR_SHARE = 4;
 const DAYS_PER_WEEK = 7;
 const DAYS_PER_MONTH = 30;
 const DAYS_PER_QUARTER = 90;
@@ -94,7 +96,8 @@ export function computedText(span: Span): string {
 }
 
 /** The day numbers a timeline labels, from 0, at a step that gives it about
- * as many as read well; the last is the run's end when that is a tick. */
+ * as many as read well; the last is always the timeline's end, in place of a tick
+ * too near it to be read beside it. */
 export function dayTicks(span: Span): number[] {
   const days = Math.max(1, Math.ceil(extent(span) / DAY_S));
   const first = Math.floor(span.startS / DAY_S);
@@ -103,6 +106,13 @@ export function dayTicks(span: Span): number[] {
   const ticks: number[] = [];
   for (let day = Math.ceil(first / step) * step; day <= last; day += step) {
     ticks.push(day);
+  }
+  const before = ticks.at(-1);
+  if (before !== last) {
+    if (before !== undefined && ticks.length > 1 && last - before < step / NEAR_SHARE) {
+      ticks.pop();
+    }
+    ticks.push(last);
   }
   return ticks;
 }

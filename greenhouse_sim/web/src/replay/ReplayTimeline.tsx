@@ -83,7 +83,7 @@ export function ReplayTimeline({
           aria-orientation="horizontal"
           aria-valuemin={span.startS}
           aria-valuemax={span.frontierS}
-          aria-valuenow={timeS}
+          aria-valuenow={Math.round(timeS)}
           aria-valuetext={dayLabel(timeS)}
           data-testid="replay-handle"
           style={{ left: `${at}%` }}
@@ -106,10 +106,12 @@ export function ReplayTimeline({
           <span className="replay-swatch replay-swatch-computed" aria-hidden="true" />
           computed, can be played
         </li>
-        <li>
-          <span className="replay-swatch replay-swatch-pending" aria-hidden="true" />
-          not computed yet
-        </li>
+        {computed < PERCENT && (
+          <li>
+            <span className="replay-swatch replay-swatch-pending" aria-hidden="true" />
+            not computed yet
+          </li>
+        )}
       </ul>
     </div>
   );

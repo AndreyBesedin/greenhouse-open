@@ -87,6 +87,15 @@ describe("what moves a position over a stored run", () => {
     );
   });
 
+  it("has nothing to play at the run's end, and plays from anywhere before it", () => {
+    const atEnd = shown(position({ time_s: 120 * DAY_S, frontier_s: 120 * DAY_S }));
+    expect(button(atEnd.container, "Play").disabled).toBe(true);
+    rendered?.unmount();
+
+    const atFrontier = shown(position({ time_s: 41 * DAY_S }));
+    expect(button(atFrontier.container, "Play").disabled).toBe(false);
+  });
+
   it("moves a day back or on, at the same time of day", () => {
     const { container, onSeek } = shown(position());
 

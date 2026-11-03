@@ -39,6 +39,12 @@ describe("the timeline over a stored run", () => {
     });
   }
 
+  it("says a whole second to whoever hears it, however far a play has moved it", () => {
+    const { handle } = shown(286_373.57);
+
+    expect(handle.getAttribute("aria-valuenow")).toBe("286374");
+  });
+
   it("is a slider over what is computed, that says its day and time", () => {
     const { handle } = shown(17 * DAY_S + 6 * 3600);
 
@@ -47,6 +53,14 @@ describe("the timeline over a stored run", () => {
     expect(handle.getAttribute("aria-valuetext")).toBe("Day 18, 06:00");
     expect(handle.getAttribute("aria-label")).toBe("Position in the run");
     expect(handle.tabIndex).toBe(0);
+  });
+
+  it("says nothing of what is not computed once all of it is", () => {
+    shown(0, { startS: 0, frontierS: 120 * DAY_S, endS: 120 * DAY_S });
+    const text = rendered?.container.textContent ?? "";
+
+    expect(text).toContain("computed, can be played");
+    expect(text).not.toContain("not computed yet");
   });
 
   it("labels the days, and says what the fill and the hatching are", () => {
