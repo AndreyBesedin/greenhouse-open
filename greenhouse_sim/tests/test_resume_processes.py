@@ -80,8 +80,9 @@ def test_a_worker_killed_mid_epoch_is_resumed_over_the_api_and_ends_as_an_epoch_
     os.kill(worker.pid, signal.SIGKILL)
     _until(lambda: epoch.manifest().status == Status.INTERRUPTED, "the epoch to be told")
     assert epoch.frontier_s() == DAY_S
-    # The worker that died holds no lease any more: the scheduler told the epoch.
-    assert not epoch.worked()
+    # The worker that died holds no lease any more: the scheduler told the epoch,
+    # and lets go of the lease just after writing what it told.
+    _until(lambda: not epoch.worked(), "the lease to be let go")
 
     path = f"/api/runs/{shown.run_id}/epochs/{shown.epoch}/resume"
     resumed = respond(simulator, "POST", path)
