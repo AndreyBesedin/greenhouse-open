@@ -69,6 +69,27 @@ describe("the choice of a scenario to open", () => {
     ]);
   });
 
+  it("stays shut when a dialog it opened gives it focus back, and opens when asked", () => {
+    const rendered = render(
+      <ScenarioCombobox
+        scenarios={SCENARIOS}
+        counts={COUNTS}
+        behindDialog
+        onChoose={vi.fn()}
+        onBuild={vi.fn()}
+      />,
+    );
+    drawn = rendered;
+    const input = rendered.container.querySelector("input");
+    const listed = () => rendered.container.querySelectorAll('[role="option"]').length;
+
+    act(() => input?.focus());
+    expect(listed()).toBe(0);
+
+    act(() => input?.click());
+    expect(listed()).toBeGreaterThan(0);
+  });
+
   it("shows no run counts before the runs are known", () => {
     const { input, options } = shown(null);
     act(() => input.focus());
