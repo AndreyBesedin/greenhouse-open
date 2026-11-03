@@ -161,7 +161,7 @@ def test_a_position_seeks_back_and_forth_over_a_finished_epoch(kept: Kept) -> No
         )
         assert state.simulated_now == kept.played.start + timedelta(seconds=moment_s)
     for refused in (-1.0, DAYS * DAY_S + 1.0):
-        with pytest.raises(InvalidRequest, match="between the run's start and its frontier"):
+        with pytest.raises(InvalidRequest, match="between where the epoch begins and its frontier"):
             position.seek(refused)
     assert position.state().time_s == 1_234.5
     # A position that follows the frontier stops following when it is moved.

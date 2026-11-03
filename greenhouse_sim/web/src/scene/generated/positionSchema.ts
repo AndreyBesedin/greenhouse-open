@@ -4,6 +4,81 @@
 export const POSITION_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
+    "ForkOf": {
+      "additionalProperties": false,
+      "description": "Where a fork comes from (decision 0065): its parent, the exact instant\nit branches at, the state it inherits (a checkpoint at `start_s`, kept as a\ncopy of its own, and the parent's trajectory digest through it; none for\none from its run's start), how many entries of its log are its parent's,\nand the layout it changes to, if it does.",
+      "properties": {
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "epoch": {
+          "title": "Epoch",
+          "type": "integer"
+        },
+        "at_s": {
+          "title": "At S",
+          "type": "number"
+        },
+        "start_s": {
+          "title": "Start S",
+          "type": "number"
+        },
+        "digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Digest"
+        },
+        "checkpoint_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checkpoint Sha256"
+        },
+        "inherited": {
+          "default": 0,
+          "title": "Inherited",
+          "type": "integer"
+        },
+        "layout": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Layout"
+        }
+      },
+      "required": [
+        "run_id",
+        "epoch",
+        "at_s",
+        "start_s",
+        "digest",
+        "checkpoint_sha256",
+        "inherited",
+        "layout"
+      ],
+      "title": "ForkOf",
+      "type": "object"
+    },
     "Status": {
       "enum": [
         "queued",
@@ -97,6 +172,22 @@ export const POSITION_SCHEMA = {
       ],
       "title": "Duration S"
     },
+    "start_s": {
+      "default": 0,
+      "title": "Start S",
+      "type": "number"
+    },
+    "fork": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ForkOf"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "targets": {
       "default": [],
       "items": {
@@ -181,6 +272,8 @@ export const POSITION_SCHEMA = {
     "seconds_per_day",
     "frontier_s",
     "duration_s",
+    "start_s",
+    "fork",
     "targets",
     "commands",
     "crop"

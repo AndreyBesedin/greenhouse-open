@@ -18,6 +18,8 @@ backend (`FolderStore`). An epoch's objects, under `{run_id}/{epoch}/`:
   a worker and the API), and `answers/{id}.json`, why its worker did not take
   it. Each is written once, by the one side, so that no two writers share an
   object;
+- `inherited/outcomes.jsonl`: for a fork, the outcomes of its parent's up to
+  where it branched, which say what its crop actions before then did;
 - `commits/{seq}.json`: written last. A commit names one segment, its
   checkpoint if there is one, the position reached in the log, and the
   trajectory digest: a running sha256 over every object the commits so far
@@ -66,6 +68,7 @@ MICROSECONDS_A_SECOND: Final = 1_000_000
 INSTANT_DIGITS: Final = 16
 SEQ_DIGITS: Final = 8
 _PARTIAL: Final = ".partial"
+_INHERITED_OUTCOMES: Final = "inherited/outcomes.jsonl"
 # How much is drawn to tell apart two requests asked in one nanosecond.
 REQUEST_TOKEN_BYTES: Final = 4
 # The instant instants are counted from in a segment's file.
@@ -189,9 +192,29 @@ class FolderStore:
         (self.root / name).unlink(missing_ok=True)
 
 
+class ForkOf(BaseModel):
+    """Where a fork comes from (decision 0065): its parent, the exact instant
+    it branches at, the state it inherits (a checkpoint at `start_s`, kept as a
+    copy of its own, and the parent's trajectory digest through it; none for
+    one from its run's start), how many entries of its log are its parent's,
+    and the layout it changes to, if it does."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    run_id: str
+    epoch: int
+    at_s: float
+    start_s: float
+    digest: str | None = None
+    checkpoint_sha256: str | None = None
+    inherited: int = 0
+    layout: str | None = None
+
+
 class EpochManifest(BaseModel):
     """What an epoch is: its run, its number, the scenario it is of, its seed
-    (none: the scenario's own), its layout and its status."""
+    (none: the scenario's own), its layout and its status; and, for a fork, its
+    parent."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -207,6 +230,7 @@ class EpochManifest(BaseModel):
     duration_s: float | None = None
     # When the epoch was started, when its writer says.
     created_at: datetime | None = None
+    fork: ForkOf | None = None
 
 
 class LogEntry(BaseModel):
@@ -251,6 +275,18 @@ class Commit(BaseModel):
     checkpoint_type: str | None = None
     log_position: int
     digest: str
+
+
+@dataclass(frozen=True)
+class Inherited:
+    """What a fork at some instant of an epoch inherits of it: the nearest
+    state at or before that instant, where it is, and the trajectory's digest
+    through it. None of them for an instant before its first state: its run's
+    start."""
+
+    start_s: float
+    checkpoint: bytes | None
+    digest: str | None
 
 
 @dataclass(frozen=True)
@@ -458,6 +494,10 @@ def _extend(previous: str, parts: Sequence[tuple[str, bytes]]) -> str:
 GENESIS: Final = hashlib.sha256(FORMAT.encode()).hexdigest()
 
 
+def digest_of(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
 class EpochStore:
     """One epoch in a store: written by one worker, read by any number."""
 
@@ -472,6 +512,34 @@ class EpochStore:
         made = cls(objects, manifest.run_id, manifest.epoch)
         objects.put(f"{made._home}/manifest.json", manifest.model_dump_json().encode())
         return made
+
+    def write_fork(
+        self,
+        manifest: EpochManifest,
+        *,
+        state: bytes | None,
+        log: Sequence[LogEntry],
+        outcomes: Sequence[ActionOutcome],
+    ) -> None:
+        """Writes a fork: the state it inherits, its log so far and its parent's
+        outcomes, then its manifest, last, so that one cut short is never listed."""
+        assert manifest.fork is not None
+        if state is not None:
+            self.objects.put(self._inherited_name(manifest.fork), state)
+        if log:
+            self.objects.put(
+                f"{self._home}/interventions.jsonl",
+                b"".join(entry.model_dump_json().encode() + b"\n" for entry in log),
+            )
+        if outcomes:
+            self.objects.put(
+                f"{self._home}/{_INHERITED_OUTCOMES}",
+                b"".join(outcome.model_dump_json().encode() + b"\n" for outcome in outcomes),
+            )
+        self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
+
+    def _inherited_name(self, fork: ForkOf) -> str:
+        return f"{self._home}/checkpoints/{instant_name(fork.start_s)}.json.zst"
 
     def manifest(self) -> EpochManifest:
         data = self.objects.get(f"{self._home}/manifest.json")
@@ -507,10 +575,17 @@ class EpochStore:
             found.append(Commit.model_validate_json(data))
         return found
 
+    def start_s(self) -> float:
+        """Where what the epoch holds begins: its run's start, or for a fork
+        the state it inherits."""
+        fork = self.manifest().fork
+        return 0.0 if fork is None else fork.start_s
+
     def frontier_s(self) -> float:
-        """How far the epoch is committed, in seconds into its run."""
+        """How far the epoch is committed, in seconds into its run: where it
+        begins, until a commit says otherwise."""
         commits = self.commits()
-        return commits[-1].end_s if commits else 0.0
+        return commits[-1].end_s if commits else self.start_s()
 
     def size_bytes(self) -> int:
         """How many bytes the epoch's objects hold."""
@@ -592,6 +667,7 @@ class EpochStore:
             raise ValueError(f"a span ends no earlier than it starts, not {start_s}-{end_s} s")
         commits = self.commits()
         previous = commits[-1] if commits else None
+        before = previous.digest if previous else self._genesis()
         parts: list[tuple[str, bytes]] = []
         counts = {
             Kind.OBSERVATIONS: len(observations),
@@ -622,7 +698,7 @@ class EpochStore:
             checkpoint=kept,
             checkpoint_type=None if kept is None else CHECKPOINT_TYPE,
             log_position=position,
-            digest=_extend(previous.digest if previous else GENESIS, parts),
+            digest=_extend(before, parts),
         )
         self.objects.put(
             f"{self._home}/commits/{made.seq:0{SEQ_DIGITS}d}.json", made.model_dump_json().encode()
@@ -676,7 +752,8 @@ class EpochStore:
             if commit.checkpoint is not None and commit.end_s <= at_s:
                 best = commit
         if best is None or best.checkpoint is None or best.checkpoint_type is None:
-            return None
+            inherited = self._inherited_state(at_s)
+            return None if inherited is None else (inherited, CHECKPOINT_TYPE)
         # A state restored is the trajectory's: checked against its commit, as
         # the records are.
         self._verify_commit(best)
@@ -684,6 +761,45 @@ class EpochStore:
         if data is None:
             raise StoreCorrupt(f"commit {best.seq} of {self._home} names a checkpoint that is gone")
         return data, best.checkpoint_type
+
+    def _inherited_state(self, at_s: float) -> bytes | None:
+        """The state a fork inherited, if it did and `at_s` is not before it,
+        checked against what its manifest says of it."""
+        fork = self.manifest().fork
+        if fork is None or fork.checkpoint_sha256 is None or at_s < fork.start_s:
+            return None
+        data = self.objects.get(self._inherited_name(fork))
+        if data is None or digest_of(data) != fork.checkpoint_sha256:
+            raise StoreCorrupt(f"the state {self._home} inherited is not what it says")
+        return data
+
+    def inherited_at(self, at_s: float) -> Inherited:
+        """What a fork of the epoch at `at_s` inherits of it."""
+        best = None
+        for commit in self.commits():
+            if commit.checkpoint is not None and commit.end_s <= at_s:
+                best = commit
+        if best is not None:
+            found = self.checkpoint_at(best.end_s)
+            assert found is not None
+            return Inherited(best.end_s, found[0], best.digest)
+        fork = self.manifest().fork
+        if fork is None:
+            return Inherited(0.0, None, None)
+        return Inherited(fork.start_s, self._inherited_state(at_s), fork.digest)
+
+    def outcomes_kept(self) -> list[ActionOutcome]:
+        """Every outcome it knows of, its parent's it inherited first: what
+        its crop actions before where it is kept did."""
+        held = self.objects.get(f"{self._home}/{_INHERITED_OUTCOMES}") or b""
+        inherited = [ActionOutcome.model_validate_json(line) for line in held.splitlines()]
+        return [*inherited, *self.outcomes().records]
+
+    def _genesis(self) -> str:
+        """What the trajectory goes on from: for a fork its parent's, through
+        the state it inherits."""
+        fork = self.manifest().fork
+        return GENESIS if fork is None or fork.digest is None else fork.digest
 
     def verify(self) -> None:
         """Checks every commit's digest against the objects it names."""
@@ -701,6 +817,10 @@ class EpochStore:
         kept = {f"{self._home}/manifest.json", f"{self._home}/interventions.jsonl"}
         kept.update(self.objects.names(f"{self._home}/requests/"))
         kept.update(self.objects.names(f"{self._home}/answers/"))
+        kept.add(f"{self._home}/{_INHERITED_OUTCOMES}")
+        fork = self.manifest().fork
+        if fork is not None and fork.checkpoint_sha256 is not None:
+            kept.add(self._inherited_name(fork))
         for commit in commits:
             kept.add(f"{self._home}/commits/{commit.seq:0{SEQ_DIGITS}d}.json")
             kept.update(f"{self._home}/segments/{commit.segment}/{kind}.parquet" for kind in Kind)
@@ -714,7 +834,7 @@ class EpochStore:
         return removed
 
     def _verify_commit(self, commit: Commit) -> None:
-        previous = GENESIS
+        previous = self._genesis()
         if commit.seq:
             data = self.objects.get(f"{self._home}/commits/{commit.seq - 1:0{SEQ_DIGITS}d}.json")
             if data is None:
@@ -785,6 +905,9 @@ class StoredRun(BaseModel):
     progress: float | None
     created_at: datetime | None
     size_bytes: int
+    # Where what it holds begins, and for a fork where it comes from.
+    start_s: float = 0.0
+    fork: ForkOf | None = None
 
 
 def stored_run(objects: ObjectStore, run_id: str, epoch_number: int) -> StoredRun:
@@ -804,6 +927,8 @@ def stored_run(objects: ObjectStore, run_id: str, epoch_number: int) -> StoredRu
         progress=None if not manifest.duration_s else frontier / manifest.duration_s,
         created_at=manifest.created_at,
         size_bytes=epoch.size_bytes(),
+        start_s=0.0 if manifest.fork is None else manifest.fork.start_s,
+        fork=manifest.fork,
     )
 
 

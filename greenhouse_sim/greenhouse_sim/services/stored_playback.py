@@ -48,6 +48,7 @@ from greenhouse_sim.services.run_store import (
     CHECKPOINT_TYPE,
     Commit,
     EpochStore,
+    ForkOf,
     Kind,
     ObjectStore,
     Page,
@@ -93,6 +94,9 @@ class PositionState(BaseModel):
     seconds_per_day: float
     frontier_s: float
     duration_s: float | None
+    # Where what the epoch holds begins, and for a fork where it comes from.
+    start_s: float = 0.0
+    fork: ForkOf | None = None
     targets: list[tuple[float, str, float]] = []
     commands: list[tuple[float, str, float]] = []
     crop: list[tuple[float, str, str, str]] = []
@@ -124,6 +128,8 @@ class StoredEpoch:
             manifest.seed,
         )
         self.duration_s = manifest.duration_s
+        self.fork = manifest.fork
+        self.start_s = 0.0 if manifest.fork is None else manifest.fork.start_s
         self.start = run_start(simulator.catalogue, manifest.scenario_id)
         self._lock = threading.Lock()
         self._commits: list[Commit] = []
@@ -158,9 +164,10 @@ class StoredEpoch:
             return list(self._commits)
 
     def frontier_s(self) -> float:
-        """How far the epoch is committed, in seconds into its run."""
+        """How far the epoch is committed, in seconds into its run: where it
+        begins, until a commit says otherwise."""
         commits = self.commits()
-        return commits[-1].end_s if commits else 0.0
+        return commits[-1].end_s if commits else self.start_s
 
     def observations(self, after: int, limit: int, at_s: float) -> Records[Observation]:
         """The observations after position `after` of its log that were
@@ -258,7 +265,7 @@ class Position:
         self.position_id = position_id
         self._clock = clock
         self._lock = threading.Lock()
-        self._time_s = 0.0
+        self._time_s = epoch.start_s
         self._playing = False
         self._following = False
         self._seconds_per_day = seconds_per_day
@@ -323,6 +330,8 @@ class Position:
             seconds_per_day=self._seconds_per_day,
             frontier_s=frontier,
             duration_s=epoch.duration_s,
+            start_s=epoch.start_s,
+            fork=epoch.fork,
             targets=list(planned.targeted()),
             commands=list(planned.commanded()),
             crop=list(planned.crop_spelled()),
@@ -362,10 +371,11 @@ class Position:
         if it played. The nearest checkpoint is restored for the scene."""
         with self._lock:
             frontier = self._advance()
-            if not 0.0 <= time_s <= frontier:
+            first = self.epoch.start_s
+            if not first <= time_s <= frontier:
                 raise InvalidRequest(
-                    f"a position is between the run's start and its frontier, 0 to "
-                    f"{frontier:.15g} s, not at {time_s:.15g} s"
+                    f"a position is between where the epoch begins and its frontier, "
+                    f"{first:.15g} to {frontier:.15g} s, not at {time_s:.15g} s"
                 )
             self._time_s, self._following = time_s, False
             self._wait_if_at(frontier)

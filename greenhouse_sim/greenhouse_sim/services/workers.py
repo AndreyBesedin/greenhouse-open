@@ -154,7 +154,7 @@ def check_resumable(epoch: EpochStore) -> float:
         raise Conflict(f"epoch {epoch.epoch} of {epoch.run_id} is worked by a process still")
     commits = epoch.commits()
     if not commits:
-        return 0.0
+        return epoch.start_s()
     last = commits[-1]
     if last.checkpoint is None or last.checkpoint_type != CHECKPOINT_TYPE:
         raise Conflict(
