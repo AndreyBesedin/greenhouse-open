@@ -143,6 +143,7 @@ const SCENARIO = {
   layouts: ["default"],
   weathers: ["default"],
   thermostat: null,
+  packaged: false,
 };
 
 const PLAYBACK = {

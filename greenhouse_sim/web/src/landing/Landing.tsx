@@ -3,10 +3,9 @@ import { BUILDER_PATH } from "../builder/Builder";
 import { GithubMark } from "../icons";
 import { loadScenarios, SCENARIOS_URL, type ScenariosState } from "../scenarios";
 import { useLoad } from "../useLoad";
-import { followAddress } from "./follow";
 import { newRunScenario, REPOSITORY_URL, replayAddress, runsScenario } from "./paths";
 import { loadPlaying, runKey } from "./playing";
-import { RunProgress, StatusChip } from "./RunParts";
+import { FollowLink, RunProgress, StatusChip } from "./RunParts";
 import { RunsDialog } from "./RunsDialog";
 import { ScenarioCombobox } from "./ScenarioCombobox";
 import {
@@ -67,10 +66,23 @@ export function Landing({
       ? scenarios.scenarios.find((each) => each.id === opened)
       : undefined;
   const counts = runs.status === "loaded" ? runCounts(runs.runs) : null;
-  // A run is followed from here only if its scenario's playback is playing it.
+  // Only a scenario no worker can run has a playback to ask after: asking one
+  // that has none is a 404, each time the runs are asked for.
+  const byPlayback = new Set(
+    scenarios.status === "loaded"
+      ? scenarios.scenarios.filter((each) => each.packaged === false).map((each) => each.id)
+      : [],
+  );
   const computing =
     runs.status === "loaded"
-      ? [...new Set(runs.runs.filter(isComputing).map((run) => run.scenario_id))].sort()
+      ? [
+          ...new Set(
+            runs.runs
+              .filter(isComputing)
+              .map((run) => run.scenario_id)
+              .filter((id) => byPlayback.has(id)),
+          ),
+        ].sort()
       : [];
   const playing = useLoad(computing.length === 0 ? null : computing, loadPlaying, {
     // Asked again with the runs, since a start changes which epoch plays.
@@ -132,6 +144,7 @@ export function Landing({
           }
           followed={followed}
           newRun={form}
+          navigate={navigate}
           onClose={() => setOpened(null)}
           onChanged={() => setAsked((previous) => previous + 1)}
         />
@@ -203,12 +216,7 @@ function RecentRuns({
       </p>
       <ul className="landing-runs">
         {runs.runs.slice(0, RECENT_RUNS).map((run) => (
-          <RunRow
-            key={runKey(run)}
-            run={run}
-            name={names.get(run.scenario_id)}
-            following={followed.has(runKey(run))}
-          />
+          <RunRow key={runKey(run)} run={run} name={names.get(run.scenario_id)} played={followed} />
         ))}
       </ul>
     </>
@@ -218,11 +226,11 @@ function RecentRuns({
 function RunRow({
   run,
   name,
-  following,
+  played,
 }: {
   run: StoredRun;
   name: string | undefined;
-  following: boolean;
+  played: ReadonlySet<string>;
 }) {
   const started = startedText(run);
   const whose = name ?? run.scenario_id;
@@ -240,11 +248,7 @@ function RunRow({
       <a href={replayAddress(run.run_id, run.epoch)} className="landing-link-button">
         Replay
       </a>
-      {following && (
-        <a href={followAddress(run.scenario_id, run.layout)} className="landing-link-button">
-          Follow
-        </a>
-      )}
+      <FollowLink run={run} played={played} />
     </li>
   );
 }

@@ -7,7 +7,7 @@ import type { ScenarioSummary } from "../scenarios";
 import { type Rendered, render } from "../testing/render";
 import { followAddress } from "./follow";
 import { Landing } from "./Landing";
-import { REPOSITORY_URL } from "./paths";
+import { REPOSITORY_URL, replayAddress } from "./paths";
 import { RUNS_ASKED_EVERY_MS, type StoredRun } from "./storedRuns";
 
 // What the simulator sends of a scenario besides its name: how it grows its
@@ -19,6 +19,7 @@ const SENT = {
   weathers: ["default"],
   opening_day: null,
   thermostat: null,
+  packaged: true,
 };
 const SCENARIOS: ScenarioSummary[] = [
   {
@@ -40,6 +41,10 @@ const SCENARIOS: ScenarioSummary[] = [
     layouts: ["default"],
   },
 ];
+
+/** The same, built rather than packaged: no worker can run them, so that a
+ * playback computes their runs. */
+const BUILT = SCENARIOS.map((each) => ({ ...each, packaged: false }));
 
 /** A scenario's playback, as the simulator answers for it. */
 function playing(runId: string, epoch: number, layout = "default") {
@@ -293,7 +298,7 @@ describe("the page where a person decides what to do", () => {
     expect(container.querySelector("dialog form")).not.toBeNull();
   });
 
-  it("lists the latest runs in words, and offers to follow only one its playback is playing", async () => {
+  it("lists the latest runs in words, and offers to follow one its playback is playing", async () => {
     const running = run({
       epoch: 1,
       seed: 2,
@@ -303,7 +308,7 @@ describe("the page where a person decides what to do", () => {
     });
     const { container } = await shown(
       {
-        "/api/scenarios": SCENARIOS,
+        "/api/scenarios": BUILT,
         "/api/runs": [
           running,
           run({
@@ -338,11 +343,11 @@ describe("the page where a person decides what to do", () => {
     ]);
   });
 
-  it("does not offer to follow a run that its scenario's playback replaced", async () => {
+  it("follows a run that its scenario's playback replaced in its replay, not in the viewer", async () => {
     const replaced = run({ epoch: 1, status: "running", progress: 0.3 });
     const { container } = await shown(
       {
-        "/api/scenarios": SCENARIOS,
+        "/api/scenarios": BUILT,
         "/api/runs": [replaced],
         // The playback is at the run's next epoch by now.
         "/api/scenarios/reference_greenhouse/playback": playing(replaced.run_id, 2),
@@ -361,15 +366,37 @@ describe("the page where a person decides what to do", () => {
 
     expect(container.textContent).toContain("Running");
     expect(
-      [...container.querySelectorAll("a")].filter((each) => each.textContent === "Follow"),
-    ).toHaveLength(0);
+      [...container.querySelectorAll("a")]
+        .filter((each) => each.textContent === "Follow")
+        .map((each) => each.getAttribute("href")),
+    ).toEqual([replayAddress(replaced.run_id, 1, true)]);
+  });
+
+  it("follows a worker's run in its replay, asking after no playback, which it does not have", async () => {
+    const computing = run({ status: "queued", frontier_s: 0, progress: 0 });
+    const { container } = await shown(
+      { "/api/scenarios": SCENARIOS, "/api/runs": [computing] },
+      "Queued",
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    expect(
+      [...container.querySelectorAll("a")]
+        .filter((each) => each.textContent === "Follow")
+        .map((each) => each.getAttribute("href")),
+    ).toEqual([replayAddress(computing.run_id, 0, true)]);
+    expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).not.toContain(
+      "/api/scenarios/reference_greenhouse/playback",
+    );
   });
 
   it("follows a run in the layout it has", async () => {
     const moved = run({ status: "running", progress: 0.3, layout: "default~heater:-1:0.5" });
     const { container } = await shown(
       {
-        "/api/scenarios": SCENARIOS,
+        "/api/scenarios": BUILT,
         "/api/runs": [moved],
         "/api/scenarios/reference_greenhouse/playback": playing(
           moved.run_id,

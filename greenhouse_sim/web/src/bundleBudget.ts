@@ -18,9 +18,11 @@ export interface BundleWeight {
  * the follow rule and the outcomes of a start, 1,710.2 kB; and by the
  * scenario file's share card and the builder's two endings (P17.11), 1,722 kB.
  * Its styles again by the replay's timeline and transport (P17.6), 28 kB; its
- * scripts by the replay page, 1,739 kB with the scenario file's.
+ * scripts by the replay page, 1,739 kB with the scenario file's; by forks from
+ * a replay, 1,749.7 kB; and by runs started on workers, 1,751.2 kB, with room
+ * for their controls.
  */
-export const BUNDLE_BUDGET_KB: BundleWeight = { js: 1750, css: 29 };
+export const BUNDLE_BUDGET_KB: BundleWeight = { js: 1755, css: 29 };
 
 const BYTES_PER_KB = 1000;
 
