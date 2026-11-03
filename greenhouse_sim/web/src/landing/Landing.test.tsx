@@ -338,10 +338,12 @@ describe("the page where a person decides what to do", () => {
     expect(rows[2]).not.toContain("Oct");
     const follows = () =>
       [...container.querySelectorAll("a")].filter((each) => each.textContent === "Follow");
-    await vi.waitFor(() => expect(follows()).toHaveLength(1));
-    expect(follows().map((each) => each.getAttribute("href"))).toEqual([
-      followAddress("reference_greenhouse"),
-    ]);
+    // In its replay until its playback is known to be playing it, then in the viewer.
+    await vi.waitFor(() =>
+      expect(follows().map((each) => each.getAttribute("href"))).toEqual([
+        followAddress("reference_greenhouse"),
+      ]),
+    );
   });
 
   it("follows a run that its scenario's playback replaced in its replay, not in the viewer", async () => {
@@ -409,15 +411,11 @@ describe("the page where a person decides what to do", () => {
     );
     await vi.waitFor(() =>
       expect(
-        [...container.querySelectorAll("a")].find((each) => each.textContent === "Follow"),
-      ).toBeDefined(),
+        [...container.querySelectorAll("a")]
+          .find((each) => each.textContent === "Follow")
+          ?.getAttribute("href"),
+      ).toBe(followAddress("reference_greenhouse", "default~heater:-1:0.5")),
     );
-
-    expect(
-      [...container.querySelectorAll("a")]
-        .find((each) => each.textContent === "Follow")
-        ?.getAttribute("href"),
-    ).toBe(followAddress("reference_greenhouse", "default~heater:-1:0.5"));
   });
 
   it("moves a run being computed on by itself, and stops asking once none is", async () => {
