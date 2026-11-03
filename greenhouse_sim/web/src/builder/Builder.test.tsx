@@ -166,7 +166,10 @@ const PLAYBACK = {
 
 /** A simulator that saves, runs a draft as a scenario and starts its run;
  * every request is kept, as its method and address with the body. */
-function runningDrafts(starts: Response = answer(PLAYBACK)): string[] {
+function runningDrafts(
+  starts: Response = answer(PLAYBACK),
+  registering: Promise<unknown> = Promise.resolve(),
+): string[] {
   const asked: string[] = [];
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
@@ -188,6 +191,7 @@ function runningDrafts(starts: Response = answer(PLAYBACK)): string[] {
       });
     }
     if (url.includes("/run?")) {
+      await registering;
       return answer(SCENARIO);
     }
     if (url.includes("/playback/start")) {
@@ -472,5 +476,75 @@ describe("the setup builder (P12.2)", () => {
 
     expect(page.querySelector(".builder-share")).not.toBeNull();
     expect(button(page, "Download scenario file")).toBeDefined();
+  });
+  it("does not leave with an edit made while the save was on its way (P17.11)", async () => {
+    const saves = holdingSaves();
+    const went: string[] = [];
+    shown = render(<Builder navigate={(address) => went.push(address)} />);
+    const page = shown.container;
+    await settled();
+    click(button(page, "Draft this house"));
+    await settled();
+
+    click(button(page, "Save and go back"));
+    await settled();
+    give(page, 1, "roma");
+    saves.release();
+    await settled();
+
+    expect(went).toEqual([]);
+    expect(said(page, "builder-status")).toBe(
+      "The draft changed while it was being saved: save it again before leaving.",
+    );
+    expect(said(page, "builder-draft")).toBe(
+      "My greenhouse (my_greenhouse), revision 1, changed since",
+    );
+  });
+
+  it("does not run a house that changed while it was being saved (P17.11)", async () => {
+    const saves = holdingSaves();
+    const went: string[] = [];
+    shown = render(<Builder navigate={(address) => went.push(address)} />);
+    const page = shown.container;
+    await settled();
+    click(button(page, "Draft this house"));
+    await settled();
+
+    click(button(page, "Save and start a run"));
+    await settled();
+    give(page, 1, "roma");
+    saves.release();
+    await settled();
+
+    expect(went).toEqual([]);
+    expect(said(page, "builder-status")).toBe(
+      "The draft changed while it was being saved: save it again to run it.",
+    );
+  });
+
+  it("starts no run for a draft left while it was being registered (P17.11)", async () => {
+    let registered = () => {};
+    const asked = runningDrafts(
+      answer(PLAYBACK),
+      new Promise((resolve) => {
+        registered = () => resolve(undefined);
+      }),
+    );
+    const went: string[] = [];
+    shown = render(<Builder navigate={(address) => went.push(address)} />);
+    const page = shown.container;
+    await settled();
+    click(button(page, "Draft this house"));
+    await settled();
+
+    click(button(page, "Save and start a run"));
+    await settled();
+    click(button(page, "Start again"));
+    registered();
+    await settled();
+
+    expect(asked.some((each) => each.includes("/playback/start"))).toBe(false);
+    expect(went).toEqual([]);
+    expect(said(shown.container, "builder-status")).toBe("");
   });
 });
