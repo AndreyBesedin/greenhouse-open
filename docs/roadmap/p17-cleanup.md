@@ -14,7 +14,7 @@ takes one checks first that it is still there.
 
 ### Medium
 
-- [ ] **The builder has no way home.** Its only ways out are "Save and go back",
+- [x] **The builder has no way home.** Its only ways out are "Save and go back",
   which saves, and a link that appears after a run. The viewer has a Home button.
 - [ ] **A scene opened without following a run is not framed on the house.** The
   camera stays at its default (5.2, -5.2, 5.2) and the house runs off under the View
