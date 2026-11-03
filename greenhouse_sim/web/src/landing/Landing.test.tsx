@@ -521,6 +521,34 @@ describe("the page where a person decides what to do", () => {
     expect(link(container, "Replay")).toBeUndefined();
   });
 
+  it("says what a fork came from, in its row", async () => {
+    const { container } = await shown(
+      {
+        "/api/scenarios": SCENARIOS,
+        "/api/runs": [
+          run({
+            epoch: 3,
+            fork: {
+              run_id: "reference_greenhouse-climate-abc",
+              epoch: 2,
+              at_s: DAY_S + 3600,
+              start_s: DAY_S,
+              digest: null,
+              checkpoint_sha256: null,
+              inherited: 0,
+              layout: null,
+            },
+          }),
+        ],
+      },
+      "forked",
+    );
+
+    expect(container.querySelector(".landing-run")?.textContent).toContain(
+      "seed 1 · epoch 3 · forked from epoch 2 at Day 2, 01:00 · Oct 28",
+    );
+  });
+
   it("lists no more than the latest few", async () => {
     const many = Array.from({ length: 8 }, (_, epoch) => run({ epoch }));
     const { container } = await shown(

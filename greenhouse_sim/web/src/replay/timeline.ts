@@ -80,6 +80,11 @@ export function dayLabel(timeS: number): string {
   return `Day ${day + 1}, ${String(hours).padStart(TWO_DIGITS, "0")}:${String(minutes).padStart(TWO_DIGITS, "0")}`;
 }
 
+/** What a fork came from, in words. */
+export function forkedText(fork: { epoch: number; at_s: number }): string {
+  return `forked from epoch ${fork.epoch} at ${dayLabel(fork.at_s)}`;
+}
+
 /** How many days are computed, whole: a day counts once its last moment is. */
 export function daysComputed(span: Span): number {
   return Math.floor(span.frontierS / DAY_S);

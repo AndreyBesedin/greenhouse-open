@@ -468,6 +468,30 @@ describe("the runs of a scenario, in a dialog", () => {
     expect(follows()).toHaveLength(0);
   });
 
+  it("says what a fork came from, in its row; a run that is no fork says nothing of it", () => {
+    const { rows } = shown([
+      run({
+        epoch: 3,
+        fork: {
+          run_id: "reference_greenhouse-climate-abc",
+          epoch: 2,
+          at_s: DAY_S + 3600,
+          start_s: DAY_S,
+          digest: null,
+          checkpoint_sha256: null,
+          inherited: 0,
+          layout: null,
+        },
+      }),
+      run({ epoch: 2 }),
+    ]);
+
+    expect(rows()[0]?.textContent).toContain(
+      "epoch 3 · forked from epoch 2 at Day 2, 01:00 · Oct 28",
+    );
+    expect(rows()[1]?.textContent).not.toContain("forked");
+  });
+
   it("offers neither on a scenario no worker can run", () => {
     const { rows } = shown(
       [run({ epoch: 1, status: "running" }), run({ epoch: 0, status: "interrupted" })],

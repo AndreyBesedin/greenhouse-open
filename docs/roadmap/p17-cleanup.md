@@ -69,8 +69,9 @@ takes one checks first that it is still there.
 A walk of the merged pages at commit `2db9f3b7`, on the same setup, with forks and the
 panels in a replay.
 
-- [ ] **Medium: forks cannot be told apart on the start page or in the runs dialog.**
-  They read as rows of "Seed 143 · epoch N".
+- [x] **Medium: forks cannot be told apart on the start page or in the runs dialog.**
+  They read as rows of "Seed 143 · epoch N". A fork's row now says what it came from,
+  as its replay's header does.
 - [ ] **Low to medium: a fork's controls stay enabled at a run's end.** "Fork from here
   with these levels" and the targets form can still be used, and the refusal gives the
   end in seconds ("the run ends at 1209600 s").
