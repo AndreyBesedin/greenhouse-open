@@ -67,6 +67,8 @@ const FEATURES = new Set([
   "builder",
   "landing",
   "home",
+  // A stored run replayed (P17.6): its header, scene, transport and timeline.
+  "replay",
   "debug",
   "select",
   // Choosing what is shown, and how.

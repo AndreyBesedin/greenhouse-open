@@ -14,6 +14,12 @@
   --label-bg: rgb(17 24 39 / 85%);
   --landing-bg: #0b1220;
   --landing-backdrop: rgb(0 0 0 / 60%);
+  /* What is not computed yet, hatched in the panels' rule colour, on the
+   * replay's track and in its legend: the same in either theme, as the rule is. */
+  --replay-track:
+    repeating-linear-gradient(135deg, var(--panel-rule) 0 6px, transparent 6px 12px) center / 100%
+    14px no-repeat;
+  --replay-hatch: repeating-linear-gradient(135deg, var(--panel-rule) 0 3px, transparent 3px 6px);
   --chart-face: #1e293b;
   --chart-ring: #6b7a90;
   --chart-neutral: #b8c2d1;
@@ -2108,23 +2114,6 @@ body {
 
 /* The replay of a stored run (P17.6): a header, the scene, and what moves a
  * position over the run. */
-.replay {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background: var(--landing-bg);
-  color: var(--panel-text);
-  color-scheme: var(--panel-scheme);
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.replay-scene {
-  position: relative;
-  flex: 1 1 0;
-  min-height: 0;
-}
-
 .replay-header,
 .replay-transport {
   background: var(--panel-bg);
@@ -2241,9 +2230,7 @@ body {
   cursor: pointer;
   touch-action: none;
   border-radius: 7px;
-  background:
-    repeating-linear-gradient(135deg, var(--panel-rule) 0 6px, transparent 6px 12px) center / 100%
-    14px no-repeat;
+  background: var(--replay-track);
 }
 
 .replay-computed {
@@ -2325,11 +2312,5 @@ body {
 }
 
 .replay-swatch-pending {
-  background: repeating-linear-gradient(135deg, var(--panel-rule) 0 3px, transparent 3px 6px);
-}
-
-.replay-notice {
-  padding: 32px 24px;
-  text-align: center;
-  color: var(--panel-muted-strong);
+  background: var(--replay-hatch);
 }
