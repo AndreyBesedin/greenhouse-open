@@ -45,7 +45,17 @@ describe("the viewer's addresses", () => {
   it("names a replayed run by its run and its epoch, made safe", () => {
     expect(replayAddress("climate_box-abc", 2)).toBe("/replay?run=climate_box-abc&epoch=2");
     expect(replayAddress("a b&c", 0)).toBe("/replay?run=a%20b%26c&epoch=0");
-    expect(replayTarget("?run=a%20b%26c&epoch=3")).toEqual({ runId: "a b&c", epoch: 3 });
+    expect(replayTarget("?run=a%20b%26c&epoch=3")).toEqual({
+      runId: "a b&c",
+      epoch: 3,
+      following: false,
+    });
+    expect(replayAddress("r", 3, true)).toBe("/replay?run=r&epoch=3&follow=1");
+    expect(replayTarget("?run=r&epoch=3&follow=1")).toEqual({
+      runId: "r",
+      epoch: 3,
+      following: true,
+    });
   });
 
   it("asks for no replay unless a run and a whole epoch are named", () => {
