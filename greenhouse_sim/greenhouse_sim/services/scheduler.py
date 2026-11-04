@@ -11,6 +11,9 @@ store is the only channel between a worker and the API, so that whoever reads an
 epoch reads it while it is computed, as far as the last commit names
 (`stored_playback`).
 
+A worker claims its epoch before it does anything (`leases`), so that of two
+workers given one epoch one takes it and the other leaves.
+
 A process is the worker because P17.1 measured what a thread costs a process
 that is working: 46% of its speed against 5% for another process.
 
@@ -19,9 +22,6 @@ An epoch whose worker ends without ending it, killed or lost, is told
 carried on from there (`resume`, P17.9): queued once more, taken by a worker
 that resumes it. An epoch still `queued` or `running` when the producer that
 started it is gone is found at startup (`interrupted.mark`).
-
-A worker claims its epoch before it does anything (`leases`), so that of two
-workers given one epoch one takes it and the other leaves.
 """
 
 import logging
