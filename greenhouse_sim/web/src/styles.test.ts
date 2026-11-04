@@ -68,7 +68,8 @@ const COLOUR_ROLE =
   /^--(?:surface-\w+|text(?:-\w+)?|border|action|warn|mark|scheme|chart-[\w-]+|data-\w+)$/;
 
 // And the size tokens, each scale's steps written out, so that a new step is too.
-const SIZE_STEP = /^--(?:font-(?:xs|sm|md|lg|xl|[234]xl)|radius-(?:sm|md|lg|xl|pill)|target)$/;
+const SIZE_STEP =
+  /^--(?:font-(?:xs|sm|md|lg|xl|[234]xl)|radius-(?:sm|md|lg|xl|pill)|space-[1-9]|focus-(?:width|offset)|target)$/;
 
 function misnamedTokens(names: Iterable<string>): string[] {
   return [...names].filter((name) => !COLOUR_ROLE.test(name) && !SIZE_STEP.test(name));
@@ -116,6 +117,7 @@ describe("the stylesheet", () => {
         "--font-2xl",
         "--radius-pill",
         "--target",
+        "--space-9",
         "--panel-text",
         "--landing-bg",
         "--textual",
@@ -123,6 +125,8 @@ describe("the stylesheet", () => {
         "--font-5xl",
         "--radius",
         "--target-small",
+        "--space-10",
+        "--space",
       ]),
     ).toEqual([
       "--panel-text",
@@ -132,6 +136,8 @@ describe("the stylesheet", () => {
       "--font-5xl",
       "--radius",
       "--target-small",
+      "--space-10",
+      "--space",
     ]);
   });
 
@@ -401,8 +407,8 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
 // prints here, in its own diff, where review sees them; a token step must not.
 // It goes when selectors start to move (P19.6), and the page baselines hold.
 const RESOLVED_DIGESTS = {
-  dark: "54a376830a41f995533aabeb463619b2fa0da5930bd25c1c70071154377d9218",
-  light: "de9052354fa6932c55f1341c92d0fcaba4c62674fa036b013d150626887f308b",
+  dark: "f93136eb4f2e3c6a08d17538f4eb046e2189438aaa9eef448cf49e6aa72895d5",
+  light: "ee1f52fe685eae6fb3492008ceb6f726e6f1b3438598e6a98b8132a9408e22bd",
 };
 type ThemeName = keyof typeof RESOLVED_DIGESTS;
 const COMMENT = /\/\*[\s\S]*?\*\//g;
@@ -566,16 +572,24 @@ describe("the stylesheet with its tokens resolved (P19.1)", () => {
   });
 });
 
-// The sizes held so far (P19.4), each with the token its value must name. Spacing
-// joins them in its own step (P19.5).
+// The sizes held (P19.4, P19.5), each with the token its value must name.
 const SIZE_SCALES: readonly { property: RegExp; token: RegExp }[] = [
   { property: /^font(?:-size)?$/, token: /^var\(--font-[\w-]+\)$/ },
   { property: /^border(?:-[a-z]+)*-radius$/, token: /^var\(--radius-[\w-]+\)$/ },
   { property: /^min-(?:width|height|inline-size|block-size)$/, token: /^var\(--target\)$/ },
+  {
+    property: /^(?:(?:grid-)?(?:row-|column-)?gap|padding(?:-[a-z-]+)?|margin(?:-[a-z-]+)?)$/,
+    token: /^var\(--space-[1-9]\)$/,
+  },
+  // An outline's shorthand also names its style and a colour, which the colours' guard holds.
+  {
+    property: /^outline(?:-width|-offset)?$/,
+    token: /^(?:var\(--focus-(?:width|offset)\)|solid|var\(--(?:action|text)\))$/,
+  },
 ];
 // What is not on a scale by nature: nothing at all, the browser's own, what its
 // text gave it, or a share of its box.
-const NEEDS_NO_SCALE = /^(?:0|auto|inherit|\d*\.?\d+(?:em|%))$/i;
+const NEEDS_NO_SCALE = /^(?:0|auto|inherit|-?\d*\.?\d+(?:em|%))$/i;
 
 // What stays written as a value, with why, until a visual step (P19.12) moves it
 // onto a scale: moving one draws something else, which a neutral step must not.
@@ -594,6 +608,45 @@ const OFF_SCALE: Readonly<Record<string, string>> = {
   ".replay-play { min-width: 52px }": "the transport's main button, wider than its neighbours",
   ".replay-track { border-radius: 7px }": "half the height of the 14 px band it holds",
   ".replay-computed { border-radius: 7px 0 0 7px }": "the rounded end of that 14 px band",
+  '.landing-option[aria-selected="true"] { outline: 2px solid var(--action) }':
+    "the chosen option's mark, not a focus ring",
+  '.landing-option[aria-selected="true"] { outline-offset: -2px }':
+    "that mark, inside the option's edge",
+  // Spacing between two steps of the scale (P19.5).
+  ".panel-card { margin: 10px 0 var(--space-2) }": "room above a card for the title on its outline",
+  ".seen-in-the-view dd { margin: 0 0 var(--space-2) 18px }": "a note under its glyph's words",
+  ".field-views { gap: 10px }": "between a field's slices, in a panel's width",
+  ".camera-entities { padding-left: 20px }": "a list's indent",
+  ".plant-structure ul { padding-left: 14px }": "a tree's indent, per level",
+  ".move-list { padding-left: 18px }": "a list's indent",
+  ".builder-findings ul { padding-left: 18px }": "a list's indent",
+  ".landing-card { gap: 10px }": "between a card's lines",
+  ".landing-link-button { padding: 0 18px }": "a family of button's sides, of the two it has",
+  ".landing-button { padding: 0 18px }": "a family of button's sides, of the two it has",
+  ".landing-combobox .landing-input { padding: 0 14px }": "the search's sides, as its options'",
+  ".landing-option { padding: var(--space-4) 14px }": "an option's sides, as the search's",
+  ".landing-option-none { padding: var(--space-5) 14px }": "the note for no option, as an option's",
+  ".landing-run { padding: var(--space-5) 20px }": "a run's row, to the dialog's edge",
+  ".landing-status { padding: var(--space-1) 10px }": "a status chip's sides",
+  ".landing-dialog-head { padding: 20px var(--space-7) var(--space-5) }": "the dialog's first line",
+  '.landing-dialog p[role="alert"], .landing-dialog p[role="status"] { padding: 10px var(--space-7) }':
+    "a message's line in the dialog",
+  ".replay-header { gap: var(--space-4) 14px }": "between the header's items",
+  ".replay-header { padding: 10px 20px }": "the header's edge",
+  ".replay-transport { padding: 14px 20px var(--space-6) }":
+    "the transport's edge, as the header's",
+  ".replay-controls { gap: 10px 20px }": "between the transport's groups",
+  ".replay-refused { margin: 0 0 10px }": "a refusal, over the controls",
+  ".replay-pace select { padding: 0 10px }": "the select's sides, in a 44 px control",
+};
+// What no spacing scale should hold: a hairline, and an offset that centres a mark
+// of a given width on its place, which follows from that width.
+const HAIRLINES_AND_OFFSETS: Readonly<Record<string, string>> = {
+  ".visually-hidden { margin: -1px }": "takes the 1 px box out of the flow",
+  ".debug-label { padding: 1px var(--space-2) }": "a label's hairline above and below",
+  ".climate-schedule-bar span { margin-left: -4px }": "half the 8 px marker",
+  ".replay-frontier { margin-left: -1px }": "half the 2 px line",
+  ".replay-handle { margin-left: -10px }": "half the 20 px handle",
 };
 // Not pixels: a chart's geometry, which grows with its drawing.
 const IN_A_VIEWBOX: Readonly<Record<string, string>> = {
@@ -640,12 +693,13 @@ function againstTheList(
   return { unlisted, gone };
 }
 
-describe("the stylesheet's sizes (P19.4)", () => {
+describe("the stylesheet's sizes (P19.4, P19.5)", () => {
   it("are their scale's tokens, or named here with why", () => {
     expect(
       againstTheList(sizesOffTheScales(STYLES), [
         ...Object.keys(OFF_SCALE),
         ...Object.keys(IN_A_VIEWBOX),
+        ...Object.keys(HAIRLINES_AND_OFFSETS),
       ]),
     ).toEqual({ unlisted: [], gone: [] });
   });
@@ -678,15 +732,55 @@ describe("the stylesheet's sizes (P19.4)", () => {
     ]);
   });
 
+  it("refuse a raw spacing, in any of its properties, and one value raw among tokens", () => {
+    const written = `
+      .a { gap: 8px; row-gap: 4px; column-gap: 4px; grid-gap: 4px; }
+      .b { padding: 8px; padding-left: 8px; padding-inline: 8px; }
+      .c { margin: 8px; margin-top: -8px; margin-block-end: 8px; }
+      .d { padding: var(--space-4) 10px; margin: 0 0 var(--space-2) 18px; gap: 1px; }
+      .e { padding: calc(var(--space-4) + 1px); margin: var(--space-4, 8px); gap: 1rem; }
+      .f { outline: 3px solid var(--action); outline-offset: 2px; outline-width: 3px; }
+      .g { outline: none; outline: var(--space-1) solid var(--text); }
+    `;
+    expect(sizesOffTheScales(written)).toEqual([
+      ".a { gap: 8px }",
+      ".a { row-gap: 4px }",
+      ".a { column-gap: 4px }",
+      ".a { grid-gap: 4px }",
+      ".b { padding: 8px }",
+      ".b { padding-left: 8px }",
+      ".b { padding-inline: 8px }",
+      ".c { margin: 8px }",
+      ".c { margin-top: -8px }",
+      ".c { margin-block-end: 8px }",
+      ".d { padding: var(--space-4) 10px }",
+      ".d { margin: 0 0 var(--space-2) 18px }",
+      ".d { gap: 1px }",
+      ".e { padding: calc(var(--space-4) + 1px) }",
+      ".e { margin: var(--space-4, 8px) }",
+      ".e { gap: 1rem }",
+      ".f { outline: 3px solid var(--action) }",
+      ".f { outline-offset: 2px }",
+      ".f { outline-width: 3px }",
+      ".g { outline: none }",
+      ".g { outline: var(--space-1) solid var(--text) }",
+    ]);
+  });
+
   it("refuse a token of another scale", () => {
     const written = `
       .a { font-size: var(--radius-md); border-radius: var(--font-sm); }
-      .b { min-height: var(--font-sm); }
+      .b { min-height: var(--font-sm); padding: var(--radius-md); gap: var(--target); }
+      .c { font-size: var(--space-4); margin: var(--font-sm); }
     `;
     expect(sizesOffTheScales(written)).toEqual([
       ".a { font-size: var(--radius-md) }",
       ".a { border-radius: var(--font-sm) }",
       ".b { min-height: var(--font-sm) }",
+      ".b { padding: var(--radius-md) }",
+      ".b { gap: var(--target) }",
+      ".c { font-size: var(--space-4) }",
+      ".c { margin: var(--font-sm) }",
     ]);
   });
 
@@ -697,7 +791,10 @@ describe("the stylesheet's sizes (P19.4)", () => {
       .a { font-size: var(--font-sm); border-radius: var(--radius-md) 0 0 var(--radius-md); }
       .b { font: inherit; font-size: inherit; min-height: var(--target); min-width: 0; }
       .c { font-size: 0.7em; min-height: 1.4em; border-radius: 50%; min-width: 100%; }
-      .d { height: 44px; width: 13px; top: 44px; gap: 6px; font-weight: 600; }
+      .d { height: 44px; width: 13px; top: 44px; font-weight: 600; border: 2px solid; }
+      .f { gap: var(--space-3) var(--space-4); padding: 0 var(--space-5); margin: 0 auto; }
+      .g { padding-left: 1.5em; margin-top: -0.75em; margin-left: 50%; gap: 0; }
+      .h { outline: var(--focus-width) solid var(--action); outline-offset: var(--focus-offset); }
       .e::after { content: ""; }
     `;
     expect(sizesOffTheScales(written)).toEqual([]);
