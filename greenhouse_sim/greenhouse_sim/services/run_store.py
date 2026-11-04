@@ -21,6 +21,12 @@ backend (`FolderStore`). An epoch's objects, under `{run_id}/{epoch}/`:
   a worker and the API), and `answers/{id}.json`, why its worker did not take
   it. Each is written once, by the one side, so that no two writers share an
   object;
+- `stop.json`: that the epoch's worker is asked to stop, for a worker no process
+  that asks can signal (the one of a server that was killed, or on another
+  machine). The worker reads it between its moments and ends `interrupted`; it
+  names no moment and no process, and is removed when the epoch ended and waits
+  for a worker again, so that it never stops the work carried on after it. No
+  commit names it, so that no digest does;
 - `inherited/outcomes.jsonl`: for a fork, the outcomes of its parent's up to
   where it branched, which say what its crop actions before then did;
 - `commits/{seq}.json`: written last. A commit names one segment, its
@@ -79,6 +85,7 @@ INSTANT_DIGITS: Final = 16
 SEQ_DIGITS: Final = 8
 _PARTIAL: Final = ".partial"
 _INHERITED_OUTCOMES: Final = "inherited/outcomes.jsonl"
+_STOP_ASKED: Final = "stop.json"
 USAGE: Final = "usage.json"
 # How much is drawn to tell apart two requests asked in one nanosecond.
 REQUEST_TOKEN_BYTES: Final = 4
@@ -641,6 +648,8 @@ class EpochStore:
         held by this process (`leases`) until it is said to have ended, by
         whoever says it, and what it used is reported then, with all it keeps."""
         before = self.manifest()
+        if status == Status.QUEUED and before.status in ENDED:
+            self._forget_stop()
         said = (reason or NO_REASON_GIVEN) if status == Status.FAILED else None
         manifest = before.model_copy(update={"status": status, "reason": said})
         self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
@@ -654,6 +663,7 @@ class EpochStore:
     def queue_again(self, *, scenario_file: str | None, seconds_per_day: float | None) -> None:
         """Says the epoch waits for a worker again, with what that worker
         needs, in one write."""
+        self._forget_stop()
         manifest = self.manifest().model_copy(
             update={
                 "status": Status.QUEUED,
@@ -667,6 +677,23 @@ class EpochStore:
     def worked(self, *, now: float | None = None) -> bool:
         """Whether a process holds the epoch's lease."""
         return leases.alive(self.objects, self._home, now=now)
+
+    def ask_to_stop(self) -> None:
+        """Asks whichever worker has the epoch to stop, at its next look. Asked
+        twice, it is asked once."""
+        self.objects.put(f"{self._home}/{_STOP_ASKED}", b"{}")
+
+    def stop_asked(self) -> bool:
+        """Whether the epoch's worker has been asked to stop. Only the asker's
+        side writes this: a worker reads it and ends, and the object stays, of no
+        effect, until the epoch waits for a worker again."""
+        return self.objects.size(f"{self._home}/{_STOP_ASKED}") is not None
+
+    def _forget_stop(self) -> None:
+        """What was asked of the work that ended is not asked of the work that
+        carries it on. Before the epoch is said to wait, so that a stop asked of
+        it while it waits is kept."""
+        self.objects.delete(f"{self._home}/{_STOP_ASKED}")
 
     def commits(self, after: int = 0) -> list[Commit]:
         """The commits in order, from number `after` (a reader that has the
@@ -1040,9 +1067,13 @@ class EpochStore:
             kept.update(f"{self._home}/segments/{commit.segment}/{kind}.parquet" for kind in Kind)
             if commit.checkpoint is not None:
                 kept.add(commit.checkpoint)
-        # By their folders and not by a listing, in which one asked meanwhile
+        # By their names and not by a listing, in which one asked meanwhile
         # would be missing: the asker is in another process.
-        spared = (f"{self._home}/requests/", f"{self._home}/answers/")
+        spared = (
+            f"{self._home}/requests/",
+            f"{self._home}/answers/",
+            f"{self._home}/{_STOP_ASKED}",
+        )
         removed = []
         for name in self.objects.names(f"{self._home}/"):
             if (
@@ -1121,6 +1152,10 @@ class StoredRun(BaseModel):
     seed: int | None
     layout: str
     status: Status
+    # Whether the playback that computes it here holds its clock: the status of
+    # an epoch running, which only the process of that playback knows
+    # (`runs_kept`), so the store never says so.
+    paused: bool = False
     frontier_s: float
     duration_s: float | None
     progress: float | None
@@ -1129,6 +1164,9 @@ class StoredRun(BaseModel):
     # Where what it holds begins, and for a fork where it comes from.
     start_s: float = 0.0
     fork: ForkOf | None = None
+    # Whether its worker has been asked through the store to stop and has not
+    # yet: it reads `running` until its worker looks, or `interrupted` is found.
+    stopping: bool = False
     # Whether an object its commits name is missing, so that it cannot be read
     # whole. Said from the names of its objects, not from their contents: in a
     # list, from how many its folders hold (`EpochStore.holds_as_counted`).
@@ -1150,6 +1188,7 @@ def _shown(
     frontier_s: float,
     size_bytes: int,
     usage: EpochUsage | None,
+    stopping: bool,
     damaged: bool,
 ) -> StoredRun:
     start_s = 0.0 if manifest.fork is None else manifest.fork.start_s
@@ -1167,6 +1206,7 @@ def _shown(
         size_bytes=size_bytes,
         start_s=start_s,
         fork=manifest.fork,
+        stopping=stopping,
         damaged=damaged,
         days_computed=(frontier_s - start_s) / DAY_S,
         cpu_s=None if usage is None else usage.cpu_s,
@@ -1192,6 +1232,8 @@ def stored_run(objects: ObjectStore, run_id: str, epoch_number: int) -> StoredRu
         frontier_s=commits[-1].end_s if commits else epoch.start_s(),
         size_bytes=usage.bytes_kept if usage is not None and current else epoch.size_bytes(listed),
         usage=usage,
+        stopping=manifest.status not in ENDED
+        and f"{run_id}/{epoch_number}/{_STOP_ASKED}" in listed,
         damaged=epoch.lacks(manifest, commits, listed),
     )
 
@@ -1212,6 +1254,7 @@ def _listed(objects: ObjectStore, run_id: str, manifest: EpochManifest) -> Store
         frontier_s=usage.frontier_s,
         size_bytes=usage.bytes_kept,
         usage=usage,
+        stopping=manifest.status not in ENDED and epoch.stop_asked(),
         damaged=False,
     )
 

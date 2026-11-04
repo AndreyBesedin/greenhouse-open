@@ -124,6 +124,11 @@ export const STORED_RUN_SCHEMA = {
     "status": {
       "$ref": "#/$defs/Status"
     },
+    "paused": {
+      "default": false,
+      "title": "Paused",
+      "type": "boolean"
+    },
     "frontier_s": {
       "title": "Frontier S",
       "type": "number"
@@ -182,6 +187,11 @@ export const STORED_RUN_SCHEMA = {
       ],
       "default": null
     },
+    "stopping": {
+      "default": false,
+      "title": "Stopping",
+      "type": "boolean"
+    },
     "damaged": {
       "default": false,
       "title": "Damaged",
@@ -236,6 +246,7 @@ export const STORED_RUN_SCHEMA = {
     "seed",
     "layout",
     "status",
+    "paused",
     "frontier_s",
     "duration_s",
     "progress",
@@ -243,6 +254,7 @@ export const STORED_RUN_SCHEMA = {
     "size_bytes",
     "start_s",
     "fork",
+    "stopping",
     "damaged",
     "days_computed",
     "cpu_s",

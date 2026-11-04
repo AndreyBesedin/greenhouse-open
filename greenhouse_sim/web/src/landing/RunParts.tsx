@@ -1,6 +1,7 @@
 import { replayAddress } from "./paths";
 import {
   isComputing,
+  PAUSED_LABEL,
   progressShare,
   progressText,
   STATUS_LABEL,
@@ -9,6 +10,10 @@ import {
 
 /** What is said of a run with files missing, beside the status it has. */
 export const DAMAGED_NOTE = "Files of this run are missing, so it cannot be read whole.";
+
+/** What is said of a run asked to stop, whose worker has not yet looked. */
+export const STOPPING_NOTE =
+  "Its worker stops at its next look, with what it has committed. The run then reads Interrupted, and can be resumed or deleted.";
 
 /** A run's status, in words: never a colour alone. One with files missing is
  * called so whatever else it is, since its status says it is whole. */
@@ -21,9 +26,17 @@ export function StatusChip({ run }: { run: StoredRun }) {
       </span>
     );
   }
+  if (run.stopping) {
+    return (
+      <span className={`landing-status landing-status-${run.status}`} title={STOPPING_NOTE}>
+        Stopping
+        <span className="visually-hidden"> {STOPPING_NOTE}</span>
+      </span>
+    );
+  }
   return (
     <span className={`landing-status landing-status-${run.status}`}>
-      {STATUS_LABEL[run.status]}
+      {run.paused ? PAUSED_LABEL : STATUS_LABEL[run.status]}
     </span>
   );
 }

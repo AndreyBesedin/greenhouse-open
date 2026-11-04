@@ -1295,6 +1295,16 @@
   visibility: hidden;
 }
 
+/* Folded, the View panel's column stands exactly where it stands open. The
+ * HUD keeps itself within the window by measuring its place, on every change
+ * of its size or the window's; from just past the stripe, off the window,
+ * that measure moved it left over its own stripe, to be found so on opening. */
+.panel-side.at-the-end.folded > .panel-column {
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
 /* A tab at the top of the side's inner edge, beside its panel's head: no
  * taller, so that it never stands over the view a click is meant for. */
 .panel-stripe {

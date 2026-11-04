@@ -25,7 +25,8 @@ the log of changes given to the epoch applied again, each at the moment it was
 given (`Playback.resume_at`).
 
 A change asked of the epoch reaches its worker through the store: the worker
-looks between its moments (`Playback.take_changes`).
+looks between its moments (`Playback.take_changes`). So does a stop, from whoever
+cannot signal the worker (`EpochStore.ask_to_stop`): it ends as if told to stop.
 
 An epoch is started with what its worker needs (decision 0067): its scenario's
 file, if the scenario is not packaged, and its pace. One written before it kept
@@ -143,9 +144,10 @@ def execute(
     stop: threading.Event | None = None,
 ) -> Status:
     """Works `epoch` out into its store as `driver` advances it, and says how
-    it ended. Told to `stop` between moments, it ends `interrupted`. An epoch
-    is executed once: one that has begun is refused (`resume` carries it on),
-    as is one whose run is not the one its manifest names."""
+    it ended. Told to `stop` between moments, or asked to through the store,
+    it ends `interrupted`. An epoch is executed once: one that has begun is
+    refused (`resume` carries it on), as is one whose run is not the one its
+    manifest names."""
     manifest = epoch.manifest()
     if manifest.status != Status.QUEUED or epoch.commits():
         raise Conflict(f"epoch {epoch.epoch} of {epoch.run_id} has begun: it is {manifest.status}")
@@ -309,7 +311,7 @@ def _stepped(
     until the run ends (the epoch is finished by the last day written), the
     barriers do, or it is told to stop."""
     for barrier in barriers:
-        if stopping.is_set():
+        if stopping.is_set() or epoch.stop_asked():
             return
         run.take_changes()
         run.step_to(barrier)
@@ -324,7 +326,7 @@ def _paced(run: Playback, epoch: EpochStore, stopping: threading.Event) -> None:
     run.begin()
     try:
         run.command(PlaybackCommand.PLAY)
-        while epoch.manifest().status not in ENDED and not stopping.is_set():
+        while not (epoch.manifest().status in ENDED or stopping.is_set() or epoch.stop_asked()):
             run.take_changes()
             stopping.wait(WAIT_STEP_S)
     finally:
