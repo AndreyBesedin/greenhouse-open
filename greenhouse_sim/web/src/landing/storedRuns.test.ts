@@ -33,6 +33,10 @@ function run(more: Partial<StoredRun> = {}): StoredRun {
     start_s: 0,
     fork: null,
     damaged: false,
+    days_computed: 0,
+    cpu_s: null,
+    peak_memory_bytes: null,
+    reason: null,
     ...more,
   };
 }

@@ -1,15 +1,19 @@
 """What the scheduler's tests run: a short run and a long one of the one-plant box
 (`short_runs`), registered with a test's simulator, whose worker has them from the
-store; a worker that ends at once, which a process imports by its name; and the
-wait for an epoch worked in a test's own process to be let go by it."""
+store; workers that end at once or are killed, which a process imports by name;
+and the wait for an epoch worked in a test's own process to be let go by it."""
 
+import os
+import signal
 import threading
 import time
+from pathlib import Path
 from typing import Final
 
 import short_runs
 
-from greenhouse_sim.services.run_store import EpochStore
+from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.services.run_store import EpochStore, FolderStore, Status
 from greenhouse_sim.services.simulator import Simulator
 
 SHORT: Final = "climate_box_short"
@@ -33,6 +37,15 @@ def short_simulator() -> Simulator:
 
 def ends_at_once(root: str, run_id: str, epoch: int) -> None:
     raise SystemExit(1)
+
+
+def takes_it_up_and_is_killed(root: str, run_id: str, epoch: int) -> None:
+    """A worker killed outright, with no chance to write why: its epoch is
+    `running`, with one commit, as it left them."""
+    kept = EpochStore(FolderStore(Path(root)), run_id, epoch)
+    kept.set_status(Status.RUNNING)
+    kept.commit(0.0, DAY_S)
+    os.kill(os.getpid(), signal.SIGKILL)
 
 
 def lease_let_go(epoch: EpochStore) -> None:
