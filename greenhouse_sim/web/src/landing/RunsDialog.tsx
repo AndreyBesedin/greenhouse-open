@@ -62,6 +62,18 @@ export function RunsDialog({
     }
   }, []);
 
+  /** Closes the dialog as Escape does, for the browser to give focus back to
+   * what had it, which it does not for a dialog merely taken off the page; its
+   * `close` event says so to the page. A DOM without that only says so. */
+  function close(): void {
+    const shown = dialog.current;
+    if (shown !== null && typeof shown.close === "function") {
+      shown.close();
+    } else {
+      onClose();
+    }
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setStarting(true);
@@ -118,7 +130,7 @@ export function RunsDialog({
           <button type="button" className="landing-button" onClick={() => setFormOpen(!formOpen)}>
             New run
           </button>
-          <button type="button" className="landing-button" onClick={onClose}>
+          <button type="button" className="landing-button" onClick={close}>
             Close
           </button>
         </div>
