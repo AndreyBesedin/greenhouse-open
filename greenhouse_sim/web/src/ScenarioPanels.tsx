@@ -366,6 +366,7 @@ export function ScenarioPanels({
             time={time}
             days={days}
             fixed={replayed}
+            {...(replayed ? { describe: dayLabel } : {})}
             onTime={onSeek ?? setTime}
             onRemove={(index) => onSource(withoutCommand(source, index))}
             onRepeat={(index) => onSource(withRepeated(source, index))}
