@@ -52,6 +52,7 @@ from greenhouse_sim.climate.sources import SourceTerms, source_terms
 from greenhouse_sim.climate.thermostat import Thermostat
 from greenhouse_sim.climate.transport import AirState, Transport
 from greenhouse_sim.climate.vents import Vent
+from greenhouse_sim.core.wanted import give_up_if_unwanted
 from greenhouse_sim.domain.air import AirQuantity
 from greenhouse_sim.fields.field import VECTOR_COMPONENTS, EnvironmentField, FieldGrid
 from greenhouse_sim.solar.inside import Sunlight
@@ -518,6 +519,7 @@ class ClimateRun:
         now = start
         for until in sorted(changes | kept | {time_s}):
             if until > now:
+                give_up_if_unwanted()
                 middle = (now + until) / 2
                 outside = self.weather.at(middle)
                 terms, transport = self._transport(
