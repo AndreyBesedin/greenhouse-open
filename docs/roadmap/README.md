@@ -124,6 +124,20 @@ pull request lands, and holds the state of each of its steps.
 | [P18](p18-resources-and-deployment.md) | Resources counted and limited, and a run that can move | In progress: P18.1 and P18.2 done |
 | [P19](p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | In progress: P19.1 to P19.5 done |
 
+## After a QA
+
+A project's QA and a manual walk end the same way, in this order:
+
+1. **List what it found,** with what was seen and what was only said, in a report in this
+   folder.
+2. **Fix what blocks,** and only that.
+3. **Plan the rest,** in the report, the project's clean-up or a project of its own.
+4. **Release.** Work that adds a feature starts again after it.
+
+The last QA is [the walk of 2026-11-04](qa-2026-11-04.md). Before its release: stopping and
+deleting a run a playback left behind, a replay saying what is the case for such a run, a
+*Delete* on the start page's list, and a fork that asks first.
+
 ## Order of work
 
 1. **Finish P17:** what its QA scenario (P17.10) and its walks left in
@@ -142,6 +156,7 @@ pull request lands, and holds the state of each of its steps.
   Camera imperfections, crop work within the day, CO₂ and light targets, intelligence
   components, crop models from plant research, a Modelica comparison, the test suite
   and CI time, a second repository audit, and an assistant in the viewer.
+- **[QA of 2026-11-04](qa-2026-11-04.md):** what a manual walk of the viewer found, and what follows from it.
 - **Clean-ups:** what reviews and walks left, per project:
   [P03](p03-cleanup.md), [P14](p14-cleanup.md), [P17](p17-cleanup.md).
 - **[Frontend maintenance](frontend-maintenance.md):** the frontend audits of

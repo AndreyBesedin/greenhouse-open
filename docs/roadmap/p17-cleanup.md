@@ -69,7 +69,7 @@ takes one checks first that it is still there.
 
 - [x] The green test cube shows behind an error.
 - [x] "before day one is not available" is awkward wording.
-- [ ] The wind label shows through the light panel, and faintly through the dark one.
+- [x] The wind label shows through the light panel, and faintly through the dark one.
 - [ ] The console reports the deprecation of `THREE.Clock`, from `@react-three/fiber`.
 - [x] The console reports a 404 for `favicon.ico`.
 
