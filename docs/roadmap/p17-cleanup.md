@@ -20,9 +20,17 @@ takes one checks first that it is still there.
   camera stays at its default (5.2, -5.2, 5.2) and the house runs off under the View
   panel. It came before the landing page: the presets have looked at the world's
   origin since the viewer's first camera, and only a followed run was framed.
-- [ ] **A house with no equipment has no climate run.** It has no climate field and
-  gets fixed light, not the sun. Whether it should have a climate run, and at what
-  cost, is open.
+- [x] **A house with no equipment has no climate run.** It has no climate field and
+  gets fixed light, not the sun. It now has one, as any other house has: its crop
+  already lived in that run's house air, so the field's grid run is what is added,
+  about 6 to 12 s on tomato_compartment for the first moment drawn in an hour of the
+  run. Its sensors and its run's id stay its own airflow's, so that no run or record
+  changes. The sensor lab, the one packaged house with sensors and no equipment, reads
+  its prescribed gradient on purpose, about 8 °C from the climate drawn beside it.
+- [ ] **Low: a built house with sensors and no equipment.** Its climate run and its sensors
+  read two different airs, as the sensor lab's do, but nothing in such a house says the
+  gradient was meant. Decide what its sensors read, and keep the packaged houses' runs and
+  records as they are.
 
 ### Low to medium
 
@@ -87,7 +95,7 @@ panels in a replay.
 - [ ] **Low to medium: a fork's controls stay enabled at a run's end.** "Fork from here
   with these levels" and the targets form can still be used, and the refusal gives the
   end in seconds ("the run ends at 1209600 s"). Fix in #520.
-- [ ] Each page load of a followed house with no climate sends one burst of 404s before
+- [x] Each page load of a followed house with no climate sends one burst of 404s before
   the list of fields answers.
 - [ ] A mid-day fork opens at its day's start, while its subtitle names the fork's moment.
 - [ ] A fork of a deleted parent keeps a "The run it came from" link that ends in a
@@ -125,7 +133,7 @@ pale text.
   while the worker lives; *Delete* says to stop it first. Nothing in the viewer ends it: the run
   goes on to its end, or its process is killed. Ctrl-C ends the workers as it should. Whether a
   stop should reach such a worker, as a change does, through a request in the store, is open.
-- [ ] **A replay left open across a restart stood still in silence.** It read "Running" and
+- [x] **A replay left open across a restart stood still in silence.** It read "Running" and
   asked for its position once a second, 40 404s in 40 s. Fix in #516.
 
 **Low**
@@ -162,6 +170,6 @@ upload; the third tried both, and both behaved (its record says how).
 The third walk took about 110 screenshots and opened about 45, those of each kind of page. The
 whole browser suite was not run locally: 84 tests of the first stage, then the specs of the
 replay, the workers and the scenario file. It did not walk a scenario
-with no equipment under a climate run, which is an open pull request's, a recorded weather
+with no equipment under a climate run, which came after the commit walked, a recorded weather
 ticked out and uploaded, the *Fork this run with these moves* at a run's end, or more than one
 browser at once.

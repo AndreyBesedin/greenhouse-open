@@ -100,11 +100,15 @@ def test_a_window_is_the_moments_day_by_default_and_the_runs_start_is_in_its_fir
     assert first.subjects[first.subject[0]] == "temperature_front"
 
 
-def test_a_run_that_works_no_climate_has_no_air_events() -> None:
+def test_a_house_without_equipment_works_its_air_as_any_other() -> None:
     document = timeline(PACKAGED, RunRequest("sensor_lab"), until_s=600.0)
+    air = document.processes.index(Process.AIR)
 
-    assert document.times_s
-    assert document.processes.index(Process.AIR) not in document.process
+    assert [
+        time
+        for time, process in zip(document.times_s, document.process, strict=True)
+        if process == air
+    ] == [60.0 * minute for minute in range(1, 11)]
 
 
 def test_its_route_refuses_a_window_over_a_day_and_commands_as_the_climates(

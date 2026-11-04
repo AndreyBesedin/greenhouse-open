@@ -1,6 +1,6 @@
 # P17: Runs kept in a store, playbacks as positions, and a place to choose
 
-**Status:** accepted: the design below, with decision
+**Status:** in progress (the steps below say how far): the design below, with decision
 [0065](../decisions/0065-a-run-is-a-scenario-at-a-seed-kept-in-a-store-and-played-from-it.md),
 which this document's pull request records. Part of the
 [simulator roadmap](README.md).
@@ -552,7 +552,7 @@ Also walked together, at `bf8758ae`:
 | A file over 8 MB sent to the server, an unknown field, a wrong version | Refused, naming why (`larger than 8000000 bytes`; `fields it does not have: nonsense`; `format 999; this simulator reads format 7`) |
 | A replay after a restart | Passed |
 
-Not run: step 6; a scenario with no equipment under a climate run, an open pull request's
+Not run: step 6; a scenario with no equipment under a climate run, which came after this commit
 (`tomato_compartment` was opened, and a built house run, without one); a recorded weather
 ticked out and uploaded (the tick was seen offered, "Include the recorded weather (7 kB)").
 

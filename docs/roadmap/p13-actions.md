@@ -570,7 +570,7 @@ The simulated run carries out crop work at a day's start only, because its
 organ crop steps a day at a time; it refuses a crop action due at any
 other instant when the plan is given. Automation plans and stacks crop
 work through the day, so the crop is to step within a day. That is a
-project of its own, recorded on the [roadmap](README.md) as crop work
+project of its own, recorded on the [roadmap](future-work.md#crop-work-within-the-day) as crop work
 within the day; the action format needs no change for it.
 
 ### What becomes of today's paths

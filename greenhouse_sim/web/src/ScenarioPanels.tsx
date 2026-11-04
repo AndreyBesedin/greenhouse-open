@@ -16,7 +16,6 @@ import { describeHouseAir, HouseAir, type HouseAirState } from "./fields/HouseAi
 import { ProbeCharts, type ProbeChartsState } from "./fields/ProbeCharts";
 import { CLIMATE_FIELD, type FieldState } from "./fields/source";
 import { TargetsPanel } from "./fields/TargetsPanel";
-import { useAbsentClimate } from "./fields/useAbsentClimate";
 import { useFolds } from "./folds";
 import { OpeningControls, openingsIn } from "./OpeningControls";
 import { PanelCard } from "./PanelCard";
@@ -193,7 +192,6 @@ export function ScenarioPanels({
   const [against, setAgainst] = useState<CheckpointSummary | null>(null);
   // Asked for once, for the field's choice and what it is compared with.
   const fields = useFieldNames(source.scenarioId, source.layout);
-  useAbsentClimate({ source, replayed, onSource });
   const climate = source.field === CLIMATE_FIELD;
   const time = source.time ?? 0;
   const probed = field.status === "loaded" ? field.field : null;

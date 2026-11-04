@@ -4,9 +4,11 @@ gives daily commands of its own, and heats it by its thermostat (P10.3); and
 its sensors observe the season it makes, only through the observation
 path."""
 
-from collections.abc import Mapping
+import sys
+from collections.abc import Iterator, Mapping
 from datetime import timedelta
 from http import HTTPStatus
+from pathlib import Path
 from typing import Any, Final
 
 import pytest
@@ -21,7 +23,12 @@ from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import climate_runs, fields, sensors
 from greenhouse_sim.services.runs import Commanded, RunPlan, RunRequest
 from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.weather.sources import ConstantWeather
 from greenhouse_sim.world.sensors import PointSensor
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+from short_runs import cut, simulator_of
 
 REFERENCE = SCENARIO_REGISTRY["reference_greenhouse"]
 HOUR_S: Final = 3600.0
@@ -29,6 +36,25 @@ HOUR_S: Final = 3600.0
 # setpoint, and its noon, to the day's.
 SMALL_HOURS_S: Final = 2 * DAY_S + 3 * HOUR_S
 NOON_S: Final = 2 * DAY_S + 12 * HOUR_S
+# Outside, as on a March night, in °C.
+COLD_NIGHT_C: Final = 2.0
+
+
+@pytest.fixture(scope="module")
+def of_its_season() -> Iterator[Simulator]:
+    """A simulator of its first days, its air the whole house's: what a door
+    passes follows the wind, whichever model works its air out."""
+    with simulator_of(cut("reference_greenhouse", days=2, season=True)) as made:
+        yield made
+
+
+@pytest.fixture
+def on_a_march_night() -> Iterator[Simulator]:
+    """A simulator of its house in the dark at near freezing, whose thermostat
+    is all there is to warm it, and whose third day is seconds away."""
+    cold = ConstantWeather(air_temperature_c=COLD_NIGHT_C)
+    with simulator_of(cut("reference_greenhouse", weather=cold)) as made:
+        yield made
 
 
 def _own() -> list[tuple[float, str, float]]:
@@ -138,10 +164,11 @@ def _reading(
     )
 
 
-def test_the_thermostats_setpoints_show_in_the_readings(simulator: Simulator) -> None:
-    small_hours, noon = _reading(simulator, SMALL_HOURS_S), _reading(simulator, NOON_S)
+def test_the_thermostats_setpoints_show_in_the_readings(on_a_march_night: Simulator) -> None:
+    small_hours = _reading(on_a_march_night, SMALL_HOURS_S)
+    noon = _reading(on_a_march_night, NOON_S)
     unheated = _reading(
-        simulator,
+        on_a_march_night,
         SMALL_HOURS_S,
         daily=(),
         levels=climate_runs.off_levels(PACKAGED, "reference_greenhouse"),
@@ -190,16 +217,15 @@ def _door_flow(simulator: Simulator, weather: str) -> float:
     return float(next(o["net_m3_s"] for o in body["openings"] if o["opening_id"] == "door"))
 
 
-@pytest.mark.slow
 def test_the_winds_direction_can_be_overridden_for_qa_and_an_open_door_follows_it(
-    simulator: Simulator,
+    of_its_season: Simulator,
 ) -> None:
-    own = _body(simulator, "/api/scenarios/reference_greenhouse/weather?t=43200")["weather"]
+    own = _body(of_its_season, "/api/scenarios/reference_greenhouse/weather?t=43200")["weather"]
     east = _body(
-        simulator, "/api/scenarios/reference_greenhouse/weather?t=43200&weather=default~90"
+        of_its_season, "/api/scenarios/reference_greenhouse/weather?t=43200&weather=default~90"
     )["weather"]
     clouded = _body(
-        simulator,
+        of_its_season,
         "/api/scenarios/reference_greenhouse/weather?t=43200&weather=cold_spring_day@80~0",
     )["weather"]
 
@@ -211,10 +237,12 @@ def test_the_winds_direction_can_be_overridden_for_qa_and_an_open_door_follows_i
     # From the west, its own at noon, the wind blows in through the front
     # door; from the north, the house draws out through it.
     assert own["wind_direction_deg"] == 270.0
-    assert _door_flow(simulator, "default") > 10.0
-    assert _door_flow(simulator, "default~0") < 0.0
+    assert _door_flow(of_its_season, "default") > 10.0
+    assert _door_flow(of_its_season, "default~0") < 0.0
     for refused in ("default~360", "default~-5", "default~east"):
         response = respond(
-            simulator, "GET", f"/api/scenarios/reference_greenhouse/weather?t=0&weather={refused}"
+            of_its_season,
+            "GET",
+            f"/api/scenarios/reference_greenhouse/weather?t=0&weather={refused}",
         )
         assert response.status == HTTPStatus.BAD_REQUEST
