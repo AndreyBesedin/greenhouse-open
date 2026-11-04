@@ -281,6 +281,52 @@ test("each side's panels fold to a stripe at the view's edge, and open as they w
   });
 });
 
+test("the View panel opens where it was, whatever changed while it was folded (#304)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/?scene=example");
+  await expect(page.getByTestId("scene-status")).toContainText("Showing the example scene");
+  const hud = page.locator(".hud");
+  const putBack = page.getByRole("button", { name: "Put it back" });
+  const hudLeft = async () => (await hud.boundingBox())?.x;
+  // At the window's right edge, past its margin and with its stripe beside it.
+  const leftAt = (width: number) => width - 12 - 324;
+  await expect.poll(hudLeft).toBe(leftAt(1280));
+
+  await test.step("the window resized", async () => {
+    await page.getByRole("button", { name: "Fold the View panel" }).click();
+    await expect(hud).toBeHidden();
+    // Folded where it stands open, it still leaves the view there to be clicked.
+    const underIt = await page.evaluate(
+      ({ x, y }) => document.elementFromPoint(x, y)?.closest(".panel-column") ?? null,
+      { x: leftAt(1280) + 100, y: 100 },
+    );
+    expect(underIt).toBeNull();
+    await page.setViewportSize({ width: 1200, height: 720 });
+    await page.getByRole("button", { name: "Open the View panel" }).click();
+    await expect(hud).toBeVisible();
+    await expect(putBack).toBeHidden();
+    expect(await hudLeft()).toBe(leftAt(1200));
+  });
+
+  await test.step("the page reloaded, which measures the panel as it first draws", async () => {
+    await page.getByRole("button", { name: "Fold the View panel" }).click();
+    await expect(hud).toBeHidden();
+    await page.reload();
+    await expect(page.getByTestId("scene-status")).toContainText("Showing the example scene");
+    await page.getByRole("button", { name: "Open the View panel" }).click();
+    await expect(hud).toBeVisible();
+    await expect(putBack).toBeHidden();
+    expect(await hudLeft()).toBe(leftAt(1200));
+  });
+
+  await test.step("its stripe, not covered by it, folds it again", async () => {
+    await page.getByRole("button", { name: "Fold the View panel" }).click({ timeout: 5000 });
+    await expect(hud).toBeHidden();
+  });
+});
+
 test("a side's stripe stands at its panel's edge, however long a line of the panel (#304)", async ({
   page,
 }) => {
