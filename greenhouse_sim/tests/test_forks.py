@@ -375,24 +375,6 @@ def _values(epoch: EpochStore) -> list[float]:
     return [observation.value for observation in epoch.observations().records]
 
 
-def test_a_position_over_a_fork_says_whether_the_epoch_it_came_from_is_kept(
-    simulator: Simulator, whole: EpochStore
-) -> None:
-    parent = forks.fork(simulator, whole.objects, whole.run_id, whole.epoch, DAY_S)
-    assert _worked(simulator, parent) == Status.FINISHED
-    made = forks.fork(simulator, whole.objects, parent.run_id, parent.epoch, 2 * DAY_S)
-    assert _worked(simulator, made) == Status.FINISHED
-    position = Position(StoredEpoch(simulator, whole.objects, made.run_id, made.epoch), "fork")
-    no_fork = Position(StoredEpoch(simulator, whole.objects, whole.run_id, whole.epoch), "whole")
-    assert no_fork.state().parent_kept is False
-    assert position.state().parent_kept is True
-
-    runs_kept.delete_epoch(simulator, parent.run_id, parent.epoch)
-
-    assert position.state().parent_kept is False
-    assert position.state().fork is not None
-
-
 def test_a_position_over_a_fork_stands_inside_what_it_holds(
     simulator: Simulator, whole: EpochStore
 ) -> None:
@@ -410,6 +392,24 @@ def test_a_position_over_a_fork_stands_inside_what_it_holds(
     assert position.seek(1.5 * DAY_S).time_s == 1.5 * DAY_S
     # A seek restores the state it inherited.
     assert position.seek(DAY_S).time_s == DAY_S
+
+
+def test_a_position_over_a_fork_says_whether_the_epoch_it_came_from_is_kept(
+    simulator: Simulator, whole: EpochStore
+) -> None:
+    parent = forks.fork(simulator, whole.objects, whole.run_id, whole.epoch, DAY_S)
+    assert _worked(simulator, parent) == Status.FINISHED
+    made = forks.fork(simulator, whole.objects, parent.run_id, parent.epoch, 2 * DAY_S)
+    assert _worked(simulator, made) == Status.FINISHED
+    position = Position(StoredEpoch(simulator, whole.objects, made.run_id, made.epoch), "fork")
+    no_fork = Position(StoredEpoch(simulator, whole.objects, whole.run_id, whole.epoch), "whole")
+    assert no_fork.state().parent_kept is False
+    assert position.state().parent_kept is True
+
+    runs_kept.delete_epoch(simulator, parent.run_id, parent.epoch)
+
+    assert position.state().parent_kept is False
+    assert position.state().fork is not None
 
 
 def test_a_stored_run_says_it_is_a_fork(simulator: Simulator, whole: EpochStore) -> None:
