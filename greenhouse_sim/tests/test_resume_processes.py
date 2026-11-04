@@ -16,7 +16,7 @@ import pytest
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.services import interrupted, leases, scheduler
+from greenhouse_sim.services import interrupted, scheduler
 from greenhouse_sim.services.run_store import EpochStore, FolderStore, Status, StoredRun
 from greenhouse_sim.services.scheduler import Scheduler
 from greenhouse_sim.services.simulator import Simulator
@@ -33,15 +33,6 @@ SHORT_DAYS: Final = workers_support.SHORT_DAYS
 WAIT_S: Final = 240.0
 # Slow enough that the first day is committed well before the second.
 SECONDS_PER_DAY: Final = 3
-
-
-@pytest.fixture(autouse=True)
-def leases_written_often(monkeypatch: pytest.MonkeyPatch) -> None:
-    """So that `workers_support.lease_let_go` does not wait for a lease's thread to
-    wake, from this test or the one before it. A thread that read the manifest just
-    before the epoch ended writes the lease once more: a test that asks anything of
-    an epoch it worked here waits for that thread first."""
-    monkeypatch.setattr(leases, "REFRESH_EVERY_S", workers_support.LEASE_BEAT_S)
 
 
 def _until(condition: Callable[[], bool], what: str) -> None:
@@ -164,7 +155,6 @@ def test_an_epoch_whose_resuming_worker_ends_before_taking_it_up_is_still_interr
     kept = queued(simulator, simulator.runs, SHORT)
     assert execute(simulator, kept, Stepped([DAY_S][:days])) == Status.INTERRUPTED
     assert len(kept.commits()) == days
-    workers_support.lease_let_go(kept)
     scheduling = _workers_that_end_at_once(simulator, tmp_path, monkeypatch)
 
     resumed = respond(simulator, "POST", _resume_path(kept))
@@ -192,7 +182,6 @@ def test_an_epoch_resumed_with_no_pace_goes_on_at_the_one_it_was_asked_for(
     assert simulator.runs is not None
     kept = queued(simulator, simulator.runs, SHORT, seconds_per_day=asked_at)
     assert execute(simulator, kept, Stepped([DAY_S])) == Status.INTERRUPTED
-    workers_support.lease_let_go(kept)
     # A worker reads its pace from the manifest (`scheduler.work`).
     scheduling = _workers_that_end_at_once(simulator, tmp_path, monkeypatch)
 
@@ -209,7 +198,6 @@ def test_an_epoch_given_a_free_driver_on_resuming_goes_as_fast_as_it_computes(
     assert simulator.runs is not None
     kept = queued(simulator, simulator.runs, SHORT, seconds_per_day=20.0)
     assert execute(simulator, kept, Stepped([DAY_S])) == Status.INTERRUPTED
-    workers_support.lease_let_go(kept)
     scheduling = _workers_that_end_at_once(simulator, tmp_path, monkeypatch)
 
     scheduling.resume(kept.run_id, kept.epoch, driver=Free())
@@ -222,11 +210,8 @@ def test_two_requests_to_resume_an_epoch_are_never_looking_for_its_producer_toge
     simulator: Simulator, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     assert simulator.runs is not None
-    # The lease of the epoch executed here is written again while its manifest
-    # says it is worked: it is let end before the manifest is made to say so.
     kept = queued(simulator, simulator.runs, SHORT)
     assert execute(simulator, kept, Stepped([DAY_S])) == Status.INTERRUPTED
-    workers_support.lease_let_go(kept)
     # As a producer that died leaves it: running, and no lease.
     running = kept.manifest().model_copy(update={"status": Status.RUNNING})
     simulator.runs.put(

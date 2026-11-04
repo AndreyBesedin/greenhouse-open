@@ -1,12 +1,9 @@
 """What the scheduler's tests run: a short run and a long one of the one-plant box
 (`short_runs`), registered with a test's simulator, whose worker has them from the
-store; workers that end at once or are killed, which a process imports by name;
-and the wait for an epoch worked in a test's own process to be let go by it."""
+store; and workers that end at once or are killed, which a process imports by name."""
 
 import os
 import signal
-import threading
-import time
 from pathlib import Path
 from typing import Final
 
@@ -22,10 +19,6 @@ SHORT_DAYS: Final = 2
 # Far longer than any test lets it go on: what a test does while it is running
 # takes a few of its days, and a day takes a fraction of a second.
 LONG_DAYS: Final = 120
-# How often a test's own process writes the leases it holds (`leases.REFRESH_EVERY_S`),
-# which lets `lease_let_go` wait for less than the five seconds it does by itself.
-LEASE_BEAT_S: Final = 0.02
-LEASE_WAIT_S: Final = 30.0
 
 
 def short_simulator() -> Simulator:
@@ -46,15 +39,3 @@ def takes_it_up_and_is_killed(root: str, run_id: str, epoch: int) -> None:
     kept.set_status(Status.RUNNING)
     kept.commit(0.0, DAY_S)
     os.kill(os.getpid(), signal.SIGKILL)
-
-
-def lease_let_go(epoch: EpochStore) -> None:
-    """Waits until this process, having worked `epoch` here, no longer writes its
-    lease. Its thread looks at the manifest only when it wakes: one still asleep as
-    the epoch is queued to be carried on would take it to be worked, write the lease
-    again, and have the worker refuse the epoch as worked by another."""
-    name = f"lease of {epoch.run_id}/{epoch.epoch}"
-    deadline = time.monotonic() + LEASE_WAIT_S
-    while any(thread.name == name for thread in threading.enumerate()):
-        assert time.monotonic() < deadline, f"waited for {name} to end"
-        time.sleep(LEASE_BEAT_S)

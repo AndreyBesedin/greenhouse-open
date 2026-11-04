@@ -50,7 +50,7 @@ PACED_SEED: Final = 1
 FREE_SEED: Final = 2
 WAIT_S: Final = 120.0
 LONG_AGO: Final = timedelta(seconds=leases.EXPIRES_AFTER_S * 10)
-# Time enough for a stop to find the lease written, and to see it expire.
+# Time enough for a stop to find the claim written, and to see it expire.
 LEASE_LEFT_S: Final = 2.0
 
 # A server that starts a run of each kind, says what it started and stays, until
@@ -169,7 +169,7 @@ def test_a_stop_left_behind_is_forgotten_when_the_epoch_waits_again(
 
 
 def _epoch(objects: ObjectStore, status: Status, *, age: timedelta = LONG_AGO) -> EpochStore:
-    """An epoch told `status` by someone this test does not hold, with no lease."""
+    """An epoch told `status` by someone this test does not hold, with no claim."""
     return EpochStore.create(
         objects,
         EpochManifest(
@@ -183,11 +183,11 @@ def _epoch(objects: ObjectStore, status: Status, *, age: timedelta = LONG_AGO) -
     )
 
 
-def _leased(epoch: EpochStore, *, age_s: float = 0.0) -> None:
-    """A lease written `age_s` ago, as a worker elsewhere writes it, and not written
+def _claimed(epoch: EpochStore, *, age_s: float = 0.0) -> None:
+    """A claim written `age_s` ago, as a worker elsewhere holds it, and not written
     again."""
-    epoch.objects.put(
-        f"{epoch.run_id}/{epoch.epoch}/{leases.LEASE}",
+    assert epoch.objects.create(
+        f"{epoch.run_id}/{epoch.epoch}/{leases.CLAIMS}/00000000.json",
         json.dumps({"refreshed_at": time.time() - age_s}).encode(),
     )
 
@@ -208,7 +208,7 @@ def test_a_worker_elsewhere_is_asked_to_stop_and_the_answers_say_it_is_stopping(
     server: Simulator,
 ) -> None:
     epoch = _epoch(_store(server), Status.RUNNING)
-    _leased(epoch)
+    _claimed(epoch)
 
     # Twice: the second finds it asked and is told the same.
     for _ in range(2):
@@ -242,18 +242,93 @@ def test_a_stop_of_an_epoch_no_one_works_is_told_interrupted_at_once(server: Sim
     shown = _run_of(answer.body)
     assert shown.status == Status.INTERRUPTED and not shown.stopping
     assert not epoch.stop_asked()
+    # Told through a claim, and let go: a worker coming later finds it ended.
+    assert leases.newest(_store(server), "run/0") == 1
+    assert not epoch.worked()
 
 
-def test_a_worker_that_dies_before_it_looks_leaves_its_epoch_interrupted_as_its_lease_expires(
+def test_a_stop_of_an_epoch_whose_claim_expired_is_told_interrupted_through_the_next(
+    server: Simulator,
+) -> None:
+    epoch = _epoch(_store(server), Status.RUNNING)
+    _claimed(epoch, age_s=2 * leases.EXPIRES_AFTER_S)
+
+    answer = respond(server, "POST", _stop_path(epoch))
+
+    assert _run_of(answer.body).status == Status.INTERRUPTED
+    assert not epoch.stop_asked()
+    assert leases.newest(_store(server), "run/0") == 2
+
+
+@pytest.mark.parametrize("status", [Status.QUEUED, Status.RUNNING])
+def test_a_stop_of_an_epoch_with_a_claim_elsewhere_writes_the_request_whatever_its_status(
+    server: Simulator, status: Status
+) -> None:
+    """A worker claims an epoch while it still waits, and may be seconds from running."""
+    epoch = _epoch(_store(server), status)
+    _claimed(epoch)
+
+    answer = respond(server, "POST", _stop_path(epoch))
+
+    assert _run_of(answer.body).status == status and _run_of(answer.body).stopping
+    assert epoch.stop_asked()
+    assert leases.newest(_store(server), "run/0") == 0
+
+
+def test_a_worker_taking_an_epoch_up_as_a_stop_would_tell_it_is_asked_instead(
+    tmp_path: Path,
+) -> None:
+    """The stop found no one, and is stopped just before its claim: the worker wins."""
+
+    class TakenUpFirst(FolderStore):
+        taken = False
+
+        def create(self, name: str, data: bytes) -> bool:
+            if not self.taken:
+                self.taken = True
+                assert worker.claim()
+            return super().create(name, data)
+
+    objects = TakenUpFirst(tmp_path / "runs")
+    with _box(runs=objects) as server:
+        epoch = _epoch(objects, Status.QUEUED)
+        worker = EpochStore(FolderStore(objects.root), "run", 0)
+
+        answer = respond(server, "POST", _stop_path(epoch))
+
+        assert _run_of(answer.body).stopping
+        assert epoch.manifest().status == Status.QUEUED
+        assert epoch.stop_asked()
+        assert worker.claimed()
+        worker.let_go()
+
+
+@pytest.mark.parametrize("starts", [execute, resume], ids=["execute", "resume"])
+def test_a_worker_that_stops_as_it_was_asked_lets_its_claim_go(
+    tmp_path: Path, starts: Callable[..., Status]
+) -> None:
+    with _box() as simulator:
+        epoch = queued(simulator, FolderStore(tmp_path), BOX)
+        epoch.ask_to_stop()
+
+        assert starts(simulator, epoch, Free()) == Status.INTERRUPTED
+
+    assert not epoch.worked()
+    # Its claim and its letting go, and no time left in the store to wait out.
+    assert leases.newest(epoch.objects, f"{epoch.run_id}/{epoch.epoch}") == 1
+    assert EpochStore(epoch.objects, epoch.run_id, epoch.epoch).claim()
+
+
+def test_a_worker_that_dies_before_it_looks_leaves_its_epoch_interrupted_as_its_claim_expires(
     server: Simulator, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(interrupted, "RECHECK_EVERY_S", 0.05)
     epoch = _epoch(_store(server), Status.RUNNING)
-    _leased(epoch, age_s=leases.EXPIRES_AFTER_S - LEASE_LEFT_S)
+    _claimed(epoch, age_s=leases.EXPIRES_AFTER_S - LEASE_LEFT_S)
 
     respond(server, "POST", _stop_path(epoch))
 
-    _until(lambda: epoch.manifest().status == Status.INTERRUPTED, "the lease to expire")
+    _until(lambda: epoch.manifest().status == Status.INTERRUPTED, "the claim to expire")
     assert not stored_run(_store(server), "run", 0).stopping
 
 
@@ -262,7 +337,7 @@ def test_a_run_stopped_and_deleted_is_looked_at_no_more(
 ) -> None:
     monkeypatch.setattr(interrupted, "RECHECK_EVERY_S", 0.05)
     epoch = _epoch(_store(server), Status.RUNNING)
-    _leased(epoch)
+    _claimed(epoch)
     respond(server, "POST", _stop_path(epoch))
 
     epoch.set_status(Status.INTERRUPTED)
@@ -369,7 +444,7 @@ def test_a_failed_playback_of_another_run_does_not_keep_a_worker_elsewhere_from_
     with pytest.raises(PlaybackFailed):
         failed.state()
     epoch = _epoch(_store(server), Status.RUNNING)
-    _leased(epoch)
+    _claimed(epoch)
 
     answer = respond(server, "POST", _stop_path(epoch))
 

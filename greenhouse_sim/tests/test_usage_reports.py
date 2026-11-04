@@ -15,6 +15,7 @@ import pytest
 from greenhouse_sim import usage_reports
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.services import leases
 from greenhouse_sim.services.resources import ProcessUse
 from greenhouse_sim.services.run_store import (
     USAGE,
@@ -100,9 +101,9 @@ def _files(root: Path) -> dict[str, tuple[str, int]]:
     }
 
 
-def _a_lease(store: EpochStore) -> None:
-    store.objects.put(
-        f"{store.run_id}/{store.epoch}/lease.json",
+def _a_claim(store: EpochStore) -> None:
+    store.objects.create(
+        f"{store.run_id}/{store.epoch}/{leases.CLAIMS}/00000000.json",
         json.dumps({"refreshed_at": time.time()}).encode(),
     )
 
@@ -200,7 +201,7 @@ def test_a_report_its_workers_wrote_is_left_as_it_is(tmp_path: Path) -> None:
 def test_an_epoch_being_worked_is_left_alone(tmp_path: Path, status: Status, leased: bool) -> None:
     store = _old(tmp_path, status=status)
     if leased:
-        _a_lease(store)
+        _a_claim(store)
     before = _files(tmp_path)
 
     done = report_missing(store.objects)
@@ -212,7 +213,7 @@ def test_an_epoch_being_worked_is_left_alone(tmp_path: Path, status: Status, lea
 def test_an_epoch_a_worker_takes_up_as_it_is_read_is_left_to_its_worker(tmp_path: Path) -> None:
     class TakenUp(FolderStore):
         def names(self, prefix: str = "") -> list[str]:
-            _a_lease(EpochStore(self, "run_a", 0))
+            _a_claim(EpochStore(self, "run_a", 0))
             return super().names(prefix)
 
     _old(tmp_path)
@@ -223,9 +224,10 @@ def test_an_epoch_a_worker_takes_up_as_it_is_read_is_left_to_its_worker(tmp_path
     assert not (tmp_path / "run_a" / "0" / USAGE).exists()
 
 
-def test_a_lease_long_expired_is_no_one_working_it(tmp_path: Path) -> None:
+@pytest.mark.parametrize("name", [f"{leases.CLAIMS}/00000000.json", leases.LEASE])
+def test_a_claim_long_expired_is_no_one_working_it(tmp_path: Path, name: str) -> None:
     store = _old(tmp_path, status=Status.INTERRUPTED)
-    store.objects.put("run_a/0/lease.json", json.dumps({"refreshed_at": 1.0}).encode())
+    store.objects.put(f"run_a/0/{name}", json.dumps({"refreshed_at": 1.0}).encode())
 
     assert report_missing(store.objects).written == 1
 
@@ -394,7 +396,7 @@ def test_the_command_says_what_it_did(tmp_path: Path, capsys: pytest.CaptureFixt
     _old(tmp_path, "run_a")
     _old(tmp_path, "run_b")
     leased = _old(tmp_path, "run_c")
-    _a_lease(leased)
+    _a_claim(leased)
     garbled = _old(tmp_path, "run_d")
     first_commit = "run_d/0/commits/00000000.json"
     whole = garbled.objects.get(first_commit)

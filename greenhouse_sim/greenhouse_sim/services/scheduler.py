@@ -11,6 +11,9 @@ store is the only channel between a worker and the API, so that whoever reads an
 epoch reads it while it is computed, as far as the last commit names
 (`stored_playback`).
 
+A worker claims its epoch before it does anything (`leases`), so that of two
+workers given one epoch one takes it and the other leaves.
+
 A process is the worker because P17.1 measured what a thread costs a process
 that is working: 46% of its speed against 5% for another process.
 
@@ -67,6 +70,9 @@ logger = logging.getLogger(__name__)
 LOOK_EVERY_S: Final = 0.1
 # How long a worker told to end has before it is killed.
 END_WITHIN_S: Final = 10.0
+# What a worker exits with that found its epoch another's, or no longer waiting:
+# it has done nothing to it, and nothing is to be said of it.
+LEFT_TO_ANOTHER: Final = 3
 
 
 def work(root: str, run_id: str, epoch: int) -> None:
@@ -77,11 +83,24 @@ def work(root: str, run_id: str, epoch: int) -> None:
     kept.counted_by(this_process)
     manifest = kept.manifest()
     pace = manifest.seconds_per_day
+    if not _taken_up(kept):
+        raise SystemExit(LEFT_TO_ANOTHER)
     with Simulator() as simulator:
         if manifest.scenario_file is not None:
             scenario_files.take_up(simulator, kept.objects, manifest.scenario_file)
         status = carry_on(simulator, kept, Free() if pace is None else Paced(pace))
     raise SystemExit(0 if status == Status.FINISHED else 1)
+
+
+def _taken_up(kept: EpochStore) -> bool:
+    """Whether this worker has the epoch, which waited for it: claimed, and read
+    after that. An epoch told otherwise while the worker started is left."""
+    if not kept.claim():
+        return False
+    if kept.manifest().status == Status.QUEUED:
+        return True
+    kept.let_go()
+    return False
 
 
 def _pace(driver: Driver | None) -> float | None:
@@ -353,6 +372,8 @@ class Scheduler:
         """An epoch whose worker has ended: left as it says if it ended
         itself; else interrupted, if it had begun, was cancelled or was being
         carried on, failed if its worker never began it."""
+        if exit_code == LEFT_TO_ANOTHER:
+            return
         status = EpochStore(self._objects, *key).manifest().status
         if status in (Status.FINISHED, Status.FAILED, Status.INTERRUPTED):
             return

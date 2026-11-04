@@ -31,7 +31,7 @@ from greenhouse_sim.scenarios.scenario_files import (
     export_scenario_file,
     import_scenario_file,
 )
-from greenhouse_sim.services import drafts, leases, scenario_files, scheduler
+from greenhouse_sim.services import drafts, scenario_files, scheduler
 from greenhouse_sim.services.errors import Conflict, InvalidRequest
 from greenhouse_sim.services.playback import FIRST_EPOCH, Epochs, Playback
 from greenhouse_sim.services.run_store import (
@@ -75,15 +75,6 @@ RECORDING: Final = "timestamp,outside_air_temperature_c,outside_relative_humidit
     for day in range(1, 4)
     for hour in range(24)
 )
-
-
-@pytest.fixture(autouse=True)
-def leases_written_often(monkeypatch: pytest.MonkeyPatch) -> None:
-    """So that `workers_support.lease_let_go` does not wait for a lease's thread to
-    wake, from this test or the one before it. A thread that read the manifest just
-    before the epoch ended writes the lease once more: a test that asks anything of
-    an epoch it worked here waits for that thread first."""
-    monkeypatch.setattr(leases, "REFRESH_EVERY_S", workers_support.LEASE_BEAT_S)
 
 
 def _until(condition: Callable[[], bool], what: str) -> None:
@@ -248,7 +239,6 @@ def test_an_old_epoch_of_a_packaged_scenario_resumes_as_it_was(tmp_path: Path) -
         _as_older_code_left(objects, kept)
         run_id = kept.run_id
         made.scheduler = Scheduler(made, objects.root, limit=1)
-        workers_support.lease_let_go(kept)
 
         assert made.scheduler.resume(run_id, kept.epoch).run_id == run_id
         _until(lambda: kept.frontier_s() >= 2 * DAY_S, "another day of it")
@@ -271,7 +261,6 @@ def test_an_old_epoch_of_a_scenario_this_simulator_knows_is_given_its_file_and_r
         _as_older_code_left(objects, kept)
         _no_scenario_files(objects)
         made.scheduler = Scheduler(made, objects.root, limit=1)
-        workers_support.lease_let_go(kept)
 
         assert made.scheduler.resume(kept.run_id, kept.epoch).run_id == whole.run_id
         _until(lambda: kept.manifest().status == Status.FINISHED, "the epoch to end")
@@ -285,7 +274,6 @@ def _left_by_older_code(objects: FolderStore) -> EpochStore:
     with workers_support.short_simulator() as made:
         kept = queued(made, objects, SHORT)
         assert execute(made, kept, Stepped([DAY_S])) == Status.INTERRUPTED
-        workers_support.lease_let_go(kept)
     _as_older_code_left(objects, kept)
     _no_scenario_files(objects)
     return kept
@@ -332,7 +320,6 @@ def test_an_epoch_whose_scenario_file_is_gone_is_refused_when_it_is_asked_to_go_
         made.runs = objects
         kept = queued(made, objects, SHORT)
         assert execute(made, kept, Stepped([DAY_S])) == Status.INTERRUPTED
-        workers_support.lease_let_go(kept)
         _no_scenario_files(objects)
         made.scheduler = Scheduler(made, objects.root, limit=1)
 

@@ -2,8 +2,9 @@
 worker writes and a reader reads, with no run, clock or API in between.
 
 The store is an interface over named objects (`ObjectStore`: put one whole,
-get, list, delete) and a folder under the user's state folder is its first
-backend (`FolderStore`). An epoch's objects, under `{run_id}/{epoch}/`:
+create one unless it exists, get, list, delete) and a folder under the user's
+state folder is its first backend (`FolderStore`). An epoch's objects, under
+`{run_id}/{epoch}/`:
 
 - `manifest.json`: the run, its seed, its status, and why it failed if it did;
 - `usage.json`: what the epoch has used (`EpochUsage`, decision 0067), written
@@ -29,6 +30,7 @@ backend (`FolderStore`). An epoch's objects, under `{run_id}/{epoch}/`:
   commit names it, so that no digest does;
 - `inherited/outcomes.jsonl`: for a fork, the outcomes of its parent's up to
   where it branched, which say what its crop actions before then did;
+- `leases/{number}.json`: who works the epoch (`leases`), which no commit names;
 - `commits/{seq}.json`: written last. A commit names one segment, its
   checkpoint if there is one, the position reached in the log, and the
   trajectory digest: a running sha256 over every object the commits so far
@@ -97,6 +99,10 @@ class StoreCorrupt(RuntimeError):
     """An object a commit names is missing, or is not what its digest says."""
 
 
+class EpochTaken(RuntimeError):
+    """A process said an epoch runs with no claim on it, while another holds one."""
+
+
 class Status(StrEnum):
     QUEUED = "queued"
     RUNNING = "running"
@@ -148,6 +154,16 @@ class ObjectStore(Protocol):
 
     def put(self, name: str, data: bytes) -> None: ...
 
+    def create(self, name: str, data: bytes) -> bool:
+        """Makes the object `name` unless one exists, and says whether this call
+        made it (decision 0067). Of any number of callers at once, in any process
+        that reaches the store, exactly one is told it did; from then until the
+        object is deleted every other is told it did not, and changes nothing. The
+        object is seen whole, as one `put` is. Nothing else is promised: not which
+        caller wins, and not that another caller's listing shows the object yet. A
+        store of objects gives this as a write conditional on no such object."""
+        ...
+
     def get(self, name: str) -> bytes | None: ...
 
     def names(self, prefix: str = "") -> list[str]: ...
@@ -166,9 +182,24 @@ def default_root() -> Path:
     return Path(state) / "greenhouse-sim" / "runs"
 
 
+def _written_beside(path: Path, data: bytes) -> str:
+    """`data`, on the disk, under a name of its own beside `path` that is never listed."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, partial = tempfile.mkstemp(dir=path.parent, suffix=_PARTIAL)
+    try:
+        with os.fdopen(descriptor, "wb") as written:
+            written.write(data)
+            written.flush()
+            os.fsync(written.fileno())
+    except BaseException:
+        Path(partial).unlink(missing_ok=True)
+        raise
+    return partial
+
+
 class FolderStore:
     """Objects as files under a folder. An object is written to a name of its
-    own beside it and renamed into place, so that a reader finds it whole or
+    own beside it and moved into place, so that a reader finds it whole or
     not there, and one half written, which a crash leaves, is never listed."""
 
     def __init__(self, root: Path | None = None) -> None:
@@ -176,17 +207,27 @@ class FolderStore:
 
     def put(self, name: str, data: bytes) -> None:
         path = self.root / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        descriptor, partial = tempfile.mkstemp(dir=path.parent, suffix=_PARTIAL)
+        partial = _written_beside(path, data)
         try:
-            with os.fdopen(descriptor, "wb") as written:
-                written.write(data)
-                written.flush()
-                os.fsync(written.fileno())
             os.replace(partial, path)
         except BaseException:
             Path(partial).unlink(missing_ok=True)
             raise
+
+    def create(self, name: str, data: bytes) -> bool:
+        """The whole file is given the name as a hard link, which the file system
+        refuses, whoever else is linking, if the name is taken. So the folder must be
+        on one that has hard links: a local disk or NFS, not exFAT or some network
+        mounts, where this raises the file system's error and no epoch can be worked."""
+        path = self.root / name
+        partial = _written_beside(path, data)
+        try:
+            os.link(partial, path)
+        except FileExistsError:
+            return False
+        finally:
+            Path(partial).unlink(missing_ok=True)
+        return True
 
     def get(self, name: str) -> bytes | None:
         try:
@@ -597,6 +638,8 @@ class EpochStore:
         self.objects = objects
         self.run_id = run_id
         self.epoch = epoch
+        # The number of the claim this object took (`claim`), if it took one.
+        self._claim: int | None = None
         self._home = f"{run_id}/{epoch}"
         # What this process has used, if it works this epoch and nothing else,
         # and what the epoch's report said before it (`counted_by`).
@@ -648,15 +691,17 @@ class EpochStore:
         held by this process (`leases`) until it is said to have ended, by
         whoever says it, and what it used is reported then, with all it keeps."""
         before = self.manifest()
+        # A worker claimed it before anything else, so this refuses only a process
+        # that says an epoch runs with no claim while another works it. Before the
+        # write, so that a refusal changes nothing of that other's epoch.
+        if status == Status.RUNNING and before.status != Status.RUNNING and not self.claim():
+            raise EpochTaken(f"epoch {self.epoch} of {self.run_id} is worked by another")
         if status == Status.QUEUED and before.status in ENDED:
             self._forget_stop()
         said = (reason or NO_REASON_GIVEN) if status == Status.FAILED else None
         manifest = before.model_copy(update={"status": status, "reason": said})
         self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
-        if status == Status.RUNNING:
-            if before.status != Status.RUNNING:
-                leases.hold(self.objects, self._home)
-        elif status in ENDED:
+        if status in ENDED:
             leases.release(self.objects, self._home)
             self.report_usage()
 
@@ -674,8 +719,42 @@ class EpochStore:
         )
         self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
 
+    def claim(self, *, now: float | None = None) -> bool:
+        """Takes the epoch for this process, and says whether it has it: refused
+        while another's claim is fresh, and to all but one of any who ask at once
+        (`leases`). Held until the epoch is told it ended, or `let_go`."""
+        if self.claimed():
+            return True
+        self._claim = leases.claim(self.objects, self._home, now=now)
+        if self._claim is None:
+            return False
+        leases.keep(self.objects, self._home, self._claim)
+        return True
+
+    def claimed(self) -> bool:
+        """Whether this object took the claim that stands."""
+        return self._claim is not None and self._claim == leases.newest(self.objects, self._home)
+
+    def let_go(self) -> None:
+        """Gives up this object's claim, if it stands, with the epoch as it is."""
+        if self.claimed():
+            leases.release(self.objects, self._home, self._claim)
+
+    def end_unless_worked(self, status: Status, *, now: float | None = None) -> bool:
+        """Says the epoch ended, unless a process works it or it has ended already,
+        and says whether it did. Held while it is said, so that a worker taking the
+        epoch up is told apart: one that came first keeps it, and one that comes
+        after finds it ended."""
+        if leases.claim(self.objects, self._home, now=now) is None:
+            return False
+        if self.manifest().status in ENDED:
+            leases.release(self.objects, self._home)
+            return False
+        self.set_status(status)
+        return True
+
     def worked(self, *, now: float | None = None) -> bool:
-        """Whether a process holds the epoch's lease."""
+        """Whether a process holds the epoch's claim."""
         return leases.alive(self.objects, self._home, now=now)
 
     def ask_to_stop(self) -> None:
@@ -1087,6 +1166,7 @@ class EpochStore:
             if (
                 name not in kept
                 and name != f"{self._home}/{leases.LEASE}"
+                and not name.startswith(f"{self._home}/{leases.CLAIMS}/")
                 and not name.startswith(spared)
             ):
                 self.objects.delete(name)

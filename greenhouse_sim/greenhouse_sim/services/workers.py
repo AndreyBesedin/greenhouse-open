@@ -151,7 +151,19 @@ def execute(
     manifest = epoch.manifest()
     if manifest.status != Status.QUEUED or epoch.commits():
         raise Conflict(f"epoch {epoch.epoch} of {epoch.run_id} has begun: it is {manifest.status}")
+    if not epoch.claimed():
+        _claim(epoch)
+        try:
+            # Read again under the claim: what was read may be another's work by now.
+            return execute(simulator, epoch, driver, stop=stop)
+        finally:
+            epoch.let_go()
     return _drive(simulator, epoch, Free() if driver is None else driver, stop, 0.0)
+
+
+def _claim(epoch: EpochStore) -> None:
+    if not epoch.claim():
+        raise Conflict(f"epoch {epoch.epoch} of {epoch.run_id} is worked by a process still")
 
 
 def check_resumable(epoch: EpochStore) -> float:
@@ -166,7 +178,7 @@ def check_resumable(epoch: EpochStore) -> float:
         raise Conflict(
             f"epoch {epoch.epoch} of {epoch.run_id} is {status}: only an interrupted one resumes"
         )
-    if epoch.worked():
+    if epoch.worked() and not epoch.claimed():
         raise Conflict(f"epoch {epoch.epoch} of {epoch.run_id} is worked by a process still")
     commits = epoch.commits()
     if epoch.damaged(commits):
@@ -232,7 +244,23 @@ def resume(
     chosen = Free() if driver is None else driver
     if isinstance(chosen, Stepped):
         raise InvalidRequest("an epoch stepped by a caller is carried on by that caller")
-    frontier_s = check_resumable(epoch)
+    check_resumable(epoch)
+    _claim(epoch)
+    try:
+        # Read again: until the claim, all that was read may be another's work by now.
+        return _carry_on(simulator, epoch, chosen, stop, check_resumable(epoch))
+    finally:
+        epoch.let_go()
+
+
+def _carry_on(
+    simulator: Simulator,
+    epoch: EpochStore,
+    driver: Driver,
+    stop: threading.Event | None,
+    frontier_s: float,
+) -> Status:
+    """Under the epoch's claim: all of `resume` that writes."""
     removed = epoch.discard_uncommitted()
     if removed:
         logger.warning("%d objects past the last commit of %s removed", len(removed), epoch.run_id)
@@ -248,7 +276,7 @@ def resume(
             return Status.FINISHED
         upload_checkpoint(simulator, json.loads(decompress(data[0])))
     epoch.set_status(Status.QUEUED)
-    return _drive(simulator, epoch, chosen, stop, frontier_s)
+    return _drive(simulator, epoch, driver, stop, frontier_s)
 
 
 def _drive(

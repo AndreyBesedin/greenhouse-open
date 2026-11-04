@@ -20,25 +20,6 @@ LONG_AGO = timedelta(seconds=leases.EXPIRES_AFTER_S * 10)
 WAIT_S: Final = 20.0
 
 
-class TakenUpStore(FolderStore):
-    """A store whose epoch is taken up by a worker (told `running`, with a
-    lease) as the manifest is read for the `taken_up_at`th time since it was
-    armed: the third read of a look at an epoch, which finds it, reads it, and
-    reads it again before telling it."""
-
-    def __init__(self, root: Path) -> None:
-        super().__init__(root)
-        self.reads = 0
-        self.taken_up_at: int | None = None
-
-    def get(self, name: str) -> bytes | None:
-        if self.taken_up_at is not None and name.endswith("/manifest.json"):
-            self.reads += 1
-            if self.reads == self.taken_up_at:
-                EpochStore(FolderStore(self.root), "run", 0).set_status(Status.RUNNING)
-        return super().get(name)
-
-
 def _epoch(
     objects: FolderStore, status: Status, *, number: int = 0, age: timedelta = LONG_AGO
 ) -> EpochStore:
@@ -72,26 +53,23 @@ def test_epochs_no_one_works_are_told_interrupted_as_a_simulator_starts(tmp_path
 def test_a_running_epoch_whose_lease_is_written_is_left(tmp_path: Path) -> None:
     objects = FolderStore(tmp_path)
     running = _epoch(objects, Status.RUNNING)
-    leases.hold(objects, "run/0")
+    assert running.claim()
     try:
         with Simulator(runs=objects):
             assert running.manifest().status == Status.RUNNING
     finally:
-        leases.release(objects, "run/0")
+        running.let_go()
 
 
 def test_a_lease_that_has_expired_is_not_a_worker(tmp_path: Path) -> None:
     objects = FolderStore(tmp_path)
     running = _epoch(objects, Status.RUNNING)
-    leases.hold(objects, "run/0")
-    try:
-        with Simulator(runs=objects) as simulator:
-            later = time.time() + leases.EXPIRES_AFTER_S * 2
-            (found,) = interrupted.mark(simulator, now=later)
-            assert (found.run_id, found.epoch, found.status) == ("run", 0, Status.INTERRUPTED)
-            assert running.manifest().status == Status.INTERRUPTED
-    finally:
-        leases.release(objects, "run/0")
+    assert running.claim()
+    with Simulator(runs=objects) as simulator:
+        later = time.time() + leases.EXPIRES_AFTER_S * 2
+        (found,) = interrupted.mark(simulator, now=later)
+        assert (found.run_id, found.epoch, found.status) == ("run", 0, Status.INTERRUPTED)
+        assert running.manifest().status == Status.INTERRUPTED
 
 
 def test_an_epoch_just_asked_for_is_given_time_to_be_taken_up(tmp_path: Path) -> None:
@@ -153,22 +131,6 @@ def test_the_epochs_left_alone_are_no_longer_looked_at_once_the_simulator_is_clo
     time.sleep(0.3)
 
     assert running.manifest().status == Status.RUNNING
-
-
-def test_an_epoch_a_worker_takes_up_as_it_is_looked_at_is_not_told_interrupted(
-    tmp_path: Path,
-) -> None:
-    objects = TakenUpStore(tmp_path)
-    with Simulator(runs=objects) as simulator:
-        queued = _epoch(objects, Status.QUEUED)
-        objects.taken_up_at = 3
-
-        found = interrupted.mark(simulator)
-
-        assert found == []
-        assert queued.manifest().status == Status.RUNNING
-        assert queued.worked()
-        queued.set_status(Status.FINISHED)
 
 
 def test_a_simulator_with_no_run_store_finds_nothing() -> None:

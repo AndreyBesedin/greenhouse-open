@@ -5,21 +5,20 @@ it never took it up. At startup, and when a person asks to carry one on or to
 stop it, such an epoch is told `interrupted` with what it had committed, so that it can be
 resumed (`workers.resume`) and so that nothing reads it as still on its way.
 
-An epoch is worked if a process holds its lease (`leases`), or this simulator's
-scheduler holds it in its queue; a queued epoch is not leased, and one just
-asked for is given `leases.EXPIRES_AFTER_S` seconds to be taken up. Nothing else
+An epoch is worked if a process holds its claim (`leases`), or this simulator's
+scheduler holds it in its queue; one just asked for is given
+`leases.EXPIRES_AFTER_S` seconds to be taken up. Nothing else
 is believed: the worker of a server that was killed is a process of its own and
 writes the epoch still, and it is no one's to take over, though it can be asked
 to stop (`EpochStore.ask_to_stop`).
 
-A server started within that time of a crash finds the lease still fresh, so the
+A server started within that time of a crash finds the claim still fresh, so the
 epochs it leaves alone at startup are looked at again until each has ended or
 has no one working it (`watch`).
 
-Telling an epoch `interrupted` is a check and then a write in a folder, which
-has no lock across processes: the ownership is checked again just before the
-write, so that an epoch whose worker took it up meanwhile is left, and the time
-between that check and the write is that of two calls.
+Telling an epoch `interrupted` is itself a claim on it, held for that write
+(`EpochStore.end_unless_worked`), so that no lock across processes is needed: of a
+worker taking the epoch up and this, whichever claims it first has it.
 """
 
 import logging
@@ -78,7 +77,7 @@ def mark(simulator: Simulator, *, now: float | None = None) -> list[StoredRun]:
 def watch(simulator: Simulator) -> None:
     """Scans the store, and looks again at the epochs it left alone, in a
     thread of its own, until each has ended, has been told `interrupted` or the
-    simulator is closed: a server started soon after a crash finds the lease
+    simulator is closed: a server started soon after a crash finds the claim
     of the epoch it left fresh, and no start would find it again."""
     left = scan(simulator).left
     if left:
@@ -138,18 +137,14 @@ def _tell(
         return None, True
     if manifest.status == Status.QUEUED and _just_asked_for(manifest.created_at, now):
         return None, True
-    # Looked at again just before the write: a worker may have taken the epoch
-    # up since, changing its status and taking its lease.
-    again = epoch.manifest().status
-    if again != manifest.status or _worked(simulator, epoch, now):
-        return None, again in _WORKED
+    if not epoch.end_unless_worked(Status.INTERRUPTED, now=now):
+        return None, epoch.manifest().status in _WORKED
     logger.warning(
         "epoch %d of %s was %s, with no one working it: interrupted",
         number,
         run_id,
         manifest.status,
     )
-    epoch.set_status(Status.INTERRUPTED)
     return stored_run(objects, run_id, number), False
 
 

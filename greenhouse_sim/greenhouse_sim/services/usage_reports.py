@@ -15,7 +15,7 @@ It leaves alone:
 
 - an epoch with a report, which may hold what its workers measured, and one whose
   report cannot be read, which is said to have failed and is not written over;
-- an epoch queued, running or with a lease: its worker writes its report, or
+- an epoch queued, running or with a claim: its worker writes its report, or
   will, and one running that no one works gets one as a server starts and finds
   it interrupted;
 - an epoch with an object missing that its commits name, which is said to have
