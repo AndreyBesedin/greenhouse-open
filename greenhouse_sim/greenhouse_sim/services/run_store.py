@@ -953,6 +953,10 @@ class StoredRun(BaseModel):
     seed: int | None
     layout: str
     status: Status
+    # Whether the playback that computes it here holds its clock: the status of
+    # an epoch running, which only the process of that playback knows
+    # (`runs_kept`), so the store never says so.
+    paused: bool = False
     frontier_s: float
     duration_s: float | None
     progress: float | None

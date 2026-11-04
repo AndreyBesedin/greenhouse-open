@@ -10,6 +10,9 @@ import {
 /** What is said of a run with files missing, beside the status it has. */
 export const DAMAGED_NOTE = "Files of this run are missing, so it cannot be read whole.";
 
+/** What a run is called whose playback holds its clock, whatever else it is. */
+const PAUSED_LABEL = "Paused";
+
 /** A run's status, in words: never a colour alone. One with files missing is
  * called so whatever else it is, since its status says it is whole. */
 export function StatusChip({ run }: { run: StoredRun }) {
@@ -23,7 +26,7 @@ export function StatusChip({ run }: { run: StoredRun }) {
   }
   return (
     <span className={`landing-status landing-status-${run.status}`}>
-      {STATUS_LABEL[run.status]}
+      {run.paused ? PAUSED_LABEL : STATUS_LABEL[run.status]}
     </span>
   );
 }

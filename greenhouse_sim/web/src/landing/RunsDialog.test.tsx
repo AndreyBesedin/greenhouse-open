@@ -27,6 +27,7 @@ function run(more: Partial<StoredRun>): StoredRun {
     seed: 1,
     layout: "default",
     status: "finished",
+    paused: false,
     frontier_s: 120 * DAY_S,
     duration_s: 120 * DAY_S,
     progress: 1,
@@ -115,6 +116,7 @@ describe("the runs of a scenario, in a dialog", () => {
       epoch: 2,
       seed: 2,
       status: "running",
+      paused: false,
       frontier_s: 41 * DAY_S,
       progress: 41 / 120,
       layout: "default~heater:-1:0.5",
@@ -352,6 +354,16 @@ describe("the runs of a scenario, in a dialog", () => {
 
     await vi.waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
     expect(asked).toEqual([{ url: `/api/runs/${RUN_ID}/epochs/3/stop`, method: "POST" }]);
+  });
+
+  it("calls a run paused while its playback holds it, and running once it plays", () => {
+    const { rows } = shown([
+      run({ epoch: 1, status: "running", paused: true }),
+      run({ epoch: 0, status: "running" }),
+    ]);
+    const statuses = rows().map((row) => row.querySelector(".landing-status")?.textContent);
+
+    expect(statuses).toEqual(["Paused", "Running"]);
   });
 
   it("resumes a run as fast as it computes, through the epoch's route", async () => {

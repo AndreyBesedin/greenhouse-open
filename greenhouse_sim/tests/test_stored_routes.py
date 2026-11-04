@@ -351,6 +351,45 @@ def test_an_epoch_a_playback_is_working_on_is_refused_until_it_stops(
     assert allowed[0] == HTTPStatus.OK
 
 
+def test_a_paused_playback_is_listed_as_paused_while_it_is_held(simulator: Simulator) -> None:
+    try:
+        started = respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start")
+        assert started.status == HTTPStatus.OK and isinstance(started.body, dict)
+        epoch_path = f"/api/runs/{started.body['run_id']}/epochs/{started.body['epoch']}"
+
+        def said() -> tuple[StoredRun, StoredRun, StoredRun]:
+            one = respond(simulator, "GET", epoch_path).body
+            every = respond(simulator, "GET", "/api/runs").body
+            of_scenario = respond(simulator, "GET", f"/api/scenarios/{SCENARIO}/runs").body
+            assert isinstance(every, list) and isinstance(of_scenario, list)
+            return (
+                StoredRun.model_validate(one),
+                *(
+                    next(StoredRun.model_validate(r) for r in runs if r["run_id"] != RUN)
+                    for runs in (every, of_scenario)
+                ),
+            )
+
+        assert [(r.status, r.paused) for r in said()] == [(Status.RUNNING, False)] * 3
+
+        respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/pause")
+        assert [(r.status, r.paused) for r in said()] == [(Status.RUNNING, True)] * 3
+
+        respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/play")
+        assert [(r.status, r.paused) for r in said()] == [(Status.RUNNING, False)] * 3
+    finally:
+        playback.stop_playbacks(simulator)
+
+
+def test_an_epoch_of_another_run_is_not_paused_by_a_playback_held(simulator: Simulator) -> None:
+    try:
+        respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true")
+        shown = respond(simulator, "GET", f"/api/runs/{RUN}/epochs/0").body
+        assert StoredRun.model_validate(shown).paused is False
+    finally:
+        playback.stop_playbacks(simulator)
+
+
 def test_a_run_is_started_at_a_seed_and_a_seed_that_is_not_one_is_refused(
     simulator: Simulator, no_playbacks: Callable[[], None]
 ) -> None:

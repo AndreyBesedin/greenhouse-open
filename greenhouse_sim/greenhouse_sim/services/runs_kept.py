@@ -41,13 +41,13 @@ def runs_of(simulator: Simulator, scenario_id: str) -> list[StoredRun]:
     the simulator does not know is not found."""
     if simulator.catalogue.entry(scenario_id) is None:
         raise NotFound(f"there is no scenario {scenario_id!r}")
-    return stored_runs(_objects(simulator), scenario_id)
+    return _pauses_said(simulator, stored_runs(_objects(simulator), scenario_id))
 
 
 def all_runs(simulator: Simulator) -> list[StoredRun]:
     """Every stored epoch, the newest started first and those with no start
     time last: what a landing page shows of the runs of all scenarios."""
-    found = stored_runs(_objects(simulator))
+    found = _pauses_said(simulator, stored_runs(_objects(simulator)))
     return sorted(
         found,
         key=lambda run: (
@@ -64,7 +64,23 @@ def epoch_of(simulator: Simulator, run_id: str, epoch: int) -> StoredRun:
     objects = _objects(simulator)
     if epoch not in stored_epochs(objects, run_id):
         raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
-    return stored_run(objects, run_id, epoch)
+    return _pauses_said(simulator, [stored_run(objects, run_id, epoch)])[0]
+
+
+def _pauses_said(simulator: Simulator, runs: list[StoredRun]) -> list[StoredRun]:
+    """`runs`, those running that a playback of this simulator holds said to be
+    paused: the store calls them running, and they stand still."""
+    held = {
+        (playback.run_id, epoch)
+        for playback in simulator.playbacks.all()
+        if (epoch := playback.epoch_held()) is not None
+    }
+    return [
+        run.model_copy(update={"paused": True})
+        if run.status == Status.RUNNING and (run.run_id, run.epoch) in held
+        else run
+        for run in runs
+    ]
 
 
 def delete_epoch(simulator: Simulator, run_id: str, epoch: int) -> dict[str, JsonValue]:

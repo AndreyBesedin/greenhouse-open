@@ -48,6 +48,7 @@ function run(more: Partial<StoredRun>): StoredRun {
     seed: 1,
     layout: "default",
     status: "finished",
+    paused: false,
     frontier_s: 120 * DAY_S,
     duration_s: 120 * DAY_S,
     progress: 1,
@@ -304,6 +305,7 @@ describe("the page where a person decides what to do", () => {
       epoch: 1,
       seed: 2,
       status: "running",
+      paused: false,
       frontier_s: 41 * DAY_S,
       progress: 41 / 120,
     });
@@ -316,6 +318,7 @@ describe("the page where a person decides what to do", () => {
             scenario_id: "tomgro_house",
             seed: null,
             status: "interrupted",
+            paused: false,
             frontier_s: 63 * DAY_S,
           }),
           run({ epoch: 3, status: "failed", frontier_s: 5 * DAY_S, created_at: null }),

@@ -153,6 +153,7 @@ const STARTED = {
   seed: null,
   layout: "default",
   status: "queued",
+  paused: false,
   frontier_s: 0,
   duration_s: 86400,
   progress: 0,

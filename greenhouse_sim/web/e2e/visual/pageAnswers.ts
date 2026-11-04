@@ -43,6 +43,7 @@ const RUN: StoredRun = {
   seed: 7,
   layout: "default",
   status: "finished",
+  paused: false,
   frontier_s: DAYS_OF_THE_RUN * DAY_S,
   duration_s: DAYS_OF_THE_RUN * DAY_S,
   progress: 1,

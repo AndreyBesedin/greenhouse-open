@@ -14,6 +14,7 @@ export interface StoredRun {
   seed: number | null;
   layout: string;
   status: Status;
+  paused: boolean;
   frontier_s: number;
   duration_s: number | null;
   progress: number | null;
