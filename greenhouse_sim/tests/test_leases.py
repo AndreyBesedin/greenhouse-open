@@ -1,12 +1,13 @@
-"""Who works an epoch (P17.9, decision 0065): a process that says an epoch runs
-holds a lease on it, written again while it runs and gone when it ended, so
-that an epoch `running` that no one writes can be told from one that is.
+"""Who works an epoch (P17.9, P18.4, decisions 0065 and 0067): a process that says
+an epoch runs holds a claim on it, written again while it runs and let go when it
+ended, so that an epoch `running` that no one writes can be told from one that is.
 
 Its thread is ordered exactly against what its epoch is told: a thread's sleep
 waits for the test to wake it (`_Beats`), and what comes between its reading the
-store and its writing is done from within the write."""
+store and its writing is done from within the write (`_Stopped`)."""
 
 import json
+import shutil
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -23,7 +24,6 @@ from greenhouse_sim.services.run_store import (
     EpochManifest,
     EpochStore,
     FolderStore,
-    ObjectStore,
     Status,
 )
 from greenhouse_sim.services.simulator import Simulator
@@ -31,22 +31,28 @@ from greenhouse_sim.services.simulator import Simulator
 WAIT_S: Final = 30.0
 
 
-@pytest.fixture
-def epoch(tmp_path: Path) -> EpochStore:
-    return EpochStore.create(
-        FolderStore(tmp_path),
-        EpochManifest(
-            run_id="run", epoch=0, scenario_id="s", layout="default", created_at=datetime.now(UTC)
-        ),
+def _manifest() -> EpochManifest:
+    return EpochManifest(
+        run_id="run", epoch=0, scenario_id="s", layout="default", created_at=datetime.now(UTC)
     )
 
 
-def _lease(epoch: EpochStore) -> str:
+@pytest.fixture
+def epoch(tmp_path: Path) -> EpochStore:
+    return EpochStore.create(FolderStore(tmp_path), _manifest())
+
+
+def _claim(epoch: EpochStore) -> str:
+    """The name of the epoch's newest claim."""
+    return epoch.objects.names(f"{epoch.run_id}/{epoch.epoch}/{leases.CLAIMS}/")[-1]
+
+
+def _old_lease(epoch: EpochStore) -> str:
     return f"{epoch.run_id}/{epoch.epoch}/{leases.LEASE}"
 
 
 def _refreshed_at(epoch: EpochStore) -> float:
-    data = epoch.objects.get(_lease(epoch))
+    data = epoch.objects.get(_claim(epoch))
     assert data is not None
     return float(json.loads(data)["refreshed_at"])
 
@@ -94,9 +100,9 @@ def beats(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[_Beats]:
     held = _Beats()
     monkeypatch.setattr(leases, "time", SimpleNamespace(time=time.time, sleep=held.sleep))
     yield held
-    # A thread ends when it finds its lease gone.
-    for lease in tmp_path.rglob(leases.LEASE):
-        lease.unlink()
+    # A thread ends when it finds its claim gone.
+    for claims in tmp_path.rglob(leases.CLAIMS):
+        shutil.rmtree(claims)
     held.wake_all()
 
 
@@ -106,15 +112,41 @@ def _ended_and_queued(epoch: EpochStore) -> None:
     epoch.queue_again(scenario_file=None, seconds_per_day=None)
 
 
+class _Stopped(FolderStore):
+    """A store whose claim's thread does `before` and `after`, once each, around its
+    next write or creation: it has read the store and is stopped there."""
+
+    before: Callable[[], None] | None = None
+    after: Callable[[], None] | None = None
+
+    def _beating(self) -> bool:
+        return threading.current_thread().name.startswith("lease of")
+
+    def _around(self, write: Callable[[], bool | None]) -> bool | None:
+        if self._beating() and self.before is not None:
+            before, self.before = self.before, None
+            before()
+        written = write()
+        if self._beating() and self.after is not None:
+            after, self.after = self.after, None
+            after()
+        return written
+
+    def put(self, name: str, data: bytes) -> None:
+        self._around(lambda: super(_Stopped, self).put(name, data))
+
+    def create(self, name: str, data: bytes) -> bool:
+        return bool(self._around(lambda: super(_Stopped, self).create(name, data)))
+
+
 def test_an_epoch_told_to_run_is_held_until_it_is_told_it_ended(epoch: EpochStore) -> None:
     assert not epoch.worked()
 
     epoch.set_status(Status.RUNNING)
-    assert epoch.worked()
+    assert epoch.worked() and epoch.claimed()
 
     epoch.set_status(Status.INTERRUPTED)
-    assert not epoch.worked()
-    assert epoch.objects.get(_lease(epoch)) is None
+    assert not epoch.worked() and not epoch.claimed()
 
 
 def test_a_lease_not_written_for_a_while_is_not_believed(epoch: EpochStore) -> None:
@@ -144,29 +176,41 @@ def test_the_lease_of_a_worked_epoch_is_written_again_while_it_is_worked(
     epoch.set_status(Status.FINISHED)
 
 
-def test_an_epoch_told_it_ended_by_another_process_is_not_given_a_lease_again(
-    epoch: EpochStore, monkeypatch: pytest.MonkeyPatch
+def test_a_claim_on_an_epoch_still_waiting_is_written_again_too(
+    epoch: EpochStore, beats: _Beats
 ) -> None:
-    monkeypatch.setattr(leases, "REFRESH_EVERY_S", 0.02)
+    """A worker claims first, and may be seconds from saying it runs."""
+    assert epoch.claim()
+
+    assert beats.wake(beats.newest())
+
+    assert epoch.worked()
+    epoch.set_status(Status.FINISHED)
+
+
+def test_an_epoch_told_it_ended_by_another_process_is_let_go_by_the_thread(
+    epoch: EpochStore, beats: _Beats
+) -> None:
     epoch.set_status(Status.RUNNING)
-    # Said to have ended by the scheduler, as for a worker that died, which is
-    # another process: this one's heartbeat must not write the lease back.
+    # Said to have ended by a process stopped before it let go: this one's thread
+    # must not go on holding it.
     ended = epoch.manifest().model_copy(update={"status": Status.INTERRUPTED})
     epoch.objects.put(
         f"{epoch.run_id}/{epoch.epoch}/manifest.json", ended.model_dump_json().encode()
     )
-    epoch.objects.delete(_lease(epoch))
+    assert epoch.worked()
 
-    time.sleep(0.2)
+    assert not beats.wake(beats.newest())
 
     assert not epoch.worked()
-    assert epoch.objects.get(_lease(epoch)) is None
 
 
 def test_a_lease_that_is_not_one_is_not_believed(epoch: EpochStore) -> None:
-    epoch.objects.put(_lease(epoch), b"not json")
+    epoch.objects.put(f"{epoch.run_id}/{epoch.epoch}/{leases.CLAIMS}/00000000.json", b"not json")
 
     assert not epoch.worked()
+    assert epoch.claim()
+    epoch.let_go()
 
 
 def test_a_thread_that_wakes_on_an_epoch_queued_again_leaves_it_free_for_a_worker(
@@ -178,7 +222,7 @@ def test_a_thread_that_wakes_on_an_epoch_queued_again_leaves_it_free_for_a_worke
 
     assert not beats.wake(old)
 
-    assert epoch.objects.get(_lease(epoch)) is None
+    assert not epoch.worked()
     assert workers.check_resumable(epoch) == 0.0
 
 
@@ -190,35 +234,40 @@ def test_a_thread_that_wakes_on_a_new_holders_lease_leaves_it_as_it_is(
     _ended_and_queued(epoch)
     epoch.set_status(Status.RUNNING)
     new = beats.newest()
-    theirs = epoch.objects.get(_lease(epoch))
+    theirs = epoch.objects.get(_claim(epoch))
 
     assert not beats.wake(old)
-    assert epoch.objects.get(_lease(epoch)) == theirs
+    assert epoch.objects.get(_claim(epoch)) == theirs
 
     # And the new holder is not put off by it.
     assert beats.wake(new)
-    written = epoch.objects.get(_lease(epoch))
-    assert written is not None and theirs is not None
-    assert json.loads(written)["holder"] == json.loads(theirs)["holder"]
-    assert _refreshed_at(epoch) >= json.loads(theirs)["refreshed_at"]
+    assert epoch.claimed()
+    assert theirs is not None and _refreshed_at(epoch) >= json.loads(theirs)["refreshed_at"]
 
 
-def _told_as_it_writes(
-    monkeypatch: pytest.MonkeyPatch, before: Callable[[], None], after: Callable[[], None]
+def test_a_thread_stopped_before_its_write_takes_nothing_from_the_holder_after_it(
+    tmp_path: Path, beats: _Beats
 ) -> None:
-    """What happens around a thread's next write, once it has read the store."""
-    real = leases._write
+    objects = _Stopped(tmp_path)
+    first = EpochStore.create(objects, _manifest())
+    second = EpochStore(FolderStore(tmp_path), "run", 0)
+    first.set_status(Status.RUNNING)
+    old = beats.newest()
 
-    def writes(objects: ObjectStore, home: str, holder: str) -> None:
-        before()
-        real(objects, home, holder)
-        after()
+    def ended_and_taken_by_another() -> None:
+        _ended_and_queued(second)
+        second.set_status(Status.RUNNING)
 
-    monkeypatch.setattr(leases, "_write", writes)
+    objects.before = ended_and_taken_by_another
 
+    # It has written, too late, and looks again at its next beat.
+    beats.wake(old)
+    new = beats.newest()
+    assert not beats.wake(old)
 
-def _nothing() -> None:
-    pass
+    assert beats.wake(new)
+    assert second.worked()
+    second.set_status(Status.FINISHED)
 
 
 @pytest.mark.parametrize(
@@ -226,75 +275,68 @@ def _nothing() -> None:
     [lambda epoch: epoch.set_status(Status.INTERRUPTED), _ended_and_queued],
     ids=["ended", "ended and queued again"],
 )
-def test_an_epoch_that_ends_just_before_its_lease_is_written_is_left_with_none(
-    epoch: EpochStore,
-    beats: _Beats,
-    monkeypatch: pytest.MonkeyPatch,
-    told: Callable[[EpochStore], None],
+@pytest.mark.parametrize("when", ["before", "after"])
+def test_an_epoch_that_ends_as_its_claim_is_written_is_left_with_none_believed(
+    tmp_path: Path, beats: _Beats, told: Callable[[EpochStore], None], when: str
 ) -> None:
+    objects = _Stopped(tmp_path)
+    epoch = EpochStore.create(objects, _manifest())
     epoch.set_status(Status.RUNNING)
     thread = beats.newest()
-    _told_as_it_writes(monkeypatch, lambda: told(epoch), _nothing)
+    setattr(objects, when, lambda: told(EpochStore(FolderStore(tmp_path), "run", 0)))
 
-    assert not beats.wake(thread)
+    beats.wake(thread)
 
     assert not epoch.worked()
-    assert epoch.objects.get(_lease(epoch)) is None
+    assert not beats.wake(thread)
+    assert not epoch.worked()
 
 
-def test_an_epoch_that_ends_just_after_its_lease_is_written_is_left_with_none(
-    epoch: EpochStore, beats: _Beats, monkeypatch: pytest.MonkeyPatch
+def test_a_thread_finding_its_epoch_ended_does_not_let_go_of_a_claim_another_has_taken(
+    tmp_path: Path, beats: _Beats
 ) -> None:
+    objects = _Stopped(tmp_path)
+    epoch = EpochStore.create(objects, _manifest())
     epoch.set_status(Status.RUNNING)
     thread = beats.newest()
-    _told_as_it_writes(monkeypatch, _nothing, lambda: epoch.set_status(Status.INTERRUPTED))
+    another = EpochStore(FolderStore(tmp_path), "run", 0)
+
+    def taken_over() -> None:
+        written = json.loads(epoch.objects.get(_claim(epoch)) or b"{}")["refreshed_at"]
+        assert another.claim(now=written + leases.EXPIRES_AFTER_S + 1)
+
+    # Ended by a process stopped before it let go, and claimed as the thread lets go.
+    ended = epoch.manifest().model_copy(update={"status": Status.INTERRUPTED})
+    objects.put("run/0/manifest.json", ended.model_dump_json().encode())
+    objects.before = taken_over
 
     assert not beats.wake(thread)
 
-    assert epoch.objects.get(_lease(epoch)) is None
+    assert another.claimed() and another.worked()
+    another.let_go()
 
 
-def test_a_thread_finding_its_epoch_ended_does_not_clear_a_lease_another_has_taken(
-    epoch: EpochStore, beats: _Beats, monkeypatch: pytest.MonkeyPatch
+def test_a_lease_from_before_claims_is_believed_and_goes_when_the_epoch_is_let_go(
+    epoch: EpochStore,
 ) -> None:
-    epoch.set_status(Status.RUNNING)
-    thread = beats.newest()
-    theirs = json.dumps({"refreshed_at": time.time(), "holder": "another"}).encode()
-    _told_as_it_writes(
-        monkeypatch,
-        lambda: epoch.set_status(Status.INTERRUPTED),
-        lambda: epoch.objects.put(_lease(epoch), theirs),
-    )
-
-    assert not beats.wake(thread)
-
-    assert epoch.objects.get(_lease(epoch)) == theirs
-
-
-def test_a_lease_of_the_format_before_holders_is_believed_and_no_thread_writes_it(
-    epoch: EpochStore, beats: _Beats
-) -> None:
-    epoch.set_status(Status.RUNNING)
-    thread = beats.newest()
     written = time.time()
     old_format = json.dumps({"refreshed_at": written}).encode()
-    epoch.objects.put(_lease(epoch), old_format)
+    epoch.objects.put(_old_lease(epoch), old_format)
 
     assert epoch.worked(now=written + leases.EXPIRES_AFTER_S)
     assert not epoch.worked(now=written + leases.EXPIRES_AFTER_S + 1)
-    assert not beats.wake(thread)
-    assert epoch.objects.get(_lease(epoch)) == old_format
 
     # An epoch that is carried on from it is refused while it is believed.
     epoch.set_status(Status.INTERRUPTED)
-    epoch.objects.put(_lease(epoch), old_format)
+    epoch.objects.put(_old_lease(epoch), old_format)
     with pytest.raises(Conflict, match="worked by a process still"):
         workers.check_resumable(epoch)
+    assert not epoch.claim()
+    # And not after it has expired.
+    assert epoch.claim(now=written + leases.EXPIRES_AFTER_S + 1)
 
-    # And whoever takes the epoch up writes over it.
-    epoch.set_status(Status.RUNNING)
-    taken = epoch.objects.get(_lease(epoch))
-    assert taken is not None and "holder" in json.loads(taken)
+    epoch.set_status(Status.FINISHED)
+    assert epoch.objects.get(_old_lease(epoch)) is None
 
 
 def test_an_epoch_carried_on_is_taken_by_its_worker_whenever_an_old_thread_wakes(
@@ -341,6 +383,6 @@ def test_an_epoch_carried_on_is_taken_by_its_worker_whenever_an_old_thread_wakes
             assert ended.value.code == 0
             assert not goes_on
             assert epoch.manifest().status == Status.FINISHED
-            assert epoch.objects.get(_lease(epoch)) is None
+            assert not epoch.worked()
         finally:
             scheduling.close()

@@ -278,6 +278,9 @@ class _Elsewhere:
     def put(self, name: str, data: bytes) -> None:
         self._held[name] = data
 
+    def create(self, name: str, data: bytes) -> bool:
+        return self._held.setdefault(name, data) is data
+
     def get(self, name: str) -> bytes | None:
         return self._held.get(name)
 
