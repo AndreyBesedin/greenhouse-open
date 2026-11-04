@@ -76,12 +76,15 @@ function ForkLevels({
   onFork,
   onPutBack,
   noFork = null,
+  from = null,
 }: {
   asked: Readonly<Record<string, number>>;
   onFork: () => void;
   onPutBack: () => void;
   /** Why no fork can be made at the moment shown, if none can. */
   noFork?: string | null;
+  /** The moment the fork takes, if the transport reads another. */
+  from?: string | null;
 }) {
   const none = Object.keys(asked).length === 0;
   return (
@@ -95,7 +98,7 @@ function ForkLevels({
       </p>
       {noFork !== null && <p className="targets-note">{noFork}</p>}
       <button type="button" disabled={none || noFork !== null} onClick={onFork}>
-        Fork from here with these levels
+        Fork from {from ?? "here"} with these levels
       </button>
       <button type="button" disabled={none} onClick={onPutBack}>
         Put them back
@@ -182,6 +185,7 @@ export function ScenarioPanels({
     onFork: () => void;
     onPutBack: () => void;
     noFork?: string | null;
+    from?: string | null;
   };
   /** The run followed as it plays, whose plan lane the timeline draws
    * (P13.8). */
@@ -362,6 +366,7 @@ export function ScenarioPanels({
             followed={source.follow === true}
             forking={replayed}
             noFork={forkLevels?.noFork ?? null}
+            forkFrom={forkLevels?.from ?? null}
             onSet={onTargets}
           />
         )}

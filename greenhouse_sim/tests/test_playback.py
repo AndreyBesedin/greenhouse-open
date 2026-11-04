@@ -432,7 +432,7 @@ def test_a_run_that_cannot_be_worked_out_is_the_simulator_s_failure(
     monkeypatch.setattr("greenhouse_sim.services.playback.delivered_between", refused)
     other = Playback(simulator, SCENARIO, clock=clock)
     assert not other.work_day(0)
-    with pytest.raises(NotFound):
+    with pytest.raises(PlaybackFailed, match="no such run"):
         other.state()
 
 

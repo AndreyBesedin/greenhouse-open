@@ -44,6 +44,7 @@ export function TargetsPanel({
   followed,
   forking = false,
   noFork = null,
+  forkFrom = null,
   onSet,
 }: {
   /** The thermostat at the moment drawn, with its setpoints then; null
@@ -57,6 +58,8 @@ export function TargetsPanel({
   forking?: boolean;
   /** Why no fork can be made at the moment drawn, if none can. */
   noFork?: string | null;
+  /** The moment the fork takes, if the transport reads another. */
+  forkFrom?: string | null;
   /** Sets the targets changed, by name, in °C. */
   onSet: (targets: Record<string, number>) => void;
 }) {
@@ -76,6 +79,7 @@ export function TargetsPanel({
           followed={followed}
           forking={forking}
           noFork={noFork}
+          forkFrom={forkFrom}
           onSet={onSet}
         />
       )}
@@ -89,6 +93,7 @@ function TargetsForm({
   followed,
   forking,
   noFork,
+  forkFrom,
   onSet,
 }: {
   thermostat: ThermostatAt;
@@ -96,6 +101,7 @@ function TargetsForm({
   followed: boolean;
   forking: boolean;
   noFork: string | null;
+  forkFrom: string | null;
   onSet: (targets: Record<string, number>) => void;
 }) {
   const [day, setDay] = useState(String(thermostat.dayC));
@@ -115,7 +121,7 @@ function TargetsForm({
     return given !== "" && value >= LOWEST_C && value <= HIGHEST_C;
   });
   const from = forking
-    ? "in a fork of this run, from its next minute"
+    ? `in a fork of this run, from ${forkFrom ?? "its next minute"}`
     : followed
       ? "from the run's next minute"
       : `from ${describeTime(settingMoment(time))}`;

@@ -27,10 +27,10 @@ takes one checks first that it is still there.
   run. Its sensors and its run's id stay its own airflow's, so that no run or record
   changes. The sensor lab, the one packaged house with sensors and no equipment, reads
   its prescribed gradient on purpose, about 8 °C from the climate drawn beside it.
-- [ ] **Low: a built house with sensors and no equipment.** Its climate run and its sensors
+- [x] **Low: a built house with sensors and no equipment.** Its climate run and its sensors
   read two different airs, as the sensor lab's do, but nothing in such a house says the
-  gradient was meant. Decide what its sensors read, and keep the packaged houses' runs and
-  records as they are.
+  gradient was meant. A scenario that is not packaged now reads its climate run, under a
+  climate run's name, and the packaged houses' runs and records stay as they are.
 
 ### Low to medium
 
@@ -47,7 +47,8 @@ takes one checks first that it is still there.
 - [x] A paused playback stays "Running".
 - [x] Progress means two different things on the same page. At `bf8758ae` a row's bar and
   its words both say the days computed, on the start page and in the dialog.
-- [ ] A saved draft is not on the start page.
+- [x] A saved draft is not on the start page. The card to build a scenario lists the latest three,
+  each opening in the builder, and no list when none is saved.
 - [x] `GET /playback` shows a red 404 in the console on a first run. None in the third
   walk: not on `/view` of any of the seven scenarios, nor on a first run from the dialog.
 - [x] Close drops the keyboard focus. Fix in #528. A dialog opened by the address has
@@ -68,7 +69,7 @@ takes one checks first that it is still there.
 
 - [x] The green test cube shows behind an error.
 - [x] "before day one is not available" is awkward wording.
-- [ ] The wind label shows through the light panel, and faintly through the dark one.
+- [x] The wind label shows through the light panel, and faintly through the dark one.
 - [ ] The console reports the deprecation of `THREE.Clock`, from `@react-three/fiber`.
 - [x] The console reports a 404 for `favicon.ico`.
 
@@ -162,14 +163,14 @@ pale text.
   epoch 0" with no word of the layout.
 - [x] At phone width the builder's page is 463 px wide in a window of 390: the pane that draws
   the house lies to the right of the form.
-- [ ] A panel's fork takes the moment it shows, by design, so under load *Fork from here with
+- [x] A panel's fork takes the moment it shows, by design, so under load *Fork from here with
   these levels* at a transport reading Day 2, 24:00 forked from Day 1, 24:00, the field still
   on its way. The subtitle then says so.
-- [ ] A playback that failed, until it is started again, answers every reader with a 500 and no
+- [x] A playback that failed, until it is started again, answers every reader with a 500 and no
   words. `GET /consumer/v1/runs` then lists no run at all, of any scenario, since it asks each
   playback kept for its state. By the code, the viewer's panel says "the simulator answered 500"
-  and has no start button, though a start now plays the run again. Why it failed is the `reason`
-  of its epoch in the store's answers, which no page of the viewer reads.
+  and has no start button, though a start now plays the run again. It now answers 409 with its
+  epoch's `reason`, the list leaves it out, and the panel says why and offers to play it again.
 
 ## Not covered by the walk
 

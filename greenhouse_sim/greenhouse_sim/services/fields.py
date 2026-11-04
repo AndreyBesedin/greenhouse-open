@@ -227,18 +227,22 @@ def air_through_a_run(
 ) -> tuple[Callable[[float], EnvironmentField], str]:
     """A run's air at each of its moments, as its sensors read it, asked as
     its climate field is, and refused as it is, with the run's identity: its
-    climate's, if its layout places equipment; otherwise its own airflow, the
-    same at every moment, however its climate run stands. Run ids and what
-    was recorded under them rest on that choice, so it tests the layout, not
-    whether the run has a climate, which every run has."""
+    climate's, if its layout places equipment or its scenario is not packaged;
+    otherwise, a packaged layout that places none, its own airflow, the same at
+    every moment, however its climate run stands. The packaged scenarios' run
+    ids and what was recorded under them rest on that choice, so it tests the
+    layout and where the scenario came from, not whether the run has a climate,
+    which every run has."""
     scenario_id = run.scenario_id
     name = run.layout or DEFAULT_LAYOUT
     asked, climate = _asked(simulator, run)
     air = grid(simulator.catalogue, scenario_id)
+    entry = simulator.catalogue.entry(scenario_id)
+    packaged = entry is not None and entry.packaged
     # A run of a scenario is told apart by what it is made of, whatever
     # drives its air: a manifest or a layout changed, such as its weather or
     # its heater, makes another run.
-    if asked.layout.equipment:
+    if asked.layout.equipment or not packaged:
         day = climate_day(simulator, climate.key)
         config = changed(
             simulator.catalogue,

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { refusal } from "../builder/api";
 import { contractCheck } from "../loadJson";
 import { PLAYBACK_SCHEMA } from "./generated/playbackSchema";
 import type { PlaybackState as ServedPlayback } from "./generated/playbackTypes";
@@ -10,6 +11,8 @@ import type { CropCommand, ScheduledCommand, TargetChange } from "./source";
 const POLL_MS = 1000;
 const MINUTE_S = 60;
 const NOT_FOUND = 404;
+// What the simulator answers of a playback that failed, until a start plays it again.
+const FAILED = 409;
 
 /**
  * A scenario's own run played back against one clock (P10.2, decision
@@ -50,6 +53,7 @@ export type PlaybackLoad =
   | { status: "loading" }
   | { status: "unstarted" }
   | { status: "unavailable"; reason: string }
+  | { status: "failed"; reason: string }
   | { status: "loaded"; state: PlaybackState };
 
 export type PlaybackCommand = "play" | "pause" | "restart";
@@ -110,9 +114,12 @@ export async function loadPlayback(
   return answered(response);
 }
 
-/** The playback's state a response says, or why it says none: its status,
- * or a body that is not the state, or not JSON at all. */
+/** The playback's state a response says, or why it says none: it failed, and
+ * why, or its status, or a body that is not the state, or not JSON at all. */
 async function answered(response: Response): Promise<PlaybackLoad> {
+  if (response.status === FAILED) {
+    return { status: "failed", reason: await refusal(response) };
+  }
   if (!response.ok) {
     return { status: "unavailable", reason: `the simulator answered ${response.status}` };
   }

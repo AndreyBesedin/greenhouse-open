@@ -253,12 +253,10 @@ def default_epochs() -> Epochs:
     return Epochs(root, legacy=root.parent / "playback-epochs")
 
 
-class PlaybackFailed(RuntimeError):
-    """A playback's run could not be worked out, unexpectedly: a failure of
-    the simulator's, not of a request, answered and logged as such."""
-
-    def __init__(self, run_id: str) -> None:
-        super().__init__(f"the playback of {run_id} could not work its run out")
+class PlaybackFailed(Conflict):
+    """Why a playback's run could not be worked out, as its epoch keeps it
+    (`failure_reason`), answered to whoever reads the playback until a start plays
+    the run again. The failure itself is logged once, as it happens."""
 
 
 class PlaybackCommand(StrEnum):
@@ -1159,10 +1157,12 @@ class Playback:
         except Stopped:
             return False
         except Exception as error:
+            logger.exception("the playback of %s failed", self.run_id)
             with self._lock:
                 self._failure = error
             return False
         if not run.plan.actions and run_id != self.run_id:
+            logger.error("the playback of %s worked out another run: %s", self.run_id, run_id)
             with self._lock:
                 self._failure = RuntimeError(f"its run is another now: {run_id}")
             return False
@@ -1260,9 +1260,7 @@ class Playback:
 
     def _state(self) -> PlaybackState:
         if self._failure is not None:
-            if isinstance(self._failure, ServiceError):
-                raise self._failure
-            raise PlaybackFailed(self.run_id) from self._failure
+            raise PlaybackFailed(failure_reason(self._failure)) from self._failure
         planned = self._executor.plan()
         return PlaybackState(
             scenario_id=self.scenario_id,
@@ -1287,6 +1285,12 @@ class Playback:
         with self._lock:
             self._advance()
             return self._state()
+
+    def standing(self) -> PlaybackState | None:
+        """Where it stands, as `state` says, or None if it failed."""
+        with self._lock:
+            self._advance()
+            return None if self._failure is not None else self._state()
 
     def has_epoch(self, run_id: str, epoch: int) -> bool:
         """Whether this is the epoch it plays. Asked of every playback kept, and

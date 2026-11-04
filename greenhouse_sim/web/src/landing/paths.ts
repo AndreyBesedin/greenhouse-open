@@ -107,3 +107,22 @@ export function newRunScenario(hash: string): string | null {
     return null;
   }
 }
+
+const DRAFT = "#draft=";
+
+/** The builder, opened on a saved draft. */
+export function draftAddress(draftId: string): string {
+  return `${BUILDER_PATH}${DRAFT}${encodeURIComponent(draftId)}`;
+}
+
+/** The draft an address's fragment asks the builder to open, if it does. */
+export function draftAsked(hash: string): string | null {
+  if (!hash.startsWith(DRAFT) || hash.length === DRAFT.length) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(hash.slice(DRAFT.length));
+  } catch {
+    return null;
+  }
+}

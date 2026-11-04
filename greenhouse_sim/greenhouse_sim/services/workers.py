@@ -199,15 +199,24 @@ def check_resumable(epoch: EpochStore) -> float:
 
 def scenario_file_of(simulator: Simulator, epoch: EpochStore) -> str | None:
     """The scenario file a worker of this epoch is to read: the one it names,
-    which must be there, or none if its scenario is packaged. An epoch started
-    before epochs named one is given it now if this simulator knows its
-    scenario as the run it is, so that its id never moves; else a worker could
-    not run it, and it is refused, saying why."""
+    which must be there and read as the run the epoch is, or none if its scenario
+    is packaged. An epoch started before epochs named one is given it now if this
+    simulator knows its scenario as the run it is, so that its id never moves;
+    else a worker could not run it, and it is refused, saying why."""
     manifest = epoch.manifest()
     which = f"epoch {epoch.epoch} of {epoch.run_id}"
+    asked = RunRequest(manifest.scenario_id, layout=manifest.layout, seed=manifest.seed)
     if manifest.scenario_file is not None:
         if epoch.objects.size(scenario_files.kept_name(manifest.scenario_file)) is None:
             raise Conflict(f"{which}: the scenario file it names is gone from the store")
+        # As its worker will read it, with nothing else, which would fail on another run.
+        with Simulator() as worker:
+            scenario_files.take_up(worker, epoch.objects, manifest.scenario_file)
+            if air_through_a_run(worker, asked)[1] != manifest.run_id:
+                raise Conflict(
+                    f"{which}: its scenario's file is now another run, and it cannot be "
+                    "carried on: its run is to be asked for again as a new epoch"
+                )
         return manifest.scenario_file
     entry = simulator.catalogue.entry(manifest.scenario_id)
     if entry is None:
@@ -217,7 +226,6 @@ def scenario_file_of(simulator: Simulator, epoch: EpochStore) -> str | None:
         )
     if entry.packaged:
         return None
-    asked = RunRequest(manifest.scenario_id, layout=manifest.layout, seed=manifest.seed)
     if air_through_a_run(simulator, asked)[1] != manifest.run_id:
         raise Conflict(
             f"{which} keeps no file of its scenario {manifest.scenario_id!r}, which this "

@@ -100,8 +100,10 @@ class Reads(Protocol):
 
 
 def runs(reads: Reads) -> RunList:
-    """The runs a consumer can follow: every playback started."""
-    return RunList(runs=tuple(run_descriptor(found.state()) for found in reads.playbacks.all()))
+    """The runs a consumer can follow: every playback started, but one that
+    failed, which says why to whoever reads it by its run."""
+    standing = (found.standing() for found in reads.playbacks.all())
+    return RunList(runs=tuple(run_descriptor(state) for state in standing if state is not None))
 
 
 def _played(reads: Reads, run_id: str) -> Playback:
