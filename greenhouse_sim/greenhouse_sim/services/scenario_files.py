@@ -67,6 +67,8 @@ KEPT_FOLDER: Final = "scenarios/"
 FILE_SUFFIX: Final = ".json"
 # What a scenario's file is called when it is downloaded.
 DOWNLOAD_SUFFIX: Final = ".scenario.json"
+# What an upload that is neither kind of file is told, in a person's words.
+NEITHER_KIND: Final = "not a scenario file or a house file"
 
 
 class ScenarioDownload(BaseModel):
@@ -159,9 +161,10 @@ def upload(simulator: Simulator, text: str) -> ScenarioUploaded | InstallationUp
         is_installation = holds_an_installation(text)
     except ScenarioFileError as error:
         raise InvalidRequest(
-            f"not a scenario file or a house file: {error.message}",
-            [(error.field, error.message)],
+            f"{NEITHER_KIND}: {error.message}", [(error.field, error.message)]
         ) from None
+    if is_installation is None:
+        raise InvalidRequest(f"{NEITHER_KIND}, which the builder's Download buttons make")
     if is_installation:
         return InstallationUploaded(assessed=assess(text))
     uploaded = _registered(simulator, text)

@@ -273,6 +273,7 @@ def test_an_installation_file_uploaded_leaves_a_draft_of_its_identifier_as_it_is
             json.loads(text)["name"],
         )
         assert again.status == HTTPStatus.CONFLICT
+        assert "change this one's identifier" in str(again.body)
 
 
 def test_a_malformed_installation_file_gets_the_builders_refusal_naming_the_field() -> None:
@@ -287,23 +288,31 @@ def test_a_malformed_installation_file_gets_the_builders_refusal_naming_the_fiel
 
 
 @pytest.mark.parametrize(
-    ("text", "said"),
-    [
-        ('{"schema_version": 7, "name": "A note"}', "this file has neither"),
-        ('{"greenhouse_id": null, "installation_id": null}', "this file has neither"),
-        ("[]", "not a JSON object"),
-        ("my house", "not JSON"),
-    ],
-    ids=["neither", "both empty", "a list", "not json"],
+    "text",
+    ['{"schema_version": 7, "name": "A note"}', '{"greenhouse_id": null, "installation_id": null}'],
+    ids=["neither", "both empty"],
 )
-def test_a_file_of_neither_kind_is_told_what_it_needs_to_be(text: str, said: str) -> None:
+def test_a_json_file_of_neither_kind_is_refused_in_plain_words(text: str) -> None:
     with Simulator() as receiver:
         status, body = _upload(receiver, text)
 
     assert status == HTTPStatus.BAD_REQUEST
-    assert body["error"].startswith("not a scenario file or a house file: ")
-    assert said in body["error"]
-    assert "None" not in body["error"]
+    assert body["error"] == (
+        "not a scenario file or a house file, which the builder's Download buttons make"
+    )
+
+
+@pytest.mark.parametrize(
+    ("text", "said"),
+    [("[]", "not a JSON object"), ("my house", "not JSON")],
+    ids=["a list", "not json"],
+)
+def test_a_file_that_cannot_be_read_says_why(text: str, said: str) -> None:
+    with Simulator() as receiver:
+        status, body = _upload(receiver, text)
+
+    assert status == HTTPStatus.BAD_REQUEST
+    assert body["error"] == f"not a scenario file or a house file: {said}"
 
 
 def test_a_file_naming_both_is_read_as_a_scenario_and_refused_for_the_other_name() -> None:

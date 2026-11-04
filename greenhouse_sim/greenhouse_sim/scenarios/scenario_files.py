@@ -195,23 +195,18 @@ def import_scenario_file(text: str) -> ScenarioFile:
     return ScenarioFile(config, recording, short_digest(canonical, DIGEST_LENGTH))
 
 
-def holds_an_installation(text: str) -> bool:
+def holds_an_installation(text: str) -> bool | None:
     """Whether an uploaded file is an installation's, not a scenario's, as each
     names what it holds: a scenario by its `greenhouse_id`, and a house by its
-    `installation_id`. Refused if it is too large, not JSON or names neither.
-    A file naming both is a scenario's, whose reader refuses the other field."""
+    `installation_id`; None if it names neither. Refused if it is too large or
+    not JSON. A file naming both is a scenario's, whose reader refuses the other
+    field."""
     if len(text.encode("utf-8")) > MAX_IMPORT_BYTES:
         raise ScenarioFileError("", f"larger than {MAX_IMPORT_BYTES} bytes")
     document = _parsed(text)
     if document.get(_SCENARIO_ID_KEY) is not None:
         return False
-    if document.get(_INSTALLATION_ID_KEY) is not None:
-        return True
-    raise ScenarioFileError(
-        "",
-        f"a scenario file names its scenario in {_SCENARIO_ID_KEY}, and a house file "
-        f"its house in {_INSTALLATION_ID_KEY}; this file has neither",
-    )
+    return True if document.get(_INSTALLATION_ID_KEY) is not None else None
 
 
 def _models(config: ScenarioConfig) -> dict[str, JsonValue]:

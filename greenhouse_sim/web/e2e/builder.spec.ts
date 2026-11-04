@@ -133,7 +133,7 @@ test("builder: a house drafted, edited, saved, exported, run, reopened and impor
   // A draft of that identifier is kept: renamed, it is saved as another.
   await expect(status).toHaveText(
     `Imported The test house from ${download.suggestedFilename()}; not saved yet. ` +
-      `A draft ${id} is kept already: rename this one to save it.`,
+      `A draft with the identifier ${id} is kept already: change this one's identifier to save it.`,
     ARRIVES,
   );
   await expect(page.getByTestId("builder-draft")).toHaveText(`The test house (${id}), not saved`);
