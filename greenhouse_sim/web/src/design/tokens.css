@@ -61,7 +61,8 @@
 }
 
 /* Sizes, the same in both themes: the scales the stylesheet mostly used already
- * (P19). `--target` is what a pointer or a finger is given to hit. */
+ * (P19). `--target` is what a pointer or a finger is given to hit, and
+ * `--target-compact` the least a dense panel gives it (WCAG 2.2's 2.5.8). */
 :root {
   --font-xs: 12px;
   --font-sm: 13px;
@@ -77,6 +78,7 @@
   --radius-xl: 12px;
   --radius-pill: 999px;
   --target: 44px;
+  --target-compact: 24px;
   --space-1: 2px;
   --space-2: 4px;
   --space-3: 6px;

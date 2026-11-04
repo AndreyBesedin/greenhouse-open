@@ -1,6 +1,7 @@
 /* Every stylesheet, in the order of the cascade (decision 0068). */
 @import "./design/tokens.css";
 @import "./design/base.css";
+@import "./design/components.css";
 
 /* The 3D view fills the window; panels float over it. */
 .viewer {

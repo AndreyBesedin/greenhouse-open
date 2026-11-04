@@ -16,7 +16,8 @@ interface IconProps {
  * What every icon of the viewer is drawn in: in the colour of the text beside
  * it, so that it follows the light and dark themes, and hidden from assistive
  * technology, since an icon is decoration and its button or link is named by
- * its words. An icon that stands alone, with no words, is not made with this.
+ * its words. An icon that stands alone, with no words, is in an `IconButton`, whose
+ * `label` names it.
  */
 export function Icon({ children, viewBox, style, size = ICON_SIZE_PX }: IconProps) {
   const drawn =
