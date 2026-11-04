@@ -61,9 +61,7 @@ def _run(levels: dict[str, float]) -> ClimateRun:
     )
 
 
-def test_a_scenario_with_equipment_offers_its_climate_and_others_do_not(
-    simulator: Simulator,
-) -> None:
+def test_every_scenario_offers_its_climate(simulator: Simulator) -> None:
     assert fields.field_names(simulator, "climate_box") == [
         "uniform",
         "buoyancy",
@@ -71,8 +69,8 @@ def test_a_scenario_with_equipment_offers_its_climate_and_others_do_not(
         "climate",
         "shear",
     ]
-    assert "climate" not in fields.field_names(simulator, "tomato_compartment")
-    assert "climate" not in fields.field_names(simulator, "airflow_box")
+    assert "climate" in fields.field_names(simulator, "tomato_compartment")
+    assert "climate" in fields.field_names(simulator, "airflow_box")
 
 
 def test_at_its_start_with_everything_off_the_air_is_still_at_its_starting_temperature(
@@ -166,7 +164,6 @@ def test_a_run_on_another_grid_or_solid_cells_is_refused() -> None:
         ("climate_box/fields/climate?set=boiler:1", "climate_box has no equipment 'boiler'"),
         ("climate_box/fields/climate?set=fan:2", "a level runs from 0 to 1: fan"),
         ("tomato_compartment/fields/shear?set=fan:1", "tomato_compartment has no equipment 'fan'"),
-        ("tomato_compartment/fields/climate", None),
         (
             "climate_box/fields/climate?t=-1",
             "a run of climate_box lasts from 0 to 1209600 s, its 14 days, not -1",
@@ -177,7 +174,7 @@ def test_a_run_on_another_grid_or_solid_cells_is_refused() -> None:
         ),
         ("climate_box/fields/climate?t=soon", "t wants seconds, not 'soon'"),
     ],
-    ids=["unknown", "above full", "none there", "no climate", "before", "after", "not a time"],
+    ids=["unknown", "above full", "none there", "before", "after", "not a time"],
 )
 def test_levels_a_scenario_cannot_run_are_refused(
     simulator: Simulator, path: str, error: str | None

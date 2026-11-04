@@ -2,7 +2,7 @@
 
 Dependabot proposes each release from one place; the other follows by hand
 on its pull request, which fails here until it does and says what to move
-(docs/roadmap/README.md, Dependabot).
+(docs/dependency-updates.md).
 """
 
 import json

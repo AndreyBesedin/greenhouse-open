@@ -15,6 +15,9 @@ import {
 // epoch is still being computed.
 const POLL_MS = 1000;
 const LOADING: PositionLoad = { status: "loading" };
+/** Why a replay stands still once the simulator has let its position go: positions
+ * are held in its memory, and the page's names none after it has started again. */
+export const POSITION_LOST = "the simulator has started again and no longer holds this replay";
 
 /** Whether an epoch is still being computed. */
 function isComputing(status: string): boolean {
@@ -48,6 +51,8 @@ export function useReplay(
   const [load, setLoad] = useState<PositionLoad>(LOADING);
   // Why the latest seek, command or pace did nothing, if it was refused.
   const [refused, setRefused] = useState<string | null>(null);
+  // Whether the simulator has let the position go: nothing more can be asked of it.
+  const [lost, setLost] = useState(false);
   // Counts what has been asked of the replay shown: each change of the replay,
   // and each seek, command or pace. An answer counts only if nothing was asked
   // after the question it answers.
@@ -57,6 +62,7 @@ export function useReplay(
   const waiting = useRef(0);
   const positionId = load.status === "loaded" ? load.position.position_id : null;
   const moving =
+    !lost &&
     load.status === "loaded" &&
     (load.position.playing || load.position.following || isComputing(load.position.status));
 
@@ -67,6 +73,7 @@ export function useReplay(
     waiting.current = 0;
     setLoad(LOADING);
     setRefused(null);
+    setLost(false);
     // Not aborted once asked: a position the simulator has opened is closed,
     // however late its answer comes.
     void openPosition(runId, epoch, fetchFn).then(async (answer) => {
@@ -109,9 +116,15 @@ export function useReplay(
       const since = asked.current;
       void askPosition(positionId, fetchFn, { signal: controller.signal }).then(
         (answer) => {
-          // A failed look is made again; the last good state stays. A look
-          // that began before something was asked, or that comes back while
+          // A failed look is made again and the last good state stays, unless
+          // the simulator no longer has the position, which no look brings back.
+          // A look that began before something was asked, or that comes back while
           // something asked waits, may say less than the page knows.
+          if (answer.status === "unavailable" && answer.gone && !controller.signal.aborted) {
+            setLost(true);
+            setRefused(POSITION_LOST);
+            return;
+          }
           if (
             answer.status === "loaded" &&
             !controller.signal.aborted &&

@@ -6,14 +6,18 @@ import type { PositionState } from "../scene/generated/positionTypes";
 export type { PositionState };
 
 /** A position over a stored epoch, as the simulator says it stands, or why it
- * cannot be said (P17.4, decision 0065). */
+ * cannot be said (P17.4, decision 0065). `gone` says the simulator does not know
+ * what was asked for, as once it has started again, rather than that it could not
+ * answer just then. */
 export type PositionLoad =
   | { status: "loading" }
-  | { status: "unavailable"; reason: string }
+  | { status: "unavailable"; reason: string; gone?: boolean }
   | { status: "loaded"; position: PositionState };
 
 /** What a viewer asks a position to do. */
 export type PositionCommand = "play" | "pause" | "follow";
+
+const NOT_FOUND = 404;
 
 const checkPosition = contractCheck<PositionState>(POSITION_SCHEMA, "the position");
 
@@ -28,7 +32,11 @@ function positionUrl(positionId: string, action = "", query = ""): string {
 /** The position in an answer, checked rather than trusted. */
 async function read(response: Response): Promise<PositionLoad> {
   if (!response.ok) {
-    return { status: "unavailable", reason: await refusal(response) };
+    return {
+      status: "unavailable",
+      reason: await refusal(response),
+      ...(response.status === NOT_FOUND ? { gone: true } : {}),
+    };
   }
   let body: unknown;
   try {

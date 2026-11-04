@@ -355,3 +355,25 @@ test("followed, a level set in the Equipment panel steers the run played back, t
     ).not.toHaveCount(0);
   });
 });
+
+test("a followed house without equipment is drawn in its climate, nothing refused", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  const refused: string[] = [];
+  page.on("response", (response) => {
+    if (response.status() === 404 && /\/(fields\/climate|climate\/)/.test(response.url())) {
+      refused.push(response.url());
+    }
+  });
+  await page.goto("/?scenario=airflow_box&field=climate&follow=1");
+
+  await expect(page).toHaveURL(/field=climate/, ARRIVES);
+  await expect(
+    page.getByRole("region", { name: "Run played back" }).getByTestId("playback-status"),
+  ).toContainText(/Following run airflow_box-uniform-|not played back yet/, ARRIVES);
+  await expect(page.getByTestId("field-status")).toContainText("airflow_box_climate", ARRIVES);
+  await expect(page.getByTestId("main-view")).not.toHaveAttribute("data-light", "fixed");
+  await expect(page.getByTestId("climate-failed")).toHaveCount(0);
+  expect(refused).toEqual([]);
+});

@@ -173,8 +173,8 @@ test("builder: a draft saved and a run of it started in one step, on a worker, i
     )
     .toBeGreaterThan(0);
   await expect(page.getByTestId("replay-status")).toHaveText(/Running|Finished/);
-  // A house with no equipment has no climate field: the view draws none, and no
-  // moment of the run is said not to be drawn.
+  // A house with no equipment has a climate run as any other: the replay draws it,
+  // and no moment of the run is said not to be drawn.
   await expect(page.getByTestId("climate-failed")).toHaveCount(0);
   await expect(page.getByText("cannot be read")).toHaveCount(0);
 });
