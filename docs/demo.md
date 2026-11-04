@@ -223,25 +223,53 @@ memory until it stops.
 
 ## Recording the demo video
 
-The walk-through is also a browser test, `greenhouse_sim/web/e2e/demo.spec.ts`,
-which CI runs after the other day-by-day tests. On a machine with a
-graphics card, after `uv run setup`:
+The README's video is under a minute and shows the main features only, for
+someone who has never seen them, each under a short caption:
+
+1. the whole house with its crop, on day 86, its first frame;
+2. the start page: a scenario searched for, its dialog, and a new run with
+   the seed left grey, the scenario's own;
+3. that run on a worker, followed at its newest day, and the replay of a run
+   computed earlier: its timeline, its days, the house and the crop changing,
+   and the panels' climate;
+4. a fork, its question answered, and a run stopped and resumed;
+5. the builder: a house laid out.
+
+It is a browser test, `greenhouse_sim/web/e2e/readme-demo.spec.ts`, which CI runs
+after the other day-by-day tests, on a replay of two days. On a machine with
+a graphics card, after `uv run setup`:
 
 ```bash
 uv run record-demo
 ```
 
-plays it with a caption on each step, lingering on each, and records it as
-video under `greenhouse_sim/web/test-results/demo/`, so that each release can
-record it again. The recording starts with the page, blank until the house
-is drawn; the walk-through notes when its opening shot is ready, the house
-and its crop in view, and the command cuts the recording from there with
-ffmpeg, at twice the speed, into `greenhouse-open-<version>.mp4`, and saves
-its first frame as a PNG beside it. GitHub shows a README's video by its
-first frame until it plays, so that frame should show the whole house.
+first has a worker compute 88 days of the reference greenhouse (about eleven
+minutes), before the video begins, so that the video waits on no worker. It
+then plays the walk-through, lingering on each step, in about two minutes,
+and records it as video under `greenhouse_sim/web/test-results/demo/`. It runs
+on a store of its own, so that nothing of the machine's own runs or drafts is
+shown; `DEMO_STORE=<a folder>` keeps that store, and the days computed in it,
+for the next recording. The recording starts with the page, blank until the
+house is drawn; the walk-through notes when its opening shot is ready, the
+house and its crop in view, and the command cuts the recording from there with
+ffmpeg, at twice the speed, into `greenhouse-open-<version>.mp4`, and saves its
+first frame as a PNG beside it. GitHub shows a README's video by its first
+frame until it plays, so that frame should show the whole house. The command
+refuses a cut over 60 s.
 
 GitHub plays a video in the README only when it hosts it, an MP4 or WebM
 uploaded through an issue or a pull request, under 10 MB, and the upload is
-done by hand. A release records it from its own branch and uploads it to its
-pull request (decision 0045, and the release skill,
+done by hand. A release that records it does so from its own branch and
+uploads it to its pull request (decision 0045, and the release skill,
 `.claude/skills/release/SKILL.md`).
+
+The long video on YouTube, which the README links, was recorded from 0.5.0: the
+final QA of P09, the twelve steps above, each held under its caption. That
+walk-through is `greenhouse_sim/web/e2e/p09-final-qa.spec.ts`, still a browser
+test. To record it again, from `greenhouse_sim/web`, with `PYTHON` naming the
+simulator's interpreter:
+
+```bash
+DEMO_SPEC=p09-final-qa.spec.ts DEMO_PAUSE_MS=3000 \
+  ./node_modules/.bin/playwright test --config playwright.demo.config.ts
+```

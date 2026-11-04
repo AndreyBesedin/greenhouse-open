@@ -5,7 +5,7 @@ recorded again with each release since. The acceptance criteria are met.
 The README plays the short cut of the final QA's walk-through, and links
 the whole of it, at its own pace, on YouTube by its thumbnail, as section
 9 plans. The walk-through also runs in CI as a browser test
-(`e2e/demo.spec.ts`), checking one visible result a step rather than
+(`e2e/p09-final-qa.spec.ts`), checking one visible result a step rather than
 every check the final QA lists. Part of the
 [simulator roadmap](README.md).
 
@@ -876,7 +876,8 @@ starts both and stops both; the video's script runs as a browser test.
   at noon on its opening day; a port in use is said with what to do; and,
   where the viewer's packages are installed, the command itself starts the
   API and the viewer and stops both (slow).
-- **The demo's script** (`e2e/demo.spec.ts`): the final QA's twelve steps,
+- **The demo's script** (`e2e/p09-final-qa.spec.ts`, since the README's video
+  became a shorter one, `docs/demo.md`): the final QA's twelve steps,
   walked through in the viewer on the reference greenhouse, each step
   captioned and its visible result checked: from the scenario list to day
   80's noon; its dimensions; dawn to the sun's noon; the air as arrows and
