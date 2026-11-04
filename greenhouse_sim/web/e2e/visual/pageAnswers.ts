@@ -36,7 +36,7 @@ const SCENARIOS: ScenarioSummary[] = [
   },
 ];
 
-const RUN: StoredRun = {
+export const RUN: StoredRun = {
   run_id: RUN_ID,
   epoch: EPOCH,
   scenario_id: SCENARIO_ID,
