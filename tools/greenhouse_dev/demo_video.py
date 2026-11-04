@@ -1,6 +1,6 @@
 """The demo's video as the README plays it, cut from what Playwright records.
 
-Playwright records the walk-through (`greenhouse_sim/web/e2e/demo.spec.ts`)
+Playwright records the walk-through (`greenhouse_sim/web/e2e/readme-demo.spec.ts`)
 from the moment its page opens, blank until the house is drawn, and GitHub
 shows a README's video by its first frame until it plays. The walk-through
 writes, beside its recording, when its opening shot is ready; the cut
@@ -54,7 +54,7 @@ def opening_s(recording: Path) -> float:
     walk-through wrote it beside the video."""
     mark = recording.parent / OPENING_MARK
     if not mark.is_file():
-        raise Uncut(f"No {OPENING_MARK} beside {recording}: was it recorded by demo.spec.ts?")
+        raise Uncut(f"No {OPENING_MARK} beside {recording}: was it recorded by a walk-through?")
     return float(json.loads(mark.read_text())[OPENING_FIELD])
 
 

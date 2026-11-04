@@ -93,7 +93,7 @@ and what it changes, never anyone's plans, events or deadlines.
 - Write the section's opening paragraph of step 4 above its entries.
 - The roadmap: mark Done only the steps that the merged work completes,
   in `docs/roadmap/README.md` and in the project's own document.
-- The walk-through, `greenhouse_sim/web/e2e/demo.spec.ts`: it shows the main
+- The walk-through, `greenhouse_sim/web/e2e/readme-demo.spec.ts`: it shows the main
   features only, under a minute. When the release adds a main feature, give
   it a step and a caption, in place of what matters less. When the walk-through
   changed, run it as a browser test before recording.
@@ -133,7 +133,7 @@ what the release holds and is named for its version.
    the house, its climate, each plant organ by organ". A blank page, a loading
    message, or the house without plants means the cut came too early. Do not
    upload it. Find what the opening shot did not wait for (the mark is written
-   in `demo.spec.ts` once the view is drawn), fix that, and record again.
+   in `readme-demo.spec.ts` once the view is drawn), fix that, and record again.
 3. Look at a few frames through the video as well (the command is in
    `references/commands.md`). Each caption should sit on the view it names.
 4. The command refuses a video over 10 MB, the most GitHub takes as an

@@ -12,7 +12,7 @@ import {
   testPort,
 } from "./simulatorApi.ts";
 
-// The README's demo video: the short walk-through (`e2e/demo.spec.ts`),
+// The README's demo video: the short walk-through (`e2e/readme-demo.spec.ts`),
 // recorded by Playwright as it plays, on this machine's graphics card, so
 // that a release can record it again (`npm run demo:record`). The video is
 // written under `test-results/demo/`, where `uv run record-demo` cuts it for
@@ -23,7 +23,7 @@ const OWN_PREVIEW_PORT = 4320;
 const PREVIEW_PORT = testPort(OWN_PREVIEW_PORT);
 const VIEW = { width: 1280, height: 720 };
 // The walk-through to record: DEMO_SPEC, to record the long one (docs/demo.md).
-const WALK_THROUGH = process.env.DEMO_SPEC ?? "demo.spec.ts";
+const WALK_THROUGH = process.env.DEMO_SPEC ?? "readme-demo.spec.ts";
 // What is recorded is kept in a folder of its own, never the user's: their runs
 // and drafts are not for a video. DEMO_STORE names one to keep between
 // recordings, with the run the walk-through replays already computed in it.

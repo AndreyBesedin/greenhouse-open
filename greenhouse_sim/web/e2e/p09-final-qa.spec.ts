@@ -9,7 +9,7 @@ import { unfold } from "./folds";
 // tour of the reference greenhouse: the long video recorded from 0.5.0. As a
 // browser test it runs on its own, after the other day-by-day specs, and it
 // can be recorded again (docs/demo.md). The README's short video is
-// `demo.spec.ts`'s.
+// `readme-demo.spec.ts`'s.
 
 const ARRIVES = { timeout: 180_000 };
 const HOUR_S = 3_600;

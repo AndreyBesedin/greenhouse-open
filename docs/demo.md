@@ -235,7 +235,7 @@ someone who has never seen them, each under a short caption:
 4. a fork, its question answered, and a run stopped and resumed;
 5. the builder: a house laid out.
 
-It is a browser test, `greenhouse_sim/web/e2e/demo.spec.ts`, which CI runs
+It is a browser test, `greenhouse_sim/web/e2e/readme-demo.spec.ts`, which CI runs
 after the other day-by-day tests, on a replay of two days. On a machine with
 a graphics card, after `uv run setup`:
 

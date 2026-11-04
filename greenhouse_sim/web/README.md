@@ -276,7 +276,7 @@ the numbers, and CI, which has no graphics card, does not run it
 
 ## The demo
 
-`e2e/demo.spec.ts` walks through the main features, the README's video of
+`e2e/readme-demo.spec.ts` walks through the main features, the README's video of
 under a minute (`docs/demo.md`), as a browser test; `e2e/p09-final-qa.spec.ts`
 walks through P09's final QA on the reference greenhouse, step by step.
 `uv run record-demo`, from the repository's root (`npm run demo:record` here,

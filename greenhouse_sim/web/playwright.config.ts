@@ -57,7 +57,7 @@ const ONE_BY_ONE = [
   "worker-runs.spec.ts",
   // P09.9's final QA, walked through whole, and the README's short demo, last of all.
   "p09-final-qa.spec.ts",
-  "demo.spec.ts",
+  "readme-demo.spec.ts",
 ];
 
 interface Stage {
