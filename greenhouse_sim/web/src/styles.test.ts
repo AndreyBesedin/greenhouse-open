@@ -380,8 +380,8 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
 // prints here, in its own diff, where review sees them; a token step must not.
 // It goes when selectors start to move (P19.6), and the page baselines hold.
 const RESOLVED_DIGESTS = {
-  dark: "787d415ab5699b007703e701156b35dbbf4b3c97f240542270a17d8a7ad1aa2a",
-  light: "3fe562ededfd568017bb8fcdc2ee0b57813e495cac5a7faadffb163b38f19389",
+  dark: "12b8474de97aa87f7cb13535624693605272631f6235d3789a153d9405876693",
+  light: "4a143acca93963a7091649861e07e9d6cd93552abbbe1f1b4fd3c0aa7e2572a2",
 };
 type ThemeName = keyof typeof RESOLVED_DIGESTS;
 const COMMENT = /\/\*[\s\S]*?\*\//g;
@@ -440,6 +440,14 @@ function outsideTheTokens(stylesheet: string): string[] {
   );
   return [...inRoot, ...elsewhere];
 }
+
+describe("a button that cannot be pressed", () => {
+  it.each([".replay-button", ".landing-button"])("looks so, as %s", (selector) => {
+    const rule = new RegExp(`\\${selector}:disabled\\s*\\{([^}]*)\\}`).exec(STYLES)?.[1] ?? "";
+    expect(rule).toMatch(/opacity:/);
+    expect(rule).toMatch(/cursor:\s*not-allowed/);
+  });
+});
 
 describe("the stylesheet with its tokens resolved (P19.1)", () => {
   const written = `
