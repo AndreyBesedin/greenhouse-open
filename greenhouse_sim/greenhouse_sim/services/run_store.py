@@ -79,7 +79,7 @@ INSTANT_DIGITS: Final = 16
 SEQ_DIGITS: Final = 8
 _PARTIAL: Final = ".partial"
 _INHERITED_OUTCOMES: Final = "inherited/outcomes.jsonl"
-_USAGE: Final = "usage.json"
+USAGE: Final = "usage.json"
 # How much is drawn to tell apart two requests asked in one nanosecond.
 REQUEST_TOKEN_BYTES: Final = 4
 # The instant instants are counted from in a segment's file.
@@ -302,8 +302,10 @@ class EpochUsage(BaseModel):
 
     The last two are none if no process of its own ever worked the epoch: a
     playback in the API's process or a caller's `execute` shares that process
-    with other work, whose figures are not the epoch's. An epoch resumed that
-    had none, or was worked partly so, counts only the workers that reported."""
+    with other work, whose figures are not the epoch's, and a report given to an
+    epoch kept before reports were written (`usage_reports`) cannot know them. None
+    is not zero: no one measured. An epoch resumed that had none, or was worked
+    partly so, counts only the workers that reported."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -694,7 +696,7 @@ class EpochStore:
         """How many bytes the epoch's objects hold, those `listed` of it if
         they have just been, the report of what it used aside."""
         names = self.objects.names(f"{self._home}/") if listed is None else listed
-        report = f"{self._home}/{_USAGE}"
+        report = f"{self._home}/{USAGE}"
         return sum(self.objects.size(name) or 0 for name in names if name != report)
 
     def usage(self) -> EpochUsage | None:
@@ -702,7 +704,7 @@ class EpochStore:
         epoch has before its first commit or from before they were written, or
         one that cannot be read, which is a report and fails nothing."""
         try:
-            data = self.objects.get(f"{self._home}/{_USAGE}")
+            data = self.objects.get(f"{self._home}/{USAGE}")
             return None if data is None else EpochUsage.model_validate_json(data)
         except OSError, ValidationError:
             logger.warning("the report of what %s used cannot be read", self._home, exc_info=True)
@@ -720,10 +722,15 @@ class EpochStore:
         been read. A report that cannot be written is logged and ends nothing:
         the disk that refuses it refuses the next commit too, and that says so."""
         try:
-            usage = self._usage_now(self.commits() if commits is None else commits)
-            self.objects.put(f"{self._home}/{_USAGE}", usage.model_dump_json().encode())
+            self.write_usage(self.commits() if commits is None else commits)
         except Exception:
             logger.warning("what %s used could not be reported", self._home, exc_info=True)
+
+    def write_usage(self, commits: Sequence[Commit]) -> None:
+        """Writes what the epoch has used through `commits`, and raises if it
+        cannot, for a caller with nothing else to do (`usage_reports`)."""
+        usage = self._usage_now(commits)
+        self.objects.put(f"{self._home}/{USAGE}", usage.model_dump_json().encode())
 
     def _usage_now(self, commits: Sequence[Commit]) -> EpochUsage:
         fork = self.manifest().fork
@@ -786,6 +793,13 @@ class EpochStore:
         written = sum(name.startswith(f"{self._home}/commits/") for name in held)
         next_commit = f"{self._home}/commits/{len(commits):0{SEQ_DIGITS}d}.json"
         return written > len(commits) and next_commit not in held
+
+    def damaged(self, commits: Sequence[Commit]) -> bool:
+        """Whether an object `commits`, just read, name is missing (`lacks`): one
+        listing of the epoch's objects, which is what a list does not afford and
+        anything that takes up one epoch does."""
+        listed = self.objects.names(f"{self._home}/")
+        return self.lacks(self.manifest(), commits, listed)
 
     def log(self) -> list[LogEntry]:
         """The changes given to the epoch up to the last commit."""
@@ -1015,7 +1029,7 @@ class EpochStore:
         kept = {
             f"{self._home}/manifest.json",
             f"{self._home}/interventions.jsonl",
-            f"{self._home}/{_USAGE}",
+            f"{self._home}/{USAGE}",
         }
         kept.add(f"{self._home}/{_INHERITED_OUTCOMES}")
         fork = self.manifest().fork
@@ -1186,7 +1200,8 @@ def _listed(objects: ObjectStore, run_id: str, manifest: EpochManifest) -> Store
     """One epoch of a list: from its report, if its folders agree with it. If
     they do not, or it has none, it is walked: one is behind a crash, or has lost
     something, and one from before reports were written costs what it always
-    did, since nothing else knows its size."""
+    did, since nothing else knows its size and a list writes nothing, until a
+    command gives it a report (`usage_reports`)."""
     epoch = EpochStore(objects, run_id, manifest.epoch)
     usage = epoch.usage()
     if usage is None or not epoch.holds_as_counted(usage):

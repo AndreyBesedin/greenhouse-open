@@ -4,6 +4,7 @@ of walking; what its figures mean across a resume and a fork; and a reason a
 client may read."""
 
 import errno
+import hashlib
 import json
 import os
 import subprocess
@@ -30,6 +31,7 @@ from greenhouse_sim.services.run_store import (
     EpochManifest,
     EpochStore,
     FolderStore,
+    ForkOf,
     Status,
     StoreCorrupt,
     StoredRun,
@@ -40,7 +42,15 @@ from greenhouse_sim.services.run_store import (
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scheduler import Scheduler
 from greenhouse_sim.services.simulator import Simulator
-from greenhouse_sim.services.workers import Free, Paced, Stepped, execute, queued, resume
+from greenhouse_sim.services.workers import (
+    Free,
+    Paced,
+    Stepped,
+    check_resumable,
+    execute,
+    queued,
+    resume,
+)
 
 # A worker starts from nothing and imports what it is told to run by name, so
 # that the module is put where its process finds it.
@@ -528,6 +538,85 @@ def test_a_file_lost_from_a_days_folder_is_seen_when_the_epoch_is_opened(
             runs_kept.open_position(simulator, "run_a", 0)
         answered = respond(simulator, "POST", "/api/runs/run_a/epochs/0/positions")
         assert answered.status == HTTPStatus.CONFLICT
+
+
+def _interrupted_fork(root: Path) -> EpochStore:
+    """A fork that inherits a state and a log, interrupted before its first commit."""
+    state = b"the state it inherits"
+    fork = EpochStore(FolderStore(root), "run_a", 0)
+    fork.write_fork(
+        EpochManifest(
+            run_id="run_a",
+            epoch=0,
+            scenario_id="s",
+            layout="default",
+            status=Status.INTERRUPTED,
+            fork=ForkOf(
+                run_id="run_p",
+                epoch=0,
+                at_s=DAY_S,
+                start_s=DAY_S,
+                digest="a",
+                checkpoint_sha256=hashlib.sha256(state).hexdigest(),
+            ),
+        ),
+        state=state,
+        log=(),
+        outcomes=(),
+    )
+    return fork
+
+
+def _interrupted(root: Path) -> EpochStore:
+    store = _epoch(root)
+    store.commit(0.0, DAY_S, checkpoint=b"first")
+    store.commit(DAY_S, 2 * DAY_S, checkpoint=b"second")
+    store.commit(2 * DAY_S, 3 * DAY_S, checkpoint=b"third")
+    store.set_status(Status.INTERRUPTED)
+    return store
+
+
+@pytest.mark.parametrize(
+    ("make", "lost"),
+    [
+        (_interrupted, "segments/0000000000000000-0000086400000000/events.parquet"),
+        (_interrupted, "commits/00000001.json"),
+        (_interrupted, "checkpoints/0000086400000000.json.zst"),
+        (_interrupted_fork, "checkpoints/0000086400000000.json.zst"),
+    ],
+)
+def test_an_epoch_with_a_file_lost_is_refused_when_it_is_asked_to_go_on(
+    tmp_path: Path, make: Callable[[Path], EpochStore], lost: str
+) -> None:
+    """Its last commit, which a resume reads, may be whole: it would work days
+    out for an epoch that still cannot be read. Refused in words, and the store
+    as it was, before anything a crash left is tidied up."""
+    store = make(tmp_path)
+    objects = store.objects
+    objects.delete(f"run_a/0/{lost}")
+    held = sorted(objects.names("run_a/0/"))
+
+    with Simulator(runs=objects) as simulator:
+        answered = respond(simulator, "POST", "/api/runs/run_a/epochs/0/resume")
+        with pytest.raises(Conflict, match="files of run run_a, epoch 0 are missing"):
+            scheduler.resume(simulator, "run_a", 0)
+        with pytest.raises(Conflict, match="files of run run_a, epoch 0 are missing"):
+            resume(simulator, store)
+
+    assert answered.status == HTTPStatus.CONFLICT and isinstance(answered.body, dict)
+    assert "files of run run_a, epoch 0 are missing" in str(answered.body["error"])
+    assert store.manifest().status == Status.INTERRUPTED
+    assert sorted(objects.names("run_a/0/")) == held
+
+
+def test_what_a_crash_leaves_is_not_a_file_lost(tmp_path: Path) -> None:
+    """A last commit gone, and a day's objects written with no commit: both are
+    an epoch at the commit before, which goes on from there."""
+    store = _interrupted(tmp_path)
+    store.objects.delete("run_a/0/commits/00000002.json")
+    store.objects.delete("run_a/0/segments/0000172800000000-0000259200000000/events.parquet")
+
+    assert check_resumable(store) == 2 * DAY_S
 
 
 def test_a_last_commit_lost_is_an_epoch_at_the_commit_before_as_a_crash_leaves_one(

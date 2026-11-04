@@ -156,7 +156,9 @@ def check_resumable(epoch: EpochStore) -> float:
     """How far the epoch is kept, in seconds, if it can be carried on from
     there; else why it cannot, as a conflict. An epoch is carried on from the
     checkpoint of its last commit, which must be one this build reads, for the
-    run its scenario still is."""
+    run its scenario still is. All its commits name must be there: a list counts
+    folders and can miss a lost file, and an epoch carried on past one would stay
+    one that cannot be read whole, its days worked out for nothing."""
     status = epoch.manifest().status
     if status not in (Status.INTERRUPTED, Status.QUEUED):
         raise Conflict(
@@ -165,6 +167,11 @@ def check_resumable(epoch: EpochStore) -> float:
     if epoch.worked():
         raise Conflict(f"epoch {epoch.epoch} of {epoch.run_id} is worked by a process still")
     commits = epoch.commits()
+    if epoch.damaged(commits):
+        raise Conflict(
+            f"files of run {epoch.run_id}, epoch {epoch.epoch} are missing: it cannot be "
+            "carried on, and its run is to be asked for again as a new epoch"
+        )
     if not commits:
         return epoch.start_s()
     last = commits[-1]
