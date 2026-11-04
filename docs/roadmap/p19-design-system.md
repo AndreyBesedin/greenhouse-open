@@ -372,7 +372,7 @@ no digest changed.
 | P19.2 | `design/tokens.css` and `base.css` cut out behind `styles.css`'s imports; the 7 raw colours become `--data-*`, with the test against `WIND_COLOR` and `SUN_COLOR`; the guard on colours everywhere. | neutral | Done: the digests did not move. `--replay-track` and `--replay-hatch`, each used once, went back into their rules. `base.css` holds `html`, `body` and `#root`; `.visually-hidden` stays where it stands until selectors may move (P19.6), since moving it changes the order the digest holds |
 | P19.3 | Colour tokens take their role names. | neutral | Done: the digests did not move, and a test refuses a colour token not named for a role. `--chart-*` keep their names, as the design has it |
 | P19.4 | Type, radii and `--target`; the guard on them, with `OFF_SCALE`; the styles' budget raised. | neutral | Done: the digests did not move. 64 values became tokens: 35 font sizes, 18 radii, 11 minimum sizes. `OFF_SCALE` holds 13 declarations, and the compass's text in its viewBox's units stands beside it. The styles went from 28.20 to 29.11 kB; on a copy with spacing's tokens as well, 31.66 kB, so the budget went to 32 kB, as this step was settled to |
-| P19.5 | Spacing, and the guard on it. Theme: `data-theme` and `design/theme.ts`. | neutral | Done: the digests did not move. 226 values in 187 declarations became `--space-*`. `OFF_SCALE` took 23 more declarations, at 10, 14, 18 and 20 px, and `HAIRLINES_AND_OFFSETS` names 5. `--focus-width` and `--focus-offset` hold the two focus rings and the guard holds `outline*`, the chosen option's outline in `OFF_SCALE`. `design/theme.ts` writes `data-theme`; the key a choice is stored under, the default and the QA pages' light theme did not change. The styles weigh 31.87 kB, against 32 |
+| P19.5 | Spacing, and the guard on it. Theme: `data-theme` and `design/theme.ts`. | neutral | Done: the digests did not move. 227 values in 189 declarations became `--space-*`. `OFF_SCALE` took 23 more declarations, at 10, 14, 18 and 20 px, and `HAIRLINES_AND_OFFSETS` names 5. `--focus-width` and `--focus-offset` hold the two focus rings and the guard holds `outline*`, the chosen option's outline in `OFF_SCALE`. `design/theme.ts` writes `data-theme`; the key a choice is stored under, the default and the QA pages' light theme did not change. The styles weigh 32.72 kB: spacing and the focus tokens, and the columns of a list of runs, which landed beside them. So the budget went to 34 kB, with room for P19.6's `.ds-` rules |
 | P19.6 | `Button`, `LinkButton`, `IconButton`, `.ds-` rules and the guard on them; the reference page, its two baselines and its browser test; the contrast test with today's failures listed. The digest test goes. | neutral: nothing yet uses them | Proposed |
 | P19.7 | `Field`, `StatusChip`, `Notice`, `Fold`, on the reference page. | neutral | Proposed |
 | P19.8 | The landing page: its stylesheet moved in two parts, then its controls moved to components. **After the changes in progress to `RunsDialog.tsx` and the new-run form have merged,** since they touch the same lines. | neutral | Proposed |
@@ -434,7 +434,8 @@ the status of a failed run reads the same with colour removed.
 2. **The panels' browser-drawn look** stays through the neutral steps. Drawing their
    buttons from tokens is a visual step of its own.
 3. **The named visual changes** are taken one by one.
-4. **The styles' budget** goes to about 32 kB in the step that needs it, P19.4.
+4. **The styles' budget** goes to about 32 kB in the step that needs it, P19.4, and
+   to 34 kB in P19.5, when spacing and the columns of a list of runs together cross it.
 
 ## Open questions
 
