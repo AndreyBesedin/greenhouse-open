@@ -410,6 +410,7 @@ export function ScenarioPanels({
             <OpeningControls
               snapshot={snapshot}
               requested={openingsShown}
+              notDrawn={forkLevels?.asked}
               fold={fold("openings")}
               onChange={(asked) =>
                 steering === undefined
@@ -422,6 +423,7 @@ export function ScenarioPanels({
             <EquipmentControls
               snapshot={snapshot}
               requested={levelsShown}
+              notDrawn={forkLevels?.asked}
               thermostat={thermostat}
               fold={fold("equipment")}
               onChange={(asked) =>

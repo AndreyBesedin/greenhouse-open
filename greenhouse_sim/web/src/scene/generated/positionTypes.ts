@@ -29,6 +29,7 @@ export interface PositionState {
   duration_s: number | null;
   start_s: number;
   fork: ForkOf | null;
+  parent_kept: boolean;
   targets: [number, string, number][];
   commands: [number, string, number][];
   crop: [number, string, string, string][];

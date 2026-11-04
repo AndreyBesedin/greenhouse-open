@@ -1,5 +1,5 @@
 import type { Fold } from "./folds";
-import { formatValue, onAndRest } from "./readouts";
+import { formatValue, onAndRest, setBeside } from "./readouts";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { PERCENT } from "./units";
 
@@ -54,12 +54,16 @@ export function describeOpenings(openings: readonly OpeningState[]): string {
 export function OpeningControls({
   snapshot,
   requested,
+  notDrawn = {},
   fold,
   onChange,
 }: {
   snapshot: SceneSnapshot;
   /** The fractions asked for, which a slider shows until the scene catches up. */
   requested: Readonly<Record<string, number>>;
+  /** Those of them no scene will catch up with, as in a stored run: the reading,
+   * still of the scene, says them beside it. */
+  notDrawn?: Readonly<Record<string, number>> | undefined;
   fold: Fold;
   onChange: (openings: Record<string, number>) => void;
 }) {
@@ -88,6 +92,7 @@ export function OpeningControls({
               />
               <span data-testid={`opening-${openingId}`}>
                 {Math.round(fraction * PERCENT)}%, {formatValue(apertureM2)} m²
+                {setBeside(notDrawn[openingId], fraction)}
               </span>
             </label>
           );

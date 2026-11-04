@@ -156,10 +156,11 @@ class Scheduler:
         there is room. An epoch the store still calls `running` whose producer
         is gone is found interrupted first, under the lock the epoch is queued
         under, so that two requests for it are told apart: the second finds
-        the epoch queued. Refused, as `workers.check_resumable` and
+        the epoch queued. With no driver it goes on at the pace it was asked
+        for, which its manifest holds. Refused, as `workers.check_resumable` and
         `workers.scenario_file_of` say, if it cannot be; the store is not
         changed by a refusal."""
-        pace = _pace(driver)
+        asked_pace = _pace(driver)
         key = (run_id, epoch)
         if epoch not in stored_epochs(self._objects, run_id):
             raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
@@ -177,6 +178,7 @@ class Scheduler:
                 )
             check_resumable(kept)
             scenario_file = scenario_file_of(self._simulator, kept)
+            pace = kept.manifest().seconds_per_day if driver is None else asked_pace
             kept.queue_again(scenario_file=scenario_file, seconds_per_day=pace)
             self._waiting.append(_Job(run_id, epoch, resuming=True))
             self._launch()
@@ -372,7 +374,8 @@ def start(
 def resume(
     simulator: Simulator, run_id: str, epoch: int, *, seconds_per_day: float | None = None
 ) -> StoredRun:
-    """An interrupted epoch asked to be carried on (`Scheduler.resume`)."""
+    """An interrupted epoch asked to be carried on (`Scheduler.resume`): at
+    `seconds_per_day`, or at the pace it was asked for."""
     driver = None if seconds_per_day is None else Paced(seconds_per_day)
     return of(simulator).resume(run_id, epoch, driver=driver)
 

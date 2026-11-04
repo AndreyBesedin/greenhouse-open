@@ -9,6 +9,7 @@ import {
   formatSize,
   framesPerSecond,
   onAndRest,
+  setBeside,
 } from "./readouts";
 
 describe("HUD readouts", () => {
@@ -50,6 +51,15 @@ describe("the renderer's diagnostics", () => {
   it("adds the heap only where the browser reports it", () => {
     expect(formatMemory(5, 1, null)).toBe("5 geometries, 1 textures");
     expect(formatMemory(5, 1, 10 * 1_048_576)).toBe("5 geometries, 1 textures, 10 MiB heap");
+  });
+});
+
+describe("a level set beside what the scene drawn reads", () => {
+  it("says the level set, unless none is or it is the one drawn", () => {
+    expect(setBeside(1, 0)).toBe(", set to 100%");
+    expect(setBeside(0, 0.5)).toBe(", set to 0%");
+    expect(setBeside(undefined, 0.5)).toBe("");
+    expect(setBeside(0.5, 0.5)).toBe("");
   });
 });
 

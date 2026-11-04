@@ -86,9 +86,11 @@ export interface ViewState {
   byCategory: boolean;
   cfdBoundaries: boolean;
   dimensions: boolean;
-  /** The kinds the scene holds, and its equipment's categories; null while
-   * the empty view is shown. */
+  /** The kinds the scene holds, and its equipment's categories; null without
+   * a scene. */
   kinds: ReadonlySet<SceneEntityKind | EquipmentCategory> | null;
+  /** Whether the empty view's axes and cube are drawn: no scene was asked for. */
+  emptyView: boolean;
   /** How long the world axes are drawn, in metres: the scene's own, or the
    * empty view's; null when none are drawn. */
   axesLengthM: number | null;
@@ -249,7 +251,7 @@ export function seenInTheView(view: ViewState): Seen {
  * in their own colours unless a colour mode puts its own on them
  * (`SceneView`'s `shownColor`); or, before a scene, a cube for scale. */
 function always(view: ViewState): SeenRow[] {
-  const { kinds, axesLengthM, byCategory, colourBy } = view;
+  const { kinds, emptyView, axesLengthM, byCategory, colourBy } = view;
   const rows: SeenRow[] = [
     {
       key: "grid",
@@ -259,6 +261,10 @@ function always(view: ViewState): SeenRow[] {
       meaning: `${GRID_SIZE_M} m across, in ${GRID_SIZE_M / GRID_DIVISIONS} m cells.`,
     },
   ];
+  // A scene on its way, or one that could not be drawn: the grid alone.
+  if (kinds === null && !emptyView) {
+    return rows;
+  }
   if (axesLengthM !== null) {
     rows.push({
       key: "axes",
