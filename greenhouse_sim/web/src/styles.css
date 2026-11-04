@@ -1397,6 +1397,21 @@
   overflow-wrap: anywhere;
 }
 
+/* What lies behind a card over the view stays a tint: a label over the scene is
+ * a page element under the panels, and unblurred its words read among the card's. */
+.viewer-panels
+  :is(
+    .info-panel,
+    .hud,
+    .inspector,
+    .category-legend,
+    .scalar-legend,
+    .controls-help,
+    .seen-in-the-view
+  ) {
+  backdrop-filter: blur(8px);
+}
+
 /* A scrollable dock leaves the upper view free for orbiting and picking.
  * Panels participate in normal flow, so adding an inspector or legend does
  * not cover another panel. Every control remains reachable by scrolling. */
