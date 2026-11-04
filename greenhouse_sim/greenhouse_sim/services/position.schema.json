@@ -88,7 +88,7 @@
       "type": "string"
     }
   },
-  "description": "Where a position stands over its epoch: the epoch, the moment, both as\nan instant and as seconds into the run (as the viewer asks for a moment),\nwhether it plays or follows, how far the epoch is committed, and the\nchanges given to it, as its plan holds them, spelled as a run's `&targets=`,\n`&schedule=` and `&crop=` write them, for the viewer to draw it under.",
+  "description": "Where a position stands over its epoch: the epoch, the moment, both as\nan instant and as seconds into the run (as the viewer asks for a moment),\nwhether it plays or follows, how far the epoch is committed, whether a playback\nholds the epoch's clock, as the runs listed say, and the changes given to it, as\nits plan holds them, spelled as a run's `&targets=`, `&schedule=` and `&crop=`\nwrite them, for the viewer to draw it under.",
   "properties": {
     "position_id": {
       "title": "Position Id",
@@ -123,6 +123,11 @@
     },
     "status": {
       "$ref": "#/$defs/Status"
+    },
+    "paused": {
+      "default": false,
+      "title": "Paused",
+      "type": "boolean"
     },
     "started_at": {
       "format": "date-time",
@@ -265,6 +270,7 @@
     "layout",
     "seed",
     "status",
+    "paused",
     "started_at",
     "simulated_now",
     "time_s",

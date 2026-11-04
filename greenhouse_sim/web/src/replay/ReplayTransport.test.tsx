@@ -16,6 +16,7 @@ function position(more: Partial<PositionState> = {}): PositionState {
     layout: "default",
     seed: 2,
     status: "running",
+    paused: false,
     started_at: "2026-03-01T00:00:00Z",
     simulated_now: "2026-03-18T06:00:00Z",
     time_s: 17 * DAY_S + 6 * 3600,
@@ -146,6 +147,43 @@ describe("what moves a position over a stored run", () => {
     expect([...pace.options].map((o) => o.textContent)).toContain("7 s a day");
     choose(pace, "30");
     expect(onPace).toHaveBeenCalledWith(30);
+  });
+
+  describe("a run a playback holds", () => {
+    const AT_ITS_FRONTIER = { paused: true, time_s: 41 * DAY_S, frontier_s: 41 * DAY_S };
+
+    it("says so, and offers no play with nothing to come", () => {
+      const { container, onPlay } = shown(position(AT_ITS_FRONTIER));
+
+      expect(said(container, "replay-held")).toContain("holds this run's clock");
+      const play = button(container, "Play");
+      expect(play).toHaveProperty("disabled", true);
+      click(play);
+      expect(onPlay).not.toHaveBeenCalled();
+    });
+
+    it("plays what is kept before its frontier", () => {
+      const { container, onPlay } = shown(position({ paused: true }));
+
+      expect(said(container, "replay-held")).toContain("holds this run's clock");
+      click(button(container, "Play"));
+      expect(onPlay).toHaveBeenCalledOnce();
+    });
+
+    it("can stop waiting at its frontier, once it was playing", () => {
+      const { container, onPause } = shown(position({ ...AT_ITS_FRONTIER, playing: true }));
+
+      click(button(container, "Pause"));
+      expect(onPause).toHaveBeenCalledOnce();
+    });
+
+    it("says nothing of one that no playback holds, and plays at its frontier", () => {
+      const { container, onPlay } = shown(position({ ...AT_ITS_FRONTIER, paused: false }));
+
+      expect(container.querySelector('[data-testid="replay-held"]')).toBeNull();
+      click(button(container, "Play"));
+      expect(onPlay).toHaveBeenCalledOnce();
+    });
   });
 
   it("follows the newest day only while the run is being computed", () => {

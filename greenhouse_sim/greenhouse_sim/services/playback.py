@@ -1670,6 +1670,15 @@ class Playbacks:
         """Every playback started, in the order they were."""
         return [found for _, found in self._store.values()]
 
+    def held(self) -> set[tuple[str, int]]:
+        """The epochs whose clocks they hold, by a pause, each by its run and its
+        number: the store calls those running, and they stand still."""
+        return {
+            (found.run_id, epoch)
+            for found in self.all()
+            if (epoch := found.epoch_held()) is not None
+        }
+
     def retiring(self) -> list[Playback]:
         """The playbacks replaced that are still working a run out: stopped,
         but not waited for, so that their epochs are being written yet."""

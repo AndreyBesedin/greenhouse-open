@@ -26,6 +26,10 @@ export function canFollow(position: PositionState): boolean {
   return position.status === "queued" || position.status === "running";
 }
 
+/** What is said of a run a playback in the viewer holds: nothing here moves it. */
+export const HELD_NOTE =
+  "A playback in the viewer holds this run's clock: nothing more of it is kept until that plays on. Stop it from Other runs to carry it on with a worker.";
+
 /**
  * What moves a position, under the scene (P17.6): a day back, play, a day
  * on, where it stands and how far the epoch is computed, how fast a day
@@ -56,6 +60,9 @@ export function ReplayTransport({
 }) {
   const span = spanOf(position);
   const from = heading ?? position.time_s;
+  // At the frontier of a run a playback holds, nothing comes for it to play over.
+  const nothingToCome = position.paused && position.time_s >= position.frontier_s;
+  const atItsEnd = position.duration_s !== null && position.time_s >= position.duration_s;
   const paceId = useId();
   const paces = PACES_S.includes(position.seconds_per_day)
     ? PACES_S
@@ -65,6 +72,11 @@ export function ReplayTransport({
       {refused !== null && (
         <p role="alert" className="replay-refused">
           That did not reach the run: {refused}. Reload the page to open it again.
+        </p>
+      )}
+      {position.paused && (
+        <p role="status" className="replay-refused" data-testid="replay-held">
+          {HELD_NOTE}
         </p>
       )}
       <div className="replay-controls">
@@ -83,8 +95,9 @@ export function ReplayTransport({
             type="button"
             className="replay-button replay-play"
             aria-label={position.playing ? "Pause" : "Play"}
-            // At the run's end there is nothing to play: it would stop at once.
-            disabled={position.duration_s !== null && position.time_s >= position.duration_s}
+            // At the run's end there is nothing to play: it would stop at once. One
+            // already waiting at a frontier held can still be told to stop waiting.
+            disabled={atItsEnd || (nothingToCome && !position.playing)}
             onClick={position.playing ? onPause : onPlay}
           >
             {position.playing ? (
