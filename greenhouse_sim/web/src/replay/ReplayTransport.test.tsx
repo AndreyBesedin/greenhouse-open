@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DAY_S } from "../clock";
@@ -104,6 +105,30 @@ describe("what moves a position over a stored run", () => {
     click(button(container, "Previous day"));
 
     expect(onSeek.mock.calls).toEqual([[18 * DAY_S + 6 * 3600], [16 * DAY_S + 6 * 3600]]);
+  });
+
+  it("moves from the moment last sought while its answer is on its way, with the handle there", () => {
+    const calls = {
+      onPlay: vi.fn(),
+      onPause: vi.fn(),
+      onFollow: vi.fn(),
+      onSeek: vi.fn(),
+      onPace: vi.fn(),
+    };
+    rendered = render(<ReplayTransport position={position()} heading={DAY_S} {...calls} />);
+    const { container } = rendered;
+
+    click(button(container, "Next day"));
+    click(button(container, "Previous day"));
+    const handle = container.querySelector<HTMLElement>('[data-testid="replay-handle"]');
+    act(() =>
+      handle?.dispatchEvent(new KeyboardEvent("keydown", { key: "PageUp", bubbles: true })),
+    );
+
+    expect(calls.onSeek.mock.calls).toEqual([[2 * DAY_S], [0], [2 * DAY_S]]);
+    expect(handle?.getAttribute("aria-valuenow")).toBe(String(DAY_S));
+    // Where the position is, the moment drawn, is still said as it stands.
+    expect(said(container, "replay-moment")).toBe("Day 18, 06:00");
   });
 
   it("never moves past what is computed", () => {

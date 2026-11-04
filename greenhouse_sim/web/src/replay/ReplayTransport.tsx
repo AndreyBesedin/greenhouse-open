@@ -35,6 +35,7 @@ export function canFollow(position: PositionState): boolean {
 export function ReplayTransport({
   position,
   refused = null,
+  heading = null,
   onPlay,
   onPause,
   onFollow,
@@ -44,6 +45,9 @@ export function ReplayTransport({
   position: PositionState;
   /** Why the latest move did nothing, if it was refused. */
   refused?: string | null;
+  /** The moment last sought, while its answer is on its way: the handle stands
+   * there and the moves go from there, while the words say where the position is. */
+  heading?: number | null;
   onPlay: () => void;
   onPause: () => void;
   onFollow: () => void;
@@ -51,6 +55,7 @@ export function ReplayTransport({
   onPace: (secondsPerDay: number) => void;
 }) {
   const span = spanOf(position);
+  const from = heading ?? position.time_s;
   const paceId = useId();
   const paces = PACES_S.includes(position.seconds_per_day)
     ? PACES_S
@@ -68,7 +73,7 @@ export function ReplayTransport({
             type="button"
             className="replay-button"
             aria-label="Previous day"
-            onClick={() => onSeek(dayAway(position.time_s, -1, span))}
+            onClick={() => onSeek(dayAway(from, -1, span))}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M19 6l-8 6 8 6zM7 6v12h-2V6z" />
@@ -108,7 +113,7 @@ export function ReplayTransport({
             type="button"
             className="replay-button"
             aria-label="Next day"
-            onClick={() => onSeek(dayAway(position.time_s, 1, span))}
+            onClick={() => onSeek(dayAway(from, 1, span))}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M5 6l8 6-8 6zM17 6v12h2V6z" />
@@ -149,7 +154,7 @@ export function ReplayTransport({
           </button>
         )}
       </div>
-      <ReplayTimeline span={span} timeS={position.time_s} onSeek={onSeek} />
+      <ReplayTimeline span={span} timeS={from} onSeek={onSeek} />
     </section>
   );
 }
