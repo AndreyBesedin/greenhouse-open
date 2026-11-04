@@ -30,6 +30,7 @@ from greenhouse_sim.services.run_store import (
     Status,
     StoredRun,
     stored_run,
+    stored_runs,
 )
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.workers import Free, Stepped, execute, queued, resume
@@ -285,6 +286,27 @@ def test_a_stop_of_an_epoch_just_queued_elsewhere_is_kept_for_the_worker_that_ta
     shown = _run_of(answer.body)
     assert shown.status == Status.QUEUED and shown.stopping
     assert epoch.stop_asked()
+
+
+def test_a_list_read_from_an_epochs_report_says_it_is_stopping(tmp_path: Path) -> None:
+    """A list reads an epoch with a report without walking its folder."""
+    objects = FolderStore(tmp_path / "runs")
+    epoch = _epoch(objects, Status.RUNNING)
+    epoch.write_usage([])
+    assert stored_runs(objects)[0].stopping is False
+
+    epoch.ask_to_stop()
+
+    assert stored_runs(objects)[0].stopping is True
+    assert stored_run(objects, epoch.run_id, epoch.epoch).stopping is True
+    epoch.objects.put(
+        f"{epoch.run_id}/{epoch.epoch}/manifest.json",
+        epoch.manifest()
+        .model_copy(update={"status": Status.INTERRUPTED})
+        .model_dump_json()
+        .encode(),
+    )
+    assert stored_runs(objects)[0].stopping is False
 
 
 @pytest.mark.parametrize("status", [Status.FINISHED, Status.FAILED, Status.INTERRUPTED])

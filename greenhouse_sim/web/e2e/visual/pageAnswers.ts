@@ -52,6 +52,10 @@ const RUN: StoredRun = {
   fork: null,
   stopping: false,
   damaged: false,
+  days_computed: 0,
+  cpu_s: null,
+  peak_memory_bytes: null,
+  reason: null,
 };
 
 // Every state a run's status is told in, since each has its own colours.

@@ -19,7 +19,6 @@ import datetime
 import json
 import os
 import platform
-import resource
 import subprocess
 import sys
 from pathlib import Path
@@ -27,6 +26,7 @@ from typing import Final
 
 from greenhouse_sim.scenarios.manifest_files import FIRST_SCENARIO
 from greenhouse_sim.services.benchmark import costs_json, simulator_costs
+from greenhouse_sim.services.resources import peak_memory_bytes
 from greenhouse_sim.services.simulator import Simulator
 
 # The report kept in the repository, beside the package's source: found only
@@ -34,7 +34,6 @@ from greenhouse_sim.services.simulator import Simulator
 CHECKOUT_REPORT: Final = Path(__file__).resolve().parents[1] / "benchmarks" / "simulator.json"
 GIBIBYTE: Final = 1024**3
 MEBIBYTE: Final = 1024**2
-KIBIBYTE: Final = 1024
 # What the CPU is called, where the system says.
 CPU_NAME_TIMEOUT_S: Final = 5.0
 
@@ -72,10 +71,8 @@ def machine() -> dict[str, object]:
 
 
 def peak_memory_mib() -> float:
-    """The most memory the process has held: bytes on macOS, KiB elsewhere."""
-    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    scale = 1 if sys.platform == "darwin" else KIBIBYTE
-    return round(peak * scale / MEBIBYTE, 1)
+    """The most memory the process has held."""
+    return round(peak_memory_bytes() / MEBIBYTE, 1)
 
 
 def report(

@@ -121,7 +121,7 @@ pull request lands, and holds the state of each of its steps.
 | [P15](p15-policy-port.md) | A policy's port, and an experiment that steps a run | Done: final QA passed on 2026-11-01 |
 | [P16](p16-crop-at-its-models-step.md) | A run's crop at its model's step, not the run's day | Done, but for P16.4, deferred until a model takes crop work within its day |
 | [P17](p17-runs-and-playbacks.md) | Runs kept in a store, playbacks as positions, and a place to choose | In progress: P17.1 to P17.9 done, some with parts left; P17.10, its QA, run for what is delivered; P17.11 in progress; [the clean-up](p17-cleanup.md) left |
-| [P18](p18-resources-and-deployment.md) | Resources counted and limited, and a run that can move | In progress: P18.1 done |
+| [P18](p18-resources-and-deployment.md) | Resources counted and limited, and a run that can move | In progress: P18.1 and P18.2 done |
 | [P19](p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | In progress: P19.1 to P19.4 done |
 
 ## Order of work
