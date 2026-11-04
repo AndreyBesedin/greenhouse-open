@@ -169,7 +169,10 @@ export function useReplay(
       }
     });
   }, []);
-  const asks = {
+  return {
+    load,
+    refused,
+    heading,
     command: (command: PositionCommand) => {
       if (positionId !== null) {
         keep(commandPosition(positionId, command, fetchFn));
@@ -177,6 +180,7 @@ export function useReplay(
     },
     seek: (timeS: number) => {
       if (positionId !== null) {
+        setHeading(timeS);
         keep(seekPosition(positionId, timeS, fetchFn));
       }
     },
@@ -184,18 +188,6 @@ export function useReplay(
       if (positionId !== null) {
         keep(paceOfPosition(positionId, secondsPerDay, fetchFn));
       }
-    },
-  };
-  return {
-    load,
-    refused,
-    heading,
-    ...asks,
-    seek: (timeS: number) => {
-      if (positionId !== null) {
-        setHeading(timeS);
-      }
-      asks.seek(timeS);
     },
   };
 }
