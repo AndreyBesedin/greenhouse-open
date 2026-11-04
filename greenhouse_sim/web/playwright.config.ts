@@ -55,7 +55,8 @@ const ONE_BY_ONE = [
   "replay.spec.ts",
   // Two workers at once, which is all a simulator runs by default.
   "worker-runs.spec.ts",
-  // P09.9's demo walks through the whole final QA, last of all.
+  // P09.9's final QA, walked through whole, and the README's short demo, last of all.
+  "p09-final-qa.spec.ts",
   "demo.spec.ts",
 ];
 

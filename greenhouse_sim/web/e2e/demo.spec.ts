@@ -1,346 +1,229 @@
-import { writeFile } from "node:fs/promises";
-import { expect, type Page, test } from "@playwright/test";
-import { VIEWER_PATH } from "../src/landing/paths";
-import { QA_REFERENCE_PATH } from "../src/qa/referencePage.ts";
-import { chooser } from "./chooser";
+import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { BUILDER_PATH, LANDING_PATH, replayTarget, VIEWER_PATH } from "../src/landing/paths";
+import { caption, linger, markOpening, say } from "./demoSteps";
 import { unfold } from "./folds";
 
-// P09.9: the final QA of P09 (docs/demo.md), walked through as one scripted
-// demo of the reference greenhouse. As a browser test it runs on its own,
-// after the other day-by-day specs; `npm run demo:record` records it as a
-// video (playwright.demo.config.ts), lingering on each step for
-// DEMO_PAUSE_MS and captioning it.
+// The README's video: the main features, under a minute at the speed
+// `uv run record-demo` cuts it at (tools/greenhouse_dev/demo_video.py), each
+// under a caption, for someone who has never seen them. Recorded
+// (playwright.demo.config.ts), it lingers for DEMO_PAUSE_MS a step, on a store
+// of its own. As a browser test it lingers on nothing and it checks that each
+// step still shows what its caption names.
 //
-// The video starts with the page, blank until the house is drawn: the
-// moment the opening shot is ready, in seconds into the video, is written
-// beside it as OPENING_MARK, from which `uv run record-demo` cuts it
-// (tools/greenhouse_dev/demo_video.py), so that its first frame, the
-// README's preview, shows the whole house.
+// The replay it shows is of a run a worker computed before the video begins:
+// DEMO_DAYS of it, which take a worker about 7 s each, so that the video waits
+// on no worker and the crop has grown. A browser test makes do with two days.
 
-const PAUSE_MS = Number(process.env.DEMO_PAUSE_MS ?? 0);
+const SCENARIO = "reference_greenhouse";
+const DAYS = Number(process.env.DEMO_DAYS ?? 2);
+const RUN_DAYS = 120;
+const DAY_TAKES_AT_MOST_MS = 60_000;
 const ARRIVES = { timeout: 180_000 };
-const HOUR_S = 3_600;
-const DAY_S = 24 * HOUR_S;
-const CLIMATE_BOX_PLAYBACK = "/api/scenarios/climate_box/playback";
-// The climate box's run lasts 14 days.
-const CLIMATE_BOX_RUN_S = 14 * DAY_S;
-// The camera on the whole reference house, from south-west of it and above:
-// at 1280 × 720 the house stands between the info panel and the HUD,
-// rather than its corner at the world's origin, where the default camera
-// looks.
-const ON_THE_HOUSE = "-5:-14:11,5:4.8:1";
-const STARTED = Date.now();
-const OPENING_MARK = "opening.json";
+// The camera on the whole house, from south-west of it and above, with the
+// panels folded out of its way.
+const ON_THE_HOUSE = "-5.5:-12.5:9.5,5:4.8:1.5";
+// Noon of the day its kept checkpoint opens on, its first with a red fruit.
+const OPENING_S = (86 + 0.5) * 86_400;
+const OPENING_MOMENT = "day 86, 12 h 00 min";
+// How far the wheel brings the view to the house, which a replay frames whole
+// with room around it.
+const CLOSER_PX = -650;
+// Days played, up to the last computed.
+const PLAYED_DAYS = 4;
 
-/** Shows a step's caption over the page, for the video, and lingers on it. */
-async function say(page: Page, caption: string): Promise<void> {
-  console.log(`STEP ${((Date.now() - STARTED) / 1000).toFixed(0)} s: ${caption}`);
-  await page.evaluate((text) => {
-    const shown =
-      document.getElementById("demo-caption") ??
-      document.body.appendChild(
-        Object.assign(document.createElement("div"), { id: "demo-caption" }),
-      );
-    shown.textContent = text;
-    shown.setAttribute(
-      "style",
-      "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:1000;" +
-        "padding:8px 14px;border-radius:6px;background:rgb(0 0 0 / 75%);color:#fff;" +
-        "font:16px system-ui;pointer-events:none",
-    );
-  }, caption);
-  await linger(page);
+interface KeptRun {
+  run_id: string;
+  epoch: number;
+  scenario_id: string;
+  status: string;
+  days_computed: number;
+  fork: unknown;
 }
 
-async function linger(page: Page): Promise<void> {
-  if (PAUSE_MS > 0) {
-    await page.waitForTimeout(PAUSE_MS);
+async function keptRuns(request: APIRequestContext): Promise<KeptRun[]> {
+  return await (await request.get("/api/runs")).json();
+}
+
+function epochPath({ run_id, epoch }: Pick<KeptRun, "run_id" | "epoch">): string {
+  return `/api/runs/${encodeURIComponent(run_id)}/epochs/${epoch}`;
+}
+
+function computing(run: KeptRun): boolean {
+  return run.status === "queued" || run.status === "running";
+}
+
+/** Ends whatever is being computed, which would hold the workers. */
+async function stopAll(request: APIRequestContext): Promise<void> {
+  for (const run of (await keptRuns(request)).filter(computing)) {
+    await request.post(`${epochPath(run)}/stop`);
   }
+  await expect
+    .poll(async () => (await keptRuns(request)).filter(computing).length, ARRIVES)
+    .toBe(0);
 }
 
-test("the reference greenhouse's demo walks through P09's final QA", async ({ page }, testInfo) => {
+/** The run to replay, computed by a worker as far as DEMO_DAYS and stopped; or
+ * the one a store given again already has, without what recordings left there. */
+async function preparedRun(request: APIRequestContext): Promise<KeptRun> {
+  await stopAll(request);
+  const ofScenario = (await keptRuns(request)).filter((run) => run.scenario_id === SCENARIO);
+  const kept = ofScenario.findLast((run) => run.fork === null && run.days_computed >= DAYS);
+  for (const run of ofScenario.filter((each) => each !== kept)) {
+    await request.post(`${epochPath(run)}/delete`);
+  }
+  if (kept !== undefined) {
+    return kept;
+  }
+  const started = await request.post(`/api/scenarios/${SCENARIO}/runs`);
+  expect(started.ok()).toBe(true);
+  const run: KeptRun = await started.json();
+  const daysOf = async () => (await (await request.get(epochPath(run))).json()).days_computed;
+  await expect.poll(daysOf, { timeout: DAYS * DAY_TAKES_AT_MOST_MS }).toBeGreaterThanOrEqual(DAYS);
+  await stopAll(request);
+  return run;
+}
+
+/** Moves the replay to noon of a day (counted from 1), by the pointer on its
+ * timeline, and waits for the scene of that day. */
+async function moveToDay(page: Page, day: number): Promise<void> {
+  const track = page.getByTestId("replay-track");
+  const box = await track.boundingBox();
+  if (box === null) {
+    throw new Error("the replay's timeline is not on the page");
+  }
+  await track.click({
+    position: { x: (box.width * (day - 0.5)) / RUN_DAYS, y: box.height / 2 },
+  });
+  await expect(page.getByTestId("replay-moment")).toHaveText(new RegExp(`^Day ${day}, `), ARRIVES);
+  await expect(page.getByTestId("scene-status")).toContainText(`, day ${day - 1},`, ARRIVES);
+}
+
+let prepared: KeptRun;
+
+test.beforeAll(async ({ request }) => {
+  test.setTimeout(DAYS * DAY_TAKES_AT_MOST_MS * 2);
+  prepared = await preparedRun(request);
+});
+
+test.afterAll(async ({ request }) => {
+  await stopAll(request);
+});
+
+test("the README's demo shows the simulator's main features, each under its caption", async ({
+  page,
+}, testInfo) => {
   // The video started with the page, a moment before the test's body.
   const recording = Date.now();
-  test.setTimeout(900_000);
-  const moment = page.getByTestId("climate-time");
-  const run = page.getByRole("group", { name: "Climate run" });
+  test.setTimeout(600_000);
 
-  // 1. The reference scenario, seed 42, opened on its first day with red fruit.
-  await page.goto(VIEWER_PATH);
-  await say(page, "1. The reference greenhouse, seed 42, from the scenario list");
-  await (await chooser(page)).getByRole("button", { name: "Open reference_greenhouse" }).click();
-  await expect(moment).toHaveText("day 86, 12 h 00 min", ARRIVES);
-  await expect(page.getByTestId("scene-status")).toContainText("day 86,", ARRIVES);
-  await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
-  // The camera on the house from here on: the address keeps it.
-  await page.goto(`${page.url()}&camera=${ON_THE_HOUSE}`);
-  await expect(page.getByTestId("camera-position")).toHaveText("x -5.00, y -14.00, z 11.00");
-  await expect(moment).toHaveText("day 86, 12 h 00 min", ARRIVES);
-  await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
-  // The house is drawn before its crop: the opening shot waits for both.
-  await expect(page.getByTestId("scene-status")).toContainText("day 86,", ARRIVES);
-  await writeFile(
-    testInfo.outputPath(OPENING_MARK),
-    JSON.stringify({ opening_s: (Date.now() - recording) / 1000 }),
+  // The whole house with its crop, the README's preview.
+  await page.goto(
+    `${VIEWER_PATH}?scenario=${SCENARIO}&field=climate&t=${OPENING_S}&camera=${ON_THE_HOUSE}`,
   );
-  await say(page, "1. Opened on day 86, its first day with red fruit");
-
-  // 2. The house's dimensions and the crop's layout.
-  const dimensions = page.getByRole("checkbox", { name: "Dimensions and axis labels" });
-  await unfold(page, "Display");
-  await dimensions.check();
-  await expect(page.getByTestId("debug-label").first()).toBeVisible();
-  await say(page, "2. The house measured: 12 × 9.6 m, four rows of eight plants");
-  await dimensions.uncheck();
-
-  // 3. Morning to noon: the sun, its shadows and its light.
-  const timeOfDay = run.getByRole("slider", { name: "Time of day" });
-  await timeOfDay.fill(String(6 * HOUR_S));
-  await expect(moment).toHaveText("day 86, 6 h 00 min", ARRIVES);
-  await say(page, "3. Dawn: the sun 11° up in the east-north-east, its shadows long");
-  await timeOfDay.fill(String(12 * HOUR_S + 40 * 60));
-  await expect(moment).toHaveText("day 86, 12 h 40 min", ARRIVES);
+  await expect(page.getByTestId("climate-time")).toHaveText(OPENING_MOMENT, ARRIVES);
+  // The house is drawn before its crop, its air after: the shot waits for all.
+  await expect(page.getByTestId("scene-status")).toContainText("day 86,", ARRIVES);
   await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
-  await say(page, "3. The sun's noon, 12:40: 59° up in the south");
+  // Folded away from the view, and kept so from page to page.
+  await page.getByRole("button", { name: "Fold the info panel" }).click();
+  await page.getByRole("button", { name: "Fold the View panel" }).click();
+  await caption(page, "A simulated greenhouse: the house, its climate, each plant organ by organ");
+  await markOpening(testInfo, recording);
+  await linger(page);
 
-  // 4. The air: its vectors, then a slice of its temperature.
-  await say(page, "4. The air as arrows: the fans' jets down the house");
-  await unfold(page, "Air field");
-  await page.getByRole("radio", { name: "slice" }).check();
-  await page.getByLabel("Slice of").selectOption("temperature");
-  await expect(page.getByTestId("field-legend-quantity")).toContainText("temperature");
-  await say(page, "4. A slice of the air's temperature");
+  // The start page: a scenario searched for, its dialog, and a new run.
+  await page.goto(LANDING_PATH);
+  await expect(page.getByRole("heading", { name: "What would you like to do?" })).toBeVisible(
+    ARRIVES,
+  );
+  const search = page.getByRole("combobox", { name: "Scenario" });
+  await search.pressSequentially("reference", { delay: 150 });
+  const option = page.getByRole("option", { name: /^Reference greenhouse/ });
+  await expect(option).toBeVisible(ARRIVES);
+  await say(page, "The start page: search for a scenario", 0.6);
+  await option.click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { name: "Reference greenhouse" })).toBeVisible(ARRIVES);
+  await say(page, "Its dialog: the runs kept of it, and a way to start another", 0.6);
+  await dialog.getByRole("button", { name: "New run" }).click();
+  const seed = dialog.getByLabel("Seed", { exact: true });
+  await expect(seed).toHaveAttribute("placeholder", "The scenario's own", ARRIVES);
+  await expect(seed).toHaveValue("");
+  await say(page, "A new run: the seed in grey is the scenario's own, so the same run each time");
 
-  // 5. The equipment: the dehumidifier on, from this moment.
-  await unfold(page, "Equipment");
+  // A run on a worker, followed at its newest day.
+  await dialog.getByRole("button", { name: "Start run" }).click();
+  await expect(page).toHaveURL(/\/replay\?run=.*&follow=1$/);
+  const newRun = replayTarget(new URL(page.url()).search);
+  await expect(page.getByTestId("replay-status")).toHaveText("Running", ARRIVES);
+  await expect(page.getByRole("button", { name: "Follow the newest day" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+    ARRIVES,
+  );
+  await say(page, "A worker computes it, beside the others; its replay follows the newest day");
+
+  // The replay of the run computed before: its timeline, and its days.
+  await page.getByRole("link", { name: "Other runs" }).click();
   await page
-    .getByRole("group", { name: "Equipment" })
-    .getByRole("checkbox", { name: "dehumidifier" })
-    .check();
-  await expect(page).toHaveURL(/dehumidifier/);
-  await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
-  await say(page, "5. The dehumidifier on: the air dries around it");
-
-  // New in 0.5.0 (P14.5): every device drawn by what it does, as "What am I
-  // seeing?" says: grey while off, and in the colour of what it is for
-  // while running, the dehumidifier's that of drying.
-  const seen = page.getByRole("region", { name: "What am I seeing?" });
-  await page.getByRole("button", { name: "What am I seeing?" }).click();
-  const equipment = seen.getByTestId("seen-equipment");
-  await expect(equipment).toContainText("in the colour of what it is for while running");
-  // The card opens at its top, the air's lines first: its equipment's, below
-  // them, is brought into view for the video.
-  await equipment.scrollIntoViewIfNeeded();
-  await say(page, "New in 0.5.0: each device drawn by what it does, in its colour while running");
-  await page.getByRole("button", { name: "Close what am I seeing" }).click();
-  await expect(seen).toHaveCount(0);
-
-  // 6. The roof vents, open by the schedule: shut before 9:00, half open
-  // from 9:00 and fully from 11:00; then one shut by hand, a command at the
-  // moment, the run carried on rather than worked out again. The wind is
-  // turned last.
-  const vent = page.getByTestId("opening-roof_vent_1");
-  await unfold(page, "Openings");
-  await timeOfDay.fill(String(8 * HOUR_S));
-  await expect(moment).toHaveText("day 86, 8 h 00 min", ARRIVES);
-  await expect(vent).toHaveText(/^0%, /, ARRIVES);
-  await say(page, "6. At 8:00 the roof vents are shut");
-  await timeOfDay.fill(String(11 * HOUR_S));
-  await expect(moment).toHaveText("day 86, 11 h 00 min", ARRIVES);
-  await expect(vent).toHaveText(/^100%, /, ARRIVES);
-  await say(page, "6. From 11:00 the schedule has them fully open");
-  await page.getByRole("group", { name: "Openings" }).getByRole("slider").first().fill("0");
-  await expect(page).toHaveURL(/7470000:roof_vent_1:0/);
-  await expect(vent).toHaveText(/^0%, /, ARRIVES);
-  await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
-  await say(page, "6. One shut by hand at 11:00: a command at that moment");
-
-  // 7. A sensor's readings against QA mode's truth, early in the day: its
-  // log is read from the day's start, which at noon would take minutes. Not
-  // in the day's first hour, though: a field then starts its grid run an
-  // hour before the day began, which the kept opening day does not hold,
-  // and the season is worked out afresh. QA mode's developer panel lists
-  // the sensors, and selects one: in a crop this dense it is easier found
-  // there than in the view.
-  await page.getByRole("checkbox", { name: "QA mode" }).check();
-  const developer = page.getByRole("region", { name: "QA mode" });
-  // The panel settled first, then the moment moved: a slider filled while
-  // the panels around it are drawn anew can lose its change.
-  await expect(page.getByTestId("developer-clock")).toContainText("day 86, 11 h 00 min", ARRIVES);
-  await expect(async () => {
-    await timeOfDay.fill(String(HOUR_S + 20 * 60));
-    await expect(moment).toHaveText("day 86, 1 h 20 min", { timeout: 5_000 });
-  }).toPass(ARRIVES);
-  await expect(page.getByTestId("developer-clock")).toContainText("day 86, 1 h 20 min", ARRIVES);
-  await say(page, "7. QA mode's developer panel: what every process holds now");
-  await developer.getByRole("button", { name: /^temperature_back: / }).click();
-  const selected = page.getByTestId("selected-entity");
-  await expect(selected).toHaveText("reference_greenhouse_temperature_back");
-  const sensor = page.getByRole("region", { name: "Sensor" });
-  await expect(sensor.getByTestId("sensor-truth")).toContainText("°C", ARRIVES);
-  await say(page, "7. The back sensor's readings against what was truly there");
-
-  // 8. The fixed camera: its picture, its depth and its instances.
-  await developer.getByRole("button", { name: /^path_camera: / }).click();
-  await expect(selected).toHaveText("reference_greenhouse_path_camera");
-  const camera = page.getByRole("region", { name: "Camera" });
-  await expect(camera.getByTestId("camera-view")).toBeVisible();
-  await say(page, "8. The path camera's picture");
-  await camera.getByRole("tab", { name: "Depth" }).click();
-  await expect(camera.getByTestId("camera-depth-range")).toBeVisible(ARRIVES);
-  await say(page, "8. Its depth");
-  // Its instances: the list of what is in view runs to thousands of organs,
-  // which the camera's own browser tests read.
-  const instances = camera.getByRole("tab", { name: "Instance" });
-  await instances.click();
-  await expect(instances).toHaveAttribute("aria-selected", "true");
-  await say(page, "8. And what each pixel shows");
-  // Put away: a selected camera draws its passes again with every scene.
-  await page
-    .getByRole("region", { name: "Inspector" })
-    .getByRole("button", { name: "Clear selection" })
+    .getByRole("dialog")
+    .getByRole("link", { name: `Replay the run with the scenario's seed, epoch ${prepared.epoch}` })
     .click();
-  await expect(selected).toHaveCount(0);
+  const handle = page.getByRole("slider", { name: "Position in the run" });
+  await expect(handle).toHaveAttribute("aria-valuetext", "Day 1, 00:00", ARRIVES);
+  await expect(page.getByTestId("scene-status")).toContainText(", day 0,", ARRIVES);
+  // Once the scene is framed, which the first scene does.
+  await page.getByTestId("main-view").hover();
+  await page.mouse.wheel(0, CLOSER_PX);
+  await say(page, "The replay of a run computed earlier: a timeline under the view, day 1", 0.7);
 
-  // 9. The crop, a day on: no two plants alike, its fruit ripening.
-  await run.getByRole("button", { name: "Next day" }).click();
-  await expect(moment).toHaveText(/^day 87, /, ARRIVES);
-  await expect(page.getByTestId("scene-status")).toContainText("day 87,", ARRIVES);
-  await say(page, "9. A day on: each plant drawn from seed 42, its fruit ripening");
+  const halfway = Math.max(1, Math.round(DAYS / 2));
+  await moveToDay(page, halfway);
+  await say(page, `Day ${halfway}: anywhere along what is computed, the crop as it stood`, 0.7);
 
-  // New in 0.3.0 (#274): a heating target set from the panel, held from the
-  // moment drawn on, at night here, as the thermostat then heats to it.
-  const targets = page.locator("details.targets-fold");
-  await unfold(page, "Heating targets");
-  await expect(page.getByTestId("targets-summary")).toHaveText(
-    "Heating targets: 18 °C by day, 16 °C by night",
-    ARRIVES,
-  );
-  await targets.getByLabel("By night, °C").fill("22");
-  await targets.getByRole("button", { name: /^Set from day 87, / }).click();
-  await expect(page).toHaveURL(/targets=\d+:heating_night:22/);
-  await unfold(page, "Equipment");
-  await expect(page.getByTestId("equipment-heater")).toHaveText(
-    /by its thermostat at 22 °C$/,
-    ARRIVES,
-  );
-  await say(page, "New in 0.3.0: the night's heating target raised to 22 °C, from now on");
+  const late = Math.max(1, DAYS - PLAYED_DAYS);
+  await moveToDay(page, late);
+  await say(page, `Day ${late}: the crop grown high on its wires`, 0.7);
 
-  // 10. A harvest, by hand in the plant lab, in the plant's history.
-  await page.goto("/?plants=lab&day=85");
-  await expect(page.getByTestId("scene-status")).toContainText("day 85", ARRIVES);
-  await say(page, "10. The plant lab: a red fruit");
-  await page.getByRole("button", { name: "p01_t01_fr01", exact: true }).click();
-  await page.getByRole("button", { name: "Harvest this fruit" }).click();
-  await expect(page.getByTestId("plant-event")).toHaveText([
-    /^at \d+ °Cd: harvested p01_t01_fr01, \d+ g$/,
-  ]);
-  await say(page, "10. Harvested, and kept in the plant's history");
+  await page.getByRole("button", { name: "Open the info panel" }).click();
+  await unfold(page, "House air");
+  await expect(page.locator("details.house-fold > summary")).not.toContainText("mixing", ARRIVES);
+  await say(page, "The panels read the climate at that moment: the air, its humidity, its CO₂");
+  await page.getByRole("button", { name: "Fold the info panel" }).click();
 
-  // 11. A checkpoint, a branch, and two schedules compared.
-  await page.goBack();
-  await expect(moment).toHaveText(/^day 87, /, ARRIVES);
-  const checkpoints = page.locator("details", { hasText: "Checkpoints" });
-  await checkpoints.locator("summary").click();
-  await checkpoints.getByRole("button", { name: "Save day 87's start" }).click();
-  // Listed beside the kept opening day, day 86, the earliest first.
-  const compare = checkpoints.getByRole("button", { name: /^Compare with day 87, / });
-  await expect(compare).toBeVisible(ARRIVES);
-  await say(page, "11. Day 87's start saved");
-  // Its thermostat runs the heater through the night: a branch turns it off.
-  await unfold(page, "Equipment");
-  await page
-    .getByRole("group", { name: "Equipment" })
-    .getByRole("checkbox", { name: "heater" })
-    .uncheck();
-  await compare.click();
-  const branches = page.getByRole("region", { name: "Branches" });
-  await expect(branches.getByTestId("branches-house")).toBeVisible(ARRIVES);
-  await say(page, "11. A branch with the heater off, against the checkpoint's run");
+  // Played last: a moment asked for after playing waits on what playing asked.
+  const transport = page.locator(".replay-transport");
+  await transport.getByLabel("Pace").selectOption("2");
+  await transport.getByRole("button", { name: "Play" }).click();
+  await expect(transport.getByRole("button", { name: "Pause" })).toBeVisible(ARRIVES);
+  await say(page, "Played, a day every two seconds: day and night, the crop growing");
+  await transport.getByRole("button", { name: "Pause" }).click();
+  await expect(transport.getByRole("button", { name: "Play" })).toBeVisible(ARRIVES);
 
-  // 6, last: the wind turned. Under another wind the run is another run,
-  // which no kept day of the season's fits: its air is worked out afresh
-  // from its start, minutes in all, so the walk-through turns it last and
-  // shows the weather turning, not the air it makes.
-  const weather = page.getByRole("region", { name: "Weather" });
-  await weather.locator("summary").click();
-  await weather.getByRole("slider", { name: "Wind direction" }).fill("90");
-  await expect(page).toHaveURL(/&wind=90/);
-  await expect(page.getByTestId("wind-compass")).toBeVisible();
-  await say(page, "6. The wind turned to blow from the east: another run, worked out afresh");
+  // A fork, asked first; then a run stopped and resumed.
+  await page.getByTestId("replay-fork").click();
+  await expect(page.getByTestId("fork-question")).toContainText("beside the others", ARRIVES);
+  await say(page, "A fork asks first, and says what it does");
+  await page.getByRole("button", { name: "Make the fork" }).click();
+  await expect(page.getByTestId("replay-subtitle")).toContainText(/forked from epoch/, ARRIVES);
+  await say(page, "The fork, a run of its own from that moment; the run it came from stays", 0.7);
 
-  // 12. Seed 42 again: the golden views and their state probes. The viewer
-  // is left for a blank page first: the turned wind's requests, each waiting
-  // minutes on its run, hold the browser's six connections to the viewer's
-  // host, and a page asked of it waits until one ends (on a slow machine,
-  // past the test's timeout). A blank page needs none, and leaving the
-  // viewer ends them.
-  await page.goto("about:blank");
-  await page.goto(`${QA_REFERENCE_PATH}?view=noon`);
-  await expect(page.getByTestId("qa-probes")).toContainText("house air 28.14 °C", ARRIVES);
-  await say(page, "12. The golden views, as CI compares them, with their state probes");
+  await page.getByRole("link", { name: "Other runs" }).click();
+  const who = `the run with the scenario's seed, epoch ${newRun?.epoch}`;
+  const shown = page.getByRole("dialog");
+  await shown.getByRole("button", { name: `Stop ${who}` }).click();
+  const resume = shown.getByRole("button", { name: `Resume ${who}` });
+  await expect(resume).toBeVisible(ARRIVES);
+  await say(page, "A run stopped keeps what it computed…", 0.6);
+  await resume.click();
+  await expect(shown.getByRole("button", { name: `Stop ${who}` })).toBeVisible(ARRIVES);
+  await say(page, "…and resumed, it goes on from there, as the same run", 0.6);
 
-  // New in 0.4.0 (P12): the setup builder. A house drafted from its first
-  // form and drawn as the simulator draws it, then roof vents placed along
-  // both slopes of its span in one edit.
-  await page.goto("/builder");
-  await page.locator(".builder-form").getByLabel("Identifier").fill(`demo_${Date.now()}`);
+  // The builder: a house laid out.
+  await page.goto(BUILDER_PATH);
+  await page.locator(".builder-form").getByLabel("Identifier").fill("demo_house");
   await page.getByRole("button", { name: "Draft this house" }).click();
   await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
   await expect(page.getByTestId("builder-view").locator("canvas")).toBeVisible(ARRIVES);
-  await say(page, "New in 0.4.0: the setup builder, a house drafted from its first form");
-  const palette = page.locator(".builder-palette");
-  await palette.getByLabel("What").selectOption("roof_vent");
-  await palette.getByLabel("roof 1 right").check(ARRIVES);
-  await palette.getByLabel("roof 1 left").check();
-  await palette.getByRole("button", { name: "Place" }).click();
-  await expect(page.getByTestId("builder-status")).toHaveText(
-    /^Placed \d+ roof vents on 2 surfaces\.$/,
-    ARRIVES,
-  );
-  await say(page, "New in 0.4.0: roof vents placed along both slopes, in one edit");
-  // Its inspector: a heater placed, chosen, and its power set.
-  await palette.getByLabel("What").selectOption("heater");
-  await palette.getByLabel("y (m)", { exact: true }).fill("0.6");
-  await palette.getByRole("button", { name: "Place" }).click();
-  await expect(page.getByTestId("builder-status")).toHaveText("Placed 1 heater.", ARRIVES);
-  await page.getByLabel("Choose heater_1").check();
-  const inspector = page.locator(".builder-items .builder-inspector");
-  await expect(inspector.getByRole("heading", { name: "heater_1" })).toBeVisible();
-  await inspector.getByLabel("Power W").fill("20000");
-  await inspector.getByLabel("Power W").press("Enter");
-  await expect(page.getByTestId("builder-status")).toHaveText("Set power w of heater_1.", ARRIVES);
-  await say(page, "New in 0.4.0: a heater placed, and its power set in the inspector");
-
-  // New in 0.5.0 (P13.8): a scenario's run followed as it is played back,
-  // the run a consumer reads. A level set in the Equipment panel is given
-  // to it as the viewer's plan, and the timeline's plan lane says what
-  // became of it. The playback is held, so that the level is given before
-  // its clock moves on, and started over if a test before left it near its
-  // end, when it would take no more.
-  const started = (await (await page.request.post(`${CLIMATE_BOX_PLAYBACK}/start`)).json()) as {
-    time_s: number;
-  };
-  if (started.time_s > CLIMATE_BOX_RUN_S - 4 * DAY_S) {
-    expect((await page.request.post(`${CLIMATE_BOX_PLAYBACK}/restart`)).ok()).toBe(true);
-  }
-  expect((await page.request.post(`${CLIMATE_BOX_PLAYBACK}/pause`)).ok()).toBe(true);
-  await page.goto("/?scenario=climate_box&field=climate&follow=1");
-  const played = page.getByRole("region", { name: "Run played back" });
-  await expect(played.getByTestId("playback-status")).toContainText("paused", ARRIVES);
-  await say(page, "New in 0.5.0: a scenario's run, followed as it is played back");
-  await unfold(page, "Equipment");
-  await page
-    .getByRole("group", { name: "Equipment" })
-    .getByRole("checkbox", { name: "fan" })
-    .check();
-  await expect(page).toHaveURL(/schedule=[0-9.]+:fan:1(&|$)/, ARRIVES);
-  await page.locator("details.timeline").getByText("Timeline").click();
-  await page.getByRole("combobox", { name: "Timeline zoom" }).selectOption({ label: "a day" });
-  await expect(
-    page
-      .getByTestId("timeline-plan-entry")
-      .filter({ hasText: /fan to 100% \(viewer\/change_\d+\): executed$/ }),
-  ).not.toHaveCount(0, ARRIVES);
-  await say(page, "New in 0.5.0: the fan on, as the viewer's plan, and the timeline says it was");
+  await say(page, "The builder: a house laid out, checked, and drawn as the simulator draws it");
 });

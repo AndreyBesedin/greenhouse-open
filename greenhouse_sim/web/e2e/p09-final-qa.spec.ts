@@ -1,0 +1,308 @@
+import { expect, test } from "@playwright/test";
+import { VIEWER_PATH } from "../src/landing/paths";
+import { QA_REFERENCE_PATH } from "../src/qa/referencePage.ts";
+import { chooser } from "./chooser";
+import { markOpening, say } from "./demoSteps";
+import { unfold } from "./folds";
+
+// P09.9: the final QA of P09 (docs/demo.md), walked through as one scripted
+// tour of the reference greenhouse: the long video recorded from 0.5.0. As a
+// browser test it runs on its own, after the other day-by-day specs, and it
+// can be recorded again (docs/demo.md). The README's short video is
+// `demo.spec.ts`'s.
+
+const ARRIVES = { timeout: 180_000 };
+const HOUR_S = 3_600;
+const DAY_S = 24 * HOUR_S;
+const CLIMATE_BOX_PLAYBACK = "/api/scenarios/climate_box/playback";
+// The climate box's run lasts 14 days.
+const CLIMATE_BOX_RUN_S = 14 * DAY_S;
+// The camera on the whole reference house, from south-west of it and above:
+// at 1280 × 720 the house stands between the info panel and the HUD,
+// rather than its corner at the world's origin, where the default camera
+// looks.
+const ON_THE_HOUSE = "-5:-14:11,5:4.8:1";
+
+test("the reference greenhouse's demo walks through P09's final QA", async ({ page }, testInfo) => {
+  // The video started with the page, a moment before the test's body.
+  const recording = Date.now();
+  test.setTimeout(900_000);
+  const moment = page.getByTestId("climate-time");
+  const run = page.getByRole("group", { name: "Climate run" });
+
+  // 1. The reference scenario, seed 42, opened on its first day with red fruit.
+  await page.goto(VIEWER_PATH);
+  await say(page, "1. The reference greenhouse, seed 42, from the scenario list");
+  await (await chooser(page)).getByRole("button", { name: "Open reference_greenhouse" }).click();
+  await expect(moment).toHaveText("day 86, 12 h 00 min", ARRIVES);
+  await expect(page.getByTestId("scene-status")).toContainText("day 86,", ARRIVES);
+  await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
+  // The camera on the house from here on: the address keeps it.
+  await page.goto(`${page.url()}&camera=${ON_THE_HOUSE}`);
+  await expect(page.getByTestId("camera-position")).toHaveText("x -5.00, y -14.00, z 11.00");
+  await expect(moment).toHaveText("day 86, 12 h 00 min", ARRIVES);
+  await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
+  // The house is drawn before its crop: the opening shot waits for both.
+  await expect(page.getByTestId("scene-status")).toContainText("day 86,", ARRIVES);
+  await markOpening(testInfo, recording);
+  await say(page, "1. Opened on day 86, its first day with red fruit");
+
+  // 2. The house's dimensions and the crop's layout.
+  const dimensions = page.getByRole("checkbox", { name: "Dimensions and axis labels" });
+  await unfold(page, "Display");
+  await dimensions.check();
+  await expect(page.getByTestId("debug-label").first()).toBeVisible();
+  await say(page, "2. The house measured: 12 × 9.6 m, four rows of eight plants");
+  await dimensions.uncheck();
+
+  // 3. Morning to noon: the sun, its shadows and its light.
+  const timeOfDay = run.getByRole("slider", { name: "Time of day" });
+  await timeOfDay.fill(String(6 * HOUR_S));
+  await expect(moment).toHaveText("day 86, 6 h 00 min", ARRIVES);
+  await say(page, "3. Dawn: the sun 11° up in the east-north-east, its shadows long");
+  await timeOfDay.fill(String(12 * HOUR_S + 40 * 60));
+  await expect(moment).toHaveText("day 86, 12 h 40 min", ARRIVES);
+  await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
+  await say(page, "3. The sun's noon, 12:40: 59° up in the south");
+
+  // 4. The air: its vectors, then a slice of its temperature.
+  await say(page, "4. The air as arrows: the fans' jets down the house");
+  await unfold(page, "Air field");
+  await page.getByRole("radio", { name: "slice" }).check();
+  await page.getByLabel("Slice of").selectOption("temperature");
+  await expect(page.getByTestId("field-legend-quantity")).toContainText("temperature");
+  await say(page, "4. A slice of the air's temperature");
+
+  // 5. The equipment: the dehumidifier on, from this moment.
+  await unfold(page, "Equipment");
+  await page
+    .getByRole("group", { name: "Equipment" })
+    .getByRole("checkbox", { name: "dehumidifier" })
+    .check();
+  await expect(page).toHaveURL(/dehumidifier/);
+  await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
+  await say(page, "5. The dehumidifier on: the air dries around it");
+
+  // New in 0.5.0 (P14.5): every device drawn by what it does, as "What am I
+  // seeing?" says: grey while off, and in the colour of what it is for
+  // while running, the dehumidifier's that of drying.
+  const seen = page.getByRole("region", { name: "What am I seeing?" });
+  await page.getByRole("button", { name: "What am I seeing?" }).click();
+  const equipment = seen.getByTestId("seen-equipment");
+  await expect(equipment).toContainText("in the colour of what it is for while running");
+  // The card opens at its top, the air's lines first: its equipment's, below
+  // them, is brought into view for the video.
+  await equipment.scrollIntoViewIfNeeded();
+  await say(page, "New in 0.5.0: each device drawn by what it does, in its colour while running");
+  await page.getByRole("button", { name: "Close what am I seeing" }).click();
+  await expect(seen).toHaveCount(0);
+
+  // 6. The roof vents, open by the schedule: shut before 9:00, half open
+  // from 9:00 and fully from 11:00; then one shut by hand, a command at the
+  // moment, the run carried on rather than worked out again. The wind is
+  // turned last.
+  const vent = page.getByTestId("opening-roof_vent_1");
+  await unfold(page, "Openings");
+  await timeOfDay.fill(String(8 * HOUR_S));
+  await expect(moment).toHaveText("day 86, 8 h 00 min", ARRIVES);
+  await expect(vent).toHaveText(/^0%, /, ARRIVES);
+  await say(page, "6. At 8:00 the roof vents are shut");
+  await timeOfDay.fill(String(11 * HOUR_S));
+  await expect(moment).toHaveText("day 86, 11 h 00 min", ARRIVES);
+  await expect(vent).toHaveText(/^100%, /, ARRIVES);
+  await say(page, "6. From 11:00 the schedule has them fully open");
+  await page.getByRole("group", { name: "Openings" }).getByRole("slider").first().fill("0");
+  await expect(page).toHaveURL(/7470000:roof_vent_1:0/);
+  await expect(vent).toHaveText(/^0%, /, ARRIVES);
+  await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
+  await say(page, "6. One shut by hand at 11:00: a command at that moment");
+
+  // 7. A sensor's readings against QA mode's truth, early in the day: its
+  // log is read from the day's start, which at noon would take minutes. Not
+  // in the day's first hour, though: a field then starts its grid run an
+  // hour before the day began, which the kept opening day does not hold,
+  // and the season is worked out afresh. QA mode's developer panel lists
+  // the sensors, and selects one: in a crop this dense it is easier found
+  // there than in the view.
+  await page.getByRole("checkbox", { name: "QA mode" }).check();
+  const developer = page.getByRole("region", { name: "QA mode" });
+  // The panel settled first, then the moment moved: a slider filled while
+  // the panels around it are drawn anew can lose its change.
+  await expect(page.getByTestId("developer-clock")).toContainText("day 86, 11 h 00 min", ARRIVES);
+  await expect(async () => {
+    await timeOfDay.fill(String(HOUR_S + 20 * 60));
+    await expect(moment).toHaveText("day 86, 1 h 20 min", { timeout: 5_000 });
+  }).toPass(ARRIVES);
+  await expect(page.getByTestId("developer-clock")).toContainText("day 86, 1 h 20 min", ARRIVES);
+  await say(page, "7. QA mode's developer panel: what every process holds now");
+  await developer.getByRole("button", { name: /^temperature_back: / }).click();
+  const selected = page.getByTestId("selected-entity");
+  await expect(selected).toHaveText("reference_greenhouse_temperature_back");
+  const sensor = page.getByRole("region", { name: "Sensor" });
+  await expect(sensor.getByTestId("sensor-truth")).toContainText("°C", ARRIVES);
+  await say(page, "7. The back sensor's readings against what was truly there");
+
+  // 8. The fixed camera: its picture, its depth and its instances.
+  await developer.getByRole("button", { name: /^path_camera: / }).click();
+  await expect(selected).toHaveText("reference_greenhouse_path_camera");
+  const camera = page.getByRole("region", { name: "Camera" });
+  await expect(camera.getByTestId("camera-view")).toBeVisible();
+  await say(page, "8. The path camera's picture");
+  await camera.getByRole("tab", { name: "Depth" }).click();
+  await expect(camera.getByTestId("camera-depth-range")).toBeVisible(ARRIVES);
+  await say(page, "8. Its depth");
+  // Its instances: the list of what is in view runs to thousands of organs,
+  // which the camera's own browser tests read.
+  const instances = camera.getByRole("tab", { name: "Instance" });
+  await instances.click();
+  await expect(instances).toHaveAttribute("aria-selected", "true");
+  await say(page, "8. And what each pixel shows");
+  // Put away: a selected camera draws its passes again with every scene.
+  await page
+    .getByRole("region", { name: "Inspector" })
+    .getByRole("button", { name: "Clear selection" })
+    .click();
+  await expect(selected).toHaveCount(0);
+
+  // 9. The crop, a day on: no two plants alike, its fruit ripening.
+  await run.getByRole("button", { name: "Next day" }).click();
+  await expect(moment).toHaveText(/^day 87, /, ARRIVES);
+  await expect(page.getByTestId("scene-status")).toContainText("day 87,", ARRIVES);
+  await say(page, "9. A day on: each plant drawn from seed 42, its fruit ripening");
+
+  // New in 0.3.0 (#274): a heating target set from the panel, held from the
+  // moment drawn on, at night here, as the thermostat then heats to it.
+  const targets = page.locator("details.targets-fold");
+  await unfold(page, "Heating targets");
+  await expect(page.getByTestId("targets-summary")).toHaveText(
+    "Heating targets: 18 °C by day, 16 °C by night",
+    ARRIVES,
+  );
+  await targets.getByLabel("By night, °C").fill("22");
+  await targets.getByRole("button", { name: /^Set from day 87, / }).click();
+  await expect(page).toHaveURL(/targets=\d+:heating_night:22/);
+  await unfold(page, "Equipment");
+  await expect(page.getByTestId("equipment-heater")).toHaveText(
+    /by its thermostat at 22 °C$/,
+    ARRIVES,
+  );
+  await say(page, "New in 0.3.0: the night's heating target raised to 22 °C, from now on");
+
+  // 10. A harvest, by hand in the plant lab, in the plant's history.
+  await page.goto("/?plants=lab&day=85");
+  await expect(page.getByTestId("scene-status")).toContainText("day 85", ARRIVES);
+  await say(page, "10. The plant lab: a red fruit");
+  await page.getByRole("button", { name: "p01_t01_fr01", exact: true }).click();
+  await page.getByRole("button", { name: "Harvest this fruit" }).click();
+  await expect(page.getByTestId("plant-event")).toHaveText([
+    /^at \d+ °Cd: harvested p01_t01_fr01, \d+ g$/,
+  ]);
+  await say(page, "10. Harvested, and kept in the plant's history");
+
+  // 11. A checkpoint, a branch, and two schedules compared.
+  await page.goBack();
+  await expect(moment).toHaveText(/^day 87, /, ARRIVES);
+  const checkpoints = page.locator("details", { hasText: "Checkpoints" });
+  await checkpoints.locator("summary").click();
+  await checkpoints.getByRole("button", { name: "Save day 87's start" }).click();
+  // Listed beside the kept opening day, day 86, the earliest first.
+  const compare = checkpoints.getByRole("button", { name: /^Compare with day 87, / });
+  await expect(compare).toBeVisible(ARRIVES);
+  await say(page, "11. Day 87's start saved");
+  // Its thermostat runs the heater through the night: a branch turns it off.
+  await unfold(page, "Equipment");
+  await page
+    .getByRole("group", { name: "Equipment" })
+    .getByRole("checkbox", { name: "heater" })
+    .uncheck();
+  await compare.click();
+  const branches = page.getByRole("region", { name: "Branches" });
+  await expect(branches.getByTestId("branches-house")).toBeVisible(ARRIVES);
+  await say(page, "11. A branch with the heater off, against the checkpoint's run");
+
+  // 6, last: the wind turned. Under another wind the run is another run,
+  // which no kept day of the season's fits: its air is worked out afresh
+  // from its start, minutes in all, so the walk-through turns it last and
+  // shows the weather turning, not the air it makes.
+  const weather = page.getByRole("region", { name: "Weather" });
+  await weather.locator("summary").click();
+  await weather.getByRole("slider", { name: "Wind direction" }).fill("90");
+  await expect(page).toHaveURL(/&wind=90/);
+  await expect(page.getByTestId("wind-compass")).toBeVisible();
+  await say(page, "6. The wind turned to blow from the east: another run, worked out afresh");
+
+  // 12. Seed 42 again: the golden views and their state probes. The viewer
+  // is left for a blank page first: the turned wind's requests, each waiting
+  // minutes on its run, hold the browser's six connections to the viewer's
+  // host, and a page asked of it waits until one ends (on a slow machine,
+  // past the test's timeout). A blank page needs none, and leaving the
+  // viewer ends them.
+  await page.goto("about:blank");
+  await page.goto(`${QA_REFERENCE_PATH}?view=noon`);
+  await expect(page.getByTestId("qa-probes")).toContainText("house air 28.14 °C", ARRIVES);
+  await say(page, "12. The golden views, as CI compares them, with their state probes");
+
+  // New in 0.4.0 (P12): the setup builder. A house drafted from its first
+  // form and drawn as the simulator draws it, then roof vents placed along
+  // both slopes of its span in one edit.
+  await page.goto("/builder");
+  await page.locator(".builder-form").getByLabel("Identifier").fill(`demo_${Date.now()}`);
+  await page.getByRole("button", { name: "Draft this house" }).click();
+  await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+  await expect(page.getByTestId("builder-view").locator("canvas")).toBeVisible(ARRIVES);
+  await say(page, "New in 0.4.0: the setup builder, a house drafted from its first form");
+  const palette = page.locator(".builder-palette");
+  await palette.getByLabel("What").selectOption("roof_vent");
+  await palette.getByLabel("roof 1 right").check(ARRIVES);
+  await palette.getByLabel("roof 1 left").check();
+  await palette.getByRole("button", { name: "Place" }).click();
+  await expect(page.getByTestId("builder-status")).toHaveText(
+    /^Placed \d+ roof vents on 2 surfaces\.$/,
+    ARRIVES,
+  );
+  await say(page, "New in 0.4.0: roof vents placed along both slopes, in one edit");
+  // Its inspector: a heater placed, chosen, and its power set.
+  await palette.getByLabel("What").selectOption("heater");
+  await palette.getByLabel("y (m)", { exact: true }).fill("0.6");
+  await palette.getByRole("button", { name: "Place" }).click();
+  await expect(page.getByTestId("builder-status")).toHaveText("Placed 1 heater.", ARRIVES);
+  await page.getByLabel("Choose heater_1").check();
+  const inspector = page.locator(".builder-items .builder-inspector");
+  await expect(inspector.getByRole("heading", { name: "heater_1" })).toBeVisible();
+  await inspector.getByLabel("Power W").fill("20000");
+  await inspector.getByLabel("Power W").press("Enter");
+  await expect(page.getByTestId("builder-status")).toHaveText("Set power w of heater_1.", ARRIVES);
+  await say(page, "New in 0.4.0: a heater placed, and its power set in the inspector");
+
+  // New in 0.5.0 (P13.8): a scenario's run followed as it is played back,
+  // the run a consumer reads. A level set in the Equipment panel is given
+  // to it as the viewer's plan, and the timeline's plan lane says what
+  // became of it. The playback is held, so that the level is given before
+  // its clock moves on, and started over if a test before left it near its
+  // end, when it would take no more.
+  const started = (await (await page.request.post(`${CLIMATE_BOX_PLAYBACK}/start`)).json()) as {
+    time_s: number;
+  };
+  if (started.time_s > CLIMATE_BOX_RUN_S - 4 * DAY_S) {
+    expect((await page.request.post(`${CLIMATE_BOX_PLAYBACK}/restart`)).ok()).toBe(true);
+  }
+  expect((await page.request.post(`${CLIMATE_BOX_PLAYBACK}/pause`)).ok()).toBe(true);
+  await page.goto("/?scenario=climate_box&field=climate&follow=1");
+  const played = page.getByRole("region", { name: "Run played back" });
+  await expect(played.getByTestId("playback-status")).toContainText("paused", ARRIVES);
+  await say(page, "New in 0.5.0: a scenario's run, followed as it is played back");
+  await unfold(page, "Equipment");
+  await page
+    .getByRole("group", { name: "Equipment" })
+    .getByRole("checkbox", { name: "fan" })
+    .check();
+  await expect(page).toHaveURL(/schedule=[0-9.]+:fan:1(&|$)/, ARRIVES);
+  await page.locator("details.timeline").getByText("Timeline").click();
+  await page.getByRole("combobox", { name: "Timeline zoom" }).selectOption({ label: "a day" });
+  await expect(
+    page
+      .getByTestId("timeline-plan-entry")
+      .filter({ hasText: /fan to 100% \(viewer\/change_\d+\): executed$/ }),
+  ).not.toHaveCount(0, ARRIVES);
+  await say(page, "New in 0.5.0: the fan on, as the viewer's plan, and the timeline says it was");
+});
