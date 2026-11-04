@@ -64,6 +64,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // A run's date is written where it is read: one zone, wherever they run.
+    env: { TZ: "UTC" },
     include: ["src/**/*.test.{ts,tsx}"],
     // Of the handwritten code only: not the contracts generated from the
     // simulator's schemas, the tests, or what the tests are written with.

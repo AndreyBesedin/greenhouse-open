@@ -342,8 +342,13 @@ def test_an_epoch_whose_scenario_file_is_gone_is_refused_when_it_is_asked_to_go_
     assert kept.manifest().status == Status.INTERRUPTED
 
 
-def test_a_resume_says_its_own_pace_and_leaves_none_of_the_one_before(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    ("driver", "pace"),
+    [(None, SECONDS_PER_DAY), (Paced(2 * SECONDS_PER_DAY), 2 * SECONDS_PER_DAY)],
+    ids=["none_named", "its_own"],
+)
+def test_a_resume_keeps_the_pace_it_was_asked_for_unless_it_says_its_own(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, driver: Paced | None, pace: float
 ) -> None:
     objects = FolderStore(tmp_path / "runs")
     monkeypatch.setattr(scheduler, "work", workers_support.ends_at_once)
@@ -356,9 +361,9 @@ def test_a_resume_says_its_own_pace_and_leaves_none_of_the_one_before(
         _until(lambda: epoch.manifest().status == Status.FAILED, "the worker to end")
         epoch.set_status(Status.INTERRUPTED)
 
-        made.scheduler.resume(shown.run_id, shown.epoch)
+        made.scheduler.resume(shown.run_id, shown.epoch, driver=driver)
 
-        assert epoch.manifest().seconds_per_day is None
+        assert epoch.manifest().seconds_per_day == pace
 
 
 def test_a_scenario_that_cannot_be_written_as_a_file_starts_no_epoch(tmp_path: Path) -> None:

@@ -34,6 +34,7 @@ from typing import Final
 from greenhouse_sim.services import forks, interrupted, scenario_files
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.interventions import Asked
+from greenhouse_sim.services.resources import this_process
 from greenhouse_sim.services.run_store import EpochStore, FolderStore, Status, StoredRun, stored_run
 from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.simulator import Simulator
@@ -60,6 +61,7 @@ def work(root: str, run_id: str, epoch: int) -> None:
     the store under `root`, from all that the store holds of it, and exits with
     0 if the epoch finished."""
     kept = EpochStore(FolderStore(Path(root)), run_id, epoch)
+    kept.counted_by(this_process)
     manifest = kept.manifest()
     pace = manifest.seconds_per_day
     with Simulator() as simulator:
@@ -154,10 +156,11 @@ class Scheduler:
         there is room. An epoch the store still calls `running` whose producer
         is gone is found interrupted first, under the lock the epoch is queued
         under, so that two requests for it are told apart: the second finds
-        the epoch queued. Refused, as `workers.check_resumable` and
+        the epoch queued. With no driver it goes on at the pace it was asked
+        for, which its manifest holds. Refused, as `workers.check_resumable` and
         `workers.scenario_file_of` say, if it cannot be; the store is not
         changed by a refusal."""
-        pace = _pace(driver)
+        asked_pace = _pace(driver)
         key = (run_id, epoch)
         if epoch not in stored_epochs(self._objects, run_id):
             raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
@@ -175,6 +178,7 @@ class Scheduler:
                 )
             check_resumable(kept)
             scenario_file = scenario_file_of(self._simulator, kept)
+            pace = kept.manifest().seconds_per_day if driver is None else asked_pace
             kept.queue_again(scenario_file=scenario_file, seconds_per_day=pace)
             self._waiting.append(_Job(run_id, epoch, resuming=True))
             self._launch()
@@ -284,7 +288,9 @@ class Scheduler:
                 # The machine's limit of processes, say: this epoch is told,
                 # and the ones behind it are given workers as there is room.
                 logger.exception("no worker could be started for %s", job.run_id)
-                self._say((job.run_id, job.epoch), Status.FAILED)
+                self._say(
+                    (job.run_id, job.epoch), Status.FAILED, reason="no worker could be started"
+                )
                 continue
             self._running[(job.run_id, job.epoch)] = process
             if job.resuming:
@@ -322,10 +328,10 @@ class Scheduler:
             self._say(key, Status.INTERRUPTED)
             return
         logger.error("the worker of %s ended with %s before it began", key, exit_code)
-        self._say(key, Status.FAILED)
+        self._say(key, Status.FAILED, reason=f"its worker ended with {exit_code} before it began")
 
-    def _say(self, key: tuple[str, int], status: Status) -> None:
-        EpochStore(self._objects, *key).set_status(status)
+    def _say(self, key: tuple[str, int], status: Status, *, reason: str | None = None) -> None:
+        EpochStore(self._objects, *key).set_status(status, reason=reason)
 
     def _end(self, process: SpawnProcess) -> None:
         """Ends a worker: told to, and killed if it does not within the time."""
@@ -368,7 +374,8 @@ def start(
 def resume(
     simulator: Simulator, run_id: str, epoch: int, *, seconds_per_day: float | None = None
 ) -> StoredRun:
-    """An interrupted epoch asked to be carried on (`Scheduler.resume`)."""
+    """An interrupted epoch asked to be carried on (`Scheduler.resume`): at
+    `seconds_per_day`, or at the pace it was asked for."""
     driver = None if seconds_per_day is None else Paced(seconds_per_day)
     return of(simulator).resume(run_id, epoch, driver=driver)
 

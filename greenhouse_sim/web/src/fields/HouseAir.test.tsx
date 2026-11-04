@@ -7,7 +7,9 @@ import {
   houseAirOnShow,
   houseAirUrl,
   loadHouseAir,
+  ownHouseAirUrl,
   parseHouseAir,
+  withAllOff,
 } from "./HouseAir";
 
 const SERIES = (temperature: number[]) => ({
@@ -37,6 +39,91 @@ describe("the house's air", () => {
       "/api/scenarios/climate_box/climate/house?set=heater:1&open=roof_vent:1&t=600&weather=cold_spring_day",
     );
     expect(houseAirUrl("climate_box", {})).toBe("/api/scenarios/climate_box/climate/house");
+  });
+
+  it("is asked for apart from the same run all off", () => {
+    expect(ownHouseAirUrl("climate_box", { time: 600 })).toBe(
+      "/api/scenarios/climate_box/climate/house?t=600&all_off=0",
+    );
+    expect(ownHouseAirUrl("climate_box", {})).toBe(
+      "/api/scenarios/climate_box/climate/house?all_off=0",
+    );
+  });
+
+  it("charts the run's own air while the run all off is on its way", () => {
+    const own = { status: "loaded" as const, trace: { ...BODY, all_off: null } };
+    const html = renderToStaticMarkup(<HouseAir state={own} />);
+
+    expect(html).toContain("Air 15.6 °C, all off on its way");
+    expect(html).not.toContain("house-air-off");
+    expect(describeHouseAir(own)).toBe("House air: 15.6 °C, 85.0 %, 420.0 ppm");
+  });
+
+  it("takes the run all off from an answer of the same day, as far as it reaches", () => {
+    const own = { status: "loaded" as const, trace: { ...BODY, all_off: null } };
+    const whole = { status: "loaded" as const, trace: BODY };
+    expect(withAllOff(own, null)).toBe(own);
+    expect(withAllOff(own, whole)).toEqual(whole);
+
+    const earlier = {
+      status: "loaded" as const,
+      trace: {
+        times_s: [0, 60],
+        controlled: SERIES([16, 15.8]),
+        all_off: SERIES([16, 15.2]),
+      },
+    };
+    const html = renderToStaticMarkup(<HouseAir state={withAllOff(own, earlier)} />);
+    expect(html).toContain("all off on its way");
+    expect(html).toContain("house-air-off");
+
+    const anotherDay = {
+      status: "loaded" as const,
+      trace: { ...BODY, times_s: [86_400, 86_460, 86_520] },
+    };
+    expect(withAllOff(own, anotherDay)).toBe(own);
+    const loading = { status: "loading" as const };
+    expect(withAllOff(loading, whole)).toBe(loading);
+  });
+
+  it("matches the run all off to the run's own moments, not to how many there are", () => {
+    const series = SERIES([16, 15.8, 15.6]);
+    // Both end between minutes, at another moment each, with as many samples.
+    const own = {
+      status: "loaded" as const,
+      trace: { times_s: [0, 60, 119], controlled: series, all_off: null },
+    };
+    const whole = {
+      status: "loaded" as const,
+      trace: { times_s: [0, 60, 61], controlled: series, all_off: SERIES([16, 15.2, 15.1]) },
+    };
+    const merged = withAllOff(own, whole);
+
+    const html = renderToStaticMarkup(<HouseAir state={merged} />);
+    expect(html).toContain("Air 15.6 °C, all off on its way");
+    expect(html).not.toContain("all off 15.1");
+    expect(merged.status === "loaded" && merged.trace.all_off?.temperature_c).toEqual([16, 15.2]);
+  });
+
+  it("takes as far as the run's own moments from an answer that reaches further", () => {
+    const own = { status: "loaded" as const, trace: { ...BODY, all_off: null } };
+    const further = {
+      status: "loaded" as const,
+      trace: {
+        times_s: [0, 60, 120, 180],
+        controlled: SERIES([16, 15.8, 15.6, 15.4]),
+        all_off: SERIES([16, 15.2, 14.5, 13.9]),
+      },
+    };
+
+    expect(withAllOff(own, further)).toEqual({ status: "loaded", trace: BODY });
+  });
+
+  it("reads an answer without the run all off", async () => {
+    const without = { ...BODY, all_off: null };
+    const answered = (async () => Response.json(without)) as typeof fetch;
+
+    expect(await loadHouseAir("/x", answered)).toEqual({ status: "loaded", trace: without });
   });
 
   it("is checked rather than trusted", async () => {

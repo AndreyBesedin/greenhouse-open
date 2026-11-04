@@ -35,6 +35,10 @@ function run(more: Partial<StoredRun>): StoredRun {
     start_s: 0,
     fork: null,
     damaged: false,
+    days_computed: 0,
+    cpu_s: null,
+    peak_memory_bytes: null,
+    reason: null,
     ...more,
   };
 }
@@ -354,7 +358,7 @@ describe("the runs of a scenario, in a dialog", () => {
     expect(asked).toEqual([{ url: `/api/runs/${RUN_ID}/epochs/3/stop`, method: "POST" }]);
   });
 
-  it("resumes a run as fast as it computes, through the epoch's route", async () => {
+  it("resumes a run through the epoch's route, the simulator keeping its pace", async () => {
     const asked = simulator({
       [`POST /api/runs/${RUN_ID}/epochs/3/resume`]: {
         status: 200,
