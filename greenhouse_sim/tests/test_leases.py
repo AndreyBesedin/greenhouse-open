@@ -8,17 +8,20 @@ store and its writing is done from within the write (`_Stopped`)."""
 
 import json
 import shutil
+import sys
 import threading
 import time
 from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Final
+from typing import Any, Final
 
 import pytest
 
+from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import leases, scheduler, workers
+from greenhouse_sim.services.checkpoints import upload_checkpoint
 from greenhouse_sim.services.errors import Conflict
 from greenhouse_sim.services.run_store import (
     EpochManifest,
@@ -27,6 +30,11 @@ from greenhouse_sim.services.run_store import (
     Status,
 )
 from greenhouse_sim.services.simulator import Simulator
+
+# A worker starts from nothing and imports what it is told to run by name.
+sys.path.insert(0, str(Path(__file__).parent))
+
+import workers_support
 
 WAIT_S: Final = 30.0
 
@@ -186,6 +194,57 @@ def test_a_claim_on_an_epoch_still_waiting_is_written_again_too(
 
     assert epoch.worked()
     epoch.set_status(Status.FINISHED)
+
+
+def test_a_claim_taken_on_an_epoch_that_had_ended_is_held_until_it_is_let_go(
+    epoch: EpochStore, beats: _Beats
+) -> None:
+    """A resume asked of an epoch interrupted holds it so while it makes ready: that
+    status says nothing of the holder, which has not ended anything yet."""
+    epoch.set_status(Status.INTERRUPTED)
+    assert epoch.claim()
+    thread = beats.newest()
+
+    assert beats.wake(thread)
+
+    assert epoch.claimed() and epoch.worked()
+    assert not EpochStore(epoch.objects, "run", 0).claim()
+
+    # Once it has said the epoch waits, what ends it ends the claim, as for any other.
+    epoch.queue_again(scenario_file=None, seconds_per_day=None)
+    assert beats.wake(thread)
+    ended = epoch.manifest().model_copy(update={"status": Status.INTERRUPTED})
+    epoch.objects.put("run/0/manifest.json", ended.model_dump_json().encode())
+    assert not beats.wake(thread)
+    assert not epoch.worked()
+
+
+def test_a_resume_making_ready_for_longer_than_a_beat_keeps_the_epoch_its_own(
+    tmp_path: Path, beats: _Beats, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    objects = FolderStore(tmp_path)
+    with workers_support.short_simulator() as made:
+        made.runs = objects
+        kept = workers.queued(made, objects, workers_support.SHORT)
+        assert workers.execute(made, kept, workers.Stepped([DAY_S])) == Status.INTERRUPTED
+        # The thread of the claim it let go, which is not the one this test wakes.
+        beats.newest()
+        another = EpochStore(objects, kept.run_id, kept.epoch)
+        taken = []
+
+        def restores_slowly(*args: Any) -> Any:
+            assert beats.wake(beats.newest())
+            taken.append(another.claim())
+            return upload_checkpoint(*args)
+
+        monkeypatch.setattr(workers, "upload_checkpoint", restores_slowly)
+        resumed = EpochStore(objects, kept.run_id, kept.epoch)
+
+        assert workers.resume(made, resumed, workers.Free()) == Status.FINISHED
+
+    assert taken == [False]
+    assert len(kept.commits()) == workers_support.SHORT_DAYS
+    kept.verify()
 
 
 def test_an_epoch_told_it_ended_by_another_process_is_let_go_by_the_thread(
