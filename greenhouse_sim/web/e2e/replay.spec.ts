@@ -6,6 +6,8 @@ const DAY_S = 86_400;
 // specs working the same simulator; a test that waits for it has twice as long.
 const COMPUTES = 60_000;
 const WAITS_FOR_A_DAY = COMPUTES * 2;
+// How long a seek's answer is held, where a test presses keys faster than that.
+const ANSWER_MS = 500;
 
 /** Everything the page reports as an error, so a test can insist on none. */
 function collectErrors(page: Page): string[] {
@@ -109,6 +111,37 @@ test("a run that is being computed can be followed at its newest day", async ({ 
   await expect(follow).toHaveAttribute("aria-pressed", "false");
   await follow.click();
   await expect(follow).toHaveAttribute("aria-pressed", "true");
+});
+
+test("keys pressed faster than the answers move from the moment last sought", async ({ page }) => {
+  test.setTimeout(WAITS_FOR_A_DAY * 2);
+  await replayOfANewRun(page, "48");
+  const handle = page.getByRole("slider", { name: "Position in the run" });
+  const moment = page.getByTestId("replay-moment");
+  await expect
+    .poll(async () => Number(await handle.getAttribute("aria-valuemax")), {
+      timeout: WAITS_FOR_A_DAY,
+    })
+    .toBeGreaterThanOrEqual(2 * DAY_S);
+  await handle.focus();
+  await page.keyboard.press("PageUp");
+  await expect(moment).toHaveText("Day 1, 24:00");
+  await page.keyboard.press("PageUp");
+  await expect(moment).toHaveText("Day 2, 24:00");
+
+  // Every answer now comes later than the next key.
+  const sought: (string | null)[] = [];
+  await page.route("**/seek*", async (route) => {
+    sought.push(new URL(route.request().url()).searchParams.get("t"));
+    await new Promise((answered) => setTimeout(answered, ANSWER_MS));
+    await route.continue();
+  });
+  await page.keyboard.press("Home");
+  await page.keyboard.press("PageUp");
+
+  await expect(handle).toHaveAttribute("aria-valuetext", "Day 1, 24:00");
+  await expect(moment).toHaveText("Day 1, 24:00");
+  expect(sought.at(-1)).toBe(String(DAY_S));
 });
 
 test("a stored run is forked from the moment shown, and stays there to go back to", async ({

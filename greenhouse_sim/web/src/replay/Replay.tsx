@@ -43,7 +43,7 @@ function ReplayOf({
   epoch: number;
   following: boolean;
 }) {
-  const { load, refused, command, seek, pace } = useReplay(runId, epoch, fetch, following);
+  const { load, refused, heading, command, seek, pace } = useReplay(runId, epoch, fetch, following);
   const scenarios = useLoad(SCENARIOS_URL, (_url, fetchFn) => loadScenarios(fetchFn));
   const position = load.status === "loaded" ? load.position : null;
   // The scene is the epoch's own run, which no moment of the position changes.
@@ -110,6 +110,7 @@ function ReplayOf({
       <ReplayTransport
         position={position}
         refused={refused}
+        heading={heading}
         onPlay={() => command("play")}
         onPause={() => command("pause")}
         onFollow={() => command("follow")}

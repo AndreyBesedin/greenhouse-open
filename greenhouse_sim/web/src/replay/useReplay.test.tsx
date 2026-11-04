@@ -463,3 +463,79 @@ describe("the answers a replay takes, in the order they were asked", () => {
     expect(shownTime(rendered.container)).toBe("7200");
   });
 });
+
+describe("the moment a replay is heading for", () => {
+  let rendered: Rendered | undefined;
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    rendered?.unmount();
+    vi.useRealTimers();
+  });
+
+  function Heading({ fetchFn, runId = "run-1" }: { fetchFn: typeof fetch; runId?: string }) {
+    const replay = useReplay(runId, 0, fetchFn);
+    return (
+      <div>
+        <span data-testid="heading">{String(replay.heading)}</span>
+        <button type="button" onClick={() => replay.seek(3600)}>
+          seek
+        </button>
+        <button type="button" onClick={() => replay.seek(7200)}>
+          seek later
+        </button>
+      </div>
+    );
+  }
+
+  const heading = (container: HTMLElement) =>
+    container.querySelector('[data-testid="heading"]')?.textContent;
+
+  it("is the latest sought, until the latest asked is answered", async () => {
+    const { fetchFn, seeks } = held();
+    rendered = render(<Heading fetchFn={fetchFn} />);
+    await settle();
+    expect(heading(rendered.container)).toBe("null");
+
+    pressed(rendered.container, "seek");
+    expect(heading(rendered.container)).toBe("3600");
+    pressed(rendered.container, "seek later");
+    expect(heading(rendered.container)).toBe("7200");
+
+    // An earlier answer is to an earlier word: the page is still heading on.
+    seeks[0]?.(3600);
+    await settle();
+    expect(heading(rendered.container)).toBe("7200");
+
+    seeks.at(-1)?.(7200);
+    await settle();
+    expect(heading(rendered.container)).toBe("null");
+  });
+
+  it("is let go when the seek is refused, so that the next starts from the position", async () => {
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) =>
+      String(input).includes("/seek")
+        ? new Response("{}", { status: 503 })
+        : Response.json(state()),
+    ) as unknown as typeof fetch;
+    rendered = render(<Heading fetchFn={fetchFn} />);
+    await settle();
+
+    pressed(rendered.container, "seek");
+    expect(heading(rendered.container)).toBe("3600");
+    await settle();
+
+    expect(heading(rendered.container)).toBe("null");
+  });
+
+  it("is let go with the replay it was of", async () => {
+    const { fetchFn } = held();
+    rendered = render(<Heading fetchFn={fetchFn} runId="run-1" />);
+    await settle();
+    pressed(rendered.container, "seek");
+
+    rendered.rerender(<Heading fetchFn={fetchFn} runId="run-2" />);
+    await settle();
+
+    expect(heading(rendered.container)).toBe("null");
+  });
+});
