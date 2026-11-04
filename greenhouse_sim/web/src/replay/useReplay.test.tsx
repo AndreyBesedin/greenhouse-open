@@ -22,6 +22,7 @@ function state(more: Partial<PositionState> = {}): PositionState {
     day: 0,
     playing: false,
     following: false,
+    parent_kept: false,
     seconds_per_day: 10,
     frontier_s: 3 * DAY_S,
     duration_s: 3 * DAY_S,

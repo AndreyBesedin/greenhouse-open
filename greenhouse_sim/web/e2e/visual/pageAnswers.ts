@@ -77,6 +77,7 @@ const POSITION: PositionState = {
   day: 2,
   playing: false,
   following: false,
+  parent_kept: false,
   seconds_per_day: 60,
   frontier_s: DAYS_COMPUTED * DAY_S,
   duration_s: DAYS_OF_THE_RUN * DAY_S,

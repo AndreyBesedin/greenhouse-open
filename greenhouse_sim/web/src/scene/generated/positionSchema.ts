@@ -188,6 +188,11 @@ export const POSITION_SCHEMA = {
       ],
       "default": null
     },
+    "parent_kept": {
+      "default": false,
+      "title": "Parent Kept",
+      "type": "boolean"
+    },
     "targets": {
       "default": [],
       "items": {
@@ -274,6 +279,7 @@ export const POSITION_SCHEMA = {
     "duration_s",
     "start_s",
     "fork",
+    "parent_kept",
     "targets",
     "commands",
     "crop"
