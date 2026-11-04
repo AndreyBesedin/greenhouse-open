@@ -320,6 +320,9 @@ class EpochManifest(BaseModel):
     # When it was last put in line for a scheduler's worker, which is what brings it
     # back in its place after a restart: none for one a process of its own takes up.
     queued_at: datetime | None = None
+    # Whether it was last asked to be carried on: if its worker ends before it takes
+    # it up, it is as interrupted as it was, with or without a commit to go on from.
+    resumed: bool = False
     fork: ForkOf | None = None
     # The digest of its scenario's portable file in this store
     # (`services.scenario_files`): none for a packaged scenario, which every
@@ -719,6 +722,7 @@ class EpochStore:
                 "scenario_file": scenario_file,
                 "seconds_per_day": seconds_per_day,
                 "queued_at": datetime.now(UTC),
+                "resumed": True,
             }
         )
         self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())

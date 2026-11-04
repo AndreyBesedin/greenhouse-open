@@ -22,7 +22,7 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import leases, scenario_files, scheduler
-from greenhouse_sim.services.errors import Conflict
+from greenhouse_sim.services.errors import Conflict, NotFound
 from greenhouse_sim.services.run_store import EpochStore, FolderStore, Status, delete_epoch
 from greenhouse_sim.services.scheduler import Scheduler
 from greenhouse_sim.services.simulator import Simulator
@@ -250,6 +250,34 @@ def test_a_worker_that_found_its_run_anothers_counts_that_run_until_it_is_told(
         _until(lambda: not made.waiting(), "the next run's worker")
 
 
+def test_a_run_another_server_started_while_it_waited_here_counts_until_it_is_told(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(scheduler, "work", workers_support.ends_at_once)
+    objects = FolderStore(tmp_path)
+    holding, started, behind = _in_line(objects, [1, 2, 3])
+    assert holding.claim()
+
+    with Simulator(runs=objects, workers=1) as simulator:
+        made = simulator.scheduler
+        assert made is not None
+        assert made.waiting() == [_key(started), _key(behind)]
+        # Another server's worker takes it, and will write nothing more.
+        assert leases.claim(objects, f"{started.run_id}/{started.epoch}") == 0
+        _rewritten(started, status=Status.RUNNING)
+
+        holding.set_status(Status.FINISHED)
+
+        _until(lambda: _key(started) not in made.waiting(), "its turn to come here")
+        threading.Event().wait(5 * scheduler.LOOK_EVERY_S)
+        assert made.waiting() == [_key(behind)] and made.workers() == []
+
+        _expired(started)
+
+        _until(lambda: started.manifest().status == Status.INTERRUPTED, "it to be told")
+        _until(lambda: behind.manifest().status == Status.FAILED, "the next run's worker")
+
+
 def test_a_server_killed_leaves_a_worker_computing_which_the_next_counts_and_a_run_waiting(
     tmp_path: Path,
 ) -> None:
@@ -423,7 +451,7 @@ def test_a_run_waiting_that_this_simulator_cannot_run_is_told_interrupted_and_sa
             made_again.resume(cannot.run_id, cannot.epoch)
 
 
-@pytest.mark.parametrize("kind", ["new", "carried on", "fork"])
+@pytest.mark.parametrize("kind", ["new", "carried on", "carried on with nothing kept", "fork"])
 @pytest.mark.usefixtures("workers_end_at_once")
 def test_a_worker_that_ends_before_taking_up_a_run_found_again_says_what_it_says_otherwise(
     tmp_path: Path, kind: str, monkeypatch: pytest.MonkeyPatch
@@ -439,7 +467,8 @@ def test_a_worker_that_ends_before_taking_up_a_run_found_again_says_what_it_says
             left = EpochStore(objects, shown.run_id, shown.epoch)
         else:
             left = queued(made, objects, SHORT)
-            assert execute(made, left, Stepped([DAY_S])) == Status.INTERRUPTED
+            kept = [] if kind == "carried on with nothing kept" else [DAY_S]
+            assert execute(made, left, Stepped(kept)) == Status.INTERRUPTED
             if kind == "fork":
                 shown = scheduling.fork(left.run_id, left.epoch, DAY_S)
                 left = EpochStore(objects, shown.run_id, shown.epoch)
@@ -451,6 +480,65 @@ def test_a_worker_that_ends_before_taking_up_a_run_found_again_says_what_it_says
         _until(lambda: left.manifest().status != Status.QUEUED, "the epoch to be told")
 
     assert left.manifest().status == (Status.FAILED if kind == "new" else Status.INTERRUPTED)
+
+
+@pytest.mark.parametrize("status", [Status.QUEUED, Status.RUNNING])
+@pytest.mark.usefixtures("no_worker_starts")
+def test_a_stop_of_a_run_waiting_here_that_another_server_took_up_asks_its_worker(
+    tmp_path: Path, status: Status
+) -> None:
+    objects = FolderStore(tmp_path)
+    (left,) = _in_line(objects, [1])
+
+    with Simulator(runs=objects, workers=1) as simulator:
+        made = simulator.scheduler
+        assert made is not None
+        assert made.waiting() == [_key(left)]
+        # Another server's worker, between this server's restoring it and this stop.
+        worker = EpochStore(objects, left.run_id, left.epoch)
+        assert worker.claim()
+        if status == Status.RUNNING:
+            worker.set_status(status)
+
+        shown = made.cancel(left.run_id, left.epoch)
+
+        assert (shown.status, shown.stopping) == (status, True)
+        assert worker.claimed() and left.stop_asked()
+        assert made.waiting() == []
+        worker.set_status(Status.INTERRUPTED)
+
+
+@pytest.mark.usefixtures("no_worker_starts")
+def test_a_stop_of_a_run_waiting_here_that_ended_elsewhere_changes_nothing(tmp_path: Path) -> None:
+    objects = FolderStore(tmp_path)
+    (left,) = _in_line(objects, [1])
+
+    with Simulator(runs=objects, workers=1) as simulator:
+        made = simulator.scheduler
+        assert made is not None
+        _rewritten(left, status=Status.FINISHED)
+
+        with pytest.raises(Conflict, match="not being computed"):
+            made.cancel(left.run_id, left.epoch)
+
+        assert left.manifest().status == Status.FINISHED
+        assert made.waiting() == []
+
+
+@pytest.mark.usefixtures("no_worker_starts")
+def test_a_stop_of_a_run_waiting_here_that_was_deleted_is_not_found(tmp_path: Path) -> None:
+    objects = FolderStore(tmp_path)
+    (left,) = _in_line(objects, [1])
+
+    with Simulator(runs=objects, workers=1) as simulator:
+        made = simulator.scheduler
+        assert made is not None
+        delete_epoch(objects, left.run_id, left.epoch)
+
+        with pytest.raises(NotFound):
+            made.cancel(left.run_id, left.epoch)
+
+        assert made.waiting() == []
 
 
 def test_a_run_whose_worker_is_alive_is_asked_through_the_store_to_stop(tmp_path: Path) -> None:

@@ -293,20 +293,27 @@ class Scheduler:
             logger.warning("%s: it waits no longer", refused.message)
             kept.end_unless_worked(Status.INTERRUPTED)
             return
-        begun = kept.manifest().fork is not None or bool(kept.commits())
-        self._waiting.append(_Job(kept.run_id, kept.epoch, resuming=begun))
+        manifest = kept.manifest()
+        resuming = manifest.resumed or manifest.fork is not None or bool(kept.commits())
+        self._waiting.append(_Job(kept.run_id, kept.epoch, resuming=resuming))
 
     def cancel(self, run_id: str, epoch: int) -> StoredRun:
         """Ends an epoch: one waiting here is taken out of the queue and one
         being executed here has its worker ended, both told `interrupted` with
         what they had committed. Any other is left to `_stop_elsewhere`, and may
-        be on its way when this answers, as the epoch answered says."""
+        be on its way when this answers, as the epoch answered says: so is one
+        waiting here that another server's worker has taken up, or that has ended
+        there, since a queue made from the store is not the only one that may."""
         key = (run_id, epoch)
         with self._lock:
             waiting = next((j for j in self._waiting if (j.run_id, j.epoch) == key), None)
             if waiting is not None:
                 self._waiting.remove(waiting)
-                self._say(key, Status.INTERRUPTED)
+                kept = EpochStore(self._objects, run_id, epoch)
+                if self._status(key) != Status.QUEUED or not kept.end_unless_worked(
+                    Status.INTERRUPTED
+                ):
+                    self._stop_elsewhere(run_id, epoch)
             elif key in self._running:
                 self._cancelled.add(key)
                 self._end(self._running[key])
@@ -363,11 +370,16 @@ class Scheduler:
     def _launch(self) -> None:
         """Under the lock: a worker for each epoch waiting while there is room. One
         the store no longer has waiting, told otherwise or deleted by another
-        process, is passed over."""
+        process, is passed over, and one another server's worker has begun is counted
+        as that worker's until it is told."""
         self._look_elsewhere()
         while self._waiting and len(self._running) + len(self._elsewhere) < self._limit:
             job = self._waiting.popleft()
-            if self._status((job.run_id, job.epoch)) != Status.QUEUED:
+            key = (job.run_id, job.epoch)
+            status = self._status(key)
+            if status == Status.RUNNING:
+                self._elsewhere.add(key)
+            if status != Status.QUEUED:
                 continue
             process = self._context.Process(
                 target=work,
@@ -381,13 +393,11 @@ class Scheduler:
                 # The machine's limit of processes, say: this epoch is told,
                 # and the ones behind it are given workers as there is room.
                 logger.exception("no worker could be started for %s", job.run_id)
-                self._say(
-                    (job.run_id, job.epoch), Status.FAILED, reason="no worker could be started"
-                )
+                self._say(key, Status.FAILED, reason="no worker could be started")
                 continue
-            self._running[(job.run_id, job.epoch)] = process
+            self._running[key] = process
             if job.resuming:
-                self._resuming.add((job.run_id, job.epoch))
+                self._resuming.add(key)
 
     def _look_elsewhere(self) -> None:
         """Under the lock: an epoch worked elsewhere whose claim is no longer believed
