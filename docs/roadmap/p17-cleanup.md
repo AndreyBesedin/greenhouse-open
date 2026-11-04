@@ -151,8 +151,10 @@ pale text.
 - [x] The runs dialog keeps "still being computed: stop it, then delete it" up after Stop,
   beside a row reading Interrupted. Fix in #525.
 - [x] The note under the levels set names their identifiers ("Set roof_vent_1"). Fix in #527.
-- [ ] The address of a run with files missing still opens its replay, which says Finished. The
-  lists offer no link to it, so this takes an address kept from before.
+- [x] The address of a run with files missing still opens its replay, which says Finished. The
+  lists offer no link to it, so this takes an address kept from before. It now says the run
+  cannot be replayed and why, also for a finished run that lost its last commits, which left no
+  gap to see.
 - [ ] A fork in another layout is another run's epoch, and can read "epoch 0 · forked from
   epoch 0" with no word of the layout.
 - [ ] At phone width the builder's page is 463 px wide in a window of 390: the pane that draws

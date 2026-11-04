@@ -108,7 +108,7 @@ def _report(epoch: EpochStore) -> _Done | None:
         return _Done.HAD_REPORT
     commits = epoch.commits()
     if epoch.damaged(commits):
-        raise StoreCorrupt("an object its commits name is missing, so it is left to be walked")
+        raise StoreCorrupt("files of it are missing, so it is left to be walked")
     # Looked at again just before the write: a worker may have taken it up since.
     if _being_worked(epoch, epoch.manifest()):
         return _Done.BEING_WORKED

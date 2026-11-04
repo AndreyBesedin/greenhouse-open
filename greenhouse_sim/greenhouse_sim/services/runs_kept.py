@@ -218,7 +218,9 @@ def open_position(
     at, before a read comes to the gap."""
     objects = _objects(simulator)
     if epoch in stored_epochs(objects, run_id) and stored_run(objects, run_id, epoch).damaged:
-        raise Conflict(f"files of run {run_id}, epoch {epoch} are missing: it is not read whole")
+        raise Conflict(
+            f"files of run {run_id}, epoch {epoch} are missing, so it cannot be read whole"
+        )
     return simulator.positions.open(
         simulator,
         objects,
