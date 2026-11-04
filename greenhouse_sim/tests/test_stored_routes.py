@@ -6,7 +6,6 @@ from collections.abc import Callable, Iterator
 from datetime import timedelta
 from http import HTTPStatus
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Final
 
 import pytest
@@ -459,10 +458,10 @@ class Retiring:
 
     def __init__(self, run_id: str, epoch: int) -> None:
         self.working = True
-        self._state = SimpleNamespace(run_id=run_id, epoch=epoch)
+        self._epoch = (run_id, epoch)
 
-    def state(self) -> SimpleNamespace:
-        return self._state
+    def has_epoch(self, run_id: str, epoch: int) -> bool:
+        return (run_id, epoch) == self._epoch
 
     def stop(self, *, wait: bool = True) -> None:
         self.working = False

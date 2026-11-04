@@ -162,6 +162,11 @@ pale text.
 - [ ] A panel's fork takes the moment it shows, by design, so under load *Fork from here with
   these levels* at a transport reading Day 2, 24:00 forked from Day 1, 24:00, the field still
   on its way. The subtitle then says so.
+- [ ] A playback that failed, until it is started again, answers every reader with a 500 and no
+  words. `GET /consumer/v1/runs` then lists no run at all, of any scenario, since it asks each
+  playback kept for its state. By the code, the viewer's panel says "the simulator answered 500"
+  and has no start button, though a start now plays the run again. Why it failed is the `reason`
+  of its epoch in the store's answers, which no page of the viewer reads.
 
 ## Not covered by the walk
 
