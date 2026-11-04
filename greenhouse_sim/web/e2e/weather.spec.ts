@@ -141,6 +141,16 @@ test("weather: the sun stands where it is at the moment drawn", async ({ page })
   await expect(page.getByTestId("main-view")).toHaveAttribute("data-light", "sun");
 });
 
+test("weather: a house without equipment is lit by the sun in its climate run", async ({
+  page,
+}) => {
+  await page.goto("/?scenario=tomato_compartment&field=climate&t=45900");
+  await expect(page.getByTestId("climate-time")).toHaveText("12 h 45 min", { timeout: 60_000 });
+
+  await expect(page.getByTestId("main-view")).toHaveAttribute("data-light", "sun");
+  await expect(page.getByTestId("climate-failed")).toHaveCount(0);
+});
+
 test("weather: at night the climate run's view is lit by the sky alone", async ({ page }) => {
   await page.goto("/?scenario=climate_box&field=climate&t=600");
   await expect(page.getByTestId("climate-time")).toHaveText("10 min", { timeout: 60_000 });

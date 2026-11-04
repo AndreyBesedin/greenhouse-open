@@ -155,13 +155,16 @@ def test_a_scenario_offers_its_fields_over_its_greenhouses_air(simulator: Simula
         HTTPStatus.NOT_FOUND,
         {
             "error": "scenario 'tomato_compartment' has no field 'wind'; "
-            "it has buoyancy, uniform, vortex, cfd, shear"
+            "it has buoyancy, uniform, vortex, cfd, climate, shear"
         },
     )
     assert nowhere.status == HTTPStatus.NOT_FOUND
     listed = respond(simulator, "GET", "/api/scenarios/tomato_compartment/fields")
     assert (listed.status, listed.body) == (
         HTTPStatus.OK,
-        {"fields": ["buoyancy", "uniform", "vortex", "cfd", "shear"], "configured": "buoyancy"},
+        {
+            "fields": ["buoyancy", "uniform", "vortex", "cfd", "climate", "shear"],
+            "configured": "buoyancy",
+        },
     )
     assert respond(simulator, "GET", "/api/scenarios/gh_999/fields").status == HTTPStatus.NOT_FOUND

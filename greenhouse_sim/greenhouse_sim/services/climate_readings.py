@@ -21,8 +21,8 @@ from greenhouse_sim.climate.glazing import GlazingAt
 from greenhouse_sim.climate.house import HouseAir, HouseTrace, house_trace
 from greenhouse_sim.climate.openings import OpeningsAt
 from greenhouse_sim.climate.probes import ClimateProbes, probe_series
-from greenhouse_sim.services.climate_runs import RunKey, climate_day, everything_off
-from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.services.climate_runs import climate_day, everything_off
+from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import climate_key, grid
 from greenhouse_sim.services.runs import RunRequest, checked_moment, checked_window
 from greenhouse_sim.services.scenarios import scenario
@@ -34,15 +34,6 @@ if TYPE_CHECKING:
 
 # Probes read a climate run this often, in seconds.
 PROBE_EVERY_S: Final = 60.0
-
-
-def _climate_of(simulator: Simulator, run: RunRequest) -> RunKey:
-    """What names a run's climate, refused for a scenario without
-    equipment, which has no climate run."""
-    key = climate_key(simulator, run)
-    if key is None:
-        raise NotFound(f"scenario {run.scenario_id!r} has no climate: it has no equipment")
-    return key
 
 
 def climate_probes(
@@ -59,7 +50,7 @@ def climate_probes(
     refused too."""
     scenario_id = run.scenario_id
     checked_moment(scenario(simulator.catalogue, scenario_id), until_s)
-    key = _climate_of(simulator, run)
+    key = climate_key(simulator, run)
     air = grid(simulator.catalogue, scenario_id)
     probed = [Vector3(x=x, y=y, z=z) for x, y, z in points]
     outside = [point for point in probed if not air.contains(point)]
@@ -93,7 +84,7 @@ def house_air(
     and refused as it is."""
     scenario_id = run.scenario_id
     first = checked_window(scenario(simulator.catalogue, scenario_id), from_s, until_s)
-    key = _climate_of(simulator, run)
+    key = climate_key(simulator, run)
     return house_trace(
         climate_day(simulator, key).house,
         everything_off(simulator, key).house,
@@ -101,15 +92,12 @@ def house_air(
     )
 
 
-def house_air_at(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> HouseAir | None:
+def house_air_at(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> HouseAir:
     """The house's air as one well-mixed volume at a moment of a run's
-    climate, asked as its climate field is and refused as it is; None for a
-    scenario without equipment, which has no climate run. Unlike
+    climate, asked as its climate field is and refused as it is. Unlike
     `house_air`, it works out nothing of the same run all off."""
     checked_moment(scenario(simulator.catalogue, run.scenario_id), time_s)
     key = climate_key(simulator, run)
-    if key is None:
-        return None
     return climate_day(simulator, key).house.air_at(time_s)
 
 
@@ -143,12 +131,9 @@ class EquipmentAt(BaseModel):
 
 def equipment_at(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> EquipmentAt:
     """A run's equipment at a moment of its climate, asked as its climate
-    field is and refused as it is: none for a scenario without equipment,
-    which has no climate run."""
+    field is and refused as it is: none, for a layout that places none."""
     checked_moment(scenario(simulator.catalogue, run.scenario_id), time_s)
     key = climate_key(simulator, run)
-    if key is None:
-        return EquipmentAt(time_s=time_s, levels={}, thermostat=None)
     worked = climate_day(simulator, key).run
     thermostat = worked.thermostat
     targets = worked.schedule.targets_at(time_s)
@@ -174,7 +159,7 @@ def glazing(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> Glazi
     as it is."""
     scenario_id = run.scenario_id
     checked_moment(scenario(simulator.catalogue, scenario_id), time_s)
-    key = _climate_of(simulator, run)
+    key = climate_key(simulator, run)
     return climate_day(simulator, key).glazing_at(time_s)
 
 
@@ -184,5 +169,5 @@ def openings(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> Open
     Asked as its climate field is, and refused as it is."""
     scenario_id = run.scenario_id
     checked_moment(scenario(simulator.catalogue, scenario_id), time_s)
-    key = _climate_of(simulator, run)
+    key = climate_key(simulator, run)
     return climate_day(simulator, key).openings_at(time_s)
