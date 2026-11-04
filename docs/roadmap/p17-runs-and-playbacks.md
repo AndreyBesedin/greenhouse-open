@@ -234,9 +234,11 @@ out, edited and read back.
   scenario as a draft's run is (decision 0048), and opens it in the setup
   builder, never straight into a run: the builder shows the house and the run
   settings, and ends in *save and start a run* or *save and go back*. An
-  installation file, which has no settings, opens there to be given them. A
-  scenario whose identifier is a packaged scenario's, or another's
-  registered, is refused.
+  installation file, which has no settings, opens there to be given them, as a
+  draft not saved: a draft of its identifier stays as it is, and the file is
+  saved under another. The simulator says which kind a file is, and the
+  builder's own import takes either. A scenario whose identifier is a packaged
+  scenario's, or another's registered, is refused.
 - **A recorded weather is carried or named, as the sender chooses.** A scenario
   that runs under a recorded weather (a CSV, identified by its content) is
   downloaded with a tick, *Include the recorded weather*, on by default. Ticked,

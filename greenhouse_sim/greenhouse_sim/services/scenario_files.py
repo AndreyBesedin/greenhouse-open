@@ -9,6 +9,12 @@ the run settings, for the setup builder to open. A scenario under a recorded
 weather the file does not carry and this process does not offer is not
 registered; the answer names the weather.
 
+An upload may also be an installation's file, which has no run settings. The
+simulator says which of the two a file is, since only its readers know what
+each holds. An installation's is read and answered as the builder's import is
+(`services.builder.assess`), for the builder to open and give it its run's
+settings; nothing is registered, and no draft is kept or changed.
+
 An epoch of a scenario that is not packaged carries its file too (decision
 0067): written beside the uploaded ones when the epoch is started, with its
 recording inside, and named by its manifest, so that a worker needs only the
@@ -18,7 +24,7 @@ scenarios again as it knows the uploaded ones.
 
 import logging
 from datetime import date
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, Literal
 
 from pydantic import BaseModel, ConfigDict, NonNegativeInt, PositiveInt, ValidationError
 
@@ -29,8 +35,10 @@ from greenhouse_sim.scenarios.scenario_files import (
     Recording,
     ScenarioFileError,
     export_scenario_file,
+    holds_an_installation,
     import_scenario_file,
 )
+from greenhouse_sim.services.builder import Assessed, assess
 from greenhouse_sim.services.errors import (
     Conflict,
     InvalidRequest,
@@ -109,12 +117,23 @@ class ScenarioUploaded(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
+    kind: Literal["scenario"] = "scenario"
     file_digest: str
     scenario: ScenarioSummary | None
     kept: bool
     installation: Installation
     settings: RunSettings
     missing_weather: MissingWeather | None
+
+
+class InstallationUploaded(BaseModel):
+    """What an upload of an installation's file answers: the house, assessed
+    as the builder's import has it. Nothing was registered or kept."""
+
+    model_config = ConfigDict(frozen=True)
+
+    kind: Literal["installation"] = "installation"
+    assessed: Assessed
 
 
 def download(simulator: Simulator, scenario_id: str, with_recording: bool) -> ScenarioDownload:
@@ -129,12 +148,22 @@ def download(simulator: Simulator, scenario_id: str, with_recording: bool) -> Sc
     )
 
 
-def upload(simulator: Simulator, text: str) -> ScenarioUploaded:
+def upload(simulator: Simulator, text: str) -> ScenarioUploaded | InstallationUploaded:
     """A scenario file validated, registered and, if the simulator has a run
-    store, kept. The same file again is the scenario already registered.
-    Refused (400) if it is not a scenario file, naming each field at fault;
-    a conflict (409) if its scenario's identifier is a packaged scenario's or
-    another's registered."""
+    store, kept, or an installation's file read. The same scenario file again
+    is the scenario already registered. Refused (400) if it is neither kind of
+    file or not a good one of its kind, naming each field at fault; a conflict
+    (409) if its scenario's identifier is a packaged scenario's or another's
+    registered."""
+    try:
+        is_installation = holds_an_installation(text)
+    except ScenarioFileError as error:
+        raise InvalidRequest(
+            f"not a scenario file or an installation file: {error.message}",
+            [(error.field, error.message)],
+        ) from None
+    if is_installation:
+        return InstallationUploaded(assessed=assess(text))
     uploaded = _registered(simulator, text)
     if uploaded.scenario is None or simulator.runs is None:
         return uploaded

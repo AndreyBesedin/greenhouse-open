@@ -7,12 +7,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { button, click, type Rendered, render } from "../testing/render";
 import { UploadScenario } from "./UploadScenario";
-import { keptFields } from "./uploaded";
+import { keptFields, keptHouse } from "./uploaded";
 
 // The fields the page reads of what the simulator answers an upload of the Climate box's file under another
 // identifier.
 const UPLOADED = JSON.parse(
   readFileSync(join(process.cwd(), "src/landing/testing/uploadedScenario.json"), "utf8"),
+);
+
+const STARTING_HOUSE = JSON.parse(
+  readFileSync(join(process.cwd(), "src/builder/testing/startingHouse.json"), "utf8"),
 );
 
 function stubSimulator(answer: Response): string[] {
@@ -63,6 +67,40 @@ describe("a scenario file uploaded from the start page (P17.11)", () => {
     });
   });
 
+  it("opens an installation's file in the builder, keeping it for the builder to read", async () => {
+    stubSimulator(new Response(JSON.stringify({ kind: "installation", assessed: STARTING_HOUSE })));
+    const went: string[] = [];
+    shown = render(<UploadScenario navigate={(address) => went.push(address)} />);
+
+    await choose(shown.container, "my_greenhouse.json", "{}");
+
+    const { installation_id } = STARTING_HOUSE.installation;
+    expect(went).toEqual([`/builder#installation=${installation_id}`]);
+    const kept = keptHouse(installation_id);
+    expect(kept?.fileName).toBe("my_greenhouse.json");
+    expect(JSON.parse(kept?.text ?? "null")).toEqual({
+      schema_version: STARTING_HOUSE.schema_version,
+      ...STARTING_HOUSE.installation,
+    });
+  });
+
+  it("says where else to open an installation's file when the window keeps nothing", async () => {
+    stubSimulator(new Response(JSON.stringify({ kind: "installation", assessed: STARTING_HOUSE })));
+    const refused = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("refused");
+    });
+    const went: string[] = [];
+    shown = render(<UploadScenario navigate={(address) => went.push(address)} />);
+
+    await choose(shown.container, "my_greenhouse.json", "{}");
+    refused.mockRestore();
+
+    expect(went).toEqual([]);
+    expect(shown.container.querySelector('[role="alert"]')?.textContent).toContain(
+      "my_greenhouse.json cannot be passed to the builder",
+    );
+  });
+
   it("says a refusal next to the control, naming the file, and goes nowhere", async () => {
     stubSimulator(
       new Response(JSON.stringify({ error: "'climate_box' is a packaged scenario's" }), {
@@ -104,7 +142,7 @@ describe("a scenario file uploaded from the start page (P17.11)", () => {
 
   it("is a button a person can reach, described by what it does", () => {
     shown = render(<UploadScenario navigate={() => {}} />);
-    const upload = button(shown.container, "Upload a scenario file");
+    const upload = button(shown.container, "Upload a scenario or house file");
     const hint = shown.container.querySelector(`#${upload.getAttribute("aria-describedby")}`);
 
     expect(hint?.textContent).toContain("opens in the builder");
