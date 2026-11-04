@@ -64,6 +64,11 @@ def _epoch(simulator: Simulator, shown: StoredRun) -> EpochStore:
     return EpochStore(simulator.runs, shown.run_id, shown.epoch)
 
 
+def _reported_days(epoch: EpochStore) -> float:
+    usage = epoch.usage()
+    return 0.0 if usage is None else usage.days_computed
+
+
 def test_a_worker_killed_mid_epoch_is_resumed_over_the_api_and_ends_as_an_epoch_never_killed(
     simulator: Simulator, tmp_path: Path
 ) -> None:
@@ -78,7 +83,9 @@ def test_a_worker_killed_mid_epoch_is_resumed_over_the_api_and_ends_as_an_epoch_
     shown = StoredRun.model_validate(asked.body)
     epoch = _epoch(simulator, shown)
     assert shown.epoch == whole.epoch and shown.run_id == whole.run_id
-    _until(lambda: epoch.frontier_s() >= DAY_S, "a day to be committed")
+    # A worker writes its report just after its commit: killed between them, what it
+    # used is lost, so this waits for the report and not for the commit.
+    _until(lambda: _reported_days(epoch) >= 1.0, "a day to be committed and reported")
 
     assert simulator.scheduler is not None
     (worker,) = simulator.scheduler.workers()
