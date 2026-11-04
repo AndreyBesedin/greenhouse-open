@@ -7,7 +7,9 @@ import {
   houseAirOnShow,
   houseAirUrl,
   loadHouseAir,
+  ownHouseAirUrl,
   parseHouseAir,
+  withAllOff,
 } from "./HouseAir";
 
 const SERIES = (temperature: number[]) => ({
@@ -37,6 +39,58 @@ describe("the house's air", () => {
       "/api/scenarios/climate_box/climate/house?set=heater:1&open=roof_vent:1&t=600&weather=cold_spring_day",
     );
     expect(houseAirUrl("climate_box", {})).toBe("/api/scenarios/climate_box/climate/house");
+  });
+
+  it("is asked for apart from the same run all off", () => {
+    expect(ownHouseAirUrl("climate_box", { time: 600 })).toBe(
+      "/api/scenarios/climate_box/climate/house?t=600&all_off=0",
+    );
+    expect(ownHouseAirUrl("climate_box", {})).toBe(
+      "/api/scenarios/climate_box/climate/house?all_off=0",
+    );
+  });
+
+  it("charts the run's own air while the run all off is on its way", () => {
+    const own = { status: "loaded" as const, trace: { ...BODY, all_off: null } };
+    const html = renderToStaticMarkup(<HouseAir state={own} />);
+
+    expect(html).toContain("Air 15.6 °C, all off on its way");
+    expect(html).not.toContain("house-air-off");
+    expect(describeHouseAir(own)).toBe("House air: 15.6 °C, 85.0 %, 420.0 ppm");
+  });
+
+  it("takes the run all off from an answer of the same day, as far as it reaches", () => {
+    const own = { status: "loaded" as const, trace: { ...BODY, all_off: null } };
+    const whole = { status: "loaded" as const, trace: BODY };
+    expect(withAllOff(own, null)).toBe(own);
+    expect(withAllOff(own, whole)).toEqual(whole);
+
+    const earlier = {
+      status: "loaded" as const,
+      trace: {
+        times_s: [0, 60],
+        controlled: SERIES([16, 15.8]),
+        all_off: SERIES([16, 15.2]),
+      },
+    };
+    const html = renderToStaticMarkup(<HouseAir state={withAllOff(own, earlier)} />);
+    expect(html).toContain("all off on its way");
+    expect(html).toContain("house-air-off");
+
+    const anotherDay = {
+      status: "loaded" as const,
+      trace: { ...BODY, times_s: [86_400, 86_460, 86_520] },
+    };
+    expect(withAllOff(own, anotherDay)).toBe(own);
+    const loading = { status: "loading" as const };
+    expect(withAllOff(loading, whole)).toBe(loading);
+  });
+
+  it("reads an answer without the run all off", async () => {
+    const without = { ...BODY, all_off: null };
+    const answered = (async () => Response.json(without)) as typeof fetch;
+
+    expect(await loadHouseAir("/x", answered)).toEqual({ status: "loaded", trace: without });
   });
 
   it("is checked rather than trusted", async () => {

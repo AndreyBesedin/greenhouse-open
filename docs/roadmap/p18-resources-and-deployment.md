@@ -35,7 +35,12 @@ Read from the code at commit `28701e05`.
 - A live playback, for `/view`: computing days ahead in a thread.
 - A position's scene: a seek restores the nearest checkpoint and works the day on,
   1.0 to 1.5 s a day (P17.1), in the API's simulator.
-- The scenarios' opening days, loaded when the server starts.
+- The same run all off, which the house's chart draws beside a run and its sensors
+  and probes read beside theirs: no checkpoint holds it, so the first far moment
+  asked of it works it from its start, 96 to 144 s of a core for Day 87 of
+  `tomgro_house`. It is kept after that, 341 B a step, 59 MB for 120 days, at most
+  `KEPT_RUNS` of them. The chart does not wait for it, and it stops when the page
+  leaves it, what it worked out kept.
 
 ## Measurements
 

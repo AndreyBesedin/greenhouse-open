@@ -819,13 +819,13 @@ class HouseSeries(BaseModel):
 
 class HouseTrace(BaseModel):
     """The house's air through a climate run, and through the same run with
-    everything off, at each of its moments, in seconds."""
+    everything off unless left out, at each of its moments, in seconds."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     times_s: list[float]
     controlled: HouseSeries
-    all_off: HouseSeries
+    all_off: HouseSeries | None
 
 
 def _series(house: WholeHouse, times_s: Sequence[float]) -> HouseSeries:
@@ -840,12 +840,12 @@ def _series(house: WholeHouse, times_s: Sequence[float]) -> HouseSeries:
 
 
 def house_trace(
-    run: WholeHouse, everything_off: WholeHouse, times_s: Sequence[float]
+    run: WholeHouse, everything_off: WholeHouse | None, times_s: Sequence[float]
 ) -> HouseTrace:
-    """The house's air through `run` and through `everything_off` at each of
-    `times_s`."""
+    """The house's air through `run`, and through `everything_off` if given,
+    at each of `times_s`."""
     return HouseTrace(
         times_s=list(times_s),
         controlled=_series(run, times_s),
-        all_off=_series(everything_off, times_s),
+        all_off=None if everything_off is None else _series(everything_off, times_s),
     )
