@@ -272,7 +272,22 @@ def test_a_damaged_epoch_is_not_given_a_report_that_would_hide_it(tmp_path: Path
     done = report_missing(store.objects)
 
     assert done.written == 0 and [failed.where for failed in done.failed] == ["run_a/0"]
-    assert "an object its commits name is missing" in done.failed[0].reason
+    assert "files of it are missing" in done.failed[0].reason
+    assert not (tmp_path / "run_a" / "0" / USAGE).exists()
+    assert stored_runs(store.objects)[0].damaged
+
+
+def test_a_finished_epoch_short_of_its_end_is_not_given_a_report_that_would_hide_it(
+    tmp_path: Path,
+) -> None:
+    """A report counting the commits left would agree with its folders, and a list
+    would stop seeing that the last of them are gone."""
+    store = _old(tmp_path)
+    store.objects.delete("run_a/0/commits/00000001.json")
+
+    done = report_missing(store.objects)
+
+    assert done.written == 0 and [failed.where for failed in done.failed] == ["run_a/0"]
     assert not (tmp_path / "run_a" / "0" / USAGE).exists()
     assert stored_runs(store.objects)[0].damaged
 
@@ -382,15 +397,18 @@ def test_the_command_says_what_it_did(tmp_path: Path, capsys: pytest.CaptureFixt
     _old(tmp_path, "run_b")
     leased = _old(tmp_path, "run_c")
     _a_claim(leased)
-    _garbled_commit(_old(tmp_path, "run_d"))
+    garbled = _old(tmp_path, "run_d")
+    first_commit = "run_d/0/commits/00000000.json"
+    whole = garbled.objects.get(first_commit)
+    assert whole is not None
+    _garbled_commit(garbled)
 
     assert usage_reports.main([str(tmp_path)]) == 1
     printed = capsys.readouterr().out.splitlines()
     assert printed[0] == "2 written, 0 skipped with a report, 1 skipped as being worked, 1 failed"
     assert printed[1].startswith("failed run_d/0: ValidationError: ") and len(printed) == 2
 
-    (tmp_path / "run_d" / "0" / "commits" / "00000000.json").unlink()
-    (tmp_path / "run_d" / "0" / "commits" / "00000001.json").unlink()
+    garbled.objects.put(first_commit, whole)
     assert usage_reports.main([str(tmp_path)]) == 0
     assert capsys.readouterr().out == (
         "1 written, 2 skipped with a report, 1 skipped as being worked, 0 failed\n"

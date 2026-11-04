@@ -25,6 +25,7 @@ function run(more: Partial<StoredRun> = {}): StoredRun {
     seed: 2,
     layout: "default",
     status: "running",
+    paused: false,
     frontier_s: 41 * DAY_S,
     duration_s: 120 * DAY_S,
     progress: 41 / 120,

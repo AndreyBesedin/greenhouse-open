@@ -878,10 +878,12 @@ class EpochStore:
         self, manifest: EpochManifest, commits: Sequence[Commit], listed: Iterable[str]
     ) -> bool:
         """Whether an object that `commits` name, or the state a fork inherits,
-        is missing from what was `listed` of the epoch after they were read. A
-        writer puts up what a commit names before the commit, so that an epoch
-        being worked is never told so. No object is read: `verify` says whether
-        those held are what their commits name."""
+        is missing from what was `listed` of the epoch after they were read, or
+        an epoch that finished stops short of its end: its last commits, lost,
+        leave no gap to see. A writer puts up what a commit names before the
+        commit, and says it finished after its last, so that an epoch being worked
+        is never told so. No object is read: `verify` says whether those held are
+        what their commits name."""
         held = set(listed)
         wanted = {
             f"{self._home}/segments/{commit.segment}/{kind}.parquet"
@@ -898,10 +900,16 @@ class EpochStore:
         # `commits` stops at a gap: a commit listed past the next one, which is not.
         written = sum(name.startswith(f"{self._home}/commits/") for name in held)
         next_commit = f"{self._home}/commits/{len(commits):0{SEQ_DIGITS}d}.json"
-        return written > len(commits) and next_commit not in held
+        if written > len(commits) and next_commit not in held:
+            return True
+        return (
+            manifest.status == Status.FINISHED
+            and manifest.duration_s is not None
+            and (not commits or commits[-1].end_s < manifest.duration_s)
+        )
 
     def damaged(self, commits: Sequence[Commit]) -> bool:
-        """Whether an object `commits`, just read, name is missing (`lacks`): one
+        """Whether files `commits`, just read, say it holds are missing (`lacks`): one
         listing of the epoch's objects, which is what a list does not afford and
         anything that takes up one epoch does."""
         listed = self.objects.names(f"{self._home}/")
@@ -1232,6 +1240,10 @@ class StoredRun(BaseModel):
     seed: int | None
     layout: str
     status: Status
+    # Whether the playback that computes it here holds its clock: the status of
+    # an epoch running, which only the process of that playback knows
+    # (`runs_kept`), so the store never says so.
+    paused: bool = False
     frontier_s: float
     duration_s: float | None
     progress: float | None
@@ -1243,8 +1255,8 @@ class StoredRun(BaseModel):
     # Whether its worker has been asked through the store to stop and has not
     # yet: it reads `running` until its worker looks, or `interrupted` is found.
     stopping: bool = False
-    # Whether an object its commits name is missing, so that it cannot be read
-    # whole. Said from the names of its objects, not from their contents: in a
+    # Whether files of it are missing (`EpochStore.lacks`), so that it cannot be
+    # read whole. Said from the names of its objects, not from their contents: in a
     # list, from how many its folders hold (`EpochStore.holds_as_counted`).
     damaged: bool = False
     # What it has used (`EpochUsage`): the days it has computed itself, and the

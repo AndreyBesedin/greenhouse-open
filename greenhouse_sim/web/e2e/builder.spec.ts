@@ -11,8 +11,15 @@ import { expect, type Page, test } from "@playwright/test";
 // one asked for.
 const ARRIVES = { timeout: 60_000 };
 
+const PHONE = { width: 390, height: 844 };
+
 function field(page: Page, label: string) {
   return page.locator(".builder-form").getByLabel(label, { exact: true });
+}
+
+/** How wide the page is, with whatever overflows its window. */
+function pageWidth(page: Page): Promise<number> {
+  return page.evaluate(() => document.documentElement.scrollWidth);
 }
 
 test("builder: a house drafted, edited, saved, exported, run, reopened and imported", async ({
@@ -352,4 +359,28 @@ test("builder: heating pipes and a service zone placed, and changed in the inspe
   await expect(status).toHaveText("Set area width of service_zone_1.", ARRIVES);
   await expect(inspector.getByLabel("Area Width")).toHaveValue("1.5");
   await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+});
+
+test("builder: at a phone's width the page fits its window, with the house under the forms", async ({
+  page,
+}) => {
+  await page.setViewportSize(PHONE);
+  await page.goto("/builder");
+  await expect(page.getByRole("heading", { name: "A new house" })).toBeVisible();
+  await expect(page.getByTestId("builder-view")).toContainText("drawn here");
+  expect(await pageWidth(page)).toBe(PHONE.width);
+
+  await field(page, "Identifier").fill(`e2e_phone_${Date.now()}`);
+  await field(page, "Name").fill("The phone's house");
+  await field(page, "Name").press("Enter");
+  const canvas = page.getByTestId("builder-view").locator("canvas");
+  await expect(canvas).toBeAttached(ARRIVES);
+
+  expect(await pageWidth(page)).toBe(PHONE.width);
+  // The house's own pane, the window's width under the forms, and all on the screen.
+  await expect.poll(() => canvas.boundingBox().then((box) => box?.width)).toBe(PHONE.width);
+  const drawn = await canvas.boundingBox();
+  const forms = await page.locator(".builder-side").boundingBox();
+  expect(drawn?.y).toBe((forms?.y ?? 0) + (forms?.height ?? 0));
+  expect((drawn?.y ?? 0) + (drawn?.height ?? 0)).toBeLessThanOrEqual(PHONE.height);
 });

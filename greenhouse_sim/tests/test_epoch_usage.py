@@ -520,6 +520,47 @@ def test_what_is_lost_from_a_folder_it_counts_is_seen_by_a_list(tmp_path: Path, 
     assert shown.damaged
 
 
+@pytest.mark.parametrize(
+    "lost",
+    [("commits/00000001.json",), ("commits/00000000.json", "commits/00000001.json")],
+)
+def test_a_finished_epoch_that_lost_its_last_commits_is_damaged_and_refused_in_words(
+    tmp_path: Path, lost: tuple[str, ...]
+) -> None:
+    """Commits lost from the end leave no gap, and everything the others name is
+    held: what is left would be replayed as a whole run that ended early."""
+    store = _two_days(tmp_path)
+    objects = store.objects
+    for name in lost:
+        objects.delete(f"run_a/0/{name}")
+
+    (shown,) = stored_runs(objects)
+    assert shown.damaged and shown.status == Status.FINISHED
+    assert stored_run(objects, "run_a", 0).damaged
+
+    with Simulator(runs=objects) as simulator:
+        answered = respond(simulator, "POST", "/api/runs/run_a/epochs/0/positions")
+    assert answered.status == HTTPStatus.CONFLICT and isinstance(answered.body, dict)
+    assert "files of run run_a, epoch 0 are missing" in str(answered.body["error"])
+
+
+@pytest.mark.parametrize("status", [Status.RUNNING, Status.INTERRUPTED, Status.FAILED])
+def test_an_epoch_short_of_its_end_that_never_said_it_finished_is_whole(
+    tmp_path: Path, status: Status
+) -> None:
+    store = _epoch(tmp_path)
+    store.commit(0.0, DAY_S, checkpoint=b"first")
+    store.set_status(status)
+
+    assert not stored_run(store.objects, "run_a", 0).damaged
+
+
+def test_an_epoch_that_finished_at_its_end_is_whole(tmp_path: Path) -> None:
+    store = _two_days(tmp_path)
+
+    assert not stored_run(store.objects, "run_a", 0).damaged
+
+
 def test_a_file_lost_from_a_days_folder_is_seen_when_the_epoch_is_opened(
     tmp_path: Path,
 ) -> None:

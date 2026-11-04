@@ -416,6 +416,7 @@ class Playback:
         epochs: Epochs | None = None,
         epoch: EpochStore | None = None,
         fork: ForkOf | None = None,
+        first_epoch: int = FIRST_EPOCH,
     ) -> None:
         self._simulator = simulator
         config = scenario(simulator.catalogue, scenario_id)
@@ -449,9 +450,10 @@ class Playback:
         # The days worked out of both logs, appended together.
         self._worked: list[tuple[_Packed, _Packed]] = []
         # Counted on from the run's last epoch, if they are kept: a producer
-        # started again is a new epoch of its run, never its first again.
+        # started again is a new epoch of its run, never its first again. With
+        # none kept, `first_epoch` is where the count stands.
         self._epochs = epochs
-        self._epoch = FIRST_EPOCH if epochs is None else epochs.next(self.run_id)
+        self._epoch = first_epoch if epochs is None else epochs.next(self.run_id)
         if epoch is not None:
             # An epoch a worker was given, started already (`workers`): the
             # one this run is.
@@ -796,6 +798,12 @@ class Playback:
                 with self._lock:
                     return self._state()
 
+    def epoch_held(self) -> int | None:
+        """The epoch whose clock it holds, by a pause; none while it plays, or
+        once its run has ended."""
+        with self._lock:
+            return None if self._playing or self._time_s >= self.end_s else self._epoch
+
     def plays(self, layout: str | None, seed: int | None = None) -> bool:
         """Whether it plays the run of `layout` at `seed`: its own layout,
         when None, and the seed it has, when None."""
@@ -809,19 +817,23 @@ class Playback:
         epochs of its own run where this one counts its: not begun. From then
         on this one hands it every change asked of it, such as a target
         changed by a request already under way, so that the run played next
-        has it. A layout refused makes none, and this one goes on as it was."""
+        has it. A layout refused makes none, and this one goes on as it was.
+        Asked for the run it plays, as of one that failed, it is that run's next
+        epoch without them, as a restart is."""
+        again = self.plays(layout, seed)
         with self._lock:
             replacing = Playback(
                 self._simulator,
                 self.scenario_id,
                 layout=layout,
                 seed=self.seed if seed is None else seed,
-                targets=self._executor.plan().targeted(),
+                targets=() if again else self._executor.plan().targeted(),
                 seconds_per_day=self._seconds_per_day,
                 every_s=self.every_s,
                 clock=self._clock,
                 epochs=self._epochs,
                 fork=self._forked_as(layout, seed),
+                first_epoch=self._epoch + 1 if again else FIRST_EPOCH,
             )
             self._successor = replacing
         return replacing
@@ -855,6 +867,13 @@ class Playback:
     def tell_to_stop(self) -> None:
         """Works no other moment out."""
         self._stopped.set()
+
+    @property
+    def failed(self) -> bool:
+        """Whether its work failed: it works no more out, and `state` says why.
+        Only a new playback plays its run again (`start`)."""
+        with self._lock:
+            return self._failure is not None
 
     @property
     def working(self) -> bool:
@@ -1661,7 +1680,9 @@ def start(
     with another layout than `layout`, or another seed than `seed`, starts
     over with them, as a restart with a layout does (`command`), keeping
     its own layout or seed where none is given, or at the scenario's own seed
-    if `its_own_seed`. A pace or a layout refused starts nothing."""
+    if `its_own_seed`. A pace or a layout refused starts nothing. One that failed
+    is not the one a start gets: a new one plays its run as its next epoch, and
+    the epoch that failed keeps why in the store."""
     if seconds_per_day is not None:
         check_pace(seconds_per_day)
     if its_own_seed:
@@ -1684,7 +1705,14 @@ def start(
         found.begin()
         return found
 
-    found = simulator.playbacks.made_once(scenario_id, begun)
+    # Looked at before one is made: one this request makes and fails at once has
+    # had its start.
+    kept = simulator.playbacks.get(scenario_id)
+    found = (
+        _rearranged(simulator, kept, layout or kept.layout, seed)
+        if kept is not None and kept.failed
+        else simulator.playbacks.made_once(scenario_id, begun)
+    )
     if not found.plays(layout, seed):
         # Asked for at a seed alone, it keeps its layout.
         found = _rearranged(simulator, found, layout or found.layout, seed)
@@ -1699,13 +1727,13 @@ def _rearranged(
     """The scenario's playback with `layout` in place of the one it has, as
     `found` was: begun, and the one it replaces stopped, without waiting for
     the day it is working out, so that the new run starts at once. One put
-    in its place meanwhile with `layout` is kept; a layout refused leaves the
-    playback as it was."""
+    in its place meanwhile with `layout` is kept, unless it has failed; a layout
+    refused leaves the playback as it was."""
     playbacks = simulator.playbacks
     with playbacks.rearranging:
         playbacks.refuse_if_closed()
         current = playbacks.get(found.scenario_id) or found
-        if current.plays(layout, seed):
+        if current.plays(layout, seed) and not current.failed:
             return current
         replacing = current.rearranged(layout, seed)
         replacing.begin()
@@ -1734,13 +1762,14 @@ def command(
     start, a new run, as the epoch its own count gives it, with the target
     changes the run had: so a viewer that follows it rearranges the run
     played back (#271, decision 0049). Started over with its own layout, it
-    is the scenario's own run again, without them. Only a restart takes a
-    layout."""
+    is the scenario's own run again, without them. One that failed is started
+    over by a new playback, as `start` does, its thread having ended. Only a
+    restart takes a layout."""
     found = playback(simulator, scenario_id)
     if layout is not None and command != PlaybackCommand.RESTART:
         raise InvalidRequest(f"only a restart takes a layout, not {command.value}")
-    if not found.plays(layout):
-        replacing = _rearranged(simulator, found, layout or DEFAULT_LAYOUT)
+    if not found.plays(layout) or (command == PlaybackCommand.RESTART and found.failed):
+        replacing = _rearranged(simulator, found, layout or found.layout)
         return replacing.command(PlaybackCommand.PLAY)
     return found.command(command)
 
