@@ -5,8 +5,8 @@
 It orders the work after the projects in progress; it changes no numbered
 project's scope. The projects' own documents ([P11](p11-climate-setpoints.md),
 [P12](p12-setup-builder.md), [P13](p13-actions.md),
-[P14](p14-models-by-manifest.md)) and the [roadmap](README.md)'s future
-work hold the plans it orders.
+[P14](p14-models-by-manifest.md)) and the roadmap's [future
+work](future-work.md) hold the plans it orders.
 
 ## Why now
 

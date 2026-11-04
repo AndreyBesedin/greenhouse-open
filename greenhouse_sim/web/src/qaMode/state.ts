@@ -33,8 +33,8 @@ export interface RunState {
   at: string;
   timeS: number;
   day: number;
-  /** The house's air, if the run has a climate. */
-  houseAir: { temperatureC: number; humidityPct: number; co2Ppm: number } | null;
+  /** The house's air. */
+  houseAir: { temperatureC: number; humidityPct: number; co2Ppm: number };
   cropModel: string;
   plants: number;
   daysLived: number;
@@ -74,10 +74,11 @@ export function parseRunState(body: unknown): RunState {
     at: served.at,
     timeS: served.time_s,
     day: served.day,
-    houseAir:
-      air === null
-        ? null
-        : { temperatureC: air.temperature_c, humidityPct: air.humidity_pct, co2Ppm: air.co2_ppm },
+    houseAir: {
+      temperatureC: air.temperature_c,
+      humidityPct: air.humidity_pct,
+      co2Ppm: air.co2_ppm,
+    },
     cropModel: served.crop_model,
     plants: served.plants,
     daysLived: served.days_lived,
@@ -131,10 +132,7 @@ export function describeRunState(state: RunState): {
   const lastDay = state.daysLived - 1;
   return {
     clock: `${describeTime(state.timeS)} (${instant(state.at)}), run ${state.runId}`,
-    houseAir:
-      air === null
-        ? "none: without equipment the run has no climate"
-        : `${formatValue(air.temperatureC)} °C, ${formatValue(air.humidityPct)}%, ${formatValue(air.co2Ppm)} ppm`,
+    houseAir: `${formatValue(air.temperatureC)} °C, ${formatValue(air.humidityPct)}%, ${formatValue(air.co2Ppm)} ppm`,
     // A crop grown by area has no plants to count.
     crop: `${state.plants > 0 ? `${state.plants} plants, ` : ""}${cropModelInWords(state.cropModel)}; ${
       lastDay < 0 ? "no day lived yet" : `last ${state.plants > 0 ? "plant " : ""}day ${lastDay}`

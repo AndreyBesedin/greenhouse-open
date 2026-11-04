@@ -1,9 +1,15 @@
 """P15's final QA scenario (P15.7, decision 0061): a policy in a process of
-its own, given only the address of a policy's port and its token, steers the
-reference greenhouse's heater over the network; and the same policy, stepped
-by the experiment runner in the process, steers it alike. The QA of record
-steered a whole day (`GREENHOUSE_QA_HOURS=24`, about 25 minutes of wall time);
-the tests steer four hours.
+its own, given only the address of a policy's port and its token, steers a
+heater over the network; and the same policy, stepped by the experiment runner
+in the process, steers it alike.
+
+The tests hold the boundary between the processes, so they steer half an hour
+of the climate box cut short (`policy_port_on_a_short_run`), its air quick to
+work out and its heater, on no thermostat, turned on and off by the policy
+alone. `GREENHOUSE_QA_HOURS` runs the QA of record instead, on the reference
+greenhouse's own run, served by `python -m greenhouse_sim.api.policy_server`:
+it steered a whole day (`GREENHOUSE_QA_HOURS=24`, about 25 minutes of wall
+time).
 
 The port's server and the policy are real processes. The server plays the
 run on the wall clock, since nothing on the port moves a held run's clock.
@@ -31,6 +37,7 @@ from urllib.request import Request, urlopen
 
 import pytest
 from greenhouse_protocol.actions import SetLevel
+from greenhouse_protocol.authorisation import AuthorisationConfig
 from greenhouse_protocol.contracts.policy_client import HttpPolicyPort, PortRefused
 from greenhouse_protocol.outcome import ActionOutcome, OutcomeStatus
 from greenhouse_protocol.plan import PrincipalKind
@@ -38,22 +45,37 @@ from greenhouse_protocol.plan import PrincipalKind
 from greenhouse_sim.experiment import Episode, EpisodeSummary, run_episode
 from greenhouse_sim.services.simulator import Simulator
 
-pytestmark = pytest.mark.slow
+sys.path.insert(0, str(Path(__file__).parent))
+
+from policy_port_on_a_short_run import CUT
+from policy_port_on_a_short_run import SCENARIO as CUT_SCENARIO
+from short_runs import simulator_of
 
 EXAMPLES: Final = Path(__file__).resolve().parents[2] / "examples"
-SCENARIO: Final = "reference_greenhouse"
-# A simulated day on the server's wall clock, in seconds.
-SECONDS_PER_DAY: Final = 20.0
-# How much of the run's clock the policy steers: four hours, or what
-# `GREENHOUSE_QA_HOURS` says.
+# How much of the run's clock the policy steers, if not half an hour of the
+# cut run: on the QA of record's scenario, as its server serves it.
 HOURS_VARIABLE: Final = "GREENHOUSE_QA_HOURS"
-HOURS: Final = float(os.environ.get(HOURS_VARIABLE, "4"))
+OF_RECORD: Final = os.environ.get(HOURS_VARIABLE)
+HOURS: Final = 0.5 if OF_RECORD is None else float(OF_RECORD)
 END_S: Final = HOURS * 3600.0
+SCENARIO: Final = CUT_SCENARIO if OF_RECORD is None else "reference_greenhouse"
+SERVER: Final = (
+    (str(Path(__file__).parent / "policy_port_on_a_short_run.py"),)
+    if OF_RECORD is None
+    else ("-m", "greenhouse_sim.api.policy_server")
+)
+# A simulated day on the server's wall clock, in seconds: the cut run's is
+# slow enough that the policy's last decision has more than a second and a
+# half of wall clock to fall in (`LAST_DECISION_STEPS`).
+SECONDS_PER_DAY: Final = 120.0 if OF_RECORD is None else 20.0
 # How long the server may take to say where it is, and the policy to finish.
 SERVER_WAIT_S: Final = 180.0
 POLICY_WAIT_S: Final = 1800.0
 # How many steps before the end the policy's last decision may fall.
 LAST_DECISION_STEPS: Final = 4
+# How long the two examples' rule is run for: over and under both its
+# thresholds, its heater on and off.
+SAME_RULE_END_S: Final = 1800.0
 # Set to a folder to keep what the two runs gave, as JSON.
 RECORD_VARIABLE: Final = "GREENHOUSE_QA_RECORD"
 
@@ -68,6 +90,13 @@ def _example(name: str) -> ModuleType:
 
 REMOTE = _example("05_policy_in_its_own_process")
 IN_PROCESS = _example("03_close_the_loop")
+
+
+def _simulator(authorisation: AuthorisationConfig) -> Simulator:
+    """A simulator of the run the policy steers, in the test's process."""
+    if OF_RECORD is None:
+        return simulator_of(CUT, authorisation=authorisation)
+    return Simulator(authorisation=authorisation)
 
 
 def _clean_environment(**extra: str) -> dict[str, str]:
@@ -113,8 +142,7 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     server = subprocess.Popen(
         [
             sys.executable,
-            "-m",
-            "greenhouse_sim.api.policy_server",
+            *SERVER,
             *("--scenario", SCENARIO, "--port", "0"),
             *("--credentials", str(credentials), "--authorisation", str(authorisation)),
             *("--seconds-per-day", str(SECONDS_PER_DAY)),
@@ -167,7 +195,7 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
 def stepped() -> EpisodeSummary:
     """The same policy, stepped by the experiment runner in the process on
     the same scenario and its own seed."""
-    with Simulator(authorisation=REMOTE.AUTHORISATION) as simulator:
+    with _simulator(REMOTE.AUTHORISATION) as simulator:
         summary = run_episode(
             simulator,
             Episode(
@@ -213,8 +241,10 @@ def test_a_policy_in_its_own_process_steers_the_heater(served: Served) -> None:
     given = [d for d in record["decisions"] if d["receipt"] is not None]
     assert record["decisions"] and given
     # It decided every so often through the whole time, by the run's clock.
-    # The last decision may fall a few steps short of the end: the run's clock
-    # lags on a loaded machine (a CI run's last decision was 610 s short).
+    # The last decision may fall a few steps short of the end: the wall clock
+    # plays the run on while a loaded machine holds up a round of the policy's
+    # requests (CI runs' last decisions were 1,480 s and 4,325 s short at 20 s
+    # a simulated day: a second of wall clock was 4,320 s of the run there).
     assert record["decisions"][-1]["at_s"] > END_S - LAST_DECISION_STEPS * REMOTE.STEP_S
     assert all(d["receipt"]["accepted"] for d in given)
     # What it gave ran: each outcome is its own, executed, and sets the heater.
@@ -223,7 +253,9 @@ def test_a_policy_in_its_own_process_steers_the_heater(served: Served) -> None:
     assert {o.status for o in outcomes} == {OutcomeStatus.EXECUTED}
     assert {o.principal for o in outcomes} == {REMOTE.POLICY}
     levels = _levels(outcomes)
-    # The rule turns the heater on, then off, then on again.
+    # The rule turns the heater on, then off, then on again: it read its
+    # heater's warmth back from a sensor, so what it gave reached the air.
+    assert len(levels) >= 2
     assert levels[:3] == [1.0, 0.0, 1.0][: len(levels)]
     assert set(levels) <= {0.0, 1.0}
     # The plan is the policy's own: the port gives it, and the operator's
@@ -294,14 +326,14 @@ def test_examples_03_and_05_hold_the_same_rule() -> None:
     # Example 05's policy is example 03's, kept by hand in a file that
     # imports the protocol alone: the two give the same run the same digest.
     def digest(example: ModuleType) -> str:
-        with Simulator(authorisation=example.AUTHORISATION) as simulator:
+        with simulator_of(CUT, authorisation=example.AUTHORISATION) as simulator:
             return run_episode(
                 simulator,
                 Episode(
                     scenario_id=IN_PROCESS.SCENARIO,
                     policy=example.NaiveHeating(),
                     principal=example.POLICY,
-                    end_s=2 * 3600.0,
+                    end_s=SAME_RULE_END_S,
                 ),
             ).digest
 

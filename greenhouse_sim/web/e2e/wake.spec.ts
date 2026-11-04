@@ -20,6 +20,7 @@ test("airflow_box's air is solved with its block, and without it", async ({ page
     "buoyancy",
     "vortex",
     "cfd",
+    "climate",
     "shear",
   ]);
 

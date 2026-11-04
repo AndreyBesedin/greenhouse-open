@@ -6,7 +6,8 @@ playback's run, steered while it plays, keeps its identity and epoch and
 rewrites nothing it delivered (decision 0043); and started over with its
 equipment moved, it keeps them (decision 0049)."""
 
-from collections.abc import Callable
+import sys
+from collections.abc import Callable, Iterator
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Final
@@ -33,6 +34,10 @@ from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import HOUR_S
 
+sys.path.insert(0, str(Path(__file__).parent))
+
+from short_runs import cut, simulator_of
+
 SCENARIO: Final = "reference_greenhouse"
 # Its day starts at 7 h, its thermostat heating to 18 °C by day.
 DAY_FROM_S: Final = 7 * HOUR_S
@@ -51,6 +56,15 @@ class Clock:
 
     def __call__(self) -> float:
         return self.now
+
+
+@pytest.fixture
+def played_on() -> Iterator[Simulator]:
+    """A simulator of a short run of its scenario, for what a playback or a
+    checkpoint does with a run's targets: its thermostat and its heater hold
+    them, a cold day's as a season's."""
+    with simulator_of(cut(SCENARIO, plants=(1, 1))) as made:
+        yield made
 
 
 def _equipment(simulator: Simulator, query: str) -> Any:
@@ -191,12 +205,11 @@ def test_a_format_2_checkpoint_is_read_as_one_whose_run_changed_no_target(
         )
 
 
-@pytest.mark.slow
-def test_a_checkpoint_keeps_the_target_changes_before_its_day(simulator: Simulator) -> None:
+def test_a_checkpoint_keeps_the_target_changes_before_its_day(played_on: Simulator) -> None:
     later = ((DAY_S + DAY_FROM_S, "heating_day", 20.0),)
     run = RunRequest(SCENARIO, plan=RunPlan.requested(targets=(*WARMER, *later)))
-    saved = checkpoints.save_checkpoint(simulator, run, time_s=DAY_S)
-    kept = checkpoints.checkpoint(simulator, saved.checkpoint_id)
+    saved = checkpoints.save_checkpoint(played_on, run, time_s=DAY_S)
+    kept = checkpoints.checkpoint(played_on, saved.checkpoint_id)
 
     assert kept.plan.targeted() == WARMER
     assert [tuple(change) for change in saved.targets] == list(WARMER)
@@ -205,25 +218,24 @@ def test_a_checkpoint_keeps_the_target_changes_before_its_day(simulator: Simulat
     assert restored.plan.targeted() == WARMER
     assert (
         climate_run(
-            simulator,
+            played_on,
             RunRequest(
                 SCENARIO, plan=RunPlan.requested(targets=(*restored.plan.targeted(), *later))
             ),
         )[0]
-        == (climate_run(simulator, run)[0])
+        == (climate_run(played_on, run)[0])
     )
 
 
-@pytest.mark.slow
 def test_a_target_set_while_the_run_plays_steers_it_from_the_next_minute(
-    simulator: Simulator,
+    played_on: Simulator,
 ) -> None:
     """Set at 6 h 00 min 30 s, the night's target holds from 6 h 01 in the
     same run and epoch: the clock waits there until the day is worked out
     again, nothing delivered before changes, and the heater gives more heat
     in the hour after."""
     clock = Clock()
-    played = Playback(simulator, SCENARIO, seconds_per_day=24.0, every_s=EVERY_S, clock=clock)
+    played = Playback(played_on, SCENARIO, seconds_per_day=24.0, every_s=EVERY_S, clock=clock)
     assert played.work_day(0)
     played.command(PlaybackCommand.PLAY)
     clock.now = 6.0 + 30.0 / HOUR_S
@@ -248,9 +260,9 @@ def test_a_target_set_while_the_run_plays_steers_it_from_the_next_minute(
     assert again.records[: len(delivered.records)] == delivered.records
 
     start = run_start(PACKAGED, SCENARIO)
-    own = heat_records(simulator, RunRequest(SCENARIO), 0, start, before.run_id)
+    own = heat_records(played_on, RunRequest(SCENARIO), 0, start, before.run_id)
     warmer = heat_records(
-        simulator,
+        played_on,
         RunRequest(SCENARIO, plan=RunPlan.requested(targets=(change,))),
         0,
         start,
@@ -266,9 +278,8 @@ def test_a_target_set_while_the_run_plays_steers_it_from_the_next_minute(
     assert played.command(PlaybackCommand.RESTART).targets == []
 
 
-@pytest.mark.slow
 def test_a_run_started_over_with_moves_keeps_its_target_changes(
-    simulator: Simulator, tmp_path: Path, no_playbacks: Callable[[], None]
+    played_on: Simulator, tmp_path: Path
 ) -> None:
     """Moving equipment while the run plays starts it over from its first
     day, the same run rearranged: a target changed in it holds from its
@@ -276,11 +287,11 @@ def test_a_run_started_over_with_moves_keeps_its_target_changes(
     run drops its changes, as decision 0043 has it."""
     clock = Clock()
     path = f"/api/scenarios/{SCENARIO}/playback"
-    playback.start(simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
+    playback.start(played_on, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
     change = (60.0, "heating_day", 24.0)
-    assert playback.set_targets(simulator, SCENARIO, {"heating_day": 24.0}).targets == [change]
+    assert playback.set_targets(played_on, SCENARIO, {"heating_day": 24.0}).targets == [change]
 
-    moved = respond(simulator, "POST", f"{path}/restart?layout={FAN_MOVED}")
+    moved = respond(played_on, "POST", f"{path}/restart?layout={FAN_MOVED}")
 
     assert moved.status == HTTPStatus.OK and isinstance(moved.body, dict)
     moved_layout = layout_name(FAN_MOVED)
@@ -288,7 +299,7 @@ def test_a_run_started_over_with_moves_keeps_its_target_changes(
     assert (moved.body["time_s"], moved.body["targets"]) == (0.0, [list(change)])
     # What it delivers is the rearranged run with the change: the same heat
     # through the night, more once the day's target holds.
-    played = playback.playback(simulator, SCENARIO)
+    played = playback.playback(played_on, SCENARIO)
     assert played.wait_for(1, timeout_s=300)
     clock.now += 24.0
     delivered = {r.observation_id: r.value for r in played.records_after(0, ALL).records}
@@ -296,14 +307,14 @@ def test_a_run_started_over_with_moves_keeps_its_target_changes(
     with_change = RunRequest(
         SCENARIO, layout=moved_layout, plan=RunPlan.requested(targets=(change,))
     )
-    kept = heat_records(simulator, with_change, 0, start, run_id)
-    dropped = heat_records(simulator, RunRequest(SCENARIO, layout=moved_layout), 0, start, run_id)
+    kept = heat_records(played_on, with_change, 0, start, run_id)
+    dropped = heat_records(played_on, RunRequest(SCENARIO, layout=moved_layout), 0, start, run_id)
     assert [delivered[record.observation_id] for record in kept] == [r.value for r in kept]
     night = int(DAY_FROM_S // HOUR_S)
     assert [r.value for r in kept[:night]] == [r.value for r in dropped[:night]]
     assert sum(r.value for r in kept) > sum(r.value for r in dropped)
 
-    again = respond(simulator, "POST", f"{path}/restart")
+    again = respond(played_on, "POST", f"{path}/restart")
     assert isinstance(again.body, dict)
     assert (again.body["layout"], again.body["targets"]) == (moved_layout, [])
 

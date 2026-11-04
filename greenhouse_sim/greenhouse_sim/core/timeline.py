@@ -5,8 +5,7 @@ a window of the run, in the order it happens.
   an event; a daily command's on each of the run's days.
 - **The house's air** (`greenhouse_sim.climate.house`), worked on in
   stretches of at most a minute, each ending at a minute's end or at a
-  command's moment: an event at the end of each, where the run works a
-  climate.
+  command's moment: an event at the end of each, if the run lists them.
 - **Each plant's day** at each midnight, from that day's air and light; and
   then, at the start of a day its crop work does something, what it does
   to each plant (`greenhouse_sim.core.crop`): a harvest round, then a
@@ -63,9 +62,9 @@ class Event:
 @dataclass(frozen=True)
 class RunProcesses:
     """What a run's timeline is enumerated from: its commands, how often its
-    house's air is worked on at most, or None where the run works no
-    climate, its plants, sensors and cameras, each in its order, and the
-    work it does on its crop."""
+    house's air is worked on at most, or None to leave the air out, its
+    plants, sensors and cameras, each in its order, and the work it does on
+    its crop."""
 
     schedule: Schedule
     air_step_s: float | None
