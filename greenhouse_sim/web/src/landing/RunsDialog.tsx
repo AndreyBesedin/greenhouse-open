@@ -190,7 +190,11 @@ export function RunsDialog({
                   key={run.status}
                   run={run}
                   name={`the run with ${who}`}
-                  onChanged={onChanged}
+                  onChanged={() => {
+                    // What a refused deletion said was of the run as it stood.
+                    setProblem(null);
+                    onChanged();
+                  }}
                 />
                 {confirming === key ? (
                   <span className="landing-confirm">
