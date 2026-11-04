@@ -58,7 +58,15 @@ const SIZES: readonly ButtonSize[] = ["target", "compact"];
 
 // Written here, not in a stylesheet, so that no page of the viewer's carries this
 // one's rules in the styles' budget.
-const PAGE: CSSProperties = { padding: "var(--space-5)", fontSize: "var(--font-sm)" };
+const PAGE: CSSProperties = {
+  boxSizing: "border-box",
+  minHeight: "100%",
+  padding: "var(--space-5)",
+  background: "var(--surface-page)",
+  color: "var(--text)",
+  colorScheme: "var(--scheme)",
+  fontSize: "var(--font-sm)",
+};
 const ROW: CSSProperties = {
   display: "flex",
   flexWrap: "wrap",
@@ -116,7 +124,7 @@ export function QaDesign() {
   const focused = useRef<HTMLButtonElement>(null);
   useEffect(() => focused.current?.focus(), []);
   return (
-    <main className="ds-page" style={PAGE}>
+    <main style={PAGE}>
       <h1 style={HEADING}>Design system</h1>
       <h2 style={HEADING}>Colours</h2>
       <ul style={ROW}>
