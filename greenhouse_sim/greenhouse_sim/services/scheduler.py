@@ -17,19 +17,25 @@ that is working: 46% of its speed against 5% for another process.
 An epoch whose worker ends without ending it, killed or lost, is told
 `interrupted` with what it had committed, and can be asked for again to be
 carried on from there (`resume`, P17.9): queued once more, taken by a worker
-that resumes it. An epoch still `queued` or `running` when the producer that
-started it is gone is found at startup (`interrupted.mark`).
+that resumes it. An epoch still `running` when the producer that started it is
+gone is found at startup (`interrupted.mark`).
 
-A worker claims its epoch before it does anything (`leases`), so that of two
-workers given one epoch one takes it and the other leaves.
+The queue outlives the process: what waits is what the store says waits, with all
+its worker needs (decision 0067), and `restore` makes the queue again from the
+manifests a scheduler put in line, in their order, as a simulator starts. A worker
+claims its epoch before it does anything (`leases`), so that this needs no
+agreement with whoever else may be looking: of two workers given one epoch, as when
+a server starts while one it replaced is still starting a worker, one takes it and
+the other leaves.
 """
 
 import logging
 import multiprocessing
 import threading
 from collections import deque
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from multiprocessing.context import SpawnProcess
 from pathlib import Path
 from typing import Final
@@ -37,7 +43,14 @@ from typing import Final
 from greenhouse_sim.services import forks, interrupted, scenario_files
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.interventions import Asked
-from greenhouse_sim.services.run_store import EpochStore, FolderStore, Status, StoredRun, stored_run
+from greenhouse_sim.services.run_store import (
+    ENDED,
+    EpochStore,
+    FolderStore,
+    Status,
+    StoredRun,
+    stored_run,
+)
 from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.workers import (
@@ -134,6 +147,9 @@ class Scheduler:
         self._waiting: deque[_Job] = deque()
         self._running: dict[tuple[str, int], SpawnProcess] = {}
         self._cancelled: set[tuple[str, int]] = set()
+        # Epochs a worker this scheduler did not start has: one a server before this
+        # left computing, which counts against the limit as long as it is believed.
+        self._elsewhere: set[tuple[str, int]] = set()
         # The running workers that were asked to carry an epoch on.
         self._resuming: set[tuple[str, int]] = set()
         self._closed = threading.Event()
@@ -162,6 +178,7 @@ class Scheduler:
                 layout=layout,
                 seed=seed,
                 seconds_per_day=pace,
+                queued_at=datetime.now(UTC),
             )
             self._waiting.append(_Job(epoch.run_id, epoch.epoch))
             self._launch()
@@ -225,6 +242,7 @@ class Scheduler:
                 layout=layout,
                 changes=changes,
                 seconds_per_day=pace,
+                queued_at=datetime.now(UTC),
             )
             self._waiting.append(_Job(made.run_id, made.epoch, resuming=True))
             self._launch()
@@ -261,14 +279,35 @@ class Scheduler:
                 raise NotFound(f"epoch {epoch} of run {run_id} is neither waiting nor executed")
         return stored_run(self._objects, run_id, epoch)
 
+    def take_up(self, left: Iterable[EpochStore]) -> None:
+        """The epochs in line in the store as this scheduler begins (`restore`): one
+        with a worker still is counted against the limit, one that waits is put in
+        the queue in its place, and one whose worker could not run it is told
+        `interrupted`, for whoever asks to carry it on to be told why."""
+        with self._lock:
+            for kept in sorted(left, key=_place_in_line):
+                if kept.worked():
+                    self._elsewhere.add((kept.run_id, kept.epoch))
+                elif kept.manifest().status == Status.QUEUED:
+                    self._wait_again(kept)
+            self._launch()
+
+    def _wait_again(self, kept: EpochStore) -> None:
+        try:
+            scenario_file_of(self._simulator, kept)
+        except Conflict as refused:
+            logger.warning("%s: it waits no longer", refused.message)
+            kept.end_unless_worked(Status.INTERRUPTED)
+            return
+        begun = kept.manifest().fork is not None or bool(kept.commits())
+        self._waiting.append(_Job(kept.run_id, kept.epoch, resuming=begun))
+
     def close(self) -> None:
-        """Ends every worker and takes every epoch waiting out of the queue,
-        each told `interrupted`; starts none after."""
+        """Ends every worker, each epoch told `interrupted`, and starts none after.
+        An epoch waiting is left so in the store, for the next scheduler to take up."""
         self._closed.set()
         with self._lock:
-            while self._waiting:
-                job = self._waiting.popleft()
-                self._say((job.run_id, job.epoch), Status.INTERRUPTED)
+            self._waiting.clear()
             self._cancelled.update(self._running)
             for process in self._running.values():
                 process.terminate()
@@ -288,9 +327,14 @@ class Scheduler:
                 logger.exception("the workers' scheduler could not look at them")
 
     def _launch(self) -> None:
-        """Under the lock: a worker for each epoch waiting while there is room."""
-        while self._waiting and len(self._running) < self._limit:
+        """Under the lock: a worker for each epoch waiting while there is room. One
+        the store no longer has waiting, told otherwise or deleted by another
+        process, is passed over."""
+        self._look_elsewhere()
+        while self._waiting and len(self._running) + len(self._elsewhere) < self._limit:
             job = self._waiting.popleft()
+            if self._status((job.run_id, job.epoch)) != Status.QUEUED:
+                continue
             process = self._context.Process(
                 target=work,
                 args=(str(self._root), job.run_id, job.epoch),
@@ -308,6 +352,20 @@ class Scheduler:
             self._running[(job.run_id, job.epoch)] = process
             if job.resuming:
                 self._resuming.add((job.run_id, job.epoch))
+
+    def _look_elsewhere(self) -> None:
+        """Under the lock: an epoch worked elsewhere whose claim is no longer believed
+        is told so if it had not ended, and leaves room."""
+        for key in list(self._elsewhere):
+            if not EpochStore(self._objects, *key).worked():
+                self._elsewhere.discard(key)
+                interrupted.mark_epoch(self._simulator, *key)
+
+    def _status(self, key: tuple[str, int]) -> Status | None:
+        """What the store says of an epoch, if it has it still."""
+        if key[1] not in stored_epochs(self._objects, key[0]):
+            return None
+        return EpochStore(self._objects, *key).manifest().status
 
     def _reap(self) -> None:
         """Under the lock: says how each epoch ended whose worker has."""
@@ -332,9 +390,10 @@ class Scheduler:
         itself; else interrupted, if it had begun, was cancelled or was being
         carried on, failed if its worker never began it."""
         if exit_code == LEFT_TO_ANOTHER:
+            self._elsewhere.add(key)
             return
-        status = EpochStore(self._objects, *key).manifest().status
-        if status in (Status.FINISHED, Status.FAILED, Status.INTERRUPTED):
+        status = self._status(key)
+        if status is None or status in ENDED:
             return
         if cancelled or status == Status.RUNNING or resuming:
             # An epoch asked to be carried on, whose worker ended before it
@@ -355,6 +414,32 @@ class Scheduler:
         if process.is_alive():
             process.kill()
             process.join()
+
+
+def _place_in_line(kept: EpochStore) -> tuple[datetime, str, int]:
+    queued_at = kept.manifest().queued_at
+    assert queued_at is not None  # all that `restore` gives
+    return queued_at, kept.run_id, kept.epoch
+
+
+def restore(simulator: Simulator) -> None:
+    """Gives a simulator starting on a folder the queue its store says it has: every
+    epoch a scheduler put in line that has not ended (`Scheduler.take_up`), for which
+    a scheduler is made. An epoch no scheduler put in line says nothing of who was to
+    take it up, as one kept from before this does, or one a process of its own was to
+    work: `interrupted` finds it."""
+    objects = simulator.runs
+    if not isinstance(objects, FolderStore):
+        return
+    left = []
+    for run_id in objects.children():
+        for number in stored_epochs(objects, run_id):
+            kept = EpochStore(objects, run_id, number)
+            manifest = kept.manifest()
+            if manifest.queued_at is not None and manifest.status not in ENDED:
+                left.append(kept)
+    if left:
+        of(simulator).take_up(left)
 
 
 def of(simulator: Simulator) -> Scheduler:

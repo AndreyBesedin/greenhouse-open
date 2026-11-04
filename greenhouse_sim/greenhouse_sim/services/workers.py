@@ -106,13 +106,14 @@ def queued(
     layout: str | None = None,
     seed: int | None = None,
     seconds_per_day: float | None = None,
+    queued_at: datetime | None = None,
 ) -> EpochStore:
     """A new epoch of the run of `scenario_id` at `layout` and `seed`, in
     `objects`, `queued`: the run's next epoch, its manifest written last, with
-    all a worker in another process needs to run it. A scenario, a layout or a
-    seed refused starts nothing, as does a scenario that cannot be written as a
-    file. Whoever starts epochs of one store does it one at a time, so that two
-    are never given a number."""
+    all a worker in another process needs to run it, and `queued_at` if a scheduler
+    puts it in line. A scenario, a layout or a seed refused starts nothing, as does
+    a scenario that cannot be written as a file. Whoever starts epochs of one store
+    does it one at a time, so that two are never given a number."""
     config = scenario(simulator.catalogue, scenario_id)
     chosen = layout_name(layout or DEFAULT_LAYOUT)
     _, run_id = air_through_a_run(simulator, RunRequest(scenario_id, layout=chosen, seed=seed))
@@ -128,6 +129,7 @@ def queued(
             layout=chosen,
             duration_s=config.duration_days * DAY_S,
             created_at=datetime.now(UTC),
+            queued_at=queued_at,
             scenario_file=scenario_file,
             seconds_per_day=seconds_per_day,
         ),

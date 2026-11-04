@@ -3,7 +3,9 @@
 A producer that crashed leaves its epoch `running` in the store, or `queued` if
 it never took it up. At startup, and when a person asks to carry one on, such
 an epoch is told `interrupted` with what it had committed, so that it can be
-resumed (`workers.resume`) and so that nothing reads it as still on its way.
+resumed (`workers.resume`) and so that nothing reads it as still on its way. One
+a scheduler put in line waits again, in the queue of the scheduler that starts
+after it (`scheduler.restore`), and is that scheduler's to tell.
 
 An epoch is worked if a process holds its claim (`leases`), or this simulator's
 scheduler holds it in its queue; one just asked for is given
@@ -119,7 +121,7 @@ def _tell(
     if manifest.status not in _WORKED:
         return None, False
     if _worked(simulator, epoch, now):
-        return None, True
+        return None, not _with_scheduler(simulator, epoch)
     if manifest.status == Status.QUEUED and _just_asked_for(manifest.created_at, now):
         return None, True
     if not epoch.end_unless_worked(Status.INTERRUPTED, now=now):
@@ -134,8 +136,12 @@ def _tell(
 
 
 def _worked(simulator: Simulator, epoch: EpochStore, now: float | None) -> bool:
-    if epoch.worked(now=now):
-        return True
+    return epoch.worked(now=now) or _with_scheduler(simulator, epoch)
+
+
+def _with_scheduler(simulator: Simulator, epoch: EpochStore) -> bool:
+    """Whether the simulator's scheduler holds the epoch, and so says what becomes
+    of it: it need not be looked at again."""
     scheduler = simulator.scheduler
     if scheduler is None:
         return False

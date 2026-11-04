@@ -269,6 +269,9 @@ class EpochManifest(BaseModel):
     duration_s: float | None = None
     # When the epoch was started, when its writer says.
     created_at: datetime | None = None
+    # When it was last put in line for a scheduler's worker, which is what brings it
+    # back in its place after a restart: none for one a process of its own takes up.
+    queued_at: datetime | None = None
     fork: ForkOf | None = None
     # The digest of its scenario's portable file in this store
     # (`services.scenario_files`): none for a packaged scenario, which every
@@ -615,6 +618,7 @@ class EpochStore:
         manifest = self.manifest().model_copy(
             update={
                 "status": Status.QUEUED,
+                "queued_at": datetime.now(UTC),
                 "scenario_file": scenario_file,
                 "seconds_per_day": seconds_per_day,
             }

@@ -89,7 +89,7 @@ def test_an_epoch_in_the_schedulers_queue_or_with_a_worker_is_left(tmp_path: Pat
             waiting=lambda: [("run", 0)], workers=lambda: [Worker("run", 1, 1)]
         )
         try:
-            assert interrupted.mark(simulator) == []
+            assert interrupted.scan(simulator) == interrupted.Scan([], [])
             assert waiting.manifest().status == Status.QUEUED
             assert working.manifest().status == Status.RUNNING
         finally:
