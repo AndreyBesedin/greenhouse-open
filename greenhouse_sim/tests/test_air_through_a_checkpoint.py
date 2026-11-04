@@ -7,6 +7,7 @@ moment it inherits."""
 import json
 
 import pytest
+from pydantic import JsonValue
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.day import window_start
@@ -47,7 +48,7 @@ _PARENTS = {"own": RunPlan(), "changing": _CHANGING, "fork": _CHANGING}
 _PLANS = {"own": RunPlan(), "changing": _CHANGING, "fork": _FORKED}
 
 
-def _checkpoint_as_a_store_keeps_it(scenario_id: str, parent: RunPlan) -> object:
+def _checkpoint_as_a_store_keeps_it(scenario_id: str, parent: RunPlan) -> JsonValue:
     """The checkpoint a worker of the parent run would write at the day's start,
     through the JSON it is kept in."""
     with Simulator() as worker:
