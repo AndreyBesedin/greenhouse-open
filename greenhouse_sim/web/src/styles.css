@@ -1715,6 +1715,20 @@
   padding: 16px;
 }
 
+/* Too narrow for a column beside the house: the forms over it, each scrolled or
+ * drawn in its own half. */
+@media (max-width: 840px) {
+  .builder {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .builder-side {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
+
 /* The landing page (P17.5): where a person decides what to do. */
 .landing {
   min-height: 100%;
