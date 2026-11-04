@@ -19,6 +19,13 @@ const LOADING: PositionLoad = { status: "loading" };
  * are held in its memory, and the page's names none after it has started again. */
 export const POSITION_LOST = "the simulator has started again and no longer holds this replay";
 
+/** The seeks of one position: whether one is on its way, and the moment asked
+ * for since, to send when it is answered. */
+interface Seeks {
+  onItsWay: boolean;
+  next: number | null;
+}
+
 /** Whether an epoch is still being computed. */
 function isComputing(status: string): boolean {
   return status === "queued" || status === "running";
@@ -39,8 +46,12 @@ function isComputing(status: string): boolean {
  * the order it arrives: a seek, a command or a pace is the page's latest
  * word on where the position stands, so an answer to an earlier one, or to a
  * look that began before it, or to anything asked of a replay that is no
- * longer the page's, is dropped. Dragging the handle asks for a seek at every
- * move; only the last one's answer is kept.
+ * longer the page's, is dropped.
+ *
+ * One seek is on its way at a time, and only the latest asked for since is
+ * sent after it: dragging the handle asks at every move, and a seek the
+ * simulator has begun restoring a checkpoint for goes on whether the page
+ * still wants it or not, so a drag sends what the simulator keeps up with.
  */
 export function useReplay(
   runId: string,
@@ -60,6 +71,7 @@ export function useReplay(
   // How many of those are still waiting for their answer: a look that comes
   // back while one is, may have been answered before it.
   const waiting = useRef(0);
+  const seeks = useRef<Seeks>({ onItsWay: false, next: null });
   const positionId = load.status === "loaded" ? load.position.position_id : null;
   const moving =
     !lost &&
@@ -71,6 +83,7 @@ export function useReplay(
     let opened: string | null = null;
     asked.current += 1;
     waiting.current = 0;
+    seeks.current = { onItsWay: false, next: null };
     setLoad(LOADING);
     setRefused(null);
     setLost(false);
@@ -101,6 +114,7 @@ export function useReplay(
     return () => {
       left = true;
       asked.current += 1;
+      seeks.current.next = null;
       if (opened !== null) {
         void closePosition(opened, fetchFn);
       }
@@ -163,17 +177,45 @@ export function useReplay(
       }
     });
   }, []);
+  const send = useCallback(
+    (position: string, timeS: number, line: Seeks) => {
+      line.onItsWay = true;
+      const answered = seekPosition(position, timeS, fetchFn);
+      keep(answered);
+      void answered.finally(() => {
+        line.onItsWay = false;
+        if (line.next !== null) {
+          const next = line.next;
+          line.next = null;
+          send(position, next, line);
+        }
+      });
+    },
+    [fetchFn, keep],
+  );
   return {
     load,
     refused,
     command: (command: PositionCommand) => {
       if (positionId !== null) {
+        if (command === "follow") {
+          // Following is a later word than any seek still to be sent.
+          seeks.current.next = null;
+        }
         keep(commandPosition(positionId, command, fetchFn));
       }
     },
     seek: (timeS: number) => {
-      if (positionId !== null) {
-        keep(seekPosition(positionId, timeS, fetchFn));
+      if (positionId === null) {
+        return;
+      }
+      const line = seeks.current;
+      if (line.onItsWay) {
+        // The answer on its way is to an earlier word than this.
+        asked.current += 1;
+        line.next = timeS;
+      } else {
+        send(positionId, timeS, line);
       }
     },
     pace: (secondsPerDay: number) => {
