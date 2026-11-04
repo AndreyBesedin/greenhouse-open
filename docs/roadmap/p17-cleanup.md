@@ -77,12 +77,13 @@ takes one checks first that it is still there.
 - [x] Play at the end does nothing.
 - [x] `aria-valuenow` can be fractional.
 - [x] The legend says "not computed yet" on a finished run.
-- [ ] At phone width the panel covers the scene. The last tick is labelled now. At
+- [x] At phone width the panel covers the scene. The last tick is labelled now. At
   390 by 844 a replay's scene is 472 px high with its lower 212 px under the panel (a
   fork's, whose header is taller, 383 and 172); the stripes that fold the panels are not
   drawn at this width, so it cannot be moved aside. Turned to 844 by 390, the panel covers
   the scene almost whole.
   The panel scrolls and nothing else overflows.
+  Closed as out of scope: the viewer is not made for phones ([the roadmap](README.md#not-goals-for-the-first-versions)).
 
 ### From a second walk
 
