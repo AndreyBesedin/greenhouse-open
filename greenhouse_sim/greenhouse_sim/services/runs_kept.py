@@ -70,11 +70,7 @@ def epoch_of(simulator: Simulator, run_id: str, epoch: int) -> StoredRun:
 def _pauses_said(simulator: Simulator, runs: list[StoredRun]) -> list[StoredRun]:
     """`runs`, those running that a playback of this simulator holds said to be
     paused: the store calls them running, and they stand still."""
-    held = {
-        (playback.run_id, epoch)
-        for playback in simulator.playbacks.all()
-        if (epoch := playback.epoch_held()) is not None
-    }
+    held = simulator.playbacks.held()
     return [
         run.model_copy(update={"paused": True})
         if run.status == Status.RUNNING and (run.run_id, run.epoch) in held
