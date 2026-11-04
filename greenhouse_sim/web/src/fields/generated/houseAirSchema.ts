@@ -56,7 +56,7 @@ export const HOUSE_AIR_SCHEMA = {
     }
   },
   "additionalProperties": false,
-  "description": "The house's air through a climate run, and through the same run with\neverything off, at each of its moments, in seconds.",
+  "description": "The house's air through a climate run, and through the same run with\neverything off unless left out, at each of its moments, in seconds.",
   "properties": {
     "times_s": {
       "items": {
@@ -69,7 +69,14 @@ export const HOUSE_AIR_SCHEMA = {
       "$ref": "#/$defs/HouseSeries"
     },
     "all_off": {
-      "$ref": "#/$defs/HouseSeries"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HouseSeries"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "required": [
