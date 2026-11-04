@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { scenarioRun } from "../scene/run";
 import type { SceneSource } from "../scene/source";
-import { forkMoment, planKey, replaySource, withPlanOf } from "./replaySource";
+import { forkMoment, forkMomentNamed, planKey, replaySource, withPlanOf } from "./replaySource";
 
 const NO_PLAN = { targets: [], commands: [], crop: [] };
 
@@ -82,6 +82,14 @@ describe("a replay's plan", () => {
 });
 
 describe("the moment a panel forks from", () => {
+  it("is named when the transport reads another, and not when it reads the same", () => {
+    expect(forkMomentNamed(86_400, 172_800)).toBe("Day 1, 24:00");
+    expect(forkMomentNamed(86_400, 86_400)).toBeNull();
+    // Within the minute both read.
+    expect(forkMomentNamed(3_600, 3_620)).toBeNull();
+    expect(forkMomentNamed(0, null)).toBeNull();
+  });
+
   it("is the one the scene shows, and not the one the position has gone on to", () => {
     expect(forkMoment("climate", 3_600, 7_200)).toBe(3_600);
     expect(forkMoment("climate", 0, 7_200)).toBe(0);

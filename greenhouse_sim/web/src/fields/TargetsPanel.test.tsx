@@ -35,6 +35,25 @@ describe("the heating targets (#274)", () => {
     expect(settingMoment(3630)).toBe(3660);
   });
 
+  it("name the moment their fork takes when the transport reads another", () => {
+    const onSet = vi.fn();
+    const view = render(
+      <TargetsPanel
+        thermostat={THERMOSTAT}
+        time={0}
+        followed={false}
+        forking
+        forkFrom="Day 1, 24:00"
+        onSet={onSet}
+      />,
+    );
+
+    expect(view.container.querySelector("button")?.textContent).toBe(
+      "Set in a fork of this run, from Day 1, 24:00",
+    );
+    view.unmount();
+  });
+
   it("say why no fork can be made of them at a run's end, and offer none", () => {
     const onSet = vi.fn();
     const view = render(

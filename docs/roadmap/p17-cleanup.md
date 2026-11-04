@@ -162,7 +162,7 @@ pale text.
   epoch 0" with no word of the layout.
 - [x] At phone width the builder's page is 463 px wide in a window of 390: the pane that draws
   the house lies to the right of the form.
-- [ ] A panel's fork takes the moment it shows, by design, so under load *Fork from here with
+- [x] A panel's fork takes the moment it shows, by design, so under load *Fork from here with
   these levels* at a transport reading Day 2, 24:00 forked from Day 1, 24:00, the field still
   on its way. The subtitle then says so.
 - [ ] A playback that failed, until it is started again, answers every reader with a 500 and no
