@@ -55,8 +55,8 @@ class RunState(BaseModel):
     time_s: float
     day: int
     at: datetime
-    # The house's air, if the run has a climate: none without equipment.
-    house_air: HouseAirNow | None
+    # The house's air.
+    house_air: HouseAirNow
     # The crop: how it grows, how many plants, and how many of the run's
     # days they have lived by then, the days that have ended.
     crop_model: str
@@ -102,9 +102,7 @@ def run_state(simulator: Simulator, run: RunRequest, until_s: float = 0.0) -> Ru
         time_s=until_s,
         day=run_day(until_s),
         at=found.start + timedelta(seconds=until_s),
-        house_air=None
-        if air is None
-        else HouseAirNow(
+        house_air=HouseAirNow(
             temperature_c=air.temperature_c,
             humidity_pct=air.relative_humidity_pct(),
             co2_ppm=air.co2_ppm,

@@ -4,7 +4,8 @@ refused otherwise in the run's own words; done once its day is worked out,
 with what it did and the event it made, which its outcome names; watering
 refused, since its organ crop has no water in its root zone."""
 
-from collections.abc import Callable
+import sys
+from collections.abc import Iterator
 from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
@@ -60,6 +61,10 @@ from greenhouse_sim.services.scenarios import plant_ids, scenario
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
 
+sys.path.insert(0, str(Path(__file__).parent))
+
+from short_runs import cut, simulator_of
+
 SCENARIO: Final = "reference_greenhouse"
 CONFIG: Final = scenario(PACKAGED, SCENARIO)
 START: Final = run_start(PACKAGED, SCENARIO)
@@ -74,6 +79,14 @@ LOOK: Final = Inspect(plant_id=PLANT, reason="spots on its lowest leaves")
 HEATING: Final = SetLevel(device_id=sorted(run_items(CONFIG).devices)[0], level=1.0)
 # Every record there is, in one batch.
 ALL: Final = 10**6
+
+
+@pytest.fixture
+def played_on() -> Iterator[Simulator]:
+    """A simulator of the two plants these tests' actions name, for the
+    days they play."""
+    with simulator_of(cut(SCENARIO, plants=(1, 2))) as made:
+        yield made
 
 
 def _executor(scenario_id: str = SCENARIO, start: datetime = START) -> RunExecutor:
@@ -172,7 +185,7 @@ def test_what_a_crop_action_did_is_worked_out_again_when_the_plan_changes_before
     assert executor.reports() == ()
 
 
-def test_each_crop_action_done_is_an_event_of_its_own_naming_it(simulator: Simulator) -> None:
+def test_each_crop_action_done_is_an_event_of_its_own_naming_it(played_on: Simulator) -> None:
     """On the run's second day: every ripe fruit picked, of which there is
     none; the lowest leaf removed; the stem lowered by the internode it
     leaves bare; a look; and a leaf the plant has not, refused."""
@@ -183,7 +196,7 @@ def test_each_crop_action_done_is_an_event_of_its_own_naming_it(simulator: Simul
     )
     assigned = [_assigned(f"e0-a{n}", action, DAY_S) for n, action in enumerate(given)]
 
-    done = crop_actions_done(simulator, run, 1, START, assigned)
+    done = crop_actions_done(played_on, run, 1, START, assigned)
 
     effects = [each.carried.effect for each in done]
     assert effects[:2] == [
@@ -230,15 +243,14 @@ def test_a_day_s_harvest_event_counts_its_crop_work_alone() -> None:
     assert whole == len(worked.history) + 1
 
 
-@pytest.mark.slow
 def test_crop_actions_given_to_a_playback_end_in_outcomes_naming_their_events(
-    simulator: Simulator, tmp_path: Path
+    played_on: Simulator, tmp_path: Path
 ) -> None:
     clock = _Clock()
     started = playback.start(
-        simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path)
+        played_on, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path)
     )
-    played = playback.playback(simulator, SCENARIO)
+    played = playback.playback(played_on, SCENARIO)
     day_1 = START + DAY
     given: list[tuple[str, Action, object]] = [
         ("ripe", RIPE, day_1),
@@ -285,14 +297,13 @@ def test_crop_actions_given_to_a_playback_end_in_outcomes_naming_their_events(
         assert event_id is not None and event_id in events
         assert events[event_id].timestamp == day_1
     path = f"/consumer/v1/runs/{started.run_id}/outcomes"
-    polls = [_poll(simulator, path)]
-    polls.append(_poll(simulator, f"{path}?after={polls[-1].next}"))
+    polls = [_poll(played_on, path)]
+    polls.append(_poll(played_on, f"{path}?after={polls[-1].next}"))
     assert check_polls(polls) == []
 
 
-@pytest.mark.slow
 def test_a_crop_action_waiting_for_another_at_its_day_start_is_carried_out_after_it(
-    simulator: Simulator, afresh: Callable[[], None], tmp_path: Path
+    played_on: Simulator, tmp_path: Path
 ) -> None:
     """A leaf removed, and the stem lowered by the internode it leaves bare,
     both at the run's second day's start, the lowering waiting for the
@@ -302,9 +313,9 @@ def test_a_crop_action_waiting_for_another_at_its_day_start_is_carried_out_after
     comes after those already delivered then, whatever its plant."""
     clock = _Clock()
     started = playback.start(
-        simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path)
+        played_on, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path)
     )
-    played = playback.playback(simulator, SCENARIO)
+    played = playback.playback(played_on, SCENARIO)
     day_1 = START + DAY
     receipt = played.submit(
         Plan(

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DAY_S } from "../clock";
 import { type Rendered, render } from "../testing/render";
 import type { PositionState } from "./position";
-import { useReplay } from "./useReplay";
+import { POSITION_LOST, useReplay } from "./useReplay";
 
 function state(more: Partial<PositionState> = {}): PositionState {
   return {
@@ -265,6 +265,69 @@ describe("a stored epoch replayed", () => {
       await vi.advanceTimersByTimeAsync(5000);
     });
     expect(done.calls.filter((c) => c.method === "GET")).toHaveLength(0);
+  });
+
+  it("says so and stops asking once the simulator has let the position go", async () => {
+    let restarted = false;
+    const answers = simulator({ status: "running" });
+    const looks: string[] = [];
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === undefined) {
+        looks.push(String(input));
+        if (restarted) {
+          return Response.json({ error: "no position 'p1'" }, { status: 404 });
+        }
+      }
+      return answers.fetchFn(input, init);
+    }) as unknown as typeof fetch;
+    rendered = render(<Probe fetchFn={fetchFn} />);
+    await settle();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+    const { container } = rendered;
+    const refused = () => container.querySelector('[data-testid="refused"]')?.textContent;
+    expect(refused()).toBe("");
+
+    restarted = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+    expect(refused()).toBe(POSITION_LOST);
+    // The last good place stays, and no more is asked of a position that is gone.
+    expect(container.querySelector('[data-testid="status"]')?.textContent).toBe("loaded");
+    const asked = looks.length;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(looks).toHaveLength(asked);
+  });
+
+  it("goes on asking through a look that failed for any other reason", async () => {
+    let down = false;
+    const answers = simulator({ status: "running" });
+    const looks: string[] = [];
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === undefined) {
+        looks.push(String(input));
+        if (down) {
+          return new Response("Bad Gateway", { status: 502 });
+        }
+      }
+      return answers.fetchFn(input, init);
+    }) as unknown as typeof fetch;
+    rendered = render(<Probe fetchFn={fetchFn} />);
+    await settle();
+    down = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+    const asked = looks.length;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2500);
+    });
+    expect(looks.length).toBeGreaterThan(asked);
+    expect(rendered.container.querySelector('[data-testid="refused"]')?.textContent).toBe("");
   });
 
   it("keeps the position a command or a seek answers with", async () => {

@@ -101,10 +101,13 @@ def test_a_door_open_from_the_start_stands_open_until_commanded(simulator: Simul
     assert opened.latest_commands == [Command(time_s=300.0, actuator_id="door", level=0.0)]
 
 
-def test_a_house_without_equipment_has_no_climate_run_to_hold_air(simulator: Simulator) -> None:
+def test_a_house_without_equipment_holds_its_climate_runs_air(simulator: Simulator) -> None:
     state = run_state(simulator, RunRequest("airflow_box"), until_s=TEN_MINUTES_S)
+    trace = climate_readings.house_air(
+        simulator, RunRequest("airflow_box"), until_s=TEN_MINUTES_S
+    ).controlled
 
-    assert state.house_air is None
+    assert state.house_air.temperature_c == pytest.approx(trace.temperature_c[-1])
     # Its doors stand open as its envelope has them, and nothing commands
     # them.
     assert state.levels == {"door_front": 1.0, "door_back": 1.0}

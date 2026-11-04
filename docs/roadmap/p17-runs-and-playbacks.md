@@ -1,6 +1,6 @@
 # P17: Runs kept in a store, playbacks as positions, and a place to choose
 
-**Status:** accepted: the design below, with decision
+**Status:** in progress (the steps below say how far): the design below, with decision
 [0065](../decisions/0065-a-run-is-a-scenario-at-a-seed-kept-in-a-store-and-played-from-it.md),
 which this document's pull request records. Part of the
 [simulator roadmap](README.md).

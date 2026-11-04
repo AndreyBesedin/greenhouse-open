@@ -399,14 +399,7 @@ export const RUN_STATE_SCHEMA = {
       "type": "string"
     },
     "house_air": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/HouseAirNow"
-        },
-        {
-          "type": "null"
-        }
-      ]
+      "$ref": "#/$defs/HouseAirNow"
     },
     "crop_model": {
       "title": "Crop Model",

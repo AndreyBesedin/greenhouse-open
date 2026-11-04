@@ -16,7 +16,6 @@ import { describeHouseAir, HouseAir, type HouseAirState } from "./fields/HouseAi
 import { ProbeCharts, type ProbeChartsState } from "./fields/ProbeCharts";
 import { CLIMATE_FIELD, type FieldState } from "./fields/source";
 import { TargetsPanel } from "./fields/TargetsPanel";
-import { useAbsentClimate } from "./fields/useAbsentClimate";
 import { useFolds } from "./folds";
 import { OpeningControls, openingsIn } from "./OpeningControls";
 import { PanelCard } from "./PanelCard";
@@ -76,10 +75,13 @@ function ForkLevels({
   asked,
   onFork,
   onPutBack,
+  noFork = null,
 }: {
   asked: Readonly<Record<string, number>>;
   onFork: () => void;
   onPutBack: () => void;
+  /** Why no fork can be made at the moment shown, if none can. */
+  noFork?: string | null;
 }) {
   const none = Object.keys(asked).length === 0;
   return (
@@ -91,7 +93,8 @@ function ForkLevels({
               .map((name) => name.replaceAll("_", " "))
               .join(", ")}: not yet this run's or a fork's.`}
       </p>
-      <button type="button" disabled={none} onClick={onFork}>
+      {noFork !== null && <p className="targets-note">{noFork}</p>}
+      <button type="button" disabled={none || noFork !== null} onClick={onFork}>
         Fork from here with these levels
       </button>
       <button type="button" disabled={none} onClick={onPutBack}>
@@ -178,6 +181,7 @@ export function ScenarioPanels({
     asked: Readonly<Record<string, number>>;
     onFork: () => void;
     onPutBack: () => void;
+    noFork?: string | null;
   };
   /** The run followed as it plays, whose plan lane the timeline draws
    * (P13.8). */
@@ -195,7 +199,6 @@ export function ScenarioPanels({
   const [against, setAgainst] = useState<CheckpointSummary | null>(null);
   // Asked for once, for the field's choice and what it is compared with.
   const fields = useFieldNames(source.scenarioId, source.layout);
-  useAbsentClimate({ source, replayed, onSource });
   const climate = source.field === CLIMATE_FIELD;
   const time = source.time ?? 0;
   const probed = field.status === "loaded" ? field.field : null;
@@ -358,6 +361,7 @@ export function ScenarioPanels({
             time={time}
             followed={source.follow === true}
             forking={replayed}
+            noFork={forkLevels?.noFork ?? null}
             onSet={onTargets}
           />
         )}

@@ -134,6 +134,25 @@ describe("a stored run's panels", () => {
     expect(onPutBack).toHaveBeenCalledOnce();
   });
 
+  it("says why no fork of levels can be made at a run's end, and offers none", () => {
+    const onFork = vi.fn();
+    rendered = panels({
+      replayed: true,
+      forkLevels: {
+        asked: { heater: 0.5 },
+        onFork,
+        onPutBack: vi.fn(),
+        noFork: "The run ends here: go back to a moment to fork from.",
+      },
+    });
+
+    expect(said(rendered.container, "fork-levels")).toMatch(/The run ends here/);
+    const fork = button(rendered.container, "Fork from here with these levels");
+    expect(fork.disabled).toBe(true);
+    // What was set can still be put back.
+    expect(button(rendered.container, "Put them back").disabled).toBe(false);
+  });
+
   it("names the levels set as the panels do, not by their identifiers", () => {
     rendered = panels({
       replayed: true,

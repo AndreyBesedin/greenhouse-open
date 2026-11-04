@@ -1,6 +1,6 @@
 # P16: A run's crop at its model's step
 
-**Status:** accepted: the design below, with decision
+**Status:** done, but for P16.4, deferred: the design below, with decision
 [0064](../decisions/0064-a-runs-crop-steps-at-its-models-step-not-the-runs-day.md),
 which this document's pull request records. Part of the
 [simulator roadmap](README.md).

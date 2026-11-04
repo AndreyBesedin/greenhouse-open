@@ -601,7 +601,7 @@ What P06 simplifies on purpose, kept here until a later step removes it:
 - **A camera's frames are perfect in time:** taken at every cadence, on
   time, none dropped, unlike point sensors. Their images are perfect too:
   no exposure, noise, blur or lens distortion. Both are planned with the
-  headless renderer (see the [roadmap](README.md#projects)); the protocol's
+  headless renderer (see the [roadmap](future-work.md#camera-imperfections)); the protocol's
   `CameraFrame` already has a delivery time for frames that come late.
 
 ## Review decisions (8 October 2026)

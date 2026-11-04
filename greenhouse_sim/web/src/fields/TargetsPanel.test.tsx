@@ -35,6 +35,26 @@ describe("the heating targets (#274)", () => {
     expect(settingMoment(3630)).toBe(3660);
   });
 
+  it("say why no fork can be made of them at a run's end, and offer none", () => {
+    const onSet = vi.fn();
+    const view = render(
+      <TargetsPanel
+        thermostat={THERMOSTAT}
+        time={DAY_S}
+        followed={false}
+        forking
+        noFork="The run ends here: go back to a moment to fork from."
+        onSet={onSet}
+      />,
+    );
+    enter(inputs(view.container)[0] as HTMLInputElement, "21");
+
+    const set = button(view.container, "Set in a fork of this run, from its next minute");
+    expect(set.disabled).toBe(true);
+    expect(view.container.textContent).toContain("The run ends here");
+    view.unmount();
+  });
+
   it("start from the setpoints in force, and set only those changed", () => {
     const onSet = vi.fn();
     const view = render(

@@ -3,7 +3,9 @@
 floor, modelled by the simulation and said to be, the same run's as the
 viewer's; a cold spell's day far above a summer day's."""
 
+import sys
 from datetime import timedelta
+from pathlib import Path
 from typing import Final
 
 import pytest
@@ -13,6 +15,7 @@ from greenhouse_protocol.observation import Observation
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.catalogue import PACKAGED
+from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.climate_runs import climate_run
 from greenhouse_sim.services.fields import air_through_a_run
@@ -20,6 +23,11 @@ from greenhouse_sim.services.heat_log import heat_records
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.weather.sources import ConstantWeather
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+from short_runs import cut, simulator_of
 
 SCENARIO: Final = "reference_greenhouse"
 # Its floor, 12 m by 9.6 m.
@@ -32,7 +40,7 @@ HEATER_W: Final = 30_000.0
 def _day(simulator: Simulator, scenario_id: str, day: int) -> list[Observation]:
     _, run_id = air_through_a_run(simulator, RunRequest(scenario_id))
     return heat_records(
-        simulator, RunRequest(scenario_id), day, run_start(PACKAGED, scenario_id), run_id
+        simulator, RunRequest(scenario_id), day, run_start(simulator.catalogue, scenario_id), run_id
     )
 
 
@@ -74,6 +82,25 @@ def test_a_heater_no_one_runs_gives_no_heat_and_a_house_without_one_no_record(
     # The climate box's heater is off until commanded; the airflow box has none.
     assert [r.value for r in _day(simulator, "climate_box", 0)] == [0.0] * 24
     assert _day(simulator, "airflow_box", 0) == []
+
+
+def test_its_heat_follows_the_weather_outside(simulator: Simulator) -> None:
+    """What a cold spell's heat comes to, in a day of each weather, its
+    thermostat holding the same setpoints; and two days of its own season,
+    which differ."""
+
+    def outside_at(name: str, celsius: float) -> ScenarioConfig:
+        weather = ConstantWeather(air_temperature_c=celsius)
+        return cut(SCENARIO, days=1, greenhouse_id=name, weather=weather)
+
+    with simulator_of(outside_at("freezing", -2.0), outside_at("mild", 14.0)) as under:
+        freezing = sum(r.value for r in _day(under, "freezing", 0))
+        mild = sum(r.value for r in _day(under, "mild", 0))
+
+    assert mild > 0.0
+    assert freezing > 4 * mild
+    first, second = (sum(r.value for r in _day(simulator, SCENARIO, day)) for day in (0, 1))
+    assert round(first, 3) != round(second, 3)
 
 
 @pytest.mark.slow
