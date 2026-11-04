@@ -6,6 +6,17 @@ import { type Rendered, render, said } from "../testing/render";
 import type { PositionState } from "./position";
 import { ReplayHeader, runSubtitle } from "./ReplayHeader";
 
+const FORK: PositionState["fork"] = {
+  run_id: "parent run",
+  epoch: 1,
+  at_s: DAY_S * 1.5,
+  start_s: DAY_S,
+  digest: null,
+  checkpoint_sha256: null,
+  inherited: 0,
+  layout: null,
+};
+
 function position(more: Partial<PositionState> = {}): PositionState {
   return {
     position_id: "p1",
@@ -21,6 +32,7 @@ function position(more: Partial<PositionState> = {}): PositionState {
     day: 0,
     playing: false,
     following: false,
+    parent_kept: false,
     seconds_per_day: 10,
     frontier_s: DAY_S,
     duration_s: 120 * DAY_S,
@@ -154,18 +166,7 @@ describe("the replay's header", () => {
     rendered = render(
       <ReplayHeader
         name={null}
-        position={position({
-          fork: {
-            run_id: "parent run",
-            epoch: 1,
-            at_s: DAY_S * 1.5,
-            start_s: DAY_S,
-            digest: null,
-            checkpoint_sha256: null,
-            inherited: 0,
-            layout: null,
-          },
-        })}
+        position={position({ fork: FORK, parent_kept: true })}
         otherRunsHref="/"
         onFork={noFork}
       />,
@@ -179,5 +180,22 @@ describe("the replay's header", () => {
       (link) => link.textContent === "The run it came from",
     );
     expect(parent?.getAttribute("href")).toBe("/replay?run=parent%20run&epoch=1");
+  });
+
+  it("keeps what a fork says of the run it came from, with no link once that is deleted", () => {
+    rendered = render(
+      <ReplayHeader
+        name={null}
+        position={position({ fork: FORK, parent_kept: false })}
+        otherRunsHref="/"
+        onFork={noFork}
+      />,
+    );
+    const { container } = rendered;
+
+    expect(said(container, "replay-subtitle")).toContain("forked from epoch 1 at Day 2, 12:00");
+    expect([...container.querySelectorAll("a")].map((link) => link.textContent)).not.toContain(
+      "The run it came from",
+    );
   });
 });

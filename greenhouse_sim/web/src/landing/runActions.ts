@@ -51,8 +51,8 @@ export function stopRun(run: Epoch, fetchFn: typeof fetch = fetch): Promise<Answ
   );
 }
 
-/** Asks a worker to carry an interrupted run on from its last commit, as fast as
- * it computes: an epoch's manifest does not say the pace it was started at. */
+/** Asks a worker to carry an interrupted run on from its last commit, at the pace
+ * it was asked for, which the simulator keeps with the run. */
 export function resumeRun(run: Epoch, fetchFn: typeof fetch = fetch): Promise<Answered<StoredRun>> {
   return ask(
     run,

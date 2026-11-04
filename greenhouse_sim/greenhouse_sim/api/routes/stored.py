@@ -25,8 +25,9 @@ them (P17.4, decision 0065).
     POST /api/runs/{run}/epochs/{n}/resume?seconds_per_day=10
                                           an interrupted epoch, or one still
                                           running that no one works, carried on
-                                          from its last commit by a worker: the
-                                          same epoch, as the list shows it
+                                          from its last commit by a worker, at
+                                          that pace or else the one it was asked
+                                          for: the same epoch, as the list shows it
     POST /api/runs/{run}/epochs/{n}/changes
                                           a change asked of an epoch waiting for
                                           a worker or being executed, as its body

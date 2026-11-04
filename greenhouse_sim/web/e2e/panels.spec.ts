@@ -259,7 +259,7 @@ test("the panels are dark, or light if chosen, and the golden views keep theirs 
   await page.addInitScript(() => {
     new MutationObserver((_, observer) => {
       if (document.querySelector(".info-panel") !== null) {
-        document.body.dataset.firstPanels = document.documentElement.dataset.panels ?? "dark";
+        document.body.dataset.firstPanels = document.documentElement.dataset.theme ?? "dark";
         observer.disconnect();
       }
     }).observe(document, { childList: true, subtree: true });
