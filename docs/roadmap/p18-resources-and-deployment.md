@@ -26,7 +26,7 @@ Read from the code at commit `28701e05`.
 | Why a run failed | Logged; `EpochManifest` has no reason, though 0065 gives `failed` one |
 | A worker's scenarios | `Simulator()`, packaged only, so a built or uploaded scenario cannot run in a worker or resume |
 | The store a worker uses | A folder only: `scheduler.of` refuses any other |
-| Claims and leases | Written without an atomic create: the folder store leaves a window of two calls between checking an owner and writing |
+| Claims and leases | Written without an atomic create: the folder store leaves a window of two calls between checking an owner and writing. A lease names its holder, and a thread writes only its own, so that what remains of a lease is a thread stopped between reading it and writing it while the epoch ended and a new holder took it |
 | Authentication | None on the local API, which binds loopback (0009); bearer tokens on the policy's port (0061) |
 | Parties | None: one simulator, one store |
 

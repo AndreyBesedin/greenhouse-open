@@ -3,6 +3,7 @@ clock has passed written as a segment of its records with a checkpoint,
 the epoch's status told, its epochs counted by the store, and the run
 asked for at a seed."""
 
+import sys
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -12,27 +13,29 @@ from typing import Any, Final
 import pytest
 
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import playback
-from greenhouse_sim.services.checkpoints import load_openings
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
 from greenhouse_sim.services.run_store import (
     EpochManifest,
     EpochStore,
+    Kind,
     Status,
     StoredRun,
     delete_epoch,
     stored_runs,
 )
 from greenhouse_sim.services.runs import RunRequest
-from greenhouse_sim.services.scenarios import layout_name
+from greenhouse_sim.services.scenarios import layout_name, scenario
 from greenhouse_sim.services.sensors import delivered_between
 from greenhouse_sim.services.simulator import Simulator
 
+sys.path.insert(0, str(Path(__file__).parent))
+
+import short_runs
+
 BOX: Final = "climate_box"
-REFERENCE: Final = "reference_greenhouse"
-SHORT: Final = "reference_greenhouse_short"
+SHORT: Final = "climate_box_tended"
 EVERY_S: Final = 300.0
 ALL: Final = 10**6
 WAIT_S: Final = 180.0
@@ -57,13 +60,10 @@ def _until(condition: Callable[[], bool], what: str) -> None:
 
 @pytest.fixture
 def short() -> Iterator[Simulator]:
-    """A simulator with the reference greenhouse cut to a run of two days."""
+    """A simulator with a run of two days of the one-plant box with a heating loop
+    and an organ crop."""
     with Simulator() as made:
-        load_openings(made)
-        config = SCENARIO_REGISTRY[REFERENCE].model_copy(
-            update=dict(greenhouse_id=SHORT, duration_days=2)
-        )
-        made.catalogue.register(config)
+        made.catalogue.register(short_runs.tended_box(SHORT, 2))
         yield made
 
 
@@ -91,7 +91,6 @@ def played(short: Simulator) -> Iterator[Callable[[Epochs, Clock], Playback]]:
         run.stop()
 
 
-@pytest.mark.slow
 def test_a_run_played_to_its_end_is_kept_as_the_consumer_read_it(
     played: Callable[[Epochs, Clock], Playback], tmp_path: Path
 ) -> None:
@@ -118,8 +117,12 @@ def test_a_run_played_to_its_end_is_kept_as_the_consumer_read_it(
     assert store.events(0, ALL).records == list(run.events_after(0, ALL).records)
     outcomes = run.outcomes_after(0, ALL)[0].outcomes
     assert outcomes and store.outcomes(0, ALL).records == list(outcomes)
-    # Positions across the days are the in-memory log's.
-    for position in (0, 1, 700, 1_000, 1_449):
+    # Positions across the days are the in-memory log's: a page from the last
+    # reading of the first day's segment runs on into the second's.
+    first_day = store.commits()[0].counts[Kind.OBSERVATIONS]
+    last = len(store.observations(0, ALL).records) - 1
+    assert 0 < first_day - 1 < last
+    for position in (0, 1, first_day - 1, first_day, last):
         ours, theirs = store.observations(position, 50), run.records_after(position, 50)
         assert (ours.records, ours.next, ours.has_more) == (
             list(theirs.records),
@@ -136,7 +139,6 @@ def test_a_run_played_to_its_end_is_kept_as_the_consumer_read_it(
     assert again.next(run.run_id) == 1
 
 
-@pytest.mark.slow
 def test_a_restart_and_a_stop_tell_the_epoch_it_was_interrupted(
     played: Callable[[Epochs, Clock], Playback], tmp_path: Path
 ) -> None:
@@ -153,7 +155,6 @@ def test_a_restart_and_a_stop_tell_the_epoch_it_was_interrupted(
     assert by_epoch == {0: Status.INTERRUPTED, 1: Status.INTERRUPTED}
 
 
-@pytest.mark.slow
 def test_a_restart_while_the_last_day_is_kept_leaves_the_new_epoch_running(
     played: Callable[[Epochs, Clock], Playback], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -191,7 +192,6 @@ def test_a_restart_while_the_last_day_is_kept_leaves_the_new_epoch_running(
     assert by_epoch == {0: Status.INTERRUPTED, 1: Status.RUNNING}
 
 
-@pytest.mark.slow
 def test_a_run_whose_simulation_fails_is_kept_as_failed(
     played: Callable[[Epochs, Clock], Playback], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -215,7 +215,7 @@ def test_a_run_whose_simulation_fails_is_kept_as_failed(
 
 def test_a_run_is_asked_for_at_a_seed(short: Simulator, tmp_path: Path) -> None:
     epochs, clock = Epochs(tmp_path), Clock()
-    own = SCENARIO_REGISTRY[REFERENCE].random_seed
+    own = scenario(short.catalogue, SHORT).random_seed
 
     def run_id(seed: int | None) -> str:
         return air_through_a_run(short, RunRequest(SHORT, seed=seed))[1]

@@ -1,7 +1,14 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { describeHouseAir, HouseAir, houseAirUrl, loadHouseAir, parseHouseAir } from "./HouseAir";
+import {
+  describeHouseAir,
+  HouseAir,
+  houseAirOnShow,
+  houseAirUrl,
+  loadHouseAir,
+  parseHouseAir,
+} from "./HouseAir";
 
 const SERIES = (temperature: number[]) => ({
   temperature_c: temperature,
@@ -51,6 +58,25 @@ describe("the house's air", () => {
     expect(describeHouseAir({ status: "loading" })).toBe("House air: mixing…");
     expect(describeHouseAir({ status: "unavailable", reason: "no" })).toBe(
       "House air: cannot be read",
+    );
+  });
+
+  it("says that what it shows is of an earlier moment while the next is on its way", () => {
+    const shown = { status: "loaded", trace: parseHouseAir(BODY) } as const;
+
+    expect(describeHouseAir(houseAirOnShow({ shown, latest: { status: "loading" } }))).toBe(
+      "House air: 15.6 °C, 85.0 %, 420.0 ppm; mixing…",
+    );
+    // Its own answer says nothing more, and one that failed says that.
+    expect(describeHouseAir(houseAirOnShow({ shown, latest: shown }))).toBe(
+      "House air: 15.6 °C, 85.0 %, 420.0 ppm",
+    );
+    expect(
+      describeHouseAir(houseAirOnShow({ shown, latest: { status: "unavailable", reason: "no" } })),
+    ).toBe("House air: cannot be read");
+    // With nothing yet to show, it is only on its way.
+    expect(describeHouseAir(houseAirOnShow({ shown: null, latest: { status: "loading" } }))).toBe(
+      "House air: mixing…",
     );
   });
 

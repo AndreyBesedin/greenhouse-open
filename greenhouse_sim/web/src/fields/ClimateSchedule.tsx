@@ -43,11 +43,14 @@ export function describeSchedule({
   daily,
   time,
   days,
+  describe = describeTime,
 }: {
   schedule: readonly ScheduledCommand[];
   daily: readonly ScheduledCommand[];
   time: number;
   days: number;
+  /** How a moment of the run is said. */
+  describe?: (seconds: number) => string;
 }): string {
   const count = schedule.length + daily.length;
   const counted = `Schedule: ${count} ${count === 1 ? "command" : "commands"}`;
@@ -56,7 +59,7 @@ export function describeSchedule({
     return `${counted}, none to come.`;
   }
   const others = more.length === 0 ? "" : ` and ${more.length} more`;
-  return `${counted}. Next at ${describeTime(first.timeS)}: ${describeCommand(first)}${others}.`;
+  return `${counted}. Next at ${describe(first.timeS)}: ${describeCommand(first)}${others}.`;
 }
 
 /**
@@ -75,6 +78,7 @@ export function ClimateSchedule({
   time,
   days,
   fixed = false,
+  describe = describeTime,
   onTime,
   onRemove,
   onRepeat,
@@ -88,6 +92,9 @@ export function ClimateSchedule({
   days: number;
   /** Whether these are a stored run's own, which cannot be taken back. */
   fixed?: boolean;
+  /** How a moment of the run is said, as the page around it says it. A daily
+   * command's time of day is said as a time of day whatever this is. */
+  describe?: (seconds: number) => string;
   onTime: (seconds: number) => void;
   onRemove: (index: number) => void;
   /** One of the commands repeated every day, in its place. */
@@ -111,7 +118,7 @@ export function ClimateSchedule({
       <details>
         <summary>
           <span data-testid="schedule-summary">
-            {describeSchedule({ schedule, daily, time, days })}
+            {describeSchedule({ schedule, daily, time, days, describe })}
           </span>
           <span className="climate-schedule-bar" aria-hidden="true">
             {marked.map((command, index) => (
@@ -150,7 +157,7 @@ export function ClimateSchedule({
             );
           })}
           {schedule.map((command, index) => {
-            const said = `${describeCommand(command)} at ${describeTime(command.timeS)}`;
+            const said = `${describeCommand(command)} at ${describe(command.timeS)}`;
             return (
               // biome-ignore lint/suspicious/noArrayIndexKey: two commands may be alike.
               <li key={index} data-testid="schedule-command" data-applied={command.timeS <= time}>
@@ -159,7 +166,7 @@ export function ClimateSchedule({
                   aria-label={`Go to ${said}`}
                   onClick={() => onTime(command.timeS)}
                 >
-                  {describeTime(command.timeS)}
+                  {describe(command.timeS)}
                 </button>{" "}
                 {describeCommand(command)}{" "}
                 {onRepeat !== undefined && !fixed && (

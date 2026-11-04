@@ -75,10 +75,13 @@ function ForkLevels({
   asked,
   onFork,
   onPutBack,
+  noFork = null,
 }: {
   asked: Readonly<Record<string, number>>;
   onFork: () => void;
   onPutBack: () => void;
+  /** Why no fork can be made at the moment shown, if none can. */
+  noFork?: string | null;
 }) {
   const none = Object.keys(asked).length === 0;
   return (
@@ -88,7 +91,8 @@ function ForkLevels({
           ? "This stored run keeps its levels: those set here make a fork of it from this moment."
           : `Set ${Object.keys(asked).join(", ")}: not yet this run's or a fork's.`}
       </p>
-      <button type="button" disabled={none} onClick={onFork}>
+      {noFork !== null && <p className="targets-note">{noFork}</p>}
+      <button type="button" disabled={none || noFork !== null} onClick={onFork}>
         Fork from here with these levels
       </button>
       <button type="button" disabled={none} onClick={onPutBack}>
@@ -175,6 +179,7 @@ export function ScenarioPanels({
     asked: Readonly<Record<string, number>>;
     onFork: () => void;
     onPutBack: () => void;
+    noFork?: string | null;
   };
   /** The run followed as it plays, whose plan lane the timeline draws
    * (P13.8). */
@@ -354,6 +359,7 @@ export function ScenarioPanels({
             time={time}
             followed={source.follow === true}
             forking={replayed}
+            noFork={forkLevels?.noFork ?? null}
             onSet={onTargets}
           />
         )}
@@ -364,6 +370,7 @@ export function ScenarioPanels({
             time={time}
             days={days}
             fixed={replayed}
+            {...(replayed ? { describe: dayLabel } : {})}
             onTime={onSeek ?? setTime}
             onRemove={(index) => onSource(withoutCommand(source, index))}
             onRepeat={(index) => onSource(withRepeated(source, index))}

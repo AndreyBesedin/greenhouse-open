@@ -2,6 +2,7 @@
 from the checkpoint of its last commit, ending as the epoch that was never
 interrupted does, whatever a crash left past its last commit."""
 
+import sys
 import threading
 import time
 from collections.abc import Iterator
@@ -11,7 +12,6 @@ from typing import Final
 import pytest
 
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import interrupted, leases
 from greenhouse_sim.services.checkpoints import checkpoints
 from greenhouse_sim.services.errors import Conflict, InvalidRequest
@@ -26,19 +26,20 @@ from greenhouse_sim.services.run_store import (
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.workers import Free, Paced, Stepped, execute, queued, resume
 
-BOX: Final = "climate_box"
+sys.path.insert(0, str(Path(__file__).parent))
+
+import short_runs
+
 SHORT: Final = "climate_box_short"
 DAYS: Final = 3
 WAIT_S: Final = 60.0
 
 
 def _simulator() -> Simulator:
-    """The climate box cut to a run of three days; a new one is a process
-    started again, which keeps none of what the one before worked out."""
+    """A run of three days of the one-plant box; a new one is a process started
+    again, which keeps none of what the one before worked out."""
     made = Simulator()
-    made.catalogue.register(
-        SCENARIO_REGISTRY[BOX].model_copy(update=dict(greenhouse_id=SHORT, duration_days=DAYS))
-    )
+    made.catalogue.register(short_runs.one_plant_box(SHORT, DAYS))
     return made
 
 
@@ -74,7 +75,6 @@ def _interrupted_after(simulator: Simulator, root: Path, days: int) -> EpochStor
     return epoch
 
 
-@pytest.mark.slow
 def test_a_resumed_epoch_is_the_epoch_that_was_never_interrupted(
     tmp_path: Path, uninterrupted: EpochStore
 ) -> None:
@@ -105,7 +105,6 @@ def test_an_epoch_with_nothing_committed_begins_again(
     assert _digests(epoch) == _digests(uninterrupted)
 
 
-@pytest.mark.slow
 def test_only_an_interrupted_epoch_resumes(simulator: Simulator, tmp_path: Path) -> None:
     finished = _epoch(simulator, tmp_path)
     assert execute(simulator, finished, Free()) == Status.FINISHED
@@ -215,7 +214,6 @@ def test_a_crash_between_the_log_and_the_commit_leaves_a_segment_that_is_written
     epoch.verify()
 
 
-@pytest.mark.slow
 def test_a_crash_as_a_checkpoint_is_written_leaves_a_segment_that_no_commit_names(
     tmp_path: Path, uninterrupted: EpochStore
 ) -> None:
@@ -229,7 +227,6 @@ def test_a_crash_as_a_checkpoint_is_written_leaves_a_segment_that_no_commit_name
     epoch.verify()
 
 
-@pytest.mark.slow
 def test_an_epoch_whose_final_day_is_committed_is_finished_not_driven_again(
     tmp_path: Path, uninterrupted: EpochStore
 ) -> None:

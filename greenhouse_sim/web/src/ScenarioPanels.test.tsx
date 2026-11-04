@@ -134,6 +134,25 @@ describe("a stored run's panels", () => {
     expect(onPutBack).toHaveBeenCalledOnce();
   });
 
+  it("says why no fork of levels can be made at a run's end, and offers none", () => {
+    const onFork = vi.fn();
+    rendered = panels({
+      replayed: true,
+      forkLevels: {
+        asked: { heater: 0.5 },
+        onFork,
+        onPutBack: vi.fn(),
+        noFork: "The run ends here: go back to a moment to fork from.",
+      },
+    });
+
+    expect(said(rendered.container, "fork-levels")).toMatch(/The run ends here/);
+    const fork = button(rendered.container, "Fork from here with these levels");
+    expect(fork.disabled).toBe(true);
+    // What was set can still be put back.
+    expect(button(rendered.container, "Put them back").disabled).toBe(false);
+  });
+
   it("goes to one of a stored run's commands by moving its position", () => {
     const onSeek = vi.fn();
     const onSource = vi.fn();
@@ -145,5 +164,31 @@ describe("a stored run's panels", () => {
 
     expect(onSeek).toHaveBeenCalledWith(60);
     expect(onSource).not.toHaveBeenCalled();
+  });
+
+  it("counts a stored run's schedule as its timeline does, from day 1", () => {
+    const fan = { actuatorId: "fan", level: 1, timeS: 3_398_400 };
+    const at = {
+      kind: "scenario" as const,
+      scenarioId: "box",
+      field: CLIMATE_FIELD,
+      time: 3_369_600,
+      schedule: [fan],
+    };
+
+    rendered = panels({ source: at, days: 120, replayed: true });
+    expect(said(rendered.container, "schedule-summary")).toBe(
+      "Schedule: 1 command. Next at Day 40, 08:00: fan 100%.",
+    );
+    const goTo = rendered.container.querySelector('button[aria-label^="Go to"]');
+    expect(goTo?.textContent).toBe("Day 40, 08:00");
+    expect(goTo?.getAttribute("aria-label")).toBe("Go to fan 100% at Day 40, 08:00");
+    rendered.unmount();
+
+    // A view keeps its own way of saying a moment.
+    rendered = panels({ source: at, days: 120 });
+    expect(said(rendered.container, "schedule-summary")).toBe(
+      "Schedule: 1 command. Next at day 39, 8 h 00 min: fan 100%.",
+    );
   });
 });

@@ -21,7 +21,6 @@ from greenhouse_protocol.plan import At, Plan, PlannedAction
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.services import forks, playback
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR
@@ -50,10 +49,11 @@ from greenhouse_sim.services.workers import Free, Stepped, execute, queued, resu
 # simulator with by name, so that the module is put where its process finds it.
 sys.path.insert(0, str(Path(__file__).parent))
 
+import short_runs
 import workers_support
 
-BOX: Final = "climate_box"
 SHORT: Final = "climate_box_short"
+TENDED: Final = "climate_box_tended"
 DAYS: Final = 3
 WAIT_S: Final = 180.0
 MOVED: Final = f"default{MOVES_MARK}heater:0.5:0.0"
@@ -61,9 +61,7 @@ MOVED: Final = f"default{MOVES_MARK}heater:0.5:0.0"
 
 def _simulator(root: Path | None = None) -> Simulator:
     made = Simulator(runs=None if root is None else FolderStore(root))
-    made.catalogue.register(
-        SCENARIO_REGISTRY[BOX].model_copy(update=dict(greenhouse_id=SHORT, duration_days=DAYS))
-    )
+    made.catalogue.register(short_runs.one_plant_box(SHORT, DAYS))
     return made
 
 
@@ -178,7 +176,6 @@ def _observed_by(epoch: EpochStore, until_s: float, start: Any) -> list[Observat
     return [o for o in epoch.observations().records if (o.delivered_at or o.timestamp) <= limit]
 
 
-@pytest.mark.slow
 def test_a_fork_at_a_moment_inside_a_day_changes_nothing_before_it(
     simulator: Simulator, whole: EpochStore
 ) -> None:
@@ -204,7 +201,6 @@ def test_a_fork_at_a_moment_inside_a_day_changes_nothing_before_it(
     assert any(o.value != parent[o.observation_id] for o in after)
 
 
-@pytest.mark.slow
 def test_a_fork_inherits_the_changes_given_by_its_instant_and_not_those_after(
     tmp_path: Path,
 ) -> None:
@@ -335,7 +331,6 @@ class StoppingAfterACommit(FolderStore):
             self._stop.set()
 
 
-@pytest.mark.slow
 def test_a_fork_interrupted_resumes_to_the_digests_of_one_never_interrupted(
     tmp_path: Path,
 ) -> None:
@@ -424,7 +419,6 @@ def _until(condition: Callable[[], bool], what: str) -> None:
         time.sleep(0.05)
 
 
-@pytest.mark.slow
 def test_a_fork_starts_through_the_scheduler_in_a_process_of_its_own(tmp_path: Path) -> None:
     objects = FolderStore(tmp_path)
     with workers_support.short_simulator() as made:
@@ -565,21 +559,16 @@ def test_what_a_fork_inherits_is_kept_after_a_discard(simulator: Simulator, tmp_
     assert made.checkpoint_at(DAY_S) is not None
 
 
-@pytest.mark.slow
 def test_a_fork_is_told_what_its_parents_crop_actions_before_its_state_did(tmp_path: Path) -> None:
     """A harvest behind the state a fork inherits is not worked out again: what
     its parent's outcome says of it comes with the fork, and it needs its parent
     no longer."""
     objects = FolderStore(tmp_path)
     with Simulator(runs=objects) as made:
-        made.catalogue.register(
-            SCENARIO_REGISTRY["reference_greenhouse"].model_copy(
-                update=dict(greenhouse_id="reference_short", duration_days=DAYS)
-            )
-        )
-        parent = queued(made, objects, "reference_short")
-        plant = plant_ids(scenario(made.catalogue, "reference_short"))[0]
-        start = run_start(made.catalogue, "reference_short")
+        made.catalogue.register(short_runs.tended_box(TENDED, DAYS))
+        parent = queued(made, objects, TENDED)
+        plant = plant_ids(scenario(made.catalogue, TENDED))[0]
+        start = run_start(made.catalogue, TENDED)
         harvest = Plan(
             plan_id="crop",
             run_id=parent.run_id,
