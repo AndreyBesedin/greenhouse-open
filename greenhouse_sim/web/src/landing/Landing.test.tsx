@@ -120,6 +120,62 @@ describe("the page where a person decides what to do", () => {
     expect(link(container, "Open the builder")?.getAttribute("href")).toBe("/builder");
   });
 
+  const draft = (id: string, saved: string) => ({
+    draft_id: id,
+    name: `House ${id}`,
+    revision: 2,
+    saved_at: saved,
+  });
+
+  it("lists the latest drafts saved in the card to build one, each opening in the builder", async () => {
+    const { container } = await shown(
+      {
+        "/api/scenarios": SCENARIOS,
+        "/api/runs": [],
+        "/api/drafts": [
+          draft("oldest", "2026-09-01T12:00:00Z"),
+          draft("latest", "2026-11-03T12:00:00Z"),
+          draft("older", "2026-10-01T12:00:00Z"),
+          draft("late", "2026-11-01T12:00:00Z"),
+        ],
+      },
+      "Saved drafts",
+    );
+
+    const list = container.querySelector('#landing-build ~ nav[aria-label="Saved drafts"]');
+    expect(
+      [...(list?.querySelectorAll("a") ?? [])].map((each) => [
+        each.textContent,
+        each.getAttribute("href"),
+      ]),
+    ).toEqual([
+      ["House latest", "/builder#draft=latest"],
+      ["House late", "/builder#draft=late"],
+      ["House older", "/builder#draft=older"],
+    ]);
+    expect(list?.textContent).toContain("Saved drafts, the latest 3 of 4");
+    expect(list?.querySelector("span")?.textContent).toBe("revision 2 · saved Nov 3");
+  });
+
+  it("lists no drafts when none is saved, or the simulator keeps none", async () => {
+    for (const drafts of [{ "/api/drafts": [] }, {}]) {
+      const { container } = await shown(
+        { "/api/scenarios": SCENARIOS, "/api/runs": [], ...drafts },
+        "No run has been kept yet",
+      );
+      await vi.waitFor(() =>
+        expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).toContain("/api/drafts"),
+      );
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+
+      expect(container.textContent).not.toContain("Saved drafts");
+      page?.unmount();
+      page = undefined;
+    }
+  });
+
   it("says how many runs are kept and what their objects hold, above the list, once", async () => {
     const MB = 1024 * 1024;
     const { container } = await shown(
@@ -362,7 +418,12 @@ describe("the page where a person decides what to do", () => {
         "fetch",
         vi.fn(async (input: RequestInfo | URL) => {
           const url = String(input);
-          const body = url === "/api/scenarios" ? SCENARIOS : (answers.shift() ?? [run({})]);
+          const body =
+            url === "/api/scenarios"
+              ? SCENARIOS
+              : url === "/api/drafts"
+                ? []
+                : (answers.shift() ?? [run({})]);
           return new Response(JSON.stringify(body));
         }),
       );

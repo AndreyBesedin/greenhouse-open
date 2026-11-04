@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { entityBounds, type OverlayPrimitive } from "../debug/overlays";
 import { HomeButton } from "../landing/HomeButton";
-import { BUILDER_PATH, LANDING_PATH, newRunAddress, replayAddress } from "../landing/paths";
+import {
+  BUILDER_PATH,
+  draftAsked,
+  LANDING_PATH,
+  newRunAddress,
+  replayAddress,
+} from "../landing/paths";
 import { DEFAULT_PACE_S, startRun } from "../landing/startRun";
 import { keptFields, uploadedScenario } from "../landing/uploaded";
 import { greenhouseExtent, qaGreenhousePose } from "../qa/greenhouseViews";
@@ -172,13 +178,16 @@ export function Builder({
     void listScenarios();
   }, [refreshDrafts, listScenarios]);
 
-  // An uploaded scenario the address names is opened once, as the start page
-  // sends it here.
+  // An uploaded scenario or a draft the address names is opened once, as the
+  // start page sends it here.
   // biome-ignore lint/correctness/useExhaustiveDependencies: opened for the address the page was loaded at
   useEffect(() => {
     const uploaded = uploadedScenario(hash);
+    const draft = draftAsked(hash);
     if (uploaded !== null) {
       void openUploaded(uploaded);
+    } else if (draft !== null) {
+      void open(draft);
     }
   }, []);
 
