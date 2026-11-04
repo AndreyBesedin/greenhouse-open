@@ -182,6 +182,26 @@ the new one, and `--days 10` measures the season's first days alone. It is a rec
 says how long the simulator took to give it, in a `Server-Timing` header,
 which the viewer's HUD shows for the latest request.
 
+## Runs kept before their usage reports
+
+A list of runs reads each epoch's usage report (`usage.json`, decision 0067).
+An epoch kept before those were written has none, so that a list walks it, and a
+thousand of them take up to a minute; a list writes nothing. Once, on a run
+store's folder:
+
+```bash
+python -m greenhouse_sim.usage_reports ~/.local/state/greenhouse-sim/runs
+```
+
+It writes the missing reports and changes no other file, so that no run id,
+digest or position moves. It leaves alone an epoch with a report, or queued,
+running or leased, so that it may run beside a server and again without effect.
+A report it writes has no CPU time or peak memory, which no worker measured: the
+API answers `null` for them, not zero. An epoch that it cannot read, or with a
+file missing that its commits name, is printed with the reason and gets no
+report, so that a list goes on saying it is damaged, and the rest go on; the exit
+code is then 1.
+
 ## Where it is going
 
 The simulator is growing into a visual, physical simulation environment,

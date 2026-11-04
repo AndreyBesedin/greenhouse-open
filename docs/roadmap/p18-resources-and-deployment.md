@@ -85,12 +85,23 @@ of its 414 kB included, took 0.54 to 0.61 s at load 40. An epoch costs its manif
 its report and a listing of three folders, whatever its length, and the three
 listings are most of it.
 
-**A store of epochs from before reports does not gain:** nothing but a walk knows such
-an epoch's size, so it is walked, as it was, on each list, and shows `cpu_s` and
-`peak_memory_bytes` as none. It is not rewritten by a read. An epoch resumed from then
-on has a report; one told `interrupted` as a server starts gets one too; one that
-ended before stays as it is until it is deleted. A store with 1,000 of them still
-takes half a minute to list.
+**A store of epochs from before reports gains once a command has run on it.** Nothing
+but a walk knows such an epoch's size, so it is walked, as it was, on each list, and a
+read writes nothing. An epoch resumed from then on has a report; one told `interrupted`
+as a server starts gets one too; one that ended before stays as it is until
+`python -m greenhouse_sim.usage_reports <the store's folder>` gives it one.
+
+| 1,002 epochs from before reports | Load 13 to 30 | Load 21 to 100 |
+| --- | --- | --- |
+| The list, before the command | 61 to 72 s | 69 to 107 s |
+| The command | 58 s | 79 s |
+| The list, after it | **0.42 to 0.45 s** | 0.49 to 0.54 s |
+| The command again, which writes nothing | 0.3 s | 0.4 s |
+
+The same method, except that each copy's 120 commits are files of its own and not hard
+links, since a commit names its checkpoint under its run's folder and a copy is
+otherwise found damaged. The list answers the same before and after, each field of each
+of the 1,002 epochs compared, and no other file's inode, size or time of writing moved.
 
 **A report's cost and its figures.** The same run reported 120 days computed, 120
 commits, 20,647,025 bytes kept, 1,357 s of CPU and a peak of 328 MB, against the 20.6 MB
@@ -121,7 +132,7 @@ a process; `RLIMIT_AS` on macOS, which P18.3 must check before relying on it.
 | Step | What | Pull request | Status |
 | --- | --- | --- | --- |
 | P18.1 | An epoch is self-contained: the scenario and its recording written into the store when it is queued; a worker takes a store's address and an epoch; built and uploaded scenarios run and resume in workers with their own weather and site. No run id moves. | `feat(sim): an epoch carries what it needs to run` | Done: an epoch of a scenario that is not packaged names, in its manifest, its portable file under `scenarios/<digest>.json`, with its recording inside and checked to read back as the same configuration; its pace is in the manifest too, so that `work` takes a folder's path, a run and an epoch. A simulator started on the store registers these files as it does the uploaded ones. An epoch from before this, of a packaged scenario, resumes as it did; of another, it is given its file if this simulator knows the scenario as the run it is, and is refused in words if not. A run of a draft named as a registered scenario, as a draft opened from a file is, stays under its site and weather unless it asks for others. Not delivered: a packaged scenario is not written, since every simulator has it; a worker's simulator has the default authorisation and no crew; a file stays when the last epoch naming it is deleted |
-| P18.2 | Counted: the usage object at each commit, outside every digest; a failed epoch's reason; the list reads them, and its cost is measured again against the table above. | `feat(sim): an epoch says what it used and why it failed` | Done: `usage.json` beside the manifest, written after each commit and as the epoch ends, and `reason` in the manifest, both in the answer of `GET /api/runs`; see "What P18.2 counts" below. Not delivered: the viewer shows neither (P18.5); a list does not see a file lost from inside a day's folder, only opening the epoch does; an epoch kept before this costs a list what it always did |
+| P18.2 | Counted: the usage object at each commit, outside every digest; a failed epoch's reason; the list reads them, and its cost is measured again against the table above. | `feat(sim): an epoch says what it used and why it failed` | Done: `usage.json` beside the manifest, written after each commit and as the epoch ends, and `reason` in the manifest, both in the answer of `GET /api/runs`; see "What P18.2 counts" below. An epoch kept before this is given its report once, by `python -m greenhouse_sim.usage_reports <folder>`. Not delivered: the viewer shows neither (P18.5); a list does not see a file lost from inside a day's folder, only opening the epoch or asking it to resume does, and each refuses in words; until that command has run, an epoch kept before this costs a list what it always did |
 | P18.3 | Limited: `Limits` from a file and the server's options; refusals for waiting runs and free disk; epochs ended by bytes, memory or time, keeping what they committed; workers at a lower priority. | `feat(sim): a simulator's runs have limits` | Planned |
 | P18.4 | The store's *create unless it exists*, for a folder; leases and claims use it, which closes the window above; the queue rebuilt from `queued` manifests after a restart, so that a waiting run survives one. | `feat(sim): a claim on an epoch needs no lock` | Planned |
 | P18.5 | The viewer: what a run used and why it failed in the runs dialog; workers busy, runs waiting and free disk on the landing page; a refusal in words. | `feat(viewer): what the runs use, and why one was refused` | Planned |
@@ -164,8 +175,28 @@ commits, day folders and checkpoints the epoch's folders hold with what its repo
 counted, and walks only an epoch that disagrees. A commit, a checkpoint or a whole
 day lost is still seen. A single file lost from inside a day's folder is not, until
 someone opens the epoch: `GET /api/runs/{run}/epochs/{n}` says so, and opening a
-position is refused in words where a read would have answered 500. Resuming is not
-refused: it goes on from the last commit and leaves the epoch as damaged as it was.
+position is refused in words where a read would have answered 500. Asking it to resume
+is refused in words as well, with a 409 and nothing changed in the store, since its
+last commit alone would have let it go on and it would have stayed damaged. That check
+lists the epoch's objects: 23 ms on the reference run's 601 at load 16, read commits
+aside, and it is made once as a resume is asked for and once as its worker takes it up.
+
+**Reports for epochs kept before them** (`python -m greenhouse_sim.usage_reports
+<folder>`) adds `usage.json` to each epoch that lacks one, written as the store writes
+every object, and touches no other object, so that no run id, digest or position moves.
+
+- It leaves alone an epoch with a report, and one queued, running or with a lease. So it
+  may run beside a server, and running it twice changes nothing. An epoch `running` that
+  no one works gets its report as a server starts and finds it interrupted.
+- `cpu_s` and `peak_memory_bytes` are none in what it writes, which the list and the
+  routes answer as `null`: no worker measured them, and none is not zero. A worker that
+  resumes the epoch counts its own from there. The viewer does not read them yet (P18.5).
+- An epoch it cannot read fails alone, with the reason printed, and the rest go on. So
+  does one whose report cannot be read, which is not written over, and one with an object
+  missing that its commits name: a report would let a list count its folders and stop
+  saying it is damaged, whereas with none a list goes on walking that one.
+- It prints how many it wrote and skipped and each failure, and its exit code is 1 if
+  any failed. It does not read objects for their digests (`verify`).
 
 ## Acceptance criteria
 
