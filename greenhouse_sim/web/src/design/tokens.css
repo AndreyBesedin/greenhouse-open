@@ -1,5 +1,5 @@
 /* Colours by what they do (decision 0068), on every page: dark by default, light
- * if chosen (`panelTheme.ts`, #208). The 3D scene, its legends' colour scales and
+ * if chosen (`theme.ts`, #208). The 3D scene, its legends' colour scales and
  * the charts' coloured lines are the same in both. */
 :root {
   --scheme: dark;
@@ -24,7 +24,7 @@
   --chart-blue-text: #5aa9e6;
 }
 
-:root[data-panels="light"] {
+:root[data-theme="light"] {
   --scheme: light;
   --surface-panel: rgb(255 255 255 / 88%);
   --text: #000000;
