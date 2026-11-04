@@ -14,6 +14,7 @@ export interface StoredRun {
   seed: number | null;
   layout: string;
   status: Status;
+  paused: boolean;
   frontier_s: number;
   duration_s: number | null;
   progress: number | null;
@@ -21,6 +22,7 @@ export interface StoredRun {
   size_bytes: number;
   start_s: number;
   fork: ForkOf | null;
+  stopping: boolean;
   damaged: boolean;
   days_computed: number;
   cpu_s: number | null;

@@ -796,6 +796,12 @@ class Playback:
                 with self._lock:
                     return self._state()
 
+    def epoch_held(self) -> int | None:
+        """The epoch whose clock it holds, by a pause; none while it plays, or
+        once its run has ended."""
+        with self._lock:
+            return None if self._playing or self._time_s >= self.end_s else self._epoch
+
     def plays(self, layout: str | None, seed: int | None = None) -> bool:
         """Whether it plays the run of `layout` at `seed`: its own layout,
         when None, and the seed it has, when None."""
@@ -1245,6 +1251,12 @@ class Playback:
         with self._lock:
             self._advance()
             return self._state()
+
+    def has_epoch(self, run_id: str, epoch: int) -> bool:
+        """Whether this is the epoch it plays. Asked of every playback kept, and
+        so unlike `state`: it moves no clock and raises no failure of its own."""
+        with self._lock:
+            return (self.run_id, self._epoch) == (run_id, epoch)
 
     def command(self, command: PlaybackCommand) -> PlaybackState:
         """Plays on, holds the clock, or starts the run over as a new epoch,
@@ -1754,3 +1766,12 @@ def set_targets(
 def stop_playbacks(simulator: Simulator) -> None:
     """Stops and forgets every playback of the simulator's."""
     simulator.playbacks.stop()
+
+
+def plays_epoch(simulator: Simulator, run_id: str, epoch: int) -> bool:
+    """Whether a playback of the simulator's, one replaced included, has this
+    epoch of a run."""
+    return any(
+        found.has_epoch(run_id, epoch)
+        for found in (*simulator.playbacks.all(), *simulator.playbacks.retiring())
+    )

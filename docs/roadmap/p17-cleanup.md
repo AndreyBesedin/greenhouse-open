@@ -126,13 +126,13 @@ pale text.
   beside the others, and while they ran a seek went unanswered for over 3 s and the
   panels read "mixing" for over 40 s. The line's words are fixed in #519; the cost is not, and
   keeping the air in a checkpoint is a change to the service.
-- [ ] **A run whose server was killed cannot be stopped.** A server ended by `kill` leaves its
+- [x] **A run whose server was killed cannot be stopped.** A server ended by `kill` leaves its
   workers computing, by design (P17.9, a lease). The next server lists the run as Running, and
   its *Stop* says "No worker of this simulator has this run. One the viewer plays stops with
   its playback, and one whose worker is gone soon reads Interrupted", which does not happen
   while the worker lives; *Delete* says to stop it first. Nothing in the viewer ends it: the run
-  goes on to its end, or its process is killed. Ctrl-C ends the workers as it should. Whether a
-  stop should reach such a worker, as a change does, through a request in the store, is open.
+  goes on to its end, or its process is killed. Ctrl-C ends the workers as it should. A stop
+  now reaches such a worker through a request in the store, as a change does.
 - [x] **A replay left open across a restart stood still in silence.** It read "Running" and
   asked for its position once a second, 40 404s in 40 s. Fix in #516.
 

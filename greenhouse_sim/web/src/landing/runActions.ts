@@ -1,14 +1,11 @@
 import { type Answered, refusal } from "../builder/api";
 import { parseStoredRun, type StoredRun } from "./storedRuns";
 
-/** Why a run has no worker to stop: nothing here computes it by that route. */
-const NO_WORKER =
-  "No worker of this simulator has this run. One the viewer plays stops with its playback, and one whose worker is gone soon reads Interrupted.";
-
 const UNREACHED = "The simulator could not be reached.";
 
-/** How the simulator answers a stop of a run no worker of its has. */
-const NOT_ITS_OWN = 404;
+/** How the simulator answers about a run it no longer has. */
+const NOT_THERE = 404;
+const GONE = "This run is no longer kept.";
 
 type Epoch = Pick<StoredRun, "run_id" | "epoch">;
 
@@ -40,13 +37,15 @@ async function ask(
 }
 
 /** Stops a run being computed or waiting for a worker: it is left interrupted,
- * with what it had committed, and can be resumed. */
+ * with what it had committed, and can be resumed. A worker the simulator cannot
+ * signal stops at its next look at the store: the run answered says `stopping`
+ * until then. */
 export function stopRun(run: Epoch, fetchFn: typeof fetch = fetch): Promise<Answered<StoredRun>> {
   return ask(
     run,
     "stop",
     async (response) =>
-      response.status === NOT_ITS_OWN ? NO_WORKER : aboutThisRun(await refusal(response), run),
+      response.status === NOT_THERE ? GONE : aboutThisRun(await refusal(response), run),
     fetchFn,
   );
 }

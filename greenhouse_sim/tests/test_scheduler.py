@@ -236,8 +236,10 @@ def test_a_run_is_asked_for_over_the_api_and_stopped_there(
     stopped = respond(simulator, "POST", f"/api/runs/{shown.run_id}/epochs/{shown.epoch}/stop")
     assert stopped.status == HTTPStatus.OK
     assert _status(objects, shown) == Status.INTERRUPTED
+    # A worker of its own is gone by the answer, with nothing asked through the store.
+    assert not EpochStore(objects, shown.run_id, shown.epoch).stop_asked()
     again = respond(simulator, "POST", f"/api/runs/{shown.run_id}/epochs/{shown.epoch}/stop")
-    assert again.status == HTTPStatus.NOT_FOUND
+    assert again.status == HTTPStatus.CONFLICT
 
 
 @pytest.mark.parametrize(

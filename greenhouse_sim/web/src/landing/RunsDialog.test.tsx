@@ -27,6 +27,7 @@ function run(more: Partial<StoredRun>): StoredRun {
     seed: 1,
     layout: "default",
     status: "finished",
+    paused: false,
     frontier_s: 120 * DAY_S,
     duration_s: 120 * DAY_S,
     progress: 1,
@@ -34,6 +35,7 @@ function run(more: Partial<StoredRun>): StoredRun {
     size_bytes: 24 * 1024 * 1024,
     start_s: 0,
     fork: null,
+    stopping: false,
     damaged: false,
     days_computed: 0,
     cpu_s: null,
@@ -119,6 +121,7 @@ describe("the runs of a scenario, in a dialog", () => {
       epoch: 2,
       seed: 2,
       status: "running",
+      paused: false,
       frontier_s: 41 * DAY_S,
       progress: 41 / 120,
       layout: "default~heater:-1:0.5",
@@ -373,6 +376,16 @@ describe("the runs of a scenario, in a dialog", () => {
     expect(asked).toEqual([{ url: `/api/runs/${RUN_ID}/epochs/3/resume`, method: "POST" }]);
   });
 
+  it("calls a run paused while its playback holds it, and running once it plays", () => {
+    const { rows } = shown([
+      run({ epoch: 1, status: "running", paused: true }),
+      run({ epoch: 0, status: "running" }),
+    ]);
+    const statuses = rows().map((row) => row.querySelector(".landing-status")?.textContent);
+
+    expect(statuses).toEqual(["Paused", "Running"]);
+  });
+
   it("asks once for two presses while the first is answered", async () => {
     let answer: (response: Response) => void = () => undefined;
     const fetchFn = vi.fn(
@@ -392,22 +405,70 @@ describe("the runs of a scenario, in a dialog", () => {
     await vi.waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
   });
 
-  it("says in words why a run has no worker to stop, with no identifier", async () => {
+  it("says in the simulator's words why a run is not stopped, with no identifier", async () => {
     simulator(
       {},
-      { status: 404, body: { error: `epoch 0 of run ${RUN_ID} is neither waiting nor executed` } },
+      {
+        status: 409,
+        body: {
+          error: `epoch 0 of ${RUN_ID} is played in the viewer, with no worker: it stops with its playback`,
+        },
+      },
     );
     const { container, onChanged } = shown([run({ status: "running" })]);
 
     click(button(container, "Stop the run with seed 1, epoch 0"));
 
     await vi.waitFor(() =>
-      expect(container.querySelector('[role="alert"]')?.textContent).toContain(
-        "No worker of this simulator has this run.",
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+        "this run is played in the viewer, with no worker: it stops with its playback",
+      ),
+    );
+    expect(onChanged).not.toHaveBeenCalled();
+  });
+
+  it("says a run that is no longer kept is gone, with no identifier", async () => {
+    simulator({}, { status: 404, body: { error: `run ${RUN_ID} has no epoch 0 in the store` } });
+    const { container } = shown([run({ status: "running" })]);
+
+    click(button(container, "Stop the run with seed 1, epoch 0"));
+
+    await vi.waitFor(() =>
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+        "This run is no longer kept.",
       ),
     );
     expect(container.textContent).not.toContain(RUN_ID);
-    expect(onChanged).not.toHaveBeenCalled();
+  });
+
+  it("asks the runs again when a stop is on its way, and says nothing is wrong", async () => {
+    simulator({}, { status: 200, body: run({ status: "running", stopping: true }) });
+    const { container, onChanged } = shown([run({ status: "running" })]);
+
+    click(button(container, "Stop the run with seed 1, epoch 0"));
+
+    await vi.waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it("calls a run asked to stop stopping, with nothing more to press and no way to delete it yet", async () => {
+    simulator({}, { status: 409, body: { error: "being computed" } });
+    const { container } = shown([run({ status: "running", stopping: true })]);
+
+    expect(container.querySelector(".landing-status")?.textContent).toContain("Stopping");
+    expect(container.querySelector(".landing-status")?.textContent).toContain("reads Interrupted");
+    const pressed = button(container, "Stopping the run with seed 1, epoch 0");
+    expect(pressed).toHaveProperty("disabled", true);
+    expect(container.querySelector('[aria-label^="Stop the run"]')).toBeNull();
+
+    click(button(container, "Delete the run with seed 1, epoch 0"));
+    click(button(container, "Delete the run with seed 1, epoch 0"));
+
+    await vi.waitFor(() =>
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+        "The run with seed 1, epoch 0 is stopping: delete it once it reads Interrupted.",
+      ),
+    );
   });
 
   it("says why a run does not resume, about this run and not its identifier", async () => {
