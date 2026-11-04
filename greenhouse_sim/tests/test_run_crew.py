@@ -4,6 +4,7 @@ time, late, missed, carried out by their fallbacks or cancelled with what
 they wait for, the same way run after run; and the run saying when it
 carries each kind out, so that its gateway starts every action then."""
 
+import sys
 from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
@@ -61,10 +62,16 @@ from greenhouse_sim.services.gateway import (
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
 from greenhouse_sim.services.scenarios import plant_ids, scenario
 from greenhouse_sim.services.sensors import run_start
-from greenhouse_sim.services.simulator import Simulator
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+from short_runs import cut, simulator_of
 
 SCENARIO: Final = "reference_greenhouse"
 CONFIG: Final = scenario(PACKAGED, SCENARIO)
+# Its playbacks' run here: as many plants as its plan names, for the days it
+# plays. Who holds a hand and when is the gateway's, whatever the crop's air.
+PLAYED: Final = cut(SCENARIO, plants=(1, 5))
 START: Final = run_start(PACKAGED, SCENARIO)
 DAY: Final = timedelta(days=1)
 HOUR: Final = timedelta(hours=1)
@@ -287,15 +294,14 @@ def test_a_plan_for_one_hand_ends_on_time_late_missed_and_cancelled(step: timede
     assert _ends(gateway) == CREW_ENDS
 
 
-@pytest.mark.slow
 def test_a_playback_with_a_crew_ends_a_plan_the_same_after_it_starts_over(
     tmp_path: Path,
 ) -> None:
-    """On the reference greenhouse, for one hand: the plan's outcomes as
-    the gateway alone gives them, and the same again once the playback
-    starts over and is given it again."""
+    """On a playback of the reference greenhouse, for one hand: the plan's
+    outcomes as the gateway alone gives them, and the same again once the
+    playback starts over and is given it again."""
     clock = _Clock()
-    with Simulator(crew=ONE_HAND) as simulator:
+    with simulator_of(PLAYED, crew=ONE_HAND) as simulator:
         playback.start(simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
         played = playback.playback(simulator, SCENARIO)
         ends = []
@@ -317,7 +323,6 @@ def test_a_playback_with_a_crew_ends_a_plan_the_same_after_it_starts_over(
     assert ends[0] == ends[1] == CREW_ENDS
 
 
-@pytest.mark.slow
 def test_a_playback_and_its_gateway_stop_together_where_a_timed_action_is_refused(
     tmp_path: Path,
 ) -> None:
@@ -326,7 +331,7 @@ def test_a_playback_and_its_gateway_stop_together_where_a_timed_action_is_refuse
     stop there together, so an inspection given then, as soon as possible,
     starts at that same day's start."""
     clock = _Clock()
-    with Simulator(crew=ONE_HAND) as simulator:
+    with simulator_of(PLAYED, crew=ONE_HAND) as simulator:
         playback.start(simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
         played = playback.playback(simulator, SCENARIO)
         state = played.state()
