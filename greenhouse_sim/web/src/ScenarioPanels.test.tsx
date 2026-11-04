@@ -165,4 +165,30 @@ describe("a stored run's panels", () => {
     expect(onSeek).toHaveBeenCalledWith(60);
     expect(onSource).not.toHaveBeenCalled();
   });
+
+  it("counts a stored run's schedule as its timeline does, from day 1", () => {
+    const fan = { actuatorId: "fan", level: 1, timeS: 3_398_400 };
+    const at = {
+      kind: "scenario" as const,
+      scenarioId: "box",
+      field: CLIMATE_FIELD,
+      time: 3_369_600,
+      schedule: [fan],
+    };
+
+    rendered = panels({ source: at, days: 120, replayed: true });
+    expect(said(rendered.container, "schedule-summary")).toBe(
+      "Schedule: 1 command. Next at Day 40, 08:00: fan 100%.",
+    );
+    const goTo = rendered.container.querySelector('button[aria-label^="Go to"]');
+    expect(goTo?.textContent).toBe("Day 40, 08:00");
+    expect(goTo?.getAttribute("aria-label")).toBe("Go to fan 100% at Day 40, 08:00");
+    rendered.unmount();
+
+    // A view keeps its own way of saying a moment.
+    rendered = panels({ source: at, days: 120 });
+    expect(said(rendered.container, "schedule-summary")).toBe(
+      "Schedule: 1 command. Next at day 39, 8 h 00 min: fan 100%.",
+    );
+  });
 });
