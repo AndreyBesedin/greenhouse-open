@@ -553,7 +553,7 @@ Also walked together, at `bf8758ae`:
 | A replay after a restart | Passed |
 
 Not run: step 6; a scenario with no equipment under a climate run, an open pull request's
-(`tomato_compartment`, and a built house, were opened and run without one); a recorded weather
+(`tomato_compartment` was opened, and a built house run, without one); a recorded weather
 ticked out and uploaded (the tick was seen offered, "Include the recorded weather (7 kB)").
 
 Browser tests on the same commit, production build on SwiftShader: 84 tests of the first stage
