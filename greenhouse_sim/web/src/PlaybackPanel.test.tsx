@@ -105,6 +105,20 @@ describe("the run a view follows as it is played back", () => {
     expect(said(container, "playback-progress")).toBe("day 1, 12 h 00 min");
   });
 
+  it("says why the run failed, and offers to play it again", () => {
+    const { container, onStart } = shown({
+      status: "failed",
+      reason: "its run could not be worked out (ArithmeticError)",
+    });
+
+    expect(said(container, "playback-status")).toBe(
+      "The run played back failed: its run could not be worked out (ArithmeticError). " +
+        "Play it again",
+    );
+    click(button(container, "Play it again"));
+    expect(onStart).toHaveBeenCalledOnce();
+  });
+
   it("offers to play the run back when nobody has yet", () => {
     const { container, onStart } = shown({ status: "unstarted" });
 
