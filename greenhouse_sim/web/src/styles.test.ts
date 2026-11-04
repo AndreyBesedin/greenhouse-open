@@ -172,6 +172,195 @@ describe("the stylesheet", () => {
   });
 });
 
+// The least contrast each kind of thing needs (WCAG 2.2's 1.4.3 and 1.4.11).
+const TEXT_NEEDS = 4.5;
+const MARK_NEEDS = 3;
+// What sits on what, as the stylesheet has it: a new colour for text, a line or an
+// outline is added here, where review sees it (decision 0068).
+const SITS_ON: readonly { needs: number; what: readonly string[]; on: readonly string[] }[] = [
+  {
+    needs: TEXT_NEEDS,
+    what: ["--text", "--text-soft", "--text-muted", "--action", "--warn"],
+    on: ["--surface-page", "--surface-panel"],
+  },
+  // The words of a label over the scene; a pressed button's; a chart key's; a compass's N.
+  { needs: TEXT_NEEDS, what: ["--text"], on: ["--surface-label"] },
+  { needs: TEXT_NEEDS, what: ["--surface-page"], on: ["--action"] },
+  { needs: TEXT_NEEDS, what: ["--chart-soft", "--chart-blue-text"], on: ["--surface-panel"] },
+  { needs: TEXT_NEEDS, what: ["--text-muted"], on: ["--chart-face"] },
+  // A control's outline: a field's, a plain button's, a primary's, a danger's.
+  {
+    needs: MARK_NEEDS,
+    what: ["--border", "--text-muted", "--action", "--warn"],
+    on: ["--surface-page", "--surface-panel"],
+  },
+  // A chart's lines, in its panel; a compass's on its face.
+  {
+    needs: MARK_NEEDS,
+    what: [
+      "--data-amber",
+      "--data-blue",
+      "--data-green",
+      "--data-navy",
+      "--data-orange",
+      "--data-red",
+      "--data-sky",
+      "--chart-ring",
+      "--chart-neutral",
+      "--chart-strong",
+      "--chart-soft",
+      "--chart-off",
+      "--chart-faint",
+    ],
+    on: ["--surface-panel"],
+  },
+  { needs: MARK_NEEDS, what: ["--chart-ring", "--data-blue"], on: ["--chart-face"] },
+];
+
+// What falls short today, computed: each is taken out by the visual step that fixes
+// it (P19.12), and the test fails if one is left here once fixed, or if one more falls.
+const CONTRAST_FAILURES: Readonly<Record<string, number>> = {
+  // Words: a chart key's.
+  "dark: --chart-soft on --surface-panel, needs 4.5": 4.36,
+  "light: --chart-soft on --surface-panel, needs 4.5": 2.7,
+  "light: --chart-blue-text on --surface-panel, needs 4.5": 3.94,
+  // A control's only outline: the words of a button identify it, a field's do not.
+  "dark: --border on --surface-page, needs 3": 2.09,
+  "dark: --border on --surface-panel, needs 3": 1.49,
+  "light: --border on --surface-page, needs 3": 1.48,
+  "light: --border on --surface-panel, needs 3": 1.22,
+  // A chart's lines, the same in both themes, which show on one of them.
+  "dark: --data-blue on --surface-panel, needs 3": 2.96,
+  "dark: --data-navy on --surface-panel, needs 3": 2.58,
+  "dark: --data-red on --surface-panel, needs 3": 2.46,
+  "light: --data-amber on --surface-panel, needs 3": 1.6,
+  "light: --data-orange on --surface-panel, needs 3": 1.77,
+  // A chart's neutral lines, and a compass's ring.
+  "dark: --chart-faint on --surface-panel, needs 3": 2.47,
+  "light: --chart-faint on --surface-panel, needs 3": 1.46,
+  "light: --chart-off on --surface-panel, needs 3": 2.64,
+  "light: --chart-soft on --surface-panel, needs 3": 2.7,
+  "light: --chart-ring on --surface-panel, needs 3": 2.17,
+  "light: --chart-ring on --chart-face, needs 3": 2.85,
+};
+
+interface Colour {
+  red: number;
+  green: number;
+  blue: number;
+  alpha: number;
+}
+
+/** A token's colour, as `tokens.css` writes them: `#rrggbb`, or `rgb(r g b / a%)`. */
+function colourOf(written: string): Colour {
+  const hex = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(written);
+  if (hex !== null) {
+    const [red, green, blue] = hex.slice(1).map((part) => Number.parseInt(part, 16));
+    return { red: red ?? 0, green: green ?? 0, blue: blue ?? 0, alpha: 1 };
+  }
+  const rgb = /^rgb\((\d+) (\d+) (\d+) \/ (\d+)%\)$/.exec(written);
+  if (rgb !== null) {
+    const [red, green, blue, percent] = rgb.slice(1).map(Number);
+    return { red: red ?? 0, green: green ?? 0, blue: blue ?? 0, alpha: (percent ?? 0) / 100 };
+  }
+  throw new Error(`no colour in ${written}`);
+}
+
+function over(top: Colour, ground: Colour): Colour {
+  const mixed = (part: "red" | "green" | "blue"): number =>
+    top.alpha * top[part] + (1 - top.alpha) * ground[part];
+  return { red: mixed("red"), green: mixed("green"), blue: mixed("blue"), alpha: 1 };
+}
+
+function luminance({ red, green, blue }: Colour): number {
+  const linear = (level: number): number => {
+    const share = level / 255;
+    return share <= 0.04045 ? share / 12.92 : ((share + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue);
+}
+
+function ratio(one: Colour, other: Colour): number {
+  const [low, high] = [luminance(one), luminance(other)].sort((a, b) => a - b);
+  return ((high ?? 0) + 0.05) / ((low ?? 0) + 0.05);
+}
+
+const WHITE: Colour = { red: 255, green: 255, blue: 255, alpha: 1 };
+const BLACK: Colour = { red: 0, green: 0, blue: 0, alpha: 1 };
+
+/** `ink`'s contrast on `surface` at its worst: what lies behind a translucent surface
+ * can be anything, between white and black. */
+function worstContrast(ink: Colour, surface: Colour): number {
+  return Math.min(ratio(ink, over(surface, WHITE)), ratio(ink, over(surface, BLACK)));
+}
+
+/** Each pair of `pairs` under what it needs, in `stylesheet`'s themes, by name, with
+ * the contrast it has to two places. */
+function contrastFailures(stylesheet: string, pairs = SITS_ON): Record<string, number> {
+  const failures: Record<string, number> = {};
+  for (const theme of ["dark", "light"] as const) {
+    const tokens = tokenValues(stylesheet.replace(COMMENT, ""), theme);
+    const colour = (name: string): Colour => {
+      const written = tokens.get(name);
+      if (written === undefined) {
+        throw new Error(`${name} is declared here and never defined`);
+      }
+      return colourOf(written.trim());
+    };
+    for (const { needs, what, on } of pairs) {
+      for (const ink of what) {
+        for (const surface of on) {
+          const contrast = worstContrast(colour(ink), colour(surface));
+          if (contrast < needs) {
+            const key = `${theme}: ${ink} on ${surface}, needs ${needs}`;
+            failures[key] = Number(contrast.toFixed(2));
+          }
+        }
+      }
+    }
+  }
+  return failures;
+}
+
+describe("the tokens' contrast (P19.6)", () => {
+  it("falls short only where it is listed, in both themes", () => {
+    expect(contrastFailures(STYLES)).toEqual(CONTRAST_FAILURES);
+  });
+
+  it("is WCAG's ratio, at the worst backdrop", () => {
+    expect(ratio(BLACK, WHITE)).toBeCloseTo(21, 5);
+    expect(ratio(colourOf("#777777"), WHITE)).toBeCloseTo(4.48, 2);
+    // A panel 90% dark over white is at its lightest, and light text at its worst.
+    const panel = colourOf("rgb(17 24 39 / 90%)");
+    expect(worstContrast(colourOf("#e5e9f0"), panel)).toBeCloseTo(11, 1);
+    expect(worstContrast(colourOf("#000000"), colourOf("rgb(255 255 255 / 88%)"))).toBeCloseTo(
+      15.97,
+      1,
+    );
+    expect(worstContrast(WHITE, BLACK)).toBeCloseTo(21, 5);
+  });
+
+  it("is computed per theme, and reads a change of a token in one of them", () => {
+    const written = `
+      :root { --ink: #777777; --ground: #ffffff; }
+      :root[data-theme="light"] { --ink: #000000; }
+    `;
+    const pairs = [{ needs: 4.5, what: ["--ink"], on: ["--ground"] }];
+    expect(contrastFailures(written, pairs)).toEqual({
+      "dark: --ink on --ground, needs 4.5": 4.48,
+    });
+    expect(contrastFailures(written.replace("--ink: #777777", "--ink: #767676"), pairs)).toEqual(
+      {},
+    );
+  });
+
+  it("refuses a pair whose token is gone, and a colour it cannot read", () => {
+    const pairs = [{ needs: 3, what: ["--gone"], on: ["--ground"] }];
+    expect(() => contrastFailures(":root { --ground: #ffffff; }", pairs)).toThrow("--gone");
+    expect(() => colourOf("red")).toThrow("red");
+  });
+});
+
 // The stylesheet's naming convention (AUDIT.20): every class is written in
 // lowercase words joined by hyphens, its first word the feature that owns
 // it, one of these, or else it is one of the states below, which a feature's
