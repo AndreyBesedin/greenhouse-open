@@ -18,8 +18,8 @@
 .qa-caption {
   padding: 8px 12px;
   background: var(--surface-panel);
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
 }
 
 /* Over the view, text and the browser's own controls follow the panels'
@@ -43,7 +43,7 @@
 
 .info-panel h1 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-xl);
 }
 
 /* The way home, and the viewer's name beside it (P17.6). */
@@ -60,11 +60,11 @@
   align-items: center;
   gap: 6px;
   box-sizing: border-box;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--target);
+  min-height: var(--target);
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   color: var(--text);
   font-weight: 600;
   text-decoration: none;
@@ -123,7 +123,7 @@
   margin: 10px 0 4px;
   padding: 2px 6px 4px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .panel-card-title {
@@ -172,7 +172,7 @@
 .build-line {
   margin: 8px 0 0;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-xs);
 }
 
 /* What is shown, and the choice of it (#201): folded, the line that says
@@ -210,13 +210,13 @@
 
 .source-chooser h2 {
   margin: 8px 0 0;
-  font-size: 13px;
+  font-size: var(--font-sm);
 }
 
 .chooser-note {
   margin: 2px 0 4px;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-xs);
 }
 
 .chooser-choices {
@@ -239,7 +239,7 @@
   min-width: 100%;
   overflow: hidden;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -363,8 +363,8 @@
   overflow: auto;
   padding: 8px 12px;
   background: var(--surface-panel);
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
 }
 
 .controls-help header {
@@ -376,7 +376,7 @@
 .controls-help h2,
 .controls-help h3 {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--font-sm);
 }
 
 .controls-help h3 {
@@ -438,8 +438,8 @@
   overflow: auto;
   padding: 8px 12px;
   background: var(--surface-panel);
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
 }
 
 .seen-in-the-view header {
@@ -450,7 +450,7 @@
 
 .seen-in-the-view h2 {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--font-sm);
 }
 
 .seen-in-the-view dl {
@@ -549,7 +549,7 @@
   background: var(--surface-label);
   border: 1px solid var(--data-orange);
   border-radius: 3px;
-  font-size: 12px;
+  font-size: var(--font-xs);
   white-space: nowrap;
   pointer-events: none;
 }
@@ -1304,7 +1304,7 @@
   height: 96px;
   padding: 0;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--border);
   color: var(--text);
   font-size: 10px;
@@ -1539,17 +1539,17 @@
   color: var(--text);
   color-scheme: var(--scheme);
   border-right: 1px solid var(--border);
-  font-size: 14px;
+  font-size: var(--font-md);
 }
 
 .builder-side h1 {
   margin: 0 0 4px;
-  font-size: 18px;
+  font-size: var(--font-2xl);
 }
 
 .builder-side h2 {
   margin: 16px 0 6px;
-  font-size: 15px;
+  font-size: var(--font-lg);
 }
 
 .builder-actions {
@@ -1621,7 +1621,7 @@
   margin-top: 12px;
   padding: 8px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .builder-chosen > legend,
@@ -1679,7 +1679,7 @@
 
 .builder-share button,
 .builder-finish button {
-  min-height: 44px;
+  min-height: var(--target);
   margin-top: 8px;
 }
 
@@ -1687,7 +1687,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
+  min-height: var(--target);
 }
 
 .builder-finish-buttons {
@@ -1711,7 +1711,7 @@
   background: var(--surface-page);
   color: var(--text);
   color-scheme: var(--scheme);
-  font-size: 15px;
+  font-size: var(--font-lg);
   line-height: 1.45;
 }
 
@@ -1728,7 +1728,7 @@
 
 .landing-header h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--font-2xl);
 }
 
 .landing-main {
@@ -1740,7 +1740,7 @@
 
 .landing-main h2 {
   margin: 0 0 6px;
-  font-size: 28px;
+  font-size: var(--font-4xl);
 }
 
 .landing-lead {
@@ -1763,7 +1763,7 @@
   min-width: 0;
   padding: 24px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: var(--surface-panel);
 }
 
@@ -1774,7 +1774,7 @@
 .landing-card h3,
 .landing-main section > h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--font-2xl);
 }
 
 .landing-card p {
@@ -1788,10 +1788,10 @@
   gap: 8px;
   align-self: flex-start;
   box-sizing: border-box;
-  min-height: 44px;
+  min-height: var(--target);
   padding: 0 18px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   color: var(--text);
   font-weight: 600;
   text-decoration: none;
@@ -1826,28 +1826,28 @@
 }
 
 .landing-label {
-  font-size: 13px;
+  font-size: var(--font-sm);
   font-weight: 600;
   color: var(--text-soft);
 }
 
 .landing-input {
   box-sizing: border-box;
-  min-height: 44px;
+  min-height: var(--target);
   padding: 0 12px;
   border: 1px solid var(--text-muted);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--surface-page);
   color: var(--text);
   font: inherit;
-  font-size: 15px;
+  font-size: var(--font-lg);
 }
 
 .landing-combobox .landing-input {
   width: 100%;
   min-height: 48px;
   padding: 0 14px;
-  font-size: 16px;
+  font-size: var(--font-xl);
 }
 
 .landing-options {
@@ -1862,7 +1862,7 @@
   overflow-y: auto;
   list-style: none;
   border: 1px solid var(--text-muted);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--surface-page);
 }
 
@@ -1871,7 +1871,7 @@
   flex-direction: column;
   gap: 2px;
   box-sizing: border-box;
-  min-height: 44px;
+  min-height: var(--target);
   padding: 8px 14px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
@@ -1890,7 +1890,7 @@
 }
 
 .landing-option-note {
-  font-size: 13px;
+  font-size: var(--font-sm);
   color: var(--text-muted);
 }
 
@@ -1909,7 +1909,7 @@
 .landing-kept {
   margin: 0;
   color: var(--text-soft);
-  font-size: 13px;
+  font-size: var(--font-sm);
 }
 
 .landing-runs {
@@ -1917,7 +1917,7 @@
   padding: 0;
   list-style: none;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: var(--surface-panel);
 }
 
@@ -1943,7 +1943,7 @@
 
 .landing-run-name span,
 .landing-run-progress span {
-  font-size: 13px;
+  font-size: var(--font-sm);
   color: var(--text-soft);
 }
 
@@ -1962,8 +1962,8 @@
 .landing-status {
   padding: 2px 10px;
   border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: 13px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-sm);
   font-weight: 600;
 }
 
@@ -2009,12 +2009,12 @@
 
 .landing-dialog-head h2 {
   margin: 0;
-  font-size: 22px;
+  font-size: var(--font-3xl);
 }
 
 .landing-dialog-head p {
   margin: 2px 0 0;
-  font-size: 13px;
+  font-size: var(--font-sm);
   color: var(--text-soft);
 }
 
@@ -2036,10 +2036,10 @@
 
 .landing-button {
   box-sizing: border-box;
-  min-height: 44px;
+  min-height: var(--target);
   padding: 0 18px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--surface-page);
   color: var(--text);
   font: inherit;
@@ -2070,7 +2070,7 @@
 .landing-field {
   display: grid;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--font-sm);
   font-weight: 600;
   color: var(--text-soft);
 }
@@ -2078,7 +2078,7 @@
 .landing-note {
   flex-basis: 100%;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--font-sm);
   color: var(--text-soft);
 }
 
@@ -2119,7 +2119,7 @@
   background: var(--surface-page);
   color: var(--text);
   color-scheme: var(--scheme);
-  font-size: 14px;
+  font-size: var(--font-md);
   line-height: 1.4;
 }
 
@@ -2152,12 +2152,12 @@
 
 .replay-title h1 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-xl);
 }
 
 .replay-title p {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--font-sm);
   color: var(--text-soft);
 }
 
@@ -2173,11 +2173,11 @@
   justify-content: center;
   gap: 6px;
   box-sizing: border-box;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--target);
+  min-height: var(--target);
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: transparent;
   color: var(--text);
   font: inherit;
@@ -2217,7 +2217,7 @@
 }
 
 .replay-moment {
-  font-size: 16px;
+  font-size: var(--font-xl);
 }
 
 .replay-computed-text {
@@ -2237,10 +2237,10 @@
 }
 
 .replay-pace select {
-  min-height: 44px;
+  min-height: var(--target);
   padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: var(--surface-panel);
   color: var(--text);
   font: inherit;
@@ -2288,7 +2288,7 @@
   height: 32px;
   margin-left: -10px;
   border: 3px solid var(--action);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--text);
 }
 
@@ -2300,7 +2300,7 @@
 .replay-ticks {
   position: relative;
   height: 18px;
-  font-size: 12px;
+  font-size: var(--font-xs);
   color: var(--text-soft);
 }
 
@@ -2320,7 +2320,7 @@
   margin: 6px 0 0;
   padding: 0;
   list-style: none;
-  font-size: 12px;
+  font-size: var(--font-xs);
   color: var(--text-soft);
 }
 
@@ -2333,7 +2333,7 @@
 .replay-swatch {
   width: 18px;
   height: 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .replay-swatch-computed {
