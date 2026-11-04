@@ -77,4 +77,13 @@
   --radius-xl: 12px;
   --radius-pill: 999px;
   --target: 44px;
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 12px;
+  --space-6: 16px;
+  --space-7: 24px;
+  --space-8: 32px;
+  --space-9: 64px;
 }
