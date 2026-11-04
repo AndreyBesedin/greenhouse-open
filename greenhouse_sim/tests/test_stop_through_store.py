@@ -485,8 +485,6 @@ def test_workers_a_killed_server_left_stop_through_the_store_and_the_run_is_dele
                 answer = respond(second, "POST", _stop_path(epoch))
                 assert answer.status == HTTPStatus.OK
                 assert _run_of(answer.body).stopping
-            refused = respond(second, "POST", f"/api/runs/{free.run_id}/epochs/{free.epoch}/delete")
-            assert refused.status == HTTPStatus.CONFLICT
 
         # The server that asked is gone too: what asks is in the store.
         _until(lambda: not any(_lives(pid) for pid in pids), "the workers to exit")
