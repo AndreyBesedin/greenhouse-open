@@ -716,13 +716,10 @@ def test_a_reason_says_the_kind_of_a_failure_and_none_of_its_text(
 
 
 def test_a_reason_is_that_of_what_a_playback_failed_for(tmp_path: Path) -> None:
-    try:
-        try:
-            raise OSError(errno.ENOSPC, "No space left", A_PATH)
-        except OSError as cause:
-            raise PlaybackFailed("run_a") from cause
-    except PlaybackFailed as failed:
-        assert failure_reason(failed) == "the disk of its run store is full"
+    # What a playback answers is its reason, read back as itself.
+    reason = failure_reason(OSError(errno.ENOSPC, "No space left", A_PATH))
+    assert reason == "the disk of its run store is full"
+    assert failure_reason(PlaybackFailed(reason)) == reason
 
 
 @pytest.mark.parametrize("driver", [Free(), Paced(seconds_per_day=0.01)], ids=["free", "paced"])
