@@ -256,24 +256,6 @@ class Scheduler:
         with self._lock:
             return [(job.run_id, job.epoch) for job in self._waiting]
 
-    def cancel(self, run_id: str, epoch: int) -> StoredRun:
-        """Ends an epoch this scheduler runs or holds: one waiting is taken
-        out of the queue, one being executed has its worker ended, and both
-        are told `interrupted`, with what they had committed."""
-        key = (run_id, epoch)
-        with self._lock:
-            waiting = next((j for j in self._waiting if (j.run_id, j.epoch) == key), None)
-            if waiting is not None:
-                self._waiting.remove(waiting)
-                self._say(key, Status.INTERRUPTED)
-            elif key in self._running:
-                self._cancelled.add(key)
-                self._end(self._running[key])
-                self._reap()
-            else:
-                raise NotFound(f"epoch {epoch} of run {run_id} is neither waiting nor executed")
-        return stored_run(self._objects, run_id, epoch)
-
     def take_up(self, left: Iterable[EpochStore]) -> None:
         """The epochs in line in the store as this scheduler begins (`restore`): one
         with a worker still is counted against the limit, one that waits is put in
@@ -296,6 +278,24 @@ class Scheduler:
             return
         begun = kept.manifest().fork is not None or bool(kept.commits())
         self._waiting.append(_Job(kept.run_id, kept.epoch, resuming=begun))
+
+    def cancel(self, run_id: str, epoch: int) -> StoredRun:
+        """Ends an epoch this scheduler runs or holds: one waiting is taken
+        out of the queue, one being executed has its worker ended, and both
+        are told `interrupted`, with what they had committed."""
+        key = (run_id, epoch)
+        with self._lock:
+            waiting = next((j for j in self._waiting if (j.run_id, j.epoch) == key), None)
+            if waiting is not None:
+                self._waiting.remove(waiting)
+                self._say(key, Status.INTERRUPTED)
+            elif key in self._running:
+                self._cancelled.add(key)
+                self._end(self._running[key])
+                self._reap()
+            else:
+                raise NotFound(f"epoch {epoch} of run {run_id} is neither waiting nor executed")
+        return stored_run(self._objects, run_id, epoch)
 
     def close(self) -> None:
         """Ends every worker, each epoch told `interrupted`, and starts none after.
