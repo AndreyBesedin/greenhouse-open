@@ -87,7 +87,9 @@ function ForkLevels({
       <p className="targets-note">
         {none
           ? "This stored run keeps its levels: those set here make a fork of it from this moment."
-          : `Set ${Object.keys(asked).join(", ")}: not yet this run's or a fork's.`}
+          : `Set ${Object.keys(asked)
+              .map((name) => name.replaceAll("_", " "))
+              .join(", ")}: not yet this run's or a fork's.`}
       </p>
       <button type="button" disabled={none} onClick={onFork}>
         Fork from here with these levels

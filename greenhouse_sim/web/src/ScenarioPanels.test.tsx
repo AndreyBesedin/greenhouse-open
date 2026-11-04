@@ -134,6 +134,16 @@ describe("a stored run's panels", () => {
     expect(onPutBack).toHaveBeenCalledOnce();
   });
 
+  it("names the levels set as the panels do, not by their identifiers", () => {
+    rendered = panels({
+      replayed: true,
+      forkLevels: { asked: { roof_vent_1: 0.5, fan_left: 1 }, onFork: vi.fn(), onPutBack: vi.fn() },
+    });
+    expect(said(rendered.container, "fork-levels")).toContain(
+      "Set roof vent 1, fan left: not yet this run's or a fork's.",
+    );
+  });
+
   it("goes to one of a stored run's commands by moving its position", () => {
     const onSeek = vi.fn();
     const onSource = vi.fn();
