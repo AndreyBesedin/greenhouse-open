@@ -14,7 +14,13 @@ export type HouseAirState =
   | { status: "none" }
   | { status: "loading" }
   | { status: "unavailable"; reason: string }
-  | { status: "loaded"; trace: HouseTrace };
+  | {
+      status: "loaded";
+      trace: HouseTrace;
+      /** Whether this is of an earlier moment, the one asked for on its way: the
+       * air is worked out from the run's start, which takes long on a late day. */
+      behind?: boolean;
+    };
 
 // Each quantity's chart, in its own units, and how its range is written.
 const HEIGHT = 28;
@@ -40,9 +46,24 @@ export function describeHouseAir(state: HouseAirState): string {
         const value = of(state.trace.controlled).at(-1);
         return value === undefined ? null : `${value.toFixed(RANGE_DECIMALS)} ${unit}`;
       }).filter((part) => part !== null);
-      return latest.length === 0 ? "House air" : `House air: ${latest.join(", ")}`;
+      if (latest.length === 0) {
+        return "House air";
+      }
+      return `House air: ${latest.join(", ")}${state.behind === true ? "; mixing…" : ""}`;
     }
   }
+}
+
+/** What the house's air has on show: the answer to the moment drawn, or, while
+ * that is on its way, the last it had, said to be behind it. */
+export function houseAirOnShow({
+  shown,
+  latest,
+}: {
+  shown: Extract<HouseAirState, { status: "loaded" }> | null;
+  latest: HouseAirState;
+}): HouseAirState {
+  return latest.status === "loading" && shown !== null ? { ...shown, behind: true } : latest;
 }
 
 /** Where the house's air through a run is published, asked for as the

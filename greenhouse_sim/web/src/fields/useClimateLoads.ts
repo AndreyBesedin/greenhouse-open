@@ -1,8 +1,8 @@
 import type { ScenarioRun } from "../scene/run";
-import { useLoad } from "../useLoad";
+import { useLoad, useLoadProgress } from "../useLoad";
 import type { Point3 } from "../world";
 import { glazingUrl, loadGlazing } from "./glazing";
-import { houseAirUrl, loadHouseAir } from "./HouseAir";
+import { houseAirOnShow, houseAirUrl, loadHouseAir } from "./HouseAir";
 import { loadOpenings, openingsUrl } from "./openingFlows";
 import { loadProbeCharts, probeChartsUrl } from "./ProbeCharts";
 
@@ -21,9 +21,11 @@ export function useClimateLoads(climate: ScenarioRun | null, probes: readonly Po
       : probeChartsUrl(climate.scenarioId, { ...climate, probes }),
     loadProbeCharts,
   );
-  const houseAir = useLoad(
-    climate === null ? null : houseAirUrl(climate.scenarioId, climate),
-    loadHouseAir,
+  const houseAir = houseAirOnShow(
+    useLoadProgress(
+      climate === null ? null : houseAirUrl(climate.scenarioId, climate),
+      loadHouseAir,
+    ),
   );
   const glazing = useLoad(
     climate === null ? null : glazingUrl(climate.scenarioId, climate),
