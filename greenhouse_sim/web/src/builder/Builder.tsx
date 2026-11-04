@@ -8,8 +8,15 @@ import {
   newRunAddress,
   replayAddress,
 } from "../landing/paths";
+import { missingWeatherProblem, uploadFile } from "../landing/sendScenarioFile";
 import { DEFAULT_PACE_S, startRun } from "../landing/startRun";
-import { keptFields, uploadedScenario } from "../landing/uploaded";
+import {
+  keepSettings,
+  keptFields,
+  keptHouse,
+  uploadedHouse,
+  uploadedScenario,
+} from "../landing/uploaded";
 import { greenhouseExtent, qaGreenhousePose } from "../qa/greenhouseViews";
 import type { ScenarioSummary, ScenariosState } from "../scenarios";
 import { loadScenarios } from "../scenarios";
@@ -32,7 +39,7 @@ import { CopyScenario } from "./CopyScenario";
 import { type Crop, withCrop } from "./edits";
 import { type Assessment, Findings } from "./Findings";
 import { FinishStep } from "./FinishStep";
-import type { Installation } from "./generated/assessedTypes";
+import type { Assessed, Installation } from "./generated/assessedTypes";
 import type { BasicSetup } from "./generated/basicTypes";
 import type { DraftListed } from "./generated/draftsTypes";
 import type { Edit } from "./generated/editTypes";
@@ -46,6 +53,10 @@ import { RowCrops } from "./RowCrops";
 import { FIRST_RUN, type RunFields, RunStep, settingsOf } from "./RunStep";
 import { ShareScenario } from "./ShareScenario";
 import { offerFile } from "./scenarioFile";
+
+/** What an installation's file is called when it is downloaded, as a scenario's
+ * is `.scenario.json`. */
+const HOUSE_FILE_SUFFIX = ".house.json";
 
 /** What outlines an item an error names, on the house. */
 const FINDING_COLOR = "#e5484d";
@@ -183,9 +194,12 @@ export function Builder({
   // biome-ignore lint/correctness/useExhaustiveDependencies: opened for the address the page was loaded at
   useEffect(() => {
     const uploaded = uploadedScenario(hash);
+    const house = uploadedHouse(hash);
     const draft = draftAsked(hash);
     if (uploaded !== null) {
       void openUploaded(uploaded);
+    } else if (house !== null) {
+      void openUploadedHouse(house);
     } else if (draft !== null) {
       void open(draft);
     }
@@ -258,7 +272,12 @@ export function Builder({
     return session.current;
   }
 
-  function begin(asked: number, next: Editing, said: string): void {
+  function begin(
+    asked: number,
+    next: Editing,
+    said: string,
+    known: readonly DraftListed[] | null = drafts,
+  ): void {
     if (session.current !== asked) {
       return;
     }
@@ -266,7 +285,7 @@ export function Builder({
     setChosen(new Set());
     setRan(null);
     const id = next.history.present.installation_id;
-    const kept = next.saved === null && drafts?.some((draft) => draft.draft_id === id);
+    const kept = next.saved === null && known?.some((draft) => draft.draft_id === id);
     setStatus(kept ? `${said} A draft ${id} is kept already: rename this one to save it.` : said);
   }
 
@@ -364,21 +383,68 @@ export function Builder({
     );
   }
 
-  async function importFile(file: File): Promise<void> {
-    const asked = nextSession();
-    const answer = await assess(await file.text());
-    if (!answer.ok) {
-      if (session.current === asked) {
-        setStatus(`${file.name} cannot be imported: ${answer.problem}`);
-      }
-      return;
-    }
-    const { installation, schema_version } = answer.value;
+  /** An installation's file opened as a draft not saved: a draft of its
+   * identifier is left as it is kept, and a save of this one is refused until
+   * it is renamed. */
+  function beginImported(
+    asked: number,
+    { installation, schema_version }: Assessed,
+    fileName: string,
+    known: readonly DraftListed[] | null = drafts,
+  ): void {
     begin(
       asked,
       { schemaVersion: schema_version, history: begun(installation), saved: null },
-      `Imported ${installation.name} from ${file.name}; not saved yet.`,
+      `Imported ${installation.name} from ${fileName}; not saved yet.`,
+      known,
     );
+  }
+
+  /** An installation's file the start page was given. The drafts are asked
+   * for here too: the page has only just opened, and has not listed them. */
+  async function openUploadedHouse(installationId: string): Promise<void> {
+    const asked = nextSession();
+    const kept = keptHouse(installationId);
+    if (kept === null) {
+      setStatus(`The file of ${installationId} is not kept in this window: import it here.`);
+      return;
+    }
+    setBusy(true);
+    const [answer, listed] = await Promise.all([assess(kept.text), loadDrafts()]);
+    setBusy(false);
+    if (!answer.ok) {
+      if (session.current === asked) {
+        setStatus(`${kept.fileName} cannot be opened: ${answer.problem}`);
+      }
+      return;
+    }
+    const known = listed.status === "loaded" ? listed.value : null;
+    beginImported(asked, answer.value, kept.fileName, known);
+  }
+
+  /** A file opened as the start page's upload opens one: the simulator says
+   * which kind it is, and a scenario file's run settings come with it. */
+  async function importFile(file: File): Promise<void> {
+    const asked = nextSession();
+    const answer = await uploadFile(file);
+    if (session.current !== asked) {
+      return;
+    }
+    if (!answer.ok) {
+      setStatus(answer.problem);
+      return;
+    }
+    if (answer.value.kind === "installation") {
+      beginImported(asked, answer.value.assessed, file.name);
+      return;
+    }
+    const { scenario, settings, missingWeather } = answer.value;
+    if (scenario === null) {
+      setStatus(missingWeatherProblem(file.name, missingWeather));
+      return;
+    }
+    keepSettings(scenario.id, settings);
+    await openUploaded(scenario.id);
   }
 
   function startAgain(): void {
@@ -578,11 +644,14 @@ export function Builder({
       return;
     }
     if (editsUnderWay.current > 0) {
-      setStatus("Not exported: an edit is still being made. Export once it is.");
+      setStatus("Not downloaded: an edit is still being made. Download the file once it is.");
       return;
     }
     const present = editing.history.present;
-    offerFile(`${present.installation_id}.json`, installationFile(editing.schemaVersion, present));
+    offerFile(
+      `${present.installation_id}${HOUSE_FILE_SUFFIX}`,
+      installationFile(editing.schemaVersion, present),
+    );
   }
 
   async function run(settings: RunSettings): Promise<void> {
@@ -719,7 +788,7 @@ export function Builder({
                 Save
               </button>
               <button type="button" disabled={busy} onClick={exportFile}>
-                Export
+                Download house file
               </button>
             </div>
           )}

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { expect, type Page, test } from "@playwright/test";
 
 import { BUILDER_PATH, LANDING_PATH } from "../src/landing/paths";
@@ -5,7 +7,8 @@ import { BUILDER_PATH, LANDING_PATH } from "../src/landing/paths";
 // A scenario file sent in from the start page (P17.11): the simulator reads it
 // and registers its scenario, and the setup builder opens it as a draft not
 // saved, never a run. The file is the simulator's own download of the Climate
-// box, under another identifier.
+// box, under another identifier. An installation's file, the builder's house
+// file, opens there too, to be given its run's settings.
 
 // On CI the simulator may still be working out what the spec before this
 // one asked for.
@@ -108,6 +111,139 @@ test("an uploaded scenario opens in the builder as a draft not saved, and starts
   await expect(page.getByTestId("builder-draft")).toContainText(`(${id}), not saved`);
   await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
   expect(await keptRunsOf(page, id)).toEqual([]);
+});
+
+/** A house drafted in the builder from its first form. */
+async function draftedHouse(page: Page, id: string, rows: number): Promise<void> {
+  const form = page.locator(".builder-form");
+  await page.goto(BUILDER_PATH);
+  await form.getByLabel("Identifier", { exact: true }).fill(id);
+  await form.getByLabel("Name", { exact: true }).fill("Round trip");
+  await form.getByLabel("Crop rows", { exact: true }).fill(String(rows));
+  await form.getByLabel("Crop rows", { exact: true }).press("Enter");
+  await expect(page.getByTestId("builder-status")).toHaveText(
+    "Drafted Round trip; not saved yet.",
+    ARRIVES,
+  );
+}
+
+/** The house file the builder offers for the house shown. */
+async function exported(page: Page): Promise<Picked> {
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download house file" }).click();
+  const download = await downloading;
+  return {
+    name: download.suggestedFilename(),
+    mimeType: "application/json",
+    buffer: readFileSync(await download.path()),
+  };
+}
+
+test("a house built, downloaded and uploaded from the start page opens in the builder", async ({
+  page,
+}) => {
+  const id = `round_${Date.now()}`;
+  const status = page.getByTestId("builder-status");
+  await draftedHouse(page, id, 4);
+  const save = page.getByRole("button", { name: "Save", exact: true });
+  await save.click();
+  await expect(status).toHaveText("Saved as revision 1.", ARRIVES);
+  const file = await exported(page);
+  expect(file.name).toBe(`${id}.house.json`);
+
+  await page.goto(LANDING_PATH);
+  await page.locator(".landing-upload input[type=file]").setInputFiles(file);
+
+  await expect(page).toHaveURL(new RegExp(`${BUILDER_PATH}#installation=${id}$`), ARRIVES);
+  // The draft it came from is kept, and is not touched: this one is not saved.
+  await expect(status).toHaveText(
+    `Imported Round trip from ${file.name}; not saved yet. ` +
+      `A draft ${id} is kept already: rename this one to save it.`,
+    ARRIVES,
+  );
+  await expect(page.getByTestId("builder-draft")).toHaveText(`Round trip (${id}), not saved`);
+  await expect(page.locator(".builder-rows tbody tr")).toHaveCount(4);
+  await expect(page.getByTestId("builder-view").locator("canvas")).toBeVisible(ARRIVES);
+  // It is given its run's settings there.
+  await expect(page.locator(".builder-run").getByLabel("Days")).toBeEditable();
+  await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+
+  // Saved as it is, it is refused, and the draft stays at its revision.
+  await save.click();
+  await expect(status).toContainText("It is not saved:", ARRIVES);
+  const kept = (await (await page.request.get(`/api/drafts/${id}`)).json()) as {
+    draft: { revision: number };
+  };
+  expect(kept.draft.revision).toBe(1);
+
+  // Renamed, it is a draft of its own.
+  const identity = page.locator(".builder-identity");
+  await identity.getByLabel("Identifier").fill(`${id}_b`);
+  await identity.getByRole("button", { name: "Rename" }).click();
+  await save.click();
+  await expect(status).toHaveText("Saved as revision 1.", ARRIVES);
+  // No scenario was made of it on the way.
+  const listed = (await (await page.request.get("/api/scenarios")).json()) as { id: string }[];
+  expect(listed.map((each) => each.id)).not.toContain(id);
+});
+
+test("a house no draft holds, uploaded from the start page, is opened with nothing to rename", async ({
+  page,
+}) => {
+  const id = `unsaved_${Date.now()}`;
+  await draftedHouse(page, id, 2);
+  const file = await exported(page);
+  // Another tab's start page: the file is what is carried, not this tab's draft.
+  const other = await page.context().newPage();
+
+  await other.goto(LANDING_PATH);
+  await other.locator(".landing-upload input[type=file]").setInputFiles(file);
+
+  await expect(other.getByTestId("builder-status")).toHaveText(
+    `Imported Round trip from ${file.name}; not saved yet.`,
+    ARRIVES,
+  );
+  await expect(other.locator(".builder-rows tbody tr")).toHaveCount(2);
+  await other.close();
+});
+
+test("a scenario file given to the builder's import opens as an upload does", async ({ page }) => {
+  const id = `imported_${Date.now()}`;
+  const file = await sharedBox(page, id);
+
+  await page.goto(BUILDER_PATH);
+  await page.locator(".builder-start input[type=file]").setInputFiles(file);
+
+  await expect(page.getByTestId("builder-status")).toHaveText(
+    "Opened Shared box from a scenario file; not saved yet.",
+    ARRIVES,
+  );
+  await expect(page.getByTestId("builder-draft")).toContainText(`(${id}), not saved`);
+  await expect(page.locator(".builder-run").getByLabel("Days")).toHaveValue("9");
+  expect(await keptRunsOf(page, id)).toEqual([]);
+});
+
+test("a file of neither kind is told what it needs to be, on either side", async ({ page }) => {
+  const file = {
+    name: "notes.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify({ title: "My notes" })),
+  };
+
+  await page.goto(LANDING_PATH);
+  await page.locator(".landing-upload input[type=file]").setInputFiles(file);
+  await expect(page.getByRole("alert").filter({ hasText: "notes.json" })).toContainText(
+    "a scenario file names its scenario in greenhouse_id, and a house file its house in installation_id",
+    ARRIVES,
+  );
+  await expect(page).toHaveURL(/\/$/);
+
+  await page.goto(BUILDER_PATH);
+  await page.locator(".builder-start input[type=file]").setInputFiles(file);
+  await expect(page.getByTestId("builder-status")).toContainText(
+    "notes.json cannot be opened: not a scenario file or a house file",
+    ARRIVES,
+  );
 });
 
 test("a scenario that is not there is said not to open, and the first form is shown", async ({

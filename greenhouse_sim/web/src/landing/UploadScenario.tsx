@@ -1,10 +1,12 @@
 import { useId, useRef, useState } from "react";
-import { type PickedFile, uploadScenarioFile } from "./sendScenarioFile";
-import { keepSettings, uploadedAddress } from "./uploaded";
+import { installationFile } from "../builder/api";
+import { missingWeatherProblem, type PickedFile, uploadFile } from "./sendScenarioFile";
+import { keepHouse, keepSettings, uploadedAddress, uploadedHouseAddress } from "./uploaded";
 
 /**
- * A scenario file sent in (P17.11): the simulator reads it and registers its
- * scenario, and the builder opens it at its setup, never straight into a run.
+ * A file sent in (P17.11): the simulator says which kind it is, and the builder
+ * opens it at its setup, never straight into a run. A scenario file's scenario
+ * is registered; an installation's file has no settings, and is given them there.
  * A refusal is said next to the control, in words that name the file.
  */
 export function UploadScenario({ navigate }: { navigate: (address: string) => void }) {
@@ -16,18 +18,27 @@ export function UploadScenario({ navigate }: { navigate: (address: string) => vo
   async function upload(file: PickedFile): Promise<void> {
     setReading(true);
     setProblem(null);
-    const answer = await uploadScenarioFile(file);
+    const answer = await uploadFile(file);
     setReading(false);
     if (!answer.ok) {
       setProblem(answer.problem);
       return;
     }
+    if (answer.value.kind === "installation") {
+      const { installation, schema_version } = answer.value.assessed;
+      const text = installationFile(schema_version, installation);
+      if (keepHouse(installation.installation_id, { fileName: file.name, text })) {
+        navigate(uploadedHouseAddress(installation.installation_id));
+      } else {
+        setProblem(
+          `${file.name} cannot be passed to the builder: this window keeps no files. Open the builder and import it there.`,
+        );
+      }
+      return;
+    }
     const { missingWeather, scenario, settings } = answer.value;
     if (missingWeather !== null || scenario === null) {
-      const weather = missingWeather ?? "a recorded weather";
-      setProblem(
-        `${file.name} runs under ${weather}, which it does not carry and this simulator does not have. Ask for the file with its recorded weather included.`,
-      );
+      setProblem(missingWeatherProblem(file.name, missingWeather));
       return;
     }
     keepSettings(scenario.id, settings);
@@ -43,7 +54,7 @@ export function UploadScenario({ navigate }: { navigate: (address: string) => vo
         aria-describedby={hint}
         onClick={() => input.current?.click()}
       >
-        Upload a scenario file
+        Upload a scenario or house file
       </button>
       <input
         ref={input}
@@ -61,7 +72,8 @@ export function UploadScenario({ navigate }: { navigate: (address: string) => vo
         }}
       />
       <p id={hint} className="landing-note">
-        A file a colleague sent opens in the builder, where it can be changed before it is run.
+        A scenario file, or a house file from the builder, opens in the builder, where it can be
+        changed before it is run.
       </p>
       <p role="status" className="landing-note">
         {reading ? "Reading the file…" : ""}
