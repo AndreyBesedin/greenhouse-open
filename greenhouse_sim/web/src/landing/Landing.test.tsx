@@ -490,6 +490,209 @@ describe("the page where a person decides what to do", () => {
     ).not.toBeNull();
   });
 
+  describe("deleting from the list of recent runs", () => {
+    const DELETE = "Delete the run of Reference greenhouse with seed 9, epoch 4";
+    const DELETE_URL = "/api/runs/reference_greenhouse-climate-abc/epochs/4/delete";
+
+    /** The page with one run in its list, the deletion answered as `answer`. */
+    async function listed(mine: StoredRun, answer: () => Response) {
+      const asked: string[] = [];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL) => {
+          const url = String(input);
+          asked.push(url);
+          if (url === DELETE_URL) {
+            return answer();
+          }
+          if (url.endsWith("/stop")) {
+            return new Response(JSON.stringify({ ...mine, stopping: true }));
+          }
+          const body = url === "/api/scenarios" ? SCENARIOS : [mine];
+          return new Response(JSON.stringify(body));
+        }),
+      );
+      page = render(<Landing navigate={vi.fn()} />);
+      const { container } = page;
+      await vi.waitFor(() => expect(container.querySelector(".landing-run")).not.toBeNull());
+      const named = (name: string) =>
+        [...container.querySelectorAll<HTMLButtonElement>(".landing-run button")].find(
+          (each) => (each.getAttribute("aria-label") ?? each.textContent?.trim()) === name,
+        );
+      return { container, asked, named };
+    }
+
+    it("removes a run only once it is confirmed, and asks for the runs again", async () => {
+      const { asked, named } = await listed(
+        run({ epoch: 4, seed: 9 }),
+        () => new Response(JSON.stringify({ deleted: "x" })),
+      );
+
+      act(() => named(DELETE)?.click());
+      expect(asked).not.toContain(DELETE_URL);
+      act(() => named(DELETE)?.click());
+
+      await vi.waitFor(() => expect(asked).toContain(DELETE_URL));
+      await vi.waitFor(() => expect(asked.filter((url) => url === "/api/runs")).toHaveLength(2));
+    });
+
+    it("keeps a run when asked to, with the keyboard back where it was", async () => {
+      const { asked, named } = await listed(
+        run({ epoch: 4, seed: 9 }),
+        () => new Response(JSON.stringify({ deleted: "x" })),
+      );
+
+      act(() => named(DELETE)?.click());
+      // Not on what cannot be undone.
+      expect(document.activeElement).toBe(named("Keep it"));
+      act(() => named("Keep it")?.click());
+
+      expect(asked).not.toContain(DELETE_URL);
+      expect(document.activeElement).toBe(named(DELETE));
+    });
+
+    /** The page with `mine` in its list, its deletion refused as being computed. */
+    async function refused(mine: StoredRun) {
+      const page = await listed(
+        mine,
+        () => new Response(JSON.stringify({ error: "being computed" }), { status: 409 }),
+      );
+      act(() => page.named(DELETE)?.click());
+      act(() => page.named(DELETE)?.click());
+      const alert = () => page.container.querySelector('.landing-run [role="alert"]');
+      return { ...page, alert };
+    }
+
+    it("says on the row why a run is not removed, until it is over", async () => {
+      const mine = run({ epoch: 4, seed: 9, status: "running" });
+      const { named, asked, alert } = await refused(mine);
+
+      await vi.waitFor(() =>
+        expect(alert()?.textContent).toBe(
+          "The run of Reference greenhouse with seed 9, epoch 4 is still being computed: stop it, then delete it.",
+        ),
+      );
+      expect(document.activeElement).toBe(named(DELETE));
+
+      // The list is asked for again while a run is computed, and it has finished.
+      mine.status = "finished";
+      await vi.waitFor(() => expect(alert()).toBeNull(), { timeout: RUNS_ASKED_EVERY_MS * 2 });
+      expect(asked).toContain(DELETE_URL);
+    });
+
+    it.each([
+      [
+        "paused",
+        { paused: true },
+        "The run of Reference greenhouse with seed 9, epoch 4 is paused, not over: stop it, then delete it.",
+      ],
+      [
+        "stopping",
+        { stopping: true },
+        "The run of Reference greenhouse with seed 9, epoch 4 is stopping: delete it once it reads Interrupted.",
+      ],
+      [
+        "queued",
+        { status: "queued" },
+        "The run of Reference greenhouse with seed 9, epoch 4 is waiting for a worker: stop it, then delete it.",
+      ],
+    ] as const)("reads a refusal off the row, now it is %s", async (_, now, said) => {
+      const mine = run({ epoch: 4, seed: 9, status: "running" });
+      const { alert } = await refused(mine);
+      await vi.waitFor(() => expect(alert()?.textContent).toContain("still being computed"));
+
+      // The row's status has not moved on, or not to anything over: the words do.
+      Object.assign(mine, now);
+
+      await vi.waitFor(() => expect(alert()?.textContent).toBe(said), {
+        timeout: RUNS_ASKED_EVERY_MS * 2,
+      });
+    });
+
+    it("says a row that reads paused is paused as the deletion is refused", async () => {
+      const { alert } = await refused(run({ epoch: 4, seed: 9, status: "running", paused: true }));
+
+      await vi.waitFor(() =>
+        expect(alert()?.textContent).toBe(
+          "The run of Reference greenhouse with seed 9, epoch 4 is paused, not over: stop it, then delete it.",
+        ),
+      );
+    });
+
+    it("says a run over by its status is being written still, and asks for the runs again", async () => {
+      const { alert, asked } = await refused(run({ epoch: 4, seed: 9, status: "interrupted" }));
+
+      await vi.waitFor(() =>
+        expect(alert()?.textContent).toBe(
+          "The run of Reference greenhouse with seed 9, epoch 4 is still being written: try again.",
+        ),
+      );
+      await vi.waitFor(() => expect(asked.filter((url) => url === "/api/runs")).toHaveLength(2));
+    });
+
+    it("does not say it again of a run computed again, once it has been over", async () => {
+      const mine = run({ epoch: 4, seed: 9, status: "running" });
+      const { alert } = await refused(mine);
+      await vi.waitFor(() => expect(alert()).not.toBeNull());
+
+      // Stopped, then resumed: each is read with the list, which is still asked
+      // for as the next run below stays computed.
+      const other = run({ run_id: "reference_greenhouse-climate-other", status: "running" });
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL) => {
+          const url = String(input);
+          const body = url === "/api/scenarios" ? SCENARIOS : [mine, other];
+          return new Response(JSON.stringify(body));
+        }),
+      );
+      mine.status = "interrupted";
+      await vi.waitFor(() => expect(alert()).toBeNull(), { timeout: RUNS_ASKED_EVERY_MS * 2 });
+      mine.status = "running";
+      await vi.waitFor(
+        () =>
+          expect(page?.container.querySelector(".landing-run")?.textContent).toContain("Running"),
+        { timeout: RUNS_ASKED_EVERY_MS * 2 },
+      );
+
+      expect(alert()).toBeNull();
+    });
+
+    it("drops what a refusal said once the run has been stopped as it asked", async () => {
+      const { named, alert } = await refused(run({ epoch: 4, seed: 9, status: "running" }));
+      await vi.waitFor(() => expect(alert()).not.toBeNull());
+
+      act(() => named("Stop the run of Reference greenhouse")?.click());
+
+      await vi.waitFor(() => expect(alert()).toBeNull());
+    });
+
+    it("says in the simulator's words a refusal of another kind, on the row", async () => {
+      const { container, named } = await listed(
+        run({ epoch: 4, seed: 9 }),
+        () => new Response(JSON.stringify({ error: "the disk is read-only" }), { status: 500 }),
+      );
+      act(() => named(DELETE)?.click());
+      act(() => named(DELETE)?.click());
+
+      await vi.waitFor(() =>
+        expect(container.querySelector('.landing-run [role="alert"]')?.textContent).toContain(
+          "the disk is read-only",
+        ),
+      );
+      expect(document.activeElement).toBe(named(DELETE));
+    });
+
+    it("offers it on every row, a run with files missing too", async () => {
+      const { named } = await listed(
+        run({ epoch: 4, seed: 9, damaged: true }),
+        () => new Response(),
+      );
+
+      expect(named(DELETE)).toBeDefined();
+    });
+  });
+
   it("calls a run with files missing damaged, with no replay to open", async () => {
     const { container } = await shown(
       { "/api/scenarios": SCENARIOS, "/api/runs": [run({ damaged: true })] },

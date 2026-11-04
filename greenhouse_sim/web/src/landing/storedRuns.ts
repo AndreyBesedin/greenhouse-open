@@ -132,6 +132,11 @@ export function startedText(run: StoredRun): string {
   return dayText(run.created_at);
 }
 
+/** Which of a scenario's runs it is, in words: its seed and epoch. */
+export function whoIs(run: Pick<StoredRun, "seed" | "epoch">): string {
+  return `${run.seed === null ? "the scenario's seed" : `seed ${run.seed}`}, epoch ${run.epoch}`;
+}
+
 /** What names a stored epoch, among the runs the simulator keeps. */
 export function runKey(run: Pick<StoredRun, "run_id" | "epoch">): string {
   return `${run.run_id}/${run.epoch}`;
