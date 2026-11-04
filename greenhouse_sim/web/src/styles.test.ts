@@ -407,8 +407,8 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
 // prints here, in its own diff, where review sees them; a token step must not.
 // It goes when selectors start to move (P19.6), and the page baselines hold.
 const RESOLVED_DIGESTS = {
-  dark: "f93136eb4f2e3c6a08d17538f4eb046e2189438aaa9eef448cf49e6aa72895d5",
-  light: "ee1f52fe685eae6fb3492008ceb6f726e6f1b3438598e6a98b8132a9408e22bd",
+  dark: "2516af32cf768a769f23374897a9a8c7f5022402a231c00e95372e58ebbb1af6",
+  light: "a6482c348ff07a53cbdceea8c9b95618b8ba1fcfac4f1960968e48548a55cdd7",
 };
 type ThemeName = keyof typeof RESOLVED_DIGESTS;
 const COMMENT = /\/\*[\s\S]*?\*\//g;
@@ -692,6 +692,46 @@ function againstTheList(
   });
   return { unlisted, gone };
 }
+
+/** WCAG's relative luminance of an sRGB colour, each channel from 0 to 255. */
+function luminance(channels: readonly number[]): number {
+  const [r = 0, g = 0, b = 0] = channels.map((channel) => {
+    const share = channel / 255;
+    return share <= 0.03928 ? share / 12.92 : ((share + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function hexChannels(hex: string | undefined): number[] {
+  return [1, 3, 5].map((at) => Number.parseInt((hex ?? "").slice(at, at + 2), 16));
+}
+
+/** WCAG's contrast of `text`, at `opacity`, over the opaque `surface`, in hex. */
+function contrast(text: string | undefined, opacity: number, surface: string | undefined): number {
+  const under = hexChannels(surface);
+  const over = hexChannels(text).map((c, at) => opacity * c + (1 - opacity) * (under[at] ?? 0));
+  const [lighter, darker] = [luminance(over), luminance(under)].sort((a, b) => b - a);
+  return ((lighter ?? 0) + 0.05) / ((darker ?? 0) + 0.05);
+}
+
+describe("a new run's placeholder", () => {
+  const rule = /\.landing-form \.landing-input::placeholder\s*\{([^}]*)\}/.exec(STYLES)?.[1] ?? "";
+  const token = /color:\s*var\((--[\w-]+)\)/.exec(rule)?.[1] ?? "";
+  const opacity = Number(/opacity:\s*([\d.]+)/.exec(rule)?.[1]);
+
+  it.each(["dark", "light"] as const)(
+    "is text that can be read, and fainter than a value entered, in the %s theme",
+    (theme) => {
+      const tokens = tokenValues(STYLES, theme);
+      const surface = tokens.get("--surface-page");
+      expect(opacity).toBeLessThan(1);
+      expect(contrast(tokens.get(token), opacity, surface)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(tokens.get(token), opacity, surface)).toBeLessThan(
+        contrast(tokens.get("--text"), 1, surface),
+      );
+    },
+  );
+});
 
 describe("the stylesheet's sizes (P19.4, P19.5)", () => {
   it("are their scale's tokens, or named here with why", () => {
