@@ -71,8 +71,8 @@
 }
 
 .home-button:focus-visible {
-  outline: 3px solid var(--action);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--action);
+  outline-offset: var(--focus-offset);
 }
 
 /* Said to whoever hears the page and not shown: a line of text that the
@@ -2303,8 +2303,8 @@
 }
 
 .replay-handle:focus-visible {
-  outline: 3px solid var(--text);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--text);
+  outline-offset: var(--focus-offset);
 }
 
 .replay-ticks {

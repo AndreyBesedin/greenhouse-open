@@ -23,7 +23,7 @@ export interface BundleWeight {
  * by runs started on workers, 1,751.2 kB, with room for their controls.
  * Its styles again by the design system's tokens (P19.4, decision 0068): a
  * token is longer than the value it names, 29.11 kB with type, radii and the
- * target, and 31.66 kB once spacing follows them, as measured on a copy.
+ * target, and 31.87 kB once spacing and the focus ring's sizes follow them (P19.5).
  */
 export const BUNDLE_BUDGET_KB: BundleWeight = { js: 1760, css: 32 };
 

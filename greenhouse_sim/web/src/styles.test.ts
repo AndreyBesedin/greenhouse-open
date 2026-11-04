@@ -69,7 +69,7 @@ const COLOUR_ROLE =
 
 // And the size tokens, each scale's steps written out, so that a new step is too.
 const SIZE_STEP =
-  /^--(?:font-(?:xs|sm|md|lg|xl|[234]xl)|radius-(?:sm|md|lg|xl|pill)|space-[1-9]|target)$/;
+  /^--(?:font-(?:xs|sm|md|lg|xl|[234]xl)|radius-(?:sm|md|lg|xl|pill)|space-[1-9]|focus-(?:width|offset)|target)$/;
 
 function misnamedTokens(names: Iterable<string>): string[] {
   return [...names].filter((name) => !COLOUR_ROLE.test(name) && !SIZE_STEP.test(name));
@@ -581,6 +581,11 @@ const SIZE_SCALES: readonly { property: RegExp; token: RegExp }[] = [
     property: /^(?:(?:grid-)?(?:row-|column-)?gap|padding(?:-[a-z-]+)?|margin(?:-[a-z-]+)?)$/,
     token: /^var\(--space-[1-9]\)$/,
   },
+  // An outline's shorthand also names its style and a colour, which the colours' guard holds.
+  {
+    property: /^outline(?:-width|-offset)?$/,
+    token: /^(?:var\(--focus-(?:width|offset)\)|solid|var\(--(?:action|text)\))$/,
+  },
 ];
 // What is not on a scale by nature: nothing at all, the browser's own, what its
 // text gave it, or a share of its box.
@@ -603,6 +608,10 @@ const OFF_SCALE: Readonly<Record<string, string>> = {
   ".replay-play { min-width: 52px }": "the transport's main button, wider than its neighbours",
   ".replay-track { border-radius: 7px }": "half the height of the 14 px band it holds",
   ".replay-computed { border-radius: 7px 0 0 7px }": "the rounded end of that 14 px band",
+  '.landing-option[aria-selected="true"] { outline: 2px solid var(--action) }':
+    "the chosen option's mark, not a focus ring",
+  '.landing-option[aria-selected="true"] { outline-offset: -2px }':
+    "that mark, inside the option's edge",
   // Spacing between two steps of the scale (P19.5).
   ".panel-card { margin: 10px 0 var(--space-2) }": "room above a card for the title on its outline",
   ".seen-in-the-view dd { margin: 0 0 var(--space-2) 18px }": "a note under its glyph's words",
@@ -730,6 +739,8 @@ describe("the stylesheet's sizes (P19.4, P19.5)", () => {
       .c { margin: 8px; margin-top: -8px; margin-block-end: 8px; }
       .d { padding: var(--space-4) 10px; margin: 0 0 var(--space-2) 18px; gap: 1px; }
       .e { padding: calc(var(--space-4) + 1px); margin: var(--space-4, 8px); gap: 1rem; }
+      .f { outline: 3px solid var(--action); outline-offset: 2px; outline-width: 3px; }
+      .g { outline: none; outline: var(--space-1) solid var(--text); }
     `;
     expect(sizesOffTheScales(written)).toEqual([
       ".a { gap: 8px }",
@@ -748,6 +759,11 @@ describe("the stylesheet's sizes (P19.4, P19.5)", () => {
       ".e { padding: calc(var(--space-4) + 1px) }",
       ".e { margin: var(--space-4, 8px) }",
       ".e { gap: 1rem }",
+      ".f { outline: 3px solid var(--action) }",
+      ".f { outline-offset: 2px }",
+      ".f { outline-width: 3px }",
+      ".g { outline: none }",
+      ".g { outline: var(--space-1) solid var(--text) }",
     ]);
   });
 
@@ -778,6 +794,7 @@ describe("the stylesheet's sizes (P19.4, P19.5)", () => {
       .d { height: 44px; width: 13px; top: 44px; font-weight: 600; border: 2px solid; }
       .f { gap: var(--space-3) var(--space-4); padding: 0 var(--space-5); margin: 0 auto; }
       .g { padding-left: 1.5em; margin-top: -0.75em; margin-left: 50%; gap: 0; }
+      .h { outline: var(--focus-width) solid var(--action); outline-offset: var(--focus-offset); }
       .e::after { content: ""; }
     `;
     expect(sizesOffTheScales(written)).toEqual([]);

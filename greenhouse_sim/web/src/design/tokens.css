@@ -86,4 +86,6 @@
   --space-7: 24px;
   --space-8: 32px;
   --space-9: 64px;
+  --focus-width: 3px;
+  --focus-offset: 2px;
 }
