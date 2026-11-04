@@ -453,6 +453,39 @@ def test_a_worker_that_ends_before_taking_up_a_run_found_again_says_what_it_says
     assert left.manifest().status == (Status.FAILED if kind == "new" else Status.INTERRUPTED)
 
 
+def test_a_run_whose_worker_is_alive_is_asked_through_the_store_to_stop(tmp_path: Path) -> None:
+    objects = FolderStore(tmp_path)
+    (worked,) = _in_line(objects, [1])
+    assert worked.claim()
+
+    with Simulator(runs=objects, workers=1) as simulator:
+        path = f"/api/runs/{worked.run_id}/epochs/{worked.epoch}/stop"
+        stopped = respond(simulator, "POST", path)
+
+        assert stopped.status == HTTPStatus.OK
+        assert worked.stop_asked()
+        assert worked.manifest().status == Status.QUEUED
+        worked.set_status(Status.INTERRUPTED)
+
+
+def test_a_run_found_waiting_with_a_stop_asked_ends_at_its_workers_first_look(
+    tmp_path: Path,
+) -> None:
+    """Asked of it while no server had it: the request is in the store, as the run is."""
+    objects = FolderStore(tmp_path)
+    (left,) = _in_line(objects, [1])
+    left.ask_to_stop()
+
+    with Simulator(runs=objects, workers=1) as simulator:
+        made = simulator.scheduler
+        assert made is not None
+        _until(lambda: left.manifest().status == Status.INTERRUPTED, "its worker to look")
+        _until(lambda: not made.workers(), "the worker to be let go")
+
+    assert left.commits() == []
+    assert not left.worked()
+
+
 @pytest.mark.usefixtures("no_worker_starts")
 def test_a_run_found_again_can_be_stopped_while_it_waits(tmp_path: Path) -> None:
     objects = FolderStore(tmp_path)
