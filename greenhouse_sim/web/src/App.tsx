@@ -103,6 +103,8 @@ export function App({
     forkWith: (change: ForkChange, timeS: number) => void;
     /** Moves applied, as a fork in their layout; why not, if it could not be. */
     forkInLayout: (layout: string, timeS: number) => Promise<string | null>;
+    /** Why no fork can be made at the moment shown, if none can. */
+    noFork: string | null;
   };
 }) {
   const [addressed, setAddressed] = useSource(replay?.source);
@@ -528,6 +530,7 @@ export function App({
                         onFork: () =>
                           replay.forkWith({ kind: "levels", levels: replayLevels }, forkFrom),
                         onPutBack: () => setReplayLevels({}),
+                        noFork: replay.noFork,
                       },
                     })}
                 played={
