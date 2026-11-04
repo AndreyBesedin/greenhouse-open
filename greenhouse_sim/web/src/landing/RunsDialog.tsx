@@ -101,7 +101,11 @@ export function RunsDialog({
     ).catch(() => null);
     setConfirming(null);
     if (response?.status === STILL_COMPUTED) {
-      setProblem(`The run with ${whoIs(run)} is still being computed: stop it, then delete it.`);
+      setProblem(
+        run.stopping
+          ? `The run with ${whoIs(run)} is stopping: delete it once it reads Interrupted.`
+          : `The run with ${whoIs(run)} is still being computed: stop it, then delete it.`,
+      );
       return;
     }
     if (response === null || !response.ok) {
@@ -228,7 +232,7 @@ export function RunsDialog({
                 ) : (
                   <button
                     type="button"
-                    className="landing-button"
+                    className="landing-button landing-run-action landing-run-delete"
                     aria-label={`Delete the run with ${who}`}
                     onClick={() => setConfirming(key)}
                   >

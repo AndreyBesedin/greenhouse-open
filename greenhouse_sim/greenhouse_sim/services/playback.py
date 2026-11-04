@@ -149,6 +149,7 @@ from greenhouse_sim.services.run_store import (
     Status,
     compress,
     default_root,
+    failure_reason,
     started_epochs,
 )
 from greenhouse_sim.services.runs import (
@@ -980,12 +981,17 @@ class Playback:
         finally:
             # Its work failed, or it was stopped.
             with self._lock:
-                failed = self._failure is not None
-            self._end_store(Status.FAILED if failed else Status.INTERRUPTED)
+                failure = self._failure
+            if failure is None:
+                self._end_store(Status.INTERRUPTED)
+            else:
+                self._end_store(Status.FAILED, reason=failure_reason(failure))
 
-    def _end_store(self, status: Status, store: EpochStore | None = None) -> None:
+    def _end_store(
+        self, status: Status, store: EpochStore | None = None, *, reason: str | None = None
+    ) -> None:
         """Says in the run store how its epoch ended, unless it ended already:
-        finished, failed, or interrupted by the producer stopping. Given the
+        finished, failed and why, or interrupted by the producer stopping. Given the
         `store` of the epoch whose end it says, it says nothing once a restart
         has put another epoch's store in its place, which said that one was
         interrupted: the new epoch is not ended for the old one."""
@@ -995,7 +1001,7 @@ class Playback:
             if current is None or self._store_ended or another:
                 return
             self._store_ended = True
-        current.set_status(status)
+        current.set_status(status, reason=reason)
 
     def keep(self) -> None:
         """Writes to the run store the days the clock has passed and not yet
@@ -1014,7 +1020,7 @@ class Playback:
             if store is None or self._store_ended:
                 return
             self._advance()
-            failed = self._failure is not None
+            failure = self._failure
             days = round(self.end_s / DAY_S)
             passed = days if self._time_s >= self.end_s else math.floor(self._time_s / DAY_S)
             closed = min(passed, len(self._worked))
@@ -1027,8 +1033,8 @@ class Playback:
             for day, _ in todo:
                 outcomes.append(self._outcomes_until((day + 1) * DAY_S, position))
                 position += len(outcomes[-1])
-        if failed:
-            self._end_store(Status.FAILED, store)
+        if failure is not None:
+            self._end_store(Status.FAILED, store, reason=failure_reason(failure))
             return
         try:
             for (day, (observed, happened)), kept in zip(todo, outcomes, strict=True):
@@ -1042,9 +1048,9 @@ class Playback:
                         make_checkpoint(self._simulator, run, (day + 1) * DAY_S).model_dump_json()
                     ),
                 )
-        except Exception:
+        except Exception as error:
             logger.exception("the run store could not keep %s", self.run_id)
-            self._end_store(Status.FAILED, store)
+            self._end_store(Status.FAILED, store, reason=failure_reason(error))
             return
         with self._lock:
             if self._store is store:
@@ -1239,6 +1245,12 @@ class Playback:
         with self._lock:
             self._advance()
             return self._state()
+
+    def has_epoch(self, run_id: str, epoch: int) -> bool:
+        """Whether this is the epoch it plays. Asked of every playback kept, and
+        so unlike `state`: it moves no clock and raises no failure of its own."""
+        with self._lock:
+            return (self.run_id, self._epoch) == (run_id, epoch)
 
     def command(self, command: PlaybackCommand) -> PlaybackState:
         """Plays on, holds the clock, or starts the run over as a new epoch,
@@ -1748,3 +1760,12 @@ def set_targets(
 def stop_playbacks(simulator: Simulator) -> None:
     """Stops and forgets every playback of the simulator's."""
     simulator.playbacks.stop()
+
+
+def plays_epoch(simulator: Simulator, run_id: str, epoch: int) -> bool:
+    """Whether a playback of the simulator's, one replaced included, has this
+    epoch of a run."""
+    return any(
+        found.has_epoch(run_id, epoch)
+        for found in (*simulator.playbacks.all(), *simulator.playbacks.retiring())
+    )

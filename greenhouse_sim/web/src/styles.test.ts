@@ -401,13 +401,13 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
 // prints here, in its own diff, where review sees them; a token step must not.
 // It goes when selectors start to move (P19.6), and the page baselines hold.
 const RESOLVED_DIGESTS = {
-  dark: "12b8474de97aa87f7cb13535624693605272631f6235d3789a153d9405876693",
-  light: "4a143acca93963a7091649861e07e9d6cd93552abbbe1f1b4fd3c0aa7e2572a2",
+  dark: "cda25f38d31faac2c8d20d073c230af96605960f43779cdea3425874d7740a93",
+  light: "e3220ecf1d3ce604459643e8731c65c3790333680e6bb065de314da375438350",
 };
 type ThemeName = keyof typeof RESOLVED_DIGESTS;
 const COMMENT = /\/\*[\s\S]*?\*\//g;
 const ROOT_BLOCK = /:root([^{]*)\{([^}]*)\}/g;
-const LIGHT_ROOT = /="light"\]\s*$/;
+const LIGHT_ROOT = /\[data-theme="light"\]\s*$/;
 const CUSTOM_PROPERTY = /(--[\w-]+)\s*:\s*([^;]*)/g;
 
 /** Each custom property's value in `theme`: `:root`'s, and the light block's over it. */
@@ -508,7 +508,7 @@ describe("the stylesheet with its tokens resolved (P19.1)", () => {
   it("does not see a value written as a token, a token's name, comments or white space", () => {
     const same = `
       :root { --space-3: 8px; --gap-small: 4px; --text: #111111; --pad: 12px; }
-      :root[data-panels="light"] { --text: #eeeeee; }
+      :root[data-theme="light"] { --text: #eeeeee; }
       .a {
         padding: var(--space-3) var(--pad);
         /* Its colour. */

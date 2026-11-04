@@ -1,9 +1,8 @@
 import { existsSync } from "node:fs";
 
 import { expect, type Page, test } from "@playwright/test";
-
+import type { Theme } from "../../src/design/theme.ts";
 import { BUILDER_PATH, LANDING_PATH, replayAddress, runsAddress } from "../../src/landing/paths.ts";
-import type { PanelTheme } from "../../src/panelTheme.ts";
 import { answerAsTheSimulator, DRAWN_AT, EPOCH, RUN_ID, SCENARIO_ID } from "./pageAnswers.ts";
 
 test.skip(process.platform !== "linux", "the baselines are drawn on Linux, in CI's container");
@@ -18,9 +17,9 @@ const EXACT = {
   maxDiffPixels: 0,
   stylePath: new URL("./pages.css", import.meta.url).pathname,
 };
-// Where a person's choice of theme is kept (`panelTheme.ts`).
+// Where a person's choice of theme is kept (`design/theme.ts`).
 const STORED_THEME = "greenhouse-sim.panels";
-const THEMES: readonly PanelTheme[] = ["dark", "light"];
+const THEMES: readonly Theme[] = ["dark", "light"];
 // How long a comparison that should fail keeps looking for a match.
 const FAILS_WITHIN_MS = 3000;
 
@@ -80,7 +79,7 @@ const PAGES: readonly Drawn[] = [
   },
 ];
 
-async function open(page: Page, drawn: Drawn, theme: PanelTheme): Promise<string[]> {
+async function open(page: Page, drawn: Drawn, theme: Theme): Promise<string[]> {
   // Dates and their words are the same on every run, and every machine.
   await page.clock.setFixedTime(new Date(DRAWN_AT));
   await page.addInitScript(

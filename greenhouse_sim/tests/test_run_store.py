@@ -499,7 +499,8 @@ def test_a_commit_made_while_an_epoch_is_listed_is_nothing_missing(tmp_path: Pat
 def test_listing_an_epoch_reads_no_more_objects_for_saying_it_is_damaged(
     tmp_path: Path,
 ) -> None:
-    """A list of many runs is slow already: the check is made from what it read."""
+    """One epoch's walk is what opening it costs: the check is made from what it
+    read, and its size comes from its report."""
     _whole_epoch(tmp_path)
 
     asked: Counter[str] = Counter()
@@ -519,10 +520,8 @@ def test_listing_an_epoch_reads_no_more_objects_for_saying_it_is_damaged(
 
     stored_run(Counted(tmp_path), "run_a", 0)
 
-    listed = len(FolderStore(tmp_path).names("run_a/0/"))
-    # The manifest, each commit, the commits' listing and the epoch's, and each
-    # object's size: what a list asked before the check was made from them.
-    assert asked == {"get": 1 + 2, "names": 2, "size": listed}
+    # The manifest, its report, each commit, the commits' listing and the epoch's.
+    assert asked == {"get": 1 + 1 + 2, "names": 2}
 
 
 def test_listing_walks_only_the_folder_a_prefix_names(

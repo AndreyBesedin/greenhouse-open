@@ -38,6 +38,7 @@ const VIEW: ViewState = {
   cfdBoundaries: false,
   dimensions: false,
   kinds: HOUSE,
+  emptyView: false,
   axesLengthM: 1,
 };
 // The view before a scene: the grid, the empty view's axes and its cube.
@@ -45,6 +46,7 @@ const EMPTY: ViewState = {
   ...VIEW,
   drawn: [],
   kinds: null,
+  emptyView: true,
   axesLengthM: PLACEHOLDER_AXES_LENGTH_M,
 };
 const names = (rows: readonly { name: string }[]) => rows.map(({ name }) => name);
@@ -111,6 +113,8 @@ describe("what the view is drawing, explained", () => {
     ]);
     // The empty view: the grid, its axes and its cube, and nothing of a house.
     expect(names(seenInTheView(EMPTY).always)).toEqual(["Ground grid", "World axes", "A 1 m cube"]);
+    // A scene on its way, or one that could not be drawn: the grid, drawn alone.
+    expect(names(seenInTheView({ ...EMPTY, emptyView: false }).always)).toEqual(["Ground grid"]);
     expect(
       names(seenInTheView({ ...VIEW, kinds: new Set(["FLOOR"]), axesLengthM: null }).always),
     ).toEqual(["Ground grid"]);

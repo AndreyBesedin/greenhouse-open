@@ -10,6 +10,10 @@ import {
 /** What is said of a run with files missing, beside the status it has. */
 export const DAMAGED_NOTE = "Files of this run are missing, so it cannot be read whole.";
 
+/** What is said of a run asked to stop, whose worker has not yet looked. */
+export const STOPPING_NOTE =
+  "Its worker stops at its next look, with what it has committed. The run then reads Interrupted, and can be resumed or deleted.";
+
 /** A run's status, in words: never a colour alone. One with files missing is
  * called so whatever else it is, since its status says it is whole. */
 export function StatusChip({ run }: { run: StoredRun }) {
@@ -18,6 +22,14 @@ export function StatusChip({ run }: { run: StoredRun }) {
       <span className="landing-status landing-status-failed" title={DAMAGED_NOTE}>
         Damaged
         <span className="visually-hidden"> {DAMAGED_NOTE}</span>
+      </span>
+    );
+  }
+  if (run.stopping) {
+    return (
+      <span className={`landing-status landing-status-${run.status}`} title={STOPPING_NOTE}>
+        Stopping
+        <span className="visually-hidden"> {STOPPING_NOTE}</span>
       </span>
     );
   }
@@ -46,7 +58,7 @@ export function ReplayLink({ run, label }: { run: StoredRun; label?: string }) {
     !run.damaged && (
       <a
         href={replayAddress(run.run_id, run.epoch)}
-        className="landing-link-button"
+        className="landing-link-button landing-run-action landing-run-replay"
         aria-label={label}
       >
         Replay
@@ -61,7 +73,10 @@ export function FollowLink({ run }: { run: StoredRun }) {
   return (
     isComputing(run) &&
     !run.damaged && (
-      <a href={replayAddress(run.run_id, run.epoch, true)} className="landing-link-button">
+      <a
+        href={replayAddress(run.run_id, run.epoch, true)}
+        className="landing-link-button landing-run-action landing-run-follow"
+      >
         Follow
       </a>
     )

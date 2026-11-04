@@ -22,6 +22,7 @@ function state(more: Partial<PositionState> = {}): PositionState {
     day: 0,
     playing: false,
     following: false,
+    parent_kept: false,
     seconds_per_day: 10,
     frontier_s: 3 * DAY_S,
     duration_s: 3 * DAY_S,
@@ -79,6 +80,9 @@ function Probe({
       <button type="button" onClick={() => replay.command("play")}>
         play
       </button>
+      <button type="button" onClick={() => replay.command("follow")}>
+        follow
+      </button>
       <button type="button" onClick={() => replay.seek(3600)}>
         seek
       </button>
@@ -116,6 +120,15 @@ function held(first: Partial<PositionState> = {}) {
 function pressed(container: HTMLElement, name: string): void {
   const control = [...container.querySelectorAll("button")].find((b) => b.textContent === name);
   act(() => control?.click());
+}
+
+/** The moments asked for by the seeks sent, in order. */
+function seekedTo(fetchFn: typeof fetch): (string | undefined)[] {
+  return vi
+    .mocked(fetchFn)
+    .mock.calls.map(([input]) => String(input))
+    .filter((url) => url.includes("/seek"))
+    .map((url) => url.split("t=")[1]);
 }
 
 function shownTime(container: HTMLElement): string | null | undefined {
@@ -395,20 +408,73 @@ describe("the answers a replay takes, in the order they were asked", () => {
     vi.useRealTimers();
   });
 
-  it("keeps the last seek's answer, though an earlier one arrives after it", async () => {
+  it("sends one seek at a time, and after it only the latest asked for", async () => {
     const { fetchFn, seeks } = held();
     rendered = render(<Probe fetchFn={fetchFn} />);
     await settle();
 
+    // A drag: three moves while the first is on its way.
     pressed(rendered.container, "seek");
     pressed(rendered.container, "seek later");
-    // The later seek is answered first, then the earlier, as a drag can.
+    pressed(rendered.container, "seek");
+    pressed(rendered.container, "seek later");
+    await settle();
+    expect(seeks).toHaveLength(1);
+
+    // The first's answer is to an earlier word than the page's latest.
+    seeks[0]?.(3600);
+    await settle();
+    expect(shownTime(rendered.container)).toBe("0");
+    expect(seekedTo(fetchFn)).toEqual(["3600", "7200"]);
+
     seeks[1]?.(7200);
+    await settle();
+    expect(shownTime(rendered.container)).toBe("7200");
+    expect(seeks).toHaveLength(2);
+  });
+
+  it("sends the next seek at once when none is on its way", async () => {
+    const { fetchFn, seeks } = held();
+    rendered = render(<Probe fetchFn={fetchFn} />);
+    await settle();
+    pressed(rendered.container, "seek");
+    seeks[0]?.(3600);
+    await settle();
+    expect(shownTime(rendered.container)).toBe("3600");
+
+    pressed(rendered.container, "seek later");
+    await settle();
+
+    expect(seekedTo(fetchFn)).toEqual(["3600", "7200"]);
+  });
+
+  it("sends no seek left waiting once the replay is another", async () => {
+    const { fetchFn, seeks } = held();
+    rendered = render(<Probe fetchFn={fetchFn} runId="run-1" />);
+    await settle();
+    pressed(rendered.container, "seek");
+    pressed(rendered.container, "seek later");
+
+    rendered.rerender(<Probe fetchFn={fetchFn} runId="run-2" />);
     await settle();
     seeks[0]?.(3600);
     await settle();
 
-    expect(shownTime(rendered.container)).toBe("7200");
+    expect(seeks).toHaveLength(1);
+  });
+
+  it("sends no seek left waiting once the position is told to follow", async () => {
+    const { fetchFn, seeks } = held();
+    rendered = render(<Probe fetchFn={fetchFn} />);
+    await settle();
+    pressed(rendered.container, "seek");
+    pressed(rendered.container, "seek later");
+    pressed(rendered.container, "follow");
+
+    seeks[0]?.(3600);
+    await settle();
+
+    expect(seeks).toHaveLength(1);
   });
 
   it("drops the answer to a seek that is asked of a replay no longer shown", async () => {

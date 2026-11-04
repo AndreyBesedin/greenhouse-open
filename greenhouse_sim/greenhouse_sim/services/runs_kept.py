@@ -73,8 +73,8 @@ def delete_epoch(simulator: Simulator, run_id: str, epoch: int) -> dict[str, Jso
     works on it: a worker in a process of its own is seen by no playback here.
     Nor is one a replaced producer is still writing, whatever the store says
     yet. A run left running by a producer that is gone stays so until it is
-    found interrupted, as a simulator starts or when it is asked to resume
-    (`interrupted`, P17.9)."""
+    found interrupted, as a simulator starts or when it is asked to resume or
+    stop (`interrupted`, P17.9); one asked to stop, until its worker has looked."""
     objects = _objects(simulator)
     if epoch not in stored_epochs(objects, run_id):
         raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
@@ -196,10 +196,15 @@ def _outcomes(
 def open_position(
     simulator: Simulator, run_id: str, epoch: int, seconds_per_day: float | None = None
 ) -> PositionState:
-    """A new position at the start of a stored epoch, paused."""
+    """A new position at the start of a stored epoch, paused. One with files
+    missing is refused in words: a list counts its folders and can miss a lost
+    file, and here its objects are looked at, before a read comes to the gap."""
+    objects = _objects(simulator)
+    if epoch in stored_epochs(objects, run_id) and stored_run(objects, run_id, epoch).damaged:
+        raise Conflict(f"files of run {run_id}, epoch {epoch} are missing: it is not read whole")
     return simulator.positions.open(
         simulator,
-        _objects(simulator),
+        objects,
         run_id,
         epoch,
         seconds_per_day=DEFAULT_SECONDS_PER_DAY if seconds_per_day is None else seconds_per_day,

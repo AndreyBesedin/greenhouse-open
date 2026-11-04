@@ -160,7 +160,12 @@ const STARTED = {
   size_bytes: 0,
   start_s: 0,
   fork: null,
+  stopping: false,
   damaged: false,
+  days_computed: 0,
+  cpu_s: null,
+  peak_memory_bytes: null,
+  reason: null,
 };
 
 /** A simulator that saves, runs a draft as a scenario and starts its run;
