@@ -34,6 +34,7 @@ from typing import Final
 from greenhouse_sim.services import forks, interrupted, scenario_files
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.interventions import Asked
+from greenhouse_sim.services.resources import this_process
 from greenhouse_sim.services.run_store import EpochStore, FolderStore, Status, StoredRun, stored_run
 from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.simulator import Simulator
@@ -60,6 +61,7 @@ def work(root: str, run_id: str, epoch: int) -> None:
     the store under `root`, from all that the store holds of it, and exits with
     0 if the epoch finished."""
     kept = EpochStore(FolderStore(Path(root)), run_id, epoch)
+    kept.counted_by(this_process)
     manifest = kept.manifest()
     pace = manifest.seconds_per_day
     with Simulator() as simulator:
@@ -284,7 +286,9 @@ class Scheduler:
                 # The machine's limit of processes, say: this epoch is told,
                 # and the ones behind it are given workers as there is room.
                 logger.exception("no worker could be started for %s", job.run_id)
-                self._say((job.run_id, job.epoch), Status.FAILED)
+                self._say(
+                    (job.run_id, job.epoch), Status.FAILED, reason="no worker could be started"
+                )
                 continue
             self._running[(job.run_id, job.epoch)] = process
             if job.resuming:
@@ -322,10 +326,10 @@ class Scheduler:
             self._say(key, Status.INTERRUPTED)
             return
         logger.error("the worker of %s ended with %s before it began", key, exit_code)
-        self._say(key, Status.FAILED)
+        self._say(key, Status.FAILED, reason=f"its worker ended with {exit_code} before it began")
 
-    def _say(self, key: tuple[str, int], status: Status) -> None:
-        EpochStore(self._objects, *key).set_status(status)
+    def _say(self, key: tuple[str, int], status: Status, *, reason: str | None = None) -> None:
+        EpochStore(self._objects, *key).set_status(status, reason=reason)
 
     def _end(self, process: SpawnProcess) -> None:
         """Ends a worker: told to, and killed if it does not within the time."""

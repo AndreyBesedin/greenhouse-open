@@ -1927,7 +1927,13 @@
   font-size: var(--font-sm);
 }
 
+/* Every row shares the list's columns, so that what a row has lines up with the
+ * rows above and below it, and a row leaves empty what it does not have: its
+ * name, its status, how far it is computed, Replay, Follow, Stop or Resume. */
 .landing-runs {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) max-content minmax(0, 1fr) repeat(3, max-content);
+  column-gap: 24px;
   margin: 8px 0 0;
   padding: 0;
   list-style: none;
@@ -1937,10 +1943,11 @@
 }
 
 .landing-run {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
-  gap: 12px 24px;
+  row-gap: 12px;
   padding: 12px 20px;
   border-bottom: 1px solid var(--border);
 }
@@ -2114,20 +2121,73 @@
   gap: 8px;
 }
 
-/* Room for a run's controls on one line, at a dialog's width. */
-.landing-dialog .landing-run {
-  column-gap: 12px;
+.landing-run > .landing-status {
+  grid-column: 2;
+  justify-self: start;
 }
 
+.landing-run > .landing-run-progress {
+  grid-column: 3;
+}
+
+.landing-run > .landing-run-action {
+  align-self: center;
+  justify-content: center;
+}
+
+.landing-run > .landing-run-replay {
+  grid-column: 4;
+}
+
+.landing-run > .landing-run-follow {
+  grid-column: 5;
+}
+
+.landing-run > .landing-run-control {
+  grid-column: 6;
+}
+
+.landing-run > .landing-run-delete {
+  grid-column: 7;
+}
+
+/* What is said of a row, or asked of it, on a line of its own under it. */
+.landing-run > .landing-note,
+.landing-run > .landing-confirm {
+  grid-column: 1 / -1;
+}
+
+.landing-run > .landing-confirm {
+  justify-content: flex-end;
+}
+
+/* Room for a run's controls on one line, at a dialog's width, and a column for
+ * its Delete. */
 .landing-dialog .landing-run-name {
   flex-basis: 150px;
 }
 
 .landing-dialog .landing-runs {
+  grid-template-columns: minmax(0, 2fr) max-content minmax(0, 1fr) repeat(4, max-content);
+  column-gap: 12px;
   margin: 0;
   border: 0;
   border-radius: 0;
   background: none;
+}
+
+/* Too narrow for the columns: each row takes the lines it needs. */
+@media (max-width: 840px) {
+  .landing-runs,
+  .landing-dialog .landing-runs {
+    display: block;
+  }
+
+  .landing-run {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
 }
 
 /* The replay of a stored run (P17.6): a header, the scene, and what moves a
