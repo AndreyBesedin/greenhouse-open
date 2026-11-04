@@ -186,6 +186,35 @@ describe("what moves a position over a stored run", () => {
     });
   });
 
+  describe("a run interrupted", () => {
+    const AT_ITS_FRONTIER = { status: "interrupted", time_s: 41 * DAY_S } as const;
+
+    it("offers no play at its frontier, with nothing to come", () => {
+      const { container, onPlay } = shown(position(AT_ITS_FRONTIER));
+
+      const play = button(container, "Play");
+      expect(play).toHaveProperty("disabled", true);
+      click(play);
+      expect(onPlay).not.toHaveBeenCalled();
+      // No playback holds it: there is nothing more to say of it here.
+      expect(container.querySelector('[data-testid="replay-held"]')).toBeNull();
+    });
+
+    it("plays what is kept before its frontier", () => {
+      const { container, onPlay } = shown(position({ status: "interrupted" }));
+
+      click(button(container, "Play"));
+      expect(onPlay).toHaveBeenCalledOnce();
+    });
+
+    it("can stop waiting at its frontier, once it was playing", () => {
+      const { container, onPause } = shown(position({ ...AT_ITS_FRONTIER, playing: true }));
+
+      click(button(container, "Pause"));
+      expect(onPause).toHaveBeenCalledOnce();
+    });
+  });
+
   it("follows the newest day only while the run is being computed", () => {
     const running = shown(position());
     const follow = button(running.container, "Follow the newest day");
