@@ -43,7 +43,8 @@ them (P17.4, decision 0065).
                                           free; the epoch as the list shows it. The
                                           epoch it came from stays as it was
     POST /api/runs/{run}/epochs/{n}/positions?seconds_per_day=10
-                                          a position at the epoch's start
+                                          a position at the epoch's start, or a
+                                          fork's at the moment it was made from
     GET /api/positions/{id}               where it stands: the moment, whether
                                           it plays or follows, the frontier
     POST /api/runs/{run}/epochs/{n}/delete

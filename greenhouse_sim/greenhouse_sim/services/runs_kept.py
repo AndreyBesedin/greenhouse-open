@@ -196,7 +196,8 @@ def _outcomes(
 def open_position(
     simulator: Simulator, run_id: str, epoch: int, seconds_per_day: float | None = None
 ) -> PositionState:
-    """A new position at the start of a stored epoch, paused."""
+    """A new position at the start of a stored epoch, or for a fork at the moment
+    it was made from, paused."""
     return simulator.positions.open(
         simulator,
         _objects(simulator),

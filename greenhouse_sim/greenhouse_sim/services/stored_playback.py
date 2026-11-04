@@ -267,6 +267,10 @@ class Position:
         self._clock = clock
         self._lock = threading.Lock()
         self._time_s = epoch.start_s
+        # A fork is first shown at the moment it was made from, which may lie
+        # inside the day it begins with: where this position is bound until it
+        # gets there, as that day is computed, or is moved.
+        self._bound_for = None if epoch.fork is None else epoch.fork.at_s
         self._playing = False
         self._following = False
         self._seconds_per_day = seconds_per_day
@@ -290,6 +294,10 @@ class Position:
         elapsed, self._since = now - self._since, now
         self._status = self.epoch.status()
         frontier = self.epoch.frontier_s()
+        if self._bound_for is not None:
+            self._time_s = min(self._bound_for, frontier)
+            if self._time_s >= self._bound_for:
+                self._bound_for = None
         if self._following:
             self._time_s = frontier
         elif self._playing:
@@ -347,7 +355,7 @@ class Position:
         stops following."""
         with self._lock:
             frontier = self._advance()
-            self._following = False
+            self._following, self._bound_for = False, None
             self._playing = not (self._time_s >= frontier and self._status == Status.FINISHED)
             self._wait_if_at(frontier)
             return self._state(frontier)
@@ -378,7 +386,7 @@ class Position:
                     f"a position is between where the epoch begins and its frontier, "
                     f"{first:.15g} to {frontier:.15g} s, not at {time_s:.15g} s"
                 )
-            self._time_s, self._following = time_s, False
+            self._time_s, self._following, self._bound_for = time_s, False, None
             self._wait_if_at(frontier)
             at = self._time_s
         self.epoch.restore_near(at)
@@ -390,6 +398,7 @@ class Position:
         with self._lock:
             frontier = self._advance()
             self._time_s, self._following, self._playing = frontier, True, False
+            self._bound_for = None
             self._wait_if_at(frontier)
         self.epoch.restore_near(frontier)
         with self._lock:
@@ -428,8 +437,9 @@ class Positions:
         seconds_per_day: float = DEFAULT_SECONDS_PER_DAY,
         clock: Callable[[], float] = monotonic,
     ) -> Position:
-        """A new position at the start of an epoch in the store; an epoch
-        the store does not hold is not found."""
+        """A new position at the start of an epoch in the store, or for a fork
+        at the moment it was made from; an epoch the store does not hold is not
+        found."""
         made = Position(
             StoredEpoch(simulator, objects, run_id, epoch),
             secrets.token_hex(ID_BYTES),
