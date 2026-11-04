@@ -65,7 +65,7 @@ rendering, physics, CFD and numerical acceleration.**
 Cell-level plant models, continuous full Navier-Stokes for a whole
 greenhouse, botanically accurate deformable mechanics, cinematic realism for
 its own sake, every crop or greenhouse technology, differentiable backends
-throughout, or a hectare at full fidelity in real time.
+throughout, a hectare at full fidelity in real time, or a viewer made for phones.
 
 ## Current technical choices
 

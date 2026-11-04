@@ -44,7 +44,7 @@ takes one checks first that it is still there.
 
 **Landing page and runs dialog**
 
-- [ ] A paused playback stays "Running".
+- [x] A paused playback stays "Running".
 - [x] Progress means two different things on the same page. At `bf8758ae` a row's bar and
   its words both say the days computed, on the start page and in the dialog.
 - [ ] A saved draft is not on the start page.
@@ -53,7 +53,7 @@ takes one checks first that it is still there.
 - [x] Close drops the keyboard focus. Fix in #528. A dialog opened by the address has
   nothing to give focus back to, by Close or Escape.
 - [x] `/#runs=x` stays in the address, and `/#run=no_such` shows nothing.
-- [ ] Run rows are not aligned: in a dialog *Replay* and *Follow* sit above *Stop* and
+- [x] Run rows are not aligned: in a dialog *Replay* and *Follow* sit above *Stop* and
   *Delete*, and the bars differ in width from row to row. The links no longer keep the
   browser's colour.
 
@@ -66,7 +66,7 @@ takes one checks first that it is still there.
 
 **Viewer**
 
-- [ ] The green test cube shows behind an error.
+- [x] The green test cube shows behind an error.
 - [x] "before day one is not available" is awkward wording.
 - [ ] The wind label shows through the light panel, and faintly through the dark one.
 - [ ] The console reports the deprecation of `THREE.Clock`, from `@react-three/fiber`.
@@ -77,12 +77,13 @@ takes one checks first that it is still there.
 - [x] Play at the end does nothing.
 - [x] `aria-valuenow` can be fractional.
 - [x] The legend says "not computed yet" on a finished run.
-- [ ] At phone width the panel covers the scene. The last tick is labelled now. At
+- [x] At phone width the panel covers the scene. The last tick is labelled now. At
   390 by 844 a replay's scene is 472 px high with its lower 212 px under the panel (a
   fork's, whose header is taller, 383 and 172); the stripes that fold the panels are not
   drawn at this width, so it cannot be moved aside. Turned to 844 by 390, the panel covers
   the scene almost whole.
   The panel scrolls and nothing else overflows.
+  Closed as out of scope: the viewer is not made for phones ([the roadmap](README.md#not-goals-for-the-first-versions)).
 
 ### From a second walk
 
@@ -97,12 +98,12 @@ panels in a replay.
   end in seconds ("the run ends at 1209600 s"). Fix in #520.
 - [x] Each page load of a followed house with no climate sends one burst of 404s before
   the list of fields answers.
-- [ ] A mid-day fork opens at its day's start, while its subtitle names the fork's moment.
-- [ ] A fork of a deleted parent keeps a "The run it came from" link that ends in a
+- [x] A mid-day fork opens at its day's start, while its subtitle names the fork's moment.
+- [x] A fork of a deleted parent keeps a "The run it came from" link that ends in a
   "cannot be replayed" notice.
-- [ ] With equipment set in a replay, the slider stands at full while its label says
+- [x] With equipment set in a replay, the slider stands at full while its label says
   "off", until the fork is made.
-- [ ] Keys pressed faster than the answers move from the old position: Home then PageUp
+- [x] Keys pressed faster than the answers move from the old position: Home then PageUp
   landed from the old place.
 
 That walk did not repeat the phone width, and did not see the fork panels in the light
@@ -117,15 +118,17 @@ pale text.
 
 **Medium**
 
-- [ ] **A far seek leaves the house's air working for minutes.** The air at a moment is worked
+- [x] **A far seek leaves the house's air working for minutes.** The air at a moment is worked
   out from the run's start, for the run and for the same run all off, and a checkpoint does not
   shorten it. On an idle server, a finished 120-day `tomgro_house` from the start to Day 87:
   the moment moved in 0.3 s, the scene in 1.1 s, the air answered in 96.6 s. On
   `reference_greenhouse`, at Day 120, the climate had not answered 40 s after the seek. A request
   is worked to its end though the page has moved on: a drag sent 10 seeks, each its own work,
   beside the others, and while they ran a seek went unanswered for over 3 s and the
-  panels read "mixing" for over 40 s. The line's words are fixed in #519; the cost is not, and
-  keeping the air in a checkpoint is a change to the service.
+  panels read "mixing" for over 40 s. The line's words are fixed in #519. #533 stops the work of a
+  request whose client has gone, and #534 draws the run's own air first, in under 2 s from Day 87,
+  from the checkpoint of its day. The same run all off still costs about 100 s of a core the first
+  time on each server, and only its dashed line waits for it; P18 keeps that as a debt.
 - [x] **A run whose server was killed cannot be stopped.** A server ended by `kill` leaves its
   workers computing, by design (P17.9, a lease). The next server lists the run as Running, and
   its *Stop* says "No worker of this simulator has this run. One the viewer plays stops with
@@ -138,9 +141,9 @@ pale text.
 
 **Low**
 
-- [ ] *Resume* forgets a run's pace: a run asked for at 20 s a day, stopped and resumed,
+- [x] *Resume* forgets a run's pace: a run asked for at 20 s a day, stopped and resumed,
   finished its 10 days in under a minute. The route takes a pace and the row sends none.
-- [ ] A run's date is its date in UTC: at 00:25 on 4 November, an hour ahead of UTC, the rows
+- [x] A run's date is its date in UTC: at 00:25 on 4 November, an hour ahead of UTC, the rows
   say "Nov 3".
   A test holds UTC, so it may have been meant.
 - [x] A disabled *Play* or *Fork from here* looks as it does enabled. Fix in #521.
@@ -155,9 +158,9 @@ pale text.
   lists offer no link to it, so this takes an address kept from before. It now says the run
   cannot be replayed and why, also for a finished run that lost its last commits, which left no
   gap to see.
-- [ ] A fork in another layout is another run's epoch, and can read "epoch 0 · forked from
+- [x] A fork in another layout is another run's epoch, and can read "epoch 0 · forked from
   epoch 0" with no word of the layout.
-- [ ] At phone width the builder's page is 463 px wide in a window of 390: the pane that draws
+- [x] At phone width the builder's page is 463 px wide in a window of 390: the pane that draws
   the house lies to the right of the form.
 - [ ] A panel's fork takes the moment it shows, by design, so under load *Fork from here with
   these levels* at a transport reading Day 2, 24:00 forked from Day 1, 24:00, the field still
