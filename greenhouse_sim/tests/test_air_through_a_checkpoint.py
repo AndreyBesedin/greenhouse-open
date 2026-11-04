@@ -55,7 +55,8 @@ def _checkpoint_as_a_store_keeps_it(scenario_id: str, parent: RunPlan) -> JsonVa
         made = checkpoints.make_checkpoint(
             worker, RunRequest(scenario_id, plan=parent), DAY * DAY_S
         )
-    return json.loads(made.model_dump_json())
+    document: JsonValue = json.loads(made.model_dump_json())
+    return document
 
 
 def _air_at(simulator: Simulator, run: RunRequest, time_s: float) -> dict[str, object]:
