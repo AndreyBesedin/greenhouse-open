@@ -16,7 +16,7 @@
 .category-legend,
 .scalar-legend,
 .qa-caption {
-  padding: 8px 12px;
+  padding: var(--space-4) var(--space-5);
   background: var(--surface-panel);
   border-radius: var(--radius-md);
   font-size: var(--font-sm);
@@ -51,18 +51,18 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 12px;
-  margin: 0 0 6px;
+  gap: var(--space-3) var(--space-5);
+  margin: 0 0 var(--space-3);
 }
 
 .home-button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-3);
   box-sizing: border-box;
   min-width: var(--target);
   min-height: var(--target);
-  padding: 0 12px;
+  padding: 0 var(--space-5);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   color: var(--text);
@@ -71,8 +71,8 @@
 }
 
 .home-button:focus-visible {
-  outline: 3px solid var(--action);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--action);
+  outline-offset: var(--focus-offset);
 }
 
 /* Said to whoever hears the page and not shown: a line of text that the
@@ -90,15 +90,15 @@
 }
 
 .chooser-label {
-  margin-right: 8px;
+  margin-right: var(--space-4);
   font-weight: 600;
 }
 
 .info-panel dl {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 2px 8px;
-  margin: 0 0 8px;
+  gap: var(--space-1) var(--space-4);
+  margin: 0 0 var(--space-4);
 }
 
 .info-panel dd {
@@ -113,15 +113,15 @@
    window. */
 .info-panel th,
 .info-panel td {
-  padding: 0 8px 0 0;
+  padding: 0 var(--space-4) 0 0;
   text-align: left;
 }
 
 /* The info panel's sections grouped in outlined cards by topic (#306), each
  * card's title on its outline, so that a card costs next to no height. */
 .panel-card {
-  margin: 10px 0 4px;
-  padding: 2px 6px 4px;
+  margin: 10px 0 var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
@@ -129,7 +129,7 @@
 .panel-card-title {
   width: fit-content;
   margin: -0.75em 0 0;
-  padding: 0 4px;
+  padding: 0 var(--space-2);
   background: var(--surface-panel);
   color: var(--text-muted);
   font-size: 0.7em;
@@ -149,7 +149,7 @@
 .equipment-fold,
 .openings-fold,
 .probes-fold {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-4);
 }
 
 .display-fold > summary,
@@ -166,11 +166,11 @@
 /* The run played back, and its button to stop following it, apart from the
  * sections below (#273). */
 .playback {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-4);
 }
 
 .build-line {
-  margin: 8px 0 0;
+  margin: var(--space-4) 0 0;
   color: var(--text-muted);
   font-size: var(--font-xs);
 }
@@ -179,7 +179,7 @@
  * what is shown; opened, the scenarios, the test scenes and the plant lab,
  * each group saying what it is, under a filter. */
 .source-chooser {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-4);
 }
 
 .source-chooser > summary {
@@ -187,7 +187,7 @@
 }
 
 .source-chooser[open] > summary {
-  margin: 0 0 6px;
+  margin: 0 0 var(--space-3);
 }
 
 /* Open, a section's line stands apart from its first control. */
@@ -199,22 +199,22 @@
 .equipment-fold[open] > summary,
 .openings-fold[open] > summary,
 .probes-fold[open] > summary {
-  margin-bottom: 4px;
+  margin-bottom: var(--space-2);
 }
 
 .source-chooser input[type="search"] {
   box-sizing: border-box;
   width: 100%;
-  margin: 0 0 6px;
+  margin: 0 0 var(--space-3);
 }
 
 .source-chooser h2 {
-  margin: 8px 0 0;
+  margin: var(--space-4) 0 0;
   font-size: var(--font-sm);
 }
 
 .chooser-note {
-  margin: 2px 0 4px;
+  margin: var(--space-1) 0 var(--space-2);
   color: var(--text-muted);
   font-size: var(--font-xs);
 }
@@ -222,8 +222,8 @@
 .chooser-choices {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin: 2px 0 4px;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 var(--space-2);
 }
 
 /* A scenario's description under its name, cut to a line until its row is
@@ -266,7 +266,7 @@
 .scenario-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 4px;
+  gap: var(--space-1) var(--space-2);
 }
 
 .hud {
@@ -278,8 +278,8 @@
 
 .hud fieldset {
   display: flex;
-  gap: 6px;
-  margin: 0 0 8px;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
   padding: 0;
   border: 0;
 }
@@ -287,7 +287,7 @@
 .hud dl {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 2px 8px;
+  gap: var(--space-1) var(--space-4);
   margin: 0;
 }
 
@@ -322,7 +322,7 @@
 }
 
 .hud-put-back {
-  margin: 8px 0 0;
+  margin: var(--space-4) 0 0;
 }
 
 .inspector {
@@ -335,8 +335,8 @@
 .inspector dl {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 2px 8px;
-  margin: 0 0 8px;
+  gap: var(--space-1) var(--space-4);
+  margin: 0 0 var(--space-4);
 }
 
 .inspector dd {
@@ -348,8 +348,8 @@
 .inspector fieldset {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 12px;
-  margin: 0 0 8px;
+  gap: var(--space-2) var(--space-5);
+  margin: 0 0 var(--space-4);
   padding: 0;
   border: 0;
 }
@@ -361,7 +361,7 @@
   width: 300px;
   max-height: 50vh;
   overflow: auto;
-  padding: 8px 12px;
+  padding: var(--space-4) var(--space-5);
   background: var(--surface-panel);
   border-radius: var(--radius-md);
   font-size: var(--font-sm);
@@ -380,12 +380,12 @@
 }
 
 .controls-help h3 {
-  margin-top: 6px;
+  margin-top: var(--space-3);
   color: var(--text-soft);
 }
 
 .controls-help dl {
-  margin: 2px 0 0;
+  margin: var(--space-1) 0 0;
 }
 
 .controls-help dt {
@@ -393,7 +393,7 @@
 }
 
 .controls-help dd {
-  margin: 0 0 2px 12px;
+  margin: 0 0 var(--space-1) var(--space-5);
   color: var(--text-soft);
 }
 
@@ -406,7 +406,7 @@
 }
 
 .controls-moves > dd:first-of-type {
-  margin-left: 4px;
+  margin-left: var(--space-2);
 }
 
 .controls-inputs {
@@ -422,7 +422,7 @@
 }
 
 .controls-open kbd {
-  padding: 0 4px;
+  padding: 0 var(--space-2);
   border: 1px solid var(--text-muted);
   border-radius: 3px;
   font-size: 11px;
@@ -436,7 +436,7 @@
   /* Never so tall that the legends under it leave the window: it scrolls. */
   max-height: 50vh;
   overflow: auto;
-  padding: 8px 12px;
+  padding: var(--space-4) var(--space-5);
   background: var(--surface-panel);
   border-radius: var(--radius-md);
   font-size: var(--font-sm);
@@ -454,7 +454,7 @@
 }
 
 .seen-in-the-view dl {
-  margin: 6px 0 0;
+  margin: var(--space-3) 0 0;
 }
 
 .seen-in-the-view dt {
@@ -462,12 +462,12 @@
 }
 
 .seen-in-the-view dd {
-  margin: 0 0 4px 18px;
+  margin: 0 0 var(--space-2) 18px;
   color: var(--text-soft);
 }
 
 .seen-in-the-view p {
-  margin: 6px 0 0;
+  margin: var(--space-3) 0 0;
   color: var(--text-soft);
 }
 
@@ -475,7 +475,7 @@
   display: inline-block;
   width: 12px;
   height: 10px;
-  margin-right: 6px;
+  margin-right: var(--space-3);
   vertical-align: middle;
 }
 
@@ -500,7 +500,7 @@
   bottom: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-4);
   align-items: flex-end;
 }
 
@@ -509,7 +509,7 @@
 }
 
 .category-legend ul {
-  margin: 4px 0 0;
+  margin: var(--space-2) 0 0;
   padding: 0;
   list-style: none;
 }
@@ -518,7 +518,7 @@
   display: inline-block;
   width: 12px;
   height: 12px;
-  margin-right: 6px;
+  margin-right: var(--space-3);
   border-radius: 2px;
   vertical-align: -1px;
 }
@@ -530,7 +530,7 @@
 
 .scalar-bar {
   height: 12px;
-  margin: 4px 0 2px;
+  margin: var(--space-2) 0 var(--space-1);
   border-radius: 2px;
 }
 
@@ -545,7 +545,7 @@
   position: absolute;
   top: 0;
   left: 0;
-  padding: 1px 4px;
+  padding: 1px var(--space-2);
   background: var(--surface-label);
   border: 1px solid var(--data-orange);
   border-radius: 3px;
@@ -559,7 +559,7 @@
   top: 12px;
   left: 12px;
   margin: 0;
-  padding: 4px 8px;
+  padding: var(--space-2) var(--space-4);
 }
 
 /* The reference QA's state probes, under its caption. */
@@ -570,32 +570,32 @@
 /* The reference QA's camera views: the path camera's picture alone, its
  * caption and probes under it rather than over it. */
 .qa-camera {
-  padding: 12px;
+  padding: var(--space-5);
 }
 
 .qa-camera .qa-caption {
   position: static;
-  margin-top: 8px;
+  margin-top: var(--space-4);
 }
 
 .field-controls {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-4);
   padding: 0;
   border: 0;
 }
 
 .field-controls p {
-  margin: 2px 0 0;
+  margin: var(--space-1) 0 0;
 }
 
 .field-probes {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-4);
   padding: 0;
   border: 0;
 }
 
 .field-probes p {
-  margin: 2px 0 4px;
+  margin: var(--space-1) 0 var(--space-2);
 }
 
 .field-probes input[type="number"] {
@@ -603,27 +603,27 @@
 }
 
 .field-probes table {
-  margin-top: 4px;
+  margin-top: var(--space-2);
   border-collapse: collapse;
 }
 
 .field-probes th {
-  padding-right: 6px;
+  padding-right: var(--space-3);
   vertical-align: top;
 }
 
 .field-probes td {
-  padding-bottom: 4px;
+  padding-bottom: var(--space-2);
 }
 
 .cfd-controls {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-4);
   padding: 0;
   border: 0;
 }
 
 .cfd-controls p {
-  margin: 2px 0 0;
+  margin: var(--space-1) 0 0;
 }
 
 /* The switches of the overlays over the scene, wrapped to the panel's width.
@@ -634,8 +634,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 2px 12px;
-  margin: 0 0 8px;
+  gap: var(--space-1) var(--space-5);
+  margin: 0 0 var(--space-4);
   padding: 0;
   border: 0;
 }
@@ -648,18 +648,18 @@
 .field-views {
   display: flex;
   gap: 10px;
-  margin: 4px 0;
+  margin: var(--space-2) 0;
 }
 
 .field-slice {
   display: grid;
-  gap: 2px;
+  gap: var(--space-1);
 }
 
 .field-slice-position {
   display: grid;
   grid-template-columns: 2em 1fr 8em;
-  gap: 6px;
+  gap: var(--space-3);
   align-items: center;
 }
 
@@ -671,8 +671,8 @@
 .equipment-controls,
 .lab-controls {
   display: grid;
-  gap: 2px;
-  margin: 0 0 8px;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-4);
   padding: 0;
   border: 0;
 }
@@ -682,7 +682,7 @@
 .lab-control {
   display: grid;
   grid-template-columns: 7em 1fr 7em;
-  gap: 6px;
+  gap: var(--space-3);
   align-items: center;
   font-variant-numeric: tabular-nums;
 }
@@ -692,8 +692,8 @@
  * pace. */
 .climate-time {
   display: grid;
-  gap: 4px;
-  margin: 0 0 8px;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
   padding: 0;
   border: 0;
   font-variant-numeric: tabular-nums;
@@ -701,7 +701,7 @@
 
 .climate-time-row {
   display: flex;
-  gap: 6px;
+  gap: var(--space-3);
   align-items: center;
 }
 
@@ -724,12 +724,12 @@
 /* The weather outside: a line, with a compass beside it, opening on its
  * details. */
 .weather-panel {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-4);
 }
 
 .weather-heading {
   display: flex;
-  gap: 8px;
+  gap: var(--space-4);
   align-items: center;
   cursor: pointer;
 }
@@ -739,24 +739,24 @@
 }
 
 .weather-panel dl {
-  margin: 4px 0 0;
+  margin: var(--space-2) 0 0;
   font-variant-numeric: tabular-nums;
 }
 
 .weather-choice {
   display: block;
-  margin: 4px 0 0;
+  margin: var(--space-2) 0 0;
 }
 
 /* The day's weather: a short line per quantity, the moment drawn across. */
 .weather-day {
-  margin: 4px 0 0;
+  margin: var(--space-2) 0 0;
 }
 
 .weather-day-row {
   display: grid;
   grid-template-columns: 11em 1fr;
-  gap: 6px;
+  gap: var(--space-3);
   align-items: center;
   font-variant-numeric: tabular-nums;
 }
@@ -821,13 +821,13 @@
 
 /* The house's air as one volume through the run, the run all off dashed. */
 .house-air {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-4);
 }
 
 .house-air-row {
   display: grid;
   grid-template-columns: 15em 1fr;
-  gap: 6px;
+  gap: var(--space-3);
   align-items: center;
   font-variant-numeric: tabular-nums;
 }
@@ -856,7 +856,7 @@
  * day under it, a marker at each command's moment, filled once applied;
  * opened, the commands listed. */
 .climate-schedule {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-4);
 }
 
 /* The bar is part of the summary, under its line, so that it shows while
@@ -865,7 +865,7 @@
   display: block;
   position: relative;
   height: 10px;
-  margin: 2px 6px 4px;
+  margin: var(--space-1) var(--space-3) var(--space-2);
   border-bottom: 1px solid var(--chart-soft);
 }
 
@@ -898,26 +898,26 @@
 /* A run's timeline: a lane per process, its events as ticks across the
  * window, the moment drawn a line across them all. */
 .timeline {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-4);
 }
 
 .timeline select {
-  margin: 4px 0;
+  margin: var(--space-2) 0;
 }
 
 /* A scenario's checkpoints: save one, upload one, and those kept listed. */
 .checkpoints {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-4);
 }
 
 .checkpoints ol {
-  margin: 4px 0;
+  margin: var(--space-2) 0;
   padding-left: 1.4em;
 }
 
 /* Two branches compared: A, the checkpoint's run, solid; B, dashed. */
 .branches {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-4);
 }
 
 .branches polyline {
@@ -943,7 +943,7 @@
 .timeline-lane {
   display: grid;
   grid-template-columns: 8em 1fr;
-  gap: 6px;
+  gap: var(--space-3);
   align-items: center;
 }
 
@@ -967,7 +967,7 @@
 }
 
 .timeline-turns {
-  margin: 4px 0 0;
+  margin: var(--space-2) 0 0;
   padding-left: 1.5em;
 }
 
@@ -993,14 +993,14 @@
 }
 
 .timeline-plan {
-  margin: 4px 0 0;
+  margin: var(--space-2) 0 0;
   padding-left: 1.5em;
 }
 
 /* Probes' charts through a climate run: this run's line solid, the run
  * with everything off dashed, and the moment drawn a faint line. */
 .probe-charts figure {
-  margin: 0 0 6px;
+  margin: 0 0 var(--space-3);
 }
 
 .probe-chart svg {
@@ -1039,13 +1039,13 @@
 .sensor-panel,
 .camera-panel,
 .camera-frames {
-  margin: 0 0 8px;
-  padding: 0 0 8px;
+  margin: 0 0 var(--space-4);
+  padding: 0 0 var(--space-4);
   border-bottom: 1px solid var(--border);
 }
 
 .camera-panel p {
-  margin: 0 0 4px;
+  margin: 0 0 var(--space-2);
 }
 
 .camera-panel canvas {
@@ -1055,8 +1055,8 @@
 /* The camera's passes, as tabs over its picture. */
 .camera-tabs {
   display: flex;
-  gap: 4px;
-  margin: 0 0 4px;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
 }
 
 .camera-tabs [aria-selected="true"] {
@@ -1084,8 +1084,8 @@
  * the run is made from, and a warning when the simulator and the viewer
  * come from different commits. */
 .qa-panel {
-  margin: 0 0 8px;
-  padding: 2px 6px;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-1) var(--space-3);
   border: 1px dashed var(--mark);
   font-variant-numeric: tabular-nums;
 }
@@ -1111,17 +1111,17 @@
 
 /* A camera's frames, as the run's log records them. */
 .camera-frames p {
-  margin: 0 0 4px;
+  margin: 0 0 var(--space-2);
 }
 
 .camera-frames dl {
-  margin: 0 0 4px;
+  margin: 0 0 var(--space-2);
 }
 
 .camera-frame-history {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 8px;
+  gap: var(--space-1) var(--space-4);
   max-height: 4em;
   margin: 0;
   padding: 0;
@@ -1142,13 +1142,13 @@
   display: inline-block;
   width: 0.8em;
   height: 0.8em;
-  margin-right: 4px;
+  margin-right: var(--space-2);
   vertical-align: middle;
 }
 
 /* A selected sensor: its reading, and the truth beside it, marked as QA's. */
 .sensor-panel p {
-  margin: 0 0 4px;
+  margin: 0 0 var(--space-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1156,7 +1156,7 @@
   display: block;
   width: 100%;
   height: 52px;
-  margin: 0 0 4px;
+  margin: 0 0 var(--space-2);
   border: 1px solid var(--border);
 }
 
@@ -1179,7 +1179,7 @@
 }
 
 .sensor-truth {
-  padding: 2px 6px;
+  padding: var(--space-1) var(--space-3);
   border: 1px dashed var(--mark);
   font-variant-numeric: tabular-nums;
 }
@@ -1199,8 +1199,8 @@
 .plant-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin: 0 0 8px;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
   padding: 0;
   border: 0;
 }
@@ -1208,7 +1208,7 @@
 /* The plant's history: what was done to it, and what was refused. */
 .plant-history {
   max-height: 20vh;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-4);
   overflow: auto;
 }
 
@@ -1219,7 +1219,7 @@
 /* The plant lab's debug tree: an organ per line, scrolling on its own. */
 .plant-structure {
   max-height: 40vh;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-4);
   overflow: auto;
 }
 
@@ -1257,7 +1257,7 @@
   inset: 12px;
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-5);
   pointer-events: none;
 }
 
@@ -1266,7 +1266,7 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--space-5);
   min-width: 0;
 }
 
@@ -1275,7 +1275,7 @@
  * so that they open again as they were, scrolled where they were. */
 .panel-side {
   display: flex;
-  gap: 4px;
+  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -1293,6 +1293,16 @@
 .panel-side.folded > .panel-column {
   position: absolute;
   visibility: hidden;
+}
+
+/* Folded, the View panel's column stands exactly where it stands open. The
+ * HUD keeps itself within the window by measuring its place, on every change
+ * of its size or the window's; from just past the stripe, off the window,
+ * that measure moved it left over its own stripe, to be found so on opening. */
+.panel-side.at-the-end.folded > .panel-column {
+  top: 0;
+  right: 0;
+  bottom: 0;
 }
 
 /* A tab at the top of the side's inner edge, beside its panel's head: no
@@ -1387,6 +1397,21 @@
   overflow-wrap: anywhere;
 }
 
+/* What lies behind a card over the view stays a tint: a label over the scene is
+ * a page element under the panels, and unblurred its words read among the card's. */
+.viewer-panels
+  :is(
+    .info-panel,
+    .hud,
+    .inspector,
+    .category-legend,
+    .scalar-legend,
+    .controls-help,
+    .seen-in-the-view
+  ) {
+  backdrop-filter: blur(8px);
+}
+
 /* A scrollable dock leaves the upper view free for orbiting and picking.
  * Panels participate in normal flow, so adding an inspector or legend does
  * not cover another panel. Every control remains reachable by scrolling. */
@@ -1451,7 +1476,7 @@
 
   .hud details[open] > summary {
     position: static;
-    margin: 0 0 8px;
+    margin: 0 0 var(--space-4);
   }
 
   .opening-control,
@@ -1471,36 +1496,36 @@
 /* Moving the selected equipment or sensor (#209), set off from the
  * inspector's details below, as a sensor's reading is. */
 .move-panel {
-  margin: 0 0 8px;
-  padding: 0 0 8px;
+  margin: 0 0 var(--space-4);
+  padding: 0 0 var(--space-4);
   border-bottom: 1px solid color-mix(in srgb, currentColor 25%, transparent);
 }
 
 .move-panel p {
-  margin: 0 0 4px;
+  margin: 0 0 var(--space-2);
 }
 
 .move-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-2);
 }
 
 .move-list {
-  margin: 0 0 6px;
+  margin: 0 0 var(--space-3);
   padding-left: 18px;
 }
 
 /* How moving works, folded under the session's line (#305). */
 .move-details {
-  margin: 0 0 4px;
+  margin: 0 0 var(--space-2);
 }
 
 /* The question before the moves' new run starts (#305): in the panel, set
  * off from the moves above it. */
 .move-confirm {
   margin: 0;
-  padding: 6px 0 0;
+  padding: var(--space-3) 0 0;
   border: 0;
   border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent);
 }
@@ -1514,7 +1539,7 @@
  * the row's width, beside the moment it has reached. */
 .playback-progress {
   display: flex;
-  gap: 6px;
+  gap: var(--space-3);
   align-items: center;
   font-variant-numeric: tabular-nums;
 }
@@ -1534,7 +1559,7 @@
 
 .builder-side {
   overflow-y: auto;
-  padding: 12px 16px;
+  padding: var(--space-5) var(--space-6);
   background: var(--surface-panel);
   color: var(--text);
   color-scheme: var(--scheme);
@@ -1543,19 +1568,19 @@
 }
 
 .builder-side h1 {
-  margin: 0 0 4px;
+  margin: 0 0 var(--space-2);
   font-size: var(--font-2xl);
 }
 
 .builder-side h2 {
-  margin: 16px 0 6px;
+  margin: var(--space-6) 0 var(--space-3);
   font-size: var(--font-lg);
 }
 
 .builder-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-3);
 }
 
 .builder-status {
@@ -1570,16 +1595,16 @@
 .builder-field {
   display: grid;
   grid-template-columns: 1fr 9em;
-  gap: 8px;
+  gap: var(--space-4);
   align-items: center;
-  margin: 4px 0;
+  margin: var(--space-2) 0;
 }
 
 .builder-form button,
 .builder-copy button,
 .builder-identity button,
 .builder-run button {
-  margin-top: 8px;
+  margin-top: var(--space-4);
 }
 
 .builder-findings ul {
@@ -1605,7 +1630,7 @@
 .builder-rows td,
 .builder-items th,
 .builder-items td {
-  padding: 2px 6px;
+  padding: var(--space-1) var(--space-3);
   border-bottom: 1px solid var(--border);
   text-align: left;
 }
@@ -1616,10 +1641,10 @@
 .builder-palette {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-4);
   align-items: end;
-  margin-top: 12px;
-  padding: 8px;
+  margin-top: var(--space-5);
+  padding: var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
@@ -1635,30 +1660,30 @@
 .builder-surfaces {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 12px;
+  gap: var(--space-2) var(--space-5);
   width: 100%;
   margin: 0;
-  padding: 4px 8px;
+  padding: var(--space-2) var(--space-4);
   border: 1px solid var(--border);
 }
 
 .builder-give-field:has(> input[type="checkbox"]) {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-2);
 }
 
 .builder-give {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-4);
   align-items: end;
-  margin-top: 8px;
+  margin-top: var(--space-4);
 }
 
 .builder-give-field {
   display: grid;
-  gap: 2px;
+  gap: var(--space-1);
 }
 
 .builder-chosen > .builder-give {
@@ -1674,26 +1699,26 @@
  * (P17.11). */
 .builder-share,
 .builder-finish {
-  margin-top: 12px;
+  margin-top: var(--space-5);
 }
 
 .builder-share button,
 .builder-finish button {
   min-height: var(--target);
-  margin-top: 8px;
+  margin-top: var(--space-4);
 }
 
 .builder-share-recording {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-4);
   min-height: var(--target);
 }
 
 .builder-finish-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-4);
 }
 
 .builder-view {
@@ -1702,7 +1727,21 @@
 }
 
 .builder-view > .builder-note {
-  padding: 16px;
+  padding: var(--space-6);
+}
+
+/* Too narrow for a column beside the house: the forms over it, each scrolled or
+ * drawn in its own half. */
+@media (max-width: 840px) {
+  .builder {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .builder-side {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
 }
 
 /* The landing page (P17.5): where a person decides what to do. */
@@ -1720,8 +1759,8 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 16px 32px;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-8);
   border-bottom: 1px solid var(--border);
   background: var(--surface-panel);
 }
@@ -1735,24 +1774,24 @@
   box-sizing: border-box;
   max-width: 1100px;
   margin: 0 auto;
-  padding: 32px 32px 64px;
+  padding: var(--space-8) var(--space-8) var(--space-9);
 }
 
 .landing-main h2 {
-  margin: 0 0 6px;
+  margin: 0 0 var(--space-3);
   font-size: var(--font-4xl);
 }
 
 .landing-lead {
-  margin: 0 0 24px;
+  margin: 0 0 var(--space-7);
   color: var(--text-soft);
 }
 
 .landing-cards {
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
-  margin-bottom: 32px;
+  gap: var(--space-7);
+  margin-bottom: var(--space-8);
 }
 
 .landing-card {
@@ -1761,7 +1800,7 @@
   flex-direction: column;
   gap: 10px;
   min-width: 0;
-  padding: 24px;
+  padding: var(--space-7);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   background: var(--surface-panel);
@@ -1785,7 +1824,7 @@
 .landing-link-button {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-4);
   align-self: flex-start;
   box-sizing: border-box;
   min-height: var(--target);
@@ -1805,7 +1844,7 @@
 .landing-upload {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-3);
 }
 
 .landing-upload .landing-link-button {
@@ -1822,7 +1861,7 @@
 .landing-combobox {
   position: relative;
   display: grid;
-  gap: 6px;
+  gap: var(--space-3);
 }
 
 .landing-label {
@@ -1834,7 +1873,7 @@
 .landing-input {
   box-sizing: border-box;
   min-height: var(--target);
-  padding: 0 12px;
+  padding: 0 var(--space-5);
   border: 1px solid var(--text-muted);
   border-radius: var(--radius-lg);
   background: var(--surface-page);
@@ -1857,7 +1896,7 @@
   right: 0;
   left: 0;
   max-height: 360px;
-  margin: 4px 0 0;
+  margin: var(--space-2) 0 0;
   padding: 0;
   overflow-y: auto;
   list-style: none;
@@ -1869,10 +1908,10 @@
 .landing-option {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
   box-sizing: border-box;
   min-height: var(--target);
-  padding: 8px 14px;
+  padding: var(--space-4) 14px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
 }
@@ -1886,7 +1925,7 @@
 .landing-option-line {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-5);
 }
 
 .landing-option-note {
@@ -1895,7 +1934,7 @@
 }
 
 .landing-option-none {
-  padding: 12px 14px;
+  padding: var(--space-5) 14px;
   color: var(--text-soft);
 }
 
@@ -1918,8 +1957,8 @@
 .landing-runs {
   display: grid;
   grid-template-columns: minmax(0, 2fr) max-content minmax(0, 1fr) repeat(3, max-content);
-  column-gap: 24px;
-  margin: 8px 0 0;
+  column-gap: var(--space-7);
+  margin: var(--space-4) 0 0;
   padding: 0;
   list-style: none;
   border: 1px solid var(--border);
@@ -1932,8 +1971,8 @@
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
   align-items: center;
-  row-gap: 12px;
-  padding: 12px 20px;
+  row-gap: var(--space-5);
+  padding: var(--space-5) 20px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -1958,7 +1997,7 @@
   display: flex;
   flex: 1 1 160px;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -1967,7 +2006,7 @@
 }
 
 .landing-status {
-  padding: 2px 10px;
+  padding: var(--space-1) 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   font-size: var(--font-sm);
@@ -1991,7 +2030,7 @@
   box-sizing: border-box;
   width: min(900px, calc(100% - 32px));
   max-height: calc(100% - 64px);
-  padding: 0 0 8px;
+  padding: 0 0 var(--space-4);
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -2009,8 +2048,8 @@
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px 24px;
-  padding: 20px 24px 12px;
+  gap: var(--space-5) var(--space-7);
+  padding: 20px var(--space-7) var(--space-5);
   border-bottom: 1px solid var(--border);
 }
 
@@ -2020,7 +2059,7 @@
 }
 
 .landing-dialog-head p {
-  margin: 2px 0 0;
+  margin: var(--space-1) 0 0;
   font-size: var(--font-sm);
   color: var(--text-soft);
 }
@@ -2028,13 +2067,13 @@
 .landing-dialog-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-4);
 }
 
 .landing-dialog p[role="alert"],
 .landing-dialog p[role="status"] {
   margin: 0;
-  padding: 10px 24px;
+  padding: 10px var(--space-7);
 }
 
 .landing-dialog p[role="alert"] {
@@ -2073,15 +2112,15 @@
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 12px 24px;
-  padding: 16px 24px;
+  gap: var(--space-5) var(--space-7);
+  padding: var(--space-6) var(--space-7);
   border-bottom: 1px solid var(--border);
   background: var(--surface-panel);
 }
 
 .landing-field {
   display: grid;
-  gap: 6px;
+  gap: var(--space-3);
   font-size: var(--font-sm);
   font-weight: 600;
   color: var(--text-soft);
@@ -2095,7 +2134,7 @@
 }
 
 .landing-empty {
-  padding: 32px 24px;
+  padding: var(--space-8) var(--space-7);
   text-align: center;
   color: var(--text-soft);
 }
@@ -2103,7 +2142,7 @@
 .landing-confirm {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-4);
 }
 
 .landing-run > .landing-status {
@@ -2154,7 +2193,7 @@
 
 .landing-dialog .landing-runs {
   grid-template-columns: minmax(0, 2fr) max-content minmax(0, 1fr) repeat(4, max-content);
-  column-gap: 12px;
+  column-gap: var(--space-5);
   margin: 0;
   border: 0;
   border-radius: 0;
@@ -2171,7 +2210,7 @@
   .landing-run {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: var(--space-5);
   }
 }
 
@@ -2210,7 +2249,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 14px;
+  gap: var(--space-4) 14px;
   padding: 10px 20px;
   border-bottom-width: 1px;
 }
@@ -2236,11 +2275,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-3);
   box-sizing: border-box;
   min-width: var(--target);
   min-height: var(--target);
-  padding: 0 12px;
+  padding: 0 var(--space-5);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: transparent;
@@ -2269,7 +2308,7 @@
 }
 
 .replay-transport {
-  padding: 14px 20px 16px;
+  padding: 14px 20px var(--space-6);
   border-top-width: 1px;
 }
 
@@ -2278,12 +2317,12 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 10px 20px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-5);
 }
 
 .replay-buttons {
   display: flex;
-  gap: 8px;
+  gap: var(--space-4);
 }
 
 .replay-moment {
@@ -2302,7 +2341,7 @@
 .replay-pace {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-4);
   color: var(--text-soft);
 }
 
@@ -2363,8 +2402,8 @@
 }
 
 .replay-handle:focus-visible {
-  outline: 3px solid var(--text);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--text);
+  outline-offset: var(--focus-offset);
 }
 
 .replay-ticks {
@@ -2386,8 +2425,8 @@
 .replay-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 24px;
-  margin: 6px 0 0;
+  gap: var(--space-2) var(--space-7);
+  margin: var(--space-3) 0 0;
   padding: 0;
   list-style: none;
   font-size: var(--font-xs);
@@ -2397,7 +2436,7 @@
 .replay-legend li {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-3);
 }
 
 .replay-swatch {
@@ -2415,7 +2454,7 @@
 }
 
 .replay-notice {
-  padding: 32px 24px;
+  padding: var(--space-8) var(--space-7);
   text-align: center;
   color: var(--text-soft);
 }

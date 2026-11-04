@@ -1,8 +1,65 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import { chooser } from "./chooser";
 import { unfold } from "./folds";
 
 import { selectAt } from "./view";
+
+// How far, of 255, a colour of the panel may change for a label under it: a soft
+// patch in the dark theme, 12 by this test; with no blur the words read, 22 and 30.
+const LABEL_SHOWS_THROUGH = 16;
+
+/** The largest change in any channel of any pixel between two screenshots of a size. */
+function largestChange(page: Page, shots: [Buffer, Buffer]): Promise<number> {
+  return page.evaluate(
+    async (pngs) => {
+      const pixels = await Promise.all(
+        pngs.map(async (png) => {
+          const bitmap = await createImageBitmap(
+            await (await fetch(`data:image/png;base64,${png}`)).blob(),
+          );
+          const context = new OffscreenCanvas(bitmap.width, bitmap.height).getContext("2d");
+          context?.drawImage(bitmap, 0, 0);
+          return context?.getImageData(0, 0, bitmap.width, bitmap.height).data ?? [];
+        }),
+      );
+      const [one = [], other = []] = pixels;
+      let largest = 0;
+      for (let i = 0; i < one.length; i++) {
+        largest = Math.max(largest, Math.abs((one[i] ?? 0) - (other[i] ?? 0)));
+      }
+      return largest;
+    },
+    shots.map((shot) => shot.toString("base64")),
+  );
+}
+
+/** The panel drawn with no label and with one in the middle of it, as the view
+ * places one: inside the view's own element, which the panels lie over. */
+async function withAndWithoutALabelUnder(panel: Locator): Promise<[Buffer, Buffer]> {
+  const without = await panel.screenshot();
+  await panel.evaluate((element) => {
+    const { left, top, width, height } = element.getBoundingClientRect();
+    const label = document.createElement("div");
+    label.className = "debug-label";
+    label.textContent = "wind 1.5 m/s from the SW";
+    label.style.transform = `translate(${left + width / 2}px, ${top + height / 2}px)`;
+    document.querySelector("[data-testid=main-view]")?.appendChild(label);
+  });
+  await expect(panel.page().locator(".debug-label")).toBeVisible();
+  return [without, await panel.screenshot()];
+}
+
+for (const theme of ["dark", "light"]) {
+  test(`a label under a panel does not read through it, ${theme}`, async ({ page }) => {
+    await page.goto("/view");
+    await expect(page.getByTestId("scene-status")).toHaveText("Showing the empty grid.");
+    await page.getByLabel("Light panels").setChecked(theme === "light");
+    const panel = page.locator(".info-panel");
+    const shots = await withAndWithoutALabelUnder(panel);
+    const change = await largestChange(page, shots);
+    expect(change).toBeLessThanOrEqual(LABEL_SHOWS_THROUGH);
+  });
+}
 
 for (const size of [
   { width: 1280, height: 720 },
@@ -278,6 +335,52 @@ test("each side's panels fold to a stripe at the view's edge, and open as they w
     await page.setViewportSize({ width: 640, height: 480 });
     await expect(infoStripe).toBeHidden();
     await expect(info).toBeVisible();
+  });
+});
+
+test("the View panel opens where it was, whatever changed while it was folded (#304)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/?scene=example");
+  await expect(page.getByTestId("scene-status")).toContainText("Showing the example scene");
+  const hud = page.locator(".hud");
+  const putBack = page.getByRole("button", { name: "Put it back" });
+  const hudLeft = async () => (await hud.boundingBox())?.x;
+  // At the window's right edge, past its margin and with its stripe beside it.
+  const leftAt = (width: number) => width - 12 - 324;
+  await expect.poll(hudLeft).toBe(leftAt(1280));
+
+  await test.step("the window resized", async () => {
+    await page.getByRole("button", { name: "Fold the View panel" }).click();
+    await expect(hud).toBeHidden();
+    // Folded where it stands open, it still leaves the view there to be clicked.
+    const underIt = await page.evaluate(
+      ({ x, y }) => document.elementFromPoint(x, y)?.closest(".panel-column") ?? null,
+      { x: leftAt(1280) + 100, y: 100 },
+    );
+    expect(underIt).toBeNull();
+    await page.setViewportSize({ width: 1200, height: 720 });
+    await page.getByRole("button", { name: "Open the View panel" }).click();
+    await expect(hud).toBeVisible();
+    await expect(putBack).toBeHidden();
+    expect(await hudLeft()).toBe(leftAt(1200));
+  });
+
+  await test.step("the page reloaded, which measures the panel as it first draws", async () => {
+    await page.getByRole("button", { name: "Fold the View panel" }).click();
+    await expect(hud).toBeHidden();
+    await page.reload();
+    await expect(page.getByTestId("scene-status")).toContainText("Showing the example scene");
+    await page.getByRole("button", { name: "Open the View panel" }).click();
+    await expect(hud).toBeVisible();
+    await expect(putBack).toBeHidden();
+    expect(await hudLeft()).toBe(leftAt(1200));
+  });
+
+  await test.step("its stripe, not covered by it, folds it again", async () => {
+    await page.getByRole("button", { name: "Fold the View panel" }).click({ timeout: 5000 });
+    await expect(hud).toBeHidden();
   });
 });
 

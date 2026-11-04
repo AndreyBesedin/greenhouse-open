@@ -151,8 +151,10 @@ pale text.
 - [x] The runs dialog keeps "still being computed: stop it, then delete it" up after Stop,
   beside a row reading Interrupted. Fix in #525.
 - [x] The note under the levels set names their identifiers ("Set roof_vent_1"). Fix in #527.
-- [ ] The address of a run with files missing still opens its replay, which says Finished. The
-  lists offer no link to it, so this takes an address kept from before.
+- [x] The address of a run with files missing still opens its replay, which says Finished. The
+  lists offer no link to it, so this takes an address kept from before. It now says the run
+  cannot be replayed and why, also for a finished run that lost its last commits, which left no
+  gap to see.
 - [ ] A fork in another layout is another run's epoch, and can read "epoch 0 · forked from
   epoch 0" with no word of the layout.
 - [ ] At phone width the builder's page is 463 px wide in a window of 390: the pane that draws
@@ -160,6 +162,11 @@ pale text.
 - [ ] A panel's fork takes the moment it shows, by design, so under load *Fork from here with
   these levels* at a transport reading Day 2, 24:00 forked from Day 1, 24:00, the field still
   on its way. The subtitle then says so.
+- [ ] A playback that failed, until it is started again, answers every reader with a 500 and no
+  words. `GET /consumer/v1/runs` then lists no run at all, of any scenario, since it asks each
+  playback kept for its state. By the code, the viewer's panel says "the simulator answered 500"
+  and has no start button, though a start now plays the run again. Why it failed is the `reason`
+  of its epoch in the store's answers, which no page of the viewer reads.
 
 ## Not covered by the walk
 

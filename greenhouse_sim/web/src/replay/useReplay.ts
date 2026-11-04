@@ -64,6 +64,10 @@ export function useReplay(
   const [refused, setRefused] = useState<string | null>(null);
   // Whether the simulator has let the position go: nothing more can be asked of it.
   const [lost, setLost] = useState(false);
+  // The moment last sought, until the latest thing asked is answered: the keys and
+  // the buttons move from it, so that a second press does not start from where the
+  // position stood before the first. Answered, or refused, the position says again.
+  const [heading, setHeading] = useState<number | null>(null);
   // Counts what has been asked of the replay shown: each change of the replay,
   // and each seek, command or pace. An answer counts only if nothing was asked
   // after the question it answers.
@@ -87,6 +91,7 @@ export function useReplay(
     setLoad(LOADING);
     setRefused(null);
     setLost(false);
+    setHeading(null);
     // Not aborted once asked: a position the simulator has opened is closed,
     // however late its answer comes.
     void openPosition(runId, epoch, fetchFn).then(async (answer) => {
@@ -166,6 +171,7 @@ export function useReplay(
       if (asked.current !== ticket) {
         return;
       }
+      setHeading(null);
       // A refused command leaves the position where it stood, and says so:
       // the simulator has let the position go, or cannot be reached, and a
       // control that only did nothing would look broken.
@@ -196,6 +202,7 @@ export function useReplay(
   return {
     load,
     refused,
+    heading,
     command: (command: PositionCommand) => {
       if (positionId !== null) {
         if (command === "follow") {
@@ -209,6 +216,7 @@ export function useReplay(
       if (positionId === null) {
         return;
       }
+      setHeading(timeS);
       const line = seeks.current;
       if (line.onItsWay) {
         // The answer on its way is to an earlier word than this.

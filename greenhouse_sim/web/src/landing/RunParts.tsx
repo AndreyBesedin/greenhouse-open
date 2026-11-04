@@ -1,6 +1,7 @@
 import { replayAddress } from "./paths";
 import {
   isComputing,
+  PAUSED_LABEL,
   progressShare,
   progressText,
   STATUS_LABEL,
@@ -35,7 +36,7 @@ export function StatusChip({ run }: { run: StoredRun }) {
   }
   return (
     <span className={`landing-status landing-status-${run.status}`}>
-      {STATUS_LABEL[run.status]}
+      {run.paused ? PAUSED_LABEL : STATUS_LABEL[run.status]}
     </span>
   );
 }

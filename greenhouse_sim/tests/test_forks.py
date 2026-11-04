@@ -375,6 +375,37 @@ def _values(epoch: EpochStore) -> list[float]:
     return [observation.value for observation in epoch.observations().records]
 
 
+def test_a_position_over_a_fork_made_mid_day_opens_at_the_moment_it_was_made_from(
+    simulator: Simulator, whole: EpochStore
+) -> None:
+    moment = 1.5 * DAY_S
+    made = forks.fork(simulator, whole.objects, whole.run_id, whole.epoch, moment)
+    fork = made.manifest().fork
+    assert fork is not None
+    assert (fork.start_s, fork.at_s) == (DAY_S, moment)
+    epoch = StoredEpoch(simulator, whole.objects, made.run_id, made.epoch)
+    opened_early = Position(epoch, "early")
+    moved_early = Position(epoch, "moved")
+    played_early = Position(epoch, "played")
+    # Nothing past the day it begins with is computed yet.
+    assert opened_early.state().time_s == DAY_S
+    assert moved_early.seek(DAY_S).time_s == DAY_S
+    assert played_early.play().time_s == DAY_S
+    played_early.pause()
+
+    _worked(simulator, made)
+
+    # Once its moment is computed it is there, however early it was opened.
+    assert opened_early.state().time_s == moment
+    assert Position(epoch, "late").state().time_s == moment
+    # One that was moved stays where it was moved to, and any move goes on from
+    # the place it has.
+    assert moved_early.state().time_s == DAY_S
+    assert played_early.state().time_s == DAY_S
+    assert opened_early.seek(DAY_S).time_s == DAY_S
+    assert opened_early.state().time_s == DAY_S
+
+
 def test_a_position_over_a_fork_stands_inside_what_it_holds(
     simulator: Simulator, whole: EpochStore
 ) -> None:

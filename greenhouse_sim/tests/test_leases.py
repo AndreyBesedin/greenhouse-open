@@ -71,8 +71,14 @@ class _Beats:
     def __init__(self) -> None:
         self._asleep: dict[threading.Thread, threading.Event] = {}
         self._seen: set[threading.Thread] = set()
+        # A thread an earlier test of this process left to end at its next beat is
+        # none of this test's: it sleeps as it would, and is not taken for a new one.
+        self._before = set(threading.enumerate())
 
-    def sleep(self, _seconds: float) -> None:
+    def sleep(self, seconds: float) -> None:
+        if threading.current_thread() in self._before:
+            threading.Event().wait(seconds)
+            return
         woken = threading.Event()
         self._asleep[threading.current_thread()] = woken
         woken.wait()
@@ -194,6 +200,27 @@ def test_a_claim_on_an_epoch_still_waiting_is_written_again_too(
 
     assert epoch.worked()
     epoch.set_status(Status.FINISHED)
+
+
+def test_a_thread_left_by_an_earlier_test_is_not_taken_for_this_ones() -> None:
+    """An earlier test's thread in this process, going to sleep once more on its
+    way to its end, would have been woken in place of the one a test means."""
+    start = threading.Event()
+    held: list[_Beats] = []
+
+    def left_behind() -> None:
+        start.wait(WAIT_S)
+        held[0].sleep(0.0)
+
+    thread = threading.Thread(target=left_behind, daemon=True)
+    thread.start()
+    held.append(_Beats())
+
+    start.set()
+    thread.join(WAIT_S / 10)
+
+    assert not thread.is_alive()
+    held[0].wake_all()
 
 
 def test_a_claim_taken_on_an_epoch_that_had_ended_is_held_until_it_is_let_go(
