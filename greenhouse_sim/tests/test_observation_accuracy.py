@@ -111,7 +111,6 @@ def test_clean_sensors_and_an_exact_walk_read_the_truth() -> None:
         assert entry.max_absolute_error <= written_to, entry
 
 
-@pytest.mark.slow
 def test_readings_of_the_airs_grid_are_scored_and_a_clean_sensor_reads_its_truth_there() -> None:
     """The other tests here score a cut run, whose air is the whole house's. A
     packaged run's sensors read its grid's air through its first two hours,
