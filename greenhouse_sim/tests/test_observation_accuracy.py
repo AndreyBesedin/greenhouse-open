@@ -3,6 +3,7 @@ each sensor's readings against what it truly sampled, and each day's walk
 through the crop against each plant as its crop model measures it."""
 
 import sys
+from collections import defaultdict
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -12,6 +13,7 @@ from greenhouse_protocol.enums import ObservationType, SourceType
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.provenance import RecordSource
 
+from greenhouse_sim.climate.day import FROM_THE_START_S
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.evaluation.observation_accuracy import observation_accuracy
 from greenhouse_sim.ground_truth import GroundTruth, ground_truth
@@ -107,6 +109,36 @@ def test_clean_sensors_and_an_exact_walk_read_the_truth() -> None:
     for entry in report.by_type:
         written_to = 0.05 if entry.observation_type in WALK_KINDS else 0.0
         assert entry.max_absolute_error <= written_to, entry
+
+
+def test_readings_of_the_airs_grid_are_scored_and_a_clean_sensor_reads_its_truth_there() -> None:
+    """The other tests here score a cut run, whose air is the whole house's. A
+    packaged run's sensors read its grid's air through its first two hours,
+    each sensor the air of its own place: this holds those readings to it."""
+    with Simulator() as packaged:
+        readings = _observed(packaged, FROM_THE_START_S)
+        clean = _observed(packaged, FROM_THE_START_S, clean=True)
+        truth = ground_truth(packaged, RUN, FROM_THE_START_S)
+
+    temperatures: dict[datetime, dict[str | None, float]] = defaultdict(dict)
+    for each in truth.readings:
+        if each.observation_type == ObservationType.AIR_TEMPERATURE_C:
+            temperatures[each.timestamp][each.sensor_id] = each.value
+    start, *between, end = sorted(temperatures)
+    # The same in every cell only as the air starts and as the grid hands over.
+    assert (end - start).total_seconds() == FROM_THE_START_S
+    assert all(len(set(temperatures[moment].values())) == 2 for moment in between)
+
+    report = observation_accuracy(readings, truth)
+    assert report.readings == len(readings)
+    assert report.for_type(ObservationType.AIR_TEMPERATURE_C).max_absolute_error > 0.0
+
+    without_errors = observation_accuracy(clean, truth)
+    assert without_errors.readings == len(clean)
+    of_the_air = without_errors.for_type(ObservationType.AIR_TEMPERATURE_C)
+    assert of_the_air.readings == 2 * len(temperatures)
+    for entry in without_errors.by_type:
+        assert entry.max_absolute_error == 0.0, entry
 
 
 def test_the_readings_are_wrong_by_about_their_sensors_imperfections(
