@@ -300,6 +300,9 @@ export function App({
     startAfresh(source, next);
   }
 
+  // The empty grid, asked for: a scene on its way, or one that could not be
+  // drawn, is not it.
+  const emptyView = scene.status === "none";
   const shownSnapshot = scene.status === "loaded" ? scene.snapshot : null;
   const grown = crop.status === "loaded" ? crop.snapshot : null;
   const snapshot = useDrawnSnapshot(shownSnapshot, grown, glazing, openingFlows);
@@ -411,6 +414,7 @@ export function App({
     <main className={replay === undefined ? "viewer" : "viewer viewer-embedded"}>
       <Viewport
         snapshot={snapshot}
+        emptyView={emptyView}
         presetRequest={presetRequest}
         selectedId={selectedId}
         colouring={display.colouring}
@@ -679,6 +683,7 @@ export function App({
                 cfdBoundaries: cfd.status === "loaded",
                 dimensions: display.showDimensions && snapshot !== null,
                 kinds: kindsShown,
+                emptyView,
                 axesLengthM,
               }}
             />
