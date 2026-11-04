@@ -2,6 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { VIEWER_PATH } from "../src/landing/paths";
 import { chooser } from "./chooser";
 import { unfold } from "./folds";
+import { settledObjectCount } from "./hud";
 import { selectAt } from "./view";
 
 function collectErrors(page: Page): string[] {
@@ -35,6 +36,34 @@ test("the example scene is drawn from its JSON file", async ({ page }) => {
   );
   await expect.poll(() => objectCount(page)).toBeGreaterThan(referenceObjects);
   expect(errors).toEqual([]);
+});
+
+test("the empty grid's cube stands for no scene asked for: not one on its way or refused", async ({
+  page,
+}) => {
+  const status = page.getByTestId("scene-status");
+  await page.goto(VIEWER_PATH);
+  await expect(status).toHaveText("Showing the empty grid.");
+  const withTheCube = await settledObjectCount(page);
+
+  await test.step("a scene that cannot be drawn is said so, over the bare grid", async () => {
+    await page.goto(`${VIEWER_PATH}?scenario=no_such`);
+    await expect(status).toContainText("is not available");
+    expect(await settledObjectCount(page)).toBeLessThan(withTheCube);
+    await page.getByRole("button", { name: "What am I seeing?" }).click();
+    await expect(page.getByText("Ground grid")).toBeVisible();
+    await expect(page.getByText("A 1 m cube")).toHaveCount(0);
+    await expect(page.getByText("World axes")).toHaveCount(0);
+  });
+
+  await test.step("a scene on its way shows the bare grid too", async () => {
+    await page.route("**/api/scenarios/*/scene*", () => {
+      // Never answered: the scene stays on its way.
+    });
+    await page.goto(`${VIEWER_PATH}?scenario=reference_greenhouse`);
+    await expect(status).toContainText("Loading the scenario");
+    expect(await settledObjectCount(page)).toBeLessThan(withTheCube);
+  });
 });
 
 test("a scenario's scene comes from the simulator and stays chosen on refresh", async ({
