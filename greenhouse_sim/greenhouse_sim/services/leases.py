@@ -4,9 +4,9 @@ An epoch the store calls `running` is worked by a process, and that process may
 be gone: killed, or its machine stopped. The store alone cannot tell, since a
 status is only what its writer last said. So a process that works an epoch first
 *claims* it, and holds the claim by writing it again every `REFRESH_EVERY_S`
-seconds from a thread of its own, for as long as the manifest says the epoch is
-waiting or worked. An epoch whose newest claim has not been written for
-`EXPIRES_AFTER_S` seconds (or that has none) has no one working it.
+seconds from a thread of its own, until it lets go or the epoch has ended. An epoch
+whose newest claim has not been written for `EXPIRES_AFTER_S` seconds (or that has
+none) has no one working it.
 
 A claim and not a process id, because the worker of a server that was killed is
 a process of its own and goes on writing the epoch: its claim stays fresh, and a
@@ -39,7 +39,9 @@ it ended (`EpochStore.set_status`), so that a producer need do nothing else.
 Whoever says an epoch was interrupted (the scheduler, finding its worker dead) lets
 go of the claim of the process that died. The thread keeps no registry: it reads the
 store each time, and ends when its claim is not the newest; it lets go, and ends,
-when the epoch has ended, whoever told it so.
+when the epoch has ended, whoever told it so. An epoch that had ended as it was
+claimed, as one being carried on has until its holder has made ready, has ended only
+once it has been seen to wait or run: until then its status says nothing of its holder.
 
 An epoch from before claims may have a `lease.json`, which a worker of that version
 writes again. It is believed until it expires, as a claim is, and goes when the
@@ -127,7 +129,10 @@ def keep(objects: ObjectStore, home: str, number: int) -> None:
     """Writes the claim `number` again every `REFRESH_EVERY_S` seconds, until it is
     not the newest or the epoch has ended."""
     threading.Thread(
-        target=_beat, args=(objects, home, number), name=f"lease of {home}", daemon=True
+        target=_beat,
+        args=(objects, home, number, _worked(objects, home)),
+        name=f"lease of {home}",
+        daemon=True,
     ).start()
 
 
@@ -146,18 +151,20 @@ def _worked(objects: ObjectStore, home: str) -> bool:
     return manifest is not None and json.loads(manifest).get("status") in _WORKED
 
 
-def _beat(objects: ObjectStore, home: str, number: int) -> None:
-    """Writes the claim `number` again while it is the newest and the epoch is
-    worked. Whatever happens after it looks, its write reaches only this claim's
-    own object, where it does no harm."""
+def _beat(objects: ObjectStore, home: str, number: int, seen_worked: bool) -> None:
+    """Writes the claim `number` again while it is the newest and the epoch has not
+    ended since it was `seen_worked`. Whatever happens after it looks, its write
+    reaches only this claim's own object, where it does no harm."""
     while True:
         time.sleep(REFRESH_EVERY_S)
         try:
             if newest(objects, home) != number:
                 return
-            if not _worked(objects, home):
+            worked = _worked(objects, home)
+            if seen_worked and not worked:
                 release(objects, home, number)
                 return
+            seen_worked = worked
             objects.put(_name(home, number), _written_now())
         except Exception:
             # Whatever a write found wrong, the next one tries again; the

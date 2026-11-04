@@ -292,9 +292,34 @@ def test_a_process_that_says_an_epoch_runs_with_another_holding_it_is_refused(
     with pytest.raises(EpochTaken):
         EpochStore(objects, "run", 0).set_status(Status.RUNNING)
 
+    # Refused, it has changed nothing of the holder's epoch.
+    assert holder.manifest().status == Status.QUEUED
     holder.set_status(Status.RUNNING)
     assert holder.claimed()
     holder.set_status(Status.FINISHED)
+
+
+def test_a_worker_is_not_put_off_by_a_process_refused_as_it_takes_the_epoch_up(
+    tmp_path: Path,
+) -> None:
+    """Between a worker's claim and its reading the epoch, which must still wait."""
+    plain = FolderStore(tmp_path)
+    _epoch(plain)
+    refused = []
+
+    def says_it_runs() -> None:
+        try:
+            EpochStore(plain, "run", 0).set_status(Status.RUNNING)
+        except EpochTaken as taken:
+            refused.append(taken)
+
+    worker = EpochStore(_Meanwhile(tmp_path, says_it_runs, after=True), "run", 0)
+
+    assert scheduler._taken_up(worker)
+
+    assert len(refused) == 1
+    assert worker.claimed() and worker.manifest().status == Status.QUEUED
+    worker.let_go()
 
 
 def test_what_a_crash_left_past_the_last_commit_is_removed_and_the_claim_is_not(

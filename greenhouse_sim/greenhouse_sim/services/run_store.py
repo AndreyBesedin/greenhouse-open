@@ -602,14 +602,14 @@ class EpochStore:
         """Says what the epoch is. One said to run is held by this process
         (`leases`) until it is said to have ended, by whoever says it."""
         before = self.manifest()
+        # A worker claimed it before anything else, so this refuses only a process
+        # that says an epoch runs with no claim while another works it. Before the
+        # write, so that a refusal changes nothing of that other's epoch.
+        if status == Status.RUNNING and before.status != Status.RUNNING and not self.claim():
+            raise EpochTaken(f"epoch {self.epoch} of {self.run_id} is worked by another")
         manifest = before.model_copy(update={"status": status})
         self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
-        if status == Status.RUNNING:
-            # A worker claimed it before anything else, so this refuses only a
-            # process that says an epoch runs with no claim while another works it.
-            if before.status != Status.RUNNING and not self.claim():
-                raise EpochTaken(f"epoch {self.epoch} of {self.run_id} is worked by another")
-        elif status in ENDED:
+        if status in ENDED:
             leases.release(self.objects, self._home)
 
     def queue_again(self, *, scenario_file: str | None, seconds_per_day: float | None) -> None:
