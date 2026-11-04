@@ -14,6 +14,7 @@ from greenhouse_protocol.contracts.consumer import ObservationBatch
 from greenhouse_protocol.enums import ObservationType, SourceType
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.provenance import RecordSource
+from pydantic import JsonValue
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
@@ -362,13 +363,12 @@ def test_a_paused_playback_is_listed_as_paused_while_it_is_held(simulator: Simul
             every = respond(simulator, "GET", "/api/runs").body
             of_scenario = respond(simulator, "GET", f"/api/scenarios/{SCENARIO}/runs").body
             assert isinstance(every, list) and isinstance(of_scenario, list)
-            return (
-                StoredRun.model_validate(one),
-                *(
-                    next(StoredRun.model_validate(r) for r in runs if r["run_id"] != RUN)
-                    for runs in (every, of_scenario)
-                ),
-            )
+
+            def listed(runs: list[JsonValue]) -> StoredRun:
+                kept = (StoredRun.model_validate(r) for r in runs)
+                return next(r for r in kept if r.run_id != RUN)
+
+            return StoredRun.model_validate(one), listed(every), listed(of_scenario)
 
         assert [(r.status, r.paused) for r in said()] == [(Status.RUNNING, False)] * 3
 
