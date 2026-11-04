@@ -1,6 +1,6 @@
 # P19: The viewer's design system
 
-**Status:** in progress (P19.1 to P19.5 are done): the design below, with decision
+**Status:** in progress (P19.1 to P19.6 are done): the design below, with decision
 [0068](../decisions/0068-the-viewers-design-system-is-its-own-tokens-and-components.md).
 Part of the [simulator roadmap](README.md).
 
@@ -174,7 +174,7 @@ steps replace values and do not change them.
 | Type | `--font-xs`, `sm`, `md`, `lg`, `xl`, `2xl`, `3xl`, `4xl` | 12, 13, 14, 15, 16, 18, 22, 28 |
 | Spacing | `--space-1` to `--space-9` | 2, 4, 6, 8, 12, 16, 24, 32, 64 |
 | Radii | `--radius-sm`, `md`, `lg`, `xl`, `pill` | 4, 6, 8, 12, 999 |
-| Target | `--target` | 44 |
+| Target | `--target`, `--target-compact` | 44, 24 |
 | Focus | `--focus-width`, `--focus-offset` | 3, 2, in `--action` |
 
 On a copy, these replace 288 of the 333 such values written in pixels: 224 of
@@ -331,7 +331,8 @@ it is judged by.
    equal order is an equal cascade. A token step's diff leaves the constant alone.
    Tried on a copy: the 288 values, written as tokens, resolve to today's stylesheet
    byte for byte. A change of the stylesheet meanwhile updates the constant in its
-   own diff. The test goes when selectors start to move (P19.6).
+   own diff. The test goes when selectors start to move (P19.8; P19.6's row says why
+   not sooner).
 2. **Page baselines at no tolerance.** `e2e/visual/pages.spec.ts`, 10 new images
    drawn by CI: the landing page, the runs dialog, the builder's first step, the
    replay and the viewer on `/view?scene=example` with its folds open, each dark
@@ -349,7 +350,7 @@ it is judged by.
    fails its comparison, in every run of the job.
 
 **While they stand.** A change that means to change a look writes the digests
-the test prints, in its own diff, until P19.6 removes them. A change of a page's
+the test prints, in its own diff, until they go. A change of a page's
 look or words takes that page's new images from CI's `visual-results`, as any
 baseline does (decision 0014).
 
@@ -373,9 +374,9 @@ no digest changed.
 | P19.3 | Colour tokens take their role names. | neutral | Done: the digests did not move, and a test refuses a colour token not named for a role. `--chart-*` keep their names, as the design has it |
 | P19.4 | Type, radii and `--target`; the guard on them, with `OFF_SCALE`; the styles' budget raised. | neutral | Done: the digests did not move. 64 values became tokens: 35 font sizes, 18 radii, 11 minimum sizes. `OFF_SCALE` holds 13 declarations, and the compass's text in its viewBox's units stands beside it. The styles went from 28.20 to 29.11 kB; on a copy with spacing's tokens as well, 31.66 kB, so the budget went to 32 kB, as this step was settled to |
 | P19.5 | Spacing, and the guard on it. Theme: `data-theme` and `design/theme.ts`. | neutral | Done: the digests did not move. 227 values in 189 declarations became `--space-*`. `OFF_SCALE` took 23 more declarations, at 10, 14, 18 and 20 px, and `HAIRLINES_AND_OFFSETS` names 5. `--focus-width` and `--focus-offset` hold the two focus rings and the guard holds `outline*`, the chosen option's outline in `OFF_SCALE`. `design/theme.ts` writes `data-theme`; the key a choice is stored under, the default and the QA pages' light theme did not change. The styles weigh 32.72 kB: spacing and the focus tokens, and the columns of a list of runs, which landed beside them. So the budget went to 34 kB, with room for P19.6's `.ds-` rules |
-| P19.6 | `Button`, `LinkButton`, `IconButton`, `.ds-` rules and the guard on them; the reference page, its two baselines and its browser test; the contrast test with today's failures listed. The digest test goes. | neutral: nothing yet uses them | Proposed |
+| P19.6 | `Button`, `LinkButton`, `IconButton`, `.ds-` rules and the guard on them; the reference page, its two baselines and its browser test; the contrast test with today's failures listed. The digest test goes, if the rest holds what it held. | neutral: nothing yet uses them | Done: the digests did not move, as they now leave out `design/components.css`, and they stay. A raw value fails the guards, and a token moved by the least fails the reference page's baselines, each token's draw being held by `e2e/design.spec.ts`; but 206 of the stylesheet's 370 rules match nothing on the pages the no-tolerance baselines draw, so that a token swapped for another, or a property off the scales changed, in one of those fails only the digest. `--target-compact` (24 px) is new, as `OFF_SCALE` may not grow. `FOCUS_RINGS` names the four rings there are until P19.12, and a page's own `:focus-visible` fails. `CONTRAST_FAILURES` lists 18 pairs by name: in the audit's light `--chart-soft`, 2.64 is `--chart-off`'s; its own is 2.70. The page's own rules are written in `QaDesign.tsx`, as with them in a stylesheet the styles weighed 34.33 kB; they weigh 33.88 kB against 34, so that P19.7's rules will need a raise. The scripts weigh 1,758.12 kB against 1,760, the page 3.40 kB of them. `.visually-hidden` moves with the first cut of a stylesheet, P19.8 |
 | P19.7 | `Field`, `StatusChip`, `Notice`, `Fold`, on the reference page. | neutral | Proposed |
-| P19.8 | The landing page: its stylesheet moved in two parts, then its controls moved to components. **After the changes in progress to `RunsDialog.tsx` and the new-run form have merged,** since they touch the same lines. | neutral | Proposed |
+| P19.8 | The digest goes, its rules starting to move. The landing page: its stylesheet moved in two parts, then its controls moved to components. **After the changes in progress to `RunsDialog.tsx` and the new-run form have merged,** since they touch the same lines. | neutral | Proposed |
 | P19.9 | The builder: its stylesheet, then its controls, `compact`. Selectors `e2e/builder.spec.ts` reads change with it, to roles where they can. | neutral | Proposed |
 | P19.10 | The replay: its stylesheet, its transport to `IconButton`, its four icons to `src/icons/`. | neutral | Proposed |
 | P19.11 | The viewer's panels, a folder a pull request; `Fold` first. Baselines of a run's panels are added first, with a fixture of one scenario's answers, as `/view?scene=example` shows few. | neutral | Proposed |
@@ -444,6 +445,6 @@ the status of a failed run reads the same with colour removed.
    pixel for a page's text, the fallback is a comparison of computed styles per
    element: exact and with no images, but blind to layout.
 2. **A change of `font-weight` alone.** The pinned container draws 600 no
-   differently from normal in these images, so they may not see it, and the digest
-   that does goes at P19.6. To settle before P19.6: a test of the components'
-   computed weights, on the reference page, is the small answer.
+   differently from normal in these images, so they may not see it. A component's is
+   held by a test of its computed weight on the reference page (P19.6). A page's own
+   rule is held by the digest, and by nothing once it goes (P19.8).

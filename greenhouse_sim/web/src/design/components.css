@@ -1,6 +1,15 @@
 /* Every `.ds-` rule (decision 0068): no other stylesheet writes one, so that no page
  * restyles a component; a page places one through a class of its own beside it. */
 
+/* A page's ground, its text and the browser's own controls. */
+.ds-page {
+  box-sizing: border-box;
+  min-height: 100%;
+  background: var(--surface-page);
+  color: var(--text);
+  color-scheme: var(--scheme);
+}
+
 .ds-button {
   display: inline-flex;
   align-items: center;

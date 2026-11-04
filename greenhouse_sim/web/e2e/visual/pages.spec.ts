@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import type { Theme } from "../../src/design/theme.ts";
 import { BUILDER_PATH, LANDING_PATH, replayAddress, runsAddress } from "../../src/landing/paths.ts";
+import { designAddress } from "../../src/qa/designPage.ts";
 import { answerAsTheSimulator, DRAWN_AT, EPOCH, RUN_ID, SCENARIO_ID } from "./pageAnswers.ts";
 
 test.skip(process.platform !== "linux", "the baselines are drawn on Linux, in CI's container");
@@ -25,9 +26,11 @@ const FAILS_WITHIN_MS = 3000;
 
 interface Drawn {
   name: string;
-  address: string;
+  address: string | ((theme: Theme) => string);
   /** Waits until the page shows what its baseline holds. */
   shown: (page: Page) => Promise<void>;
+  /** Taller than the view, and compared whole. */
+  fullPage?: boolean;
 }
 
 const PAGES: readonly Drawn[] = [
@@ -77,6 +80,16 @@ const PAGES: readonly Drawn[] = [
       await expect(page.getByText("A house for the baselines").first()).toBeVisible();
     },
   },
+  {
+    // Each token and each component, in each state: with one button focused, whose
+    // ring its image draws (P19.6).
+    name: "design",
+    address: designAddress,
+    fullPage: true,
+    shown: async (page) => {
+      await expect(page.getByRole("button", { name: "focused", exact: true })).toBeFocused();
+    },
+  },
 ];
 
 async function open(page: Page, drawn: Drawn, theme: Theme): Promise<string[]> {
@@ -87,7 +100,7 @@ async function open(page: Page, drawn: Drawn, theme: Theme): Promise<string[]> {
     [STORED_THEME, theme],
   );
   const unanswered = await answerAsTheSimulator(page);
-  await page.goto(drawn.address);
+  await page.goto(typeof drawn.address === "string" ? drawn.address : drawn.address(theme));
   await drawn.shown(page);
   return unanswered;
 }
@@ -101,7 +114,10 @@ for (const theme of THEMES) {
       const held = existsSync(testInfo.snapshotPath(baseline, { kind: "screenshot" }));
       const unanswered = await open(page, drawn, theme);
 
-      await expect(page).toHaveScreenshot(baseline, EXACT);
+      await expect(page).toHaveScreenshot(baseline, {
+        ...EXACT,
+        fullPage: drawn.fullPage === true,
+      });
       expect(unanswered).toEqual([]);
       // A missing baseline is written, and that comparison passes: this fails it,
       // which keeps what was drawn for CI's `visual-results`.
@@ -156,6 +172,38 @@ test.describe("a baseline at no tolerance", () => {
       await page.addStyleTag({ content: await written(page) });
       const matched = await expect(page)
         .toHaveScreenshot(baseline, { ...EXACT, timeout: FAILS_WITHIN_MS })
+        .then(
+          () => true,
+          () => false,
+        );
+
+      expect(matched, `${name} should not match the baseline`).toBe(false);
+    });
+  }
+});
+
+// And what the reference page's baselines are for: a token that changes, though no
+// page may show it, fails them, in its theme.
+test.describe("the reference page's baseline at no tolerance", () => {
+  const design = PAGES.find((drawn) => drawn.name === "design") as Drawn;
+  const changes: readonly (readonly [string, Theme, string])[] = [
+    ["a colour one level", "dark", ":root { --warn: #ffb37f !important; }"],
+    ["a colour one level", "light", ':root[data-theme="light"] { --warn: #8a3b11 !important; }'],
+    ["a colour of a chart one level", "dark", ":root { --data-sky: #2e86c0 !important; }"],
+    ["a size one pixel", "dark", ":root { --space-4: 9px !important; }"],
+  ];
+
+  for (const [name, theme, written] of changes) {
+    test(`fails on ${name}, ${theme}`, async ({ page }, testInfo) => {
+      const baseline = `page-${design.name}-${theme}.png`;
+      const updating = ["all", "changed"].includes(testInfo.config.updateSnapshots);
+      const missing = !existsSync(testInfo.snapshotPath(baseline, { kind: "screenshot" }));
+      test.skip(updating || missing, "compares with the baseline, which it must never write");
+
+      await open(page, design, theme);
+      await page.addStyleTag({ content: written });
+      const matched = await expect(page)
+        .toHaveScreenshot(baseline, { ...EXACT, fullPage: true, timeout: FAILS_WITHIN_MS })
         .then(
           () => true,
           () => false,
