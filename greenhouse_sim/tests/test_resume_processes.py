@@ -171,6 +171,46 @@ def test_an_epoch_whose_resuming_worker_ends_before_taking_it_up_is_still_interr
     assert respond(simulator, "POST", _resume_path(kept)).status == HTTPStatus.OK
 
 
+@pytest.mark.parametrize(
+    "paces",
+    [(20.0, "", 20.0), (20.0, "?seconds_per_day=5", 5.0), (None, "", None)],
+)
+def test_an_epoch_resumed_with_no_pace_goes_on_at_the_one_it_was_asked_for(
+    simulator: Simulator,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    paces: tuple[float | None, str, float | None],
+) -> None:
+    asked_at, query, resumed_at = paces
+    assert simulator.runs is not None
+    kept = queued(simulator, simulator.runs, SHORT, seconds_per_day=asked_at)
+    assert execute(simulator, kept, Stepped([DAY_S])) == Status.INTERRUPTED
+    workers_support.lease_let_go(kept)
+    # A worker reads its pace from the manifest (`scheduler.work`).
+    scheduling = _workers_that_end_at_once(simulator, tmp_path, monkeypatch)
+
+    answered = respond(simulator, "POST", _resume_path(kept) + query)
+
+    assert answered.status == HTTPStatus.OK
+    assert kept.manifest().seconds_per_day == resumed_at
+    _until(lambda: not scheduling.workers(), "the worker to end")
+
+
+def test_an_epoch_given_a_free_driver_on_resuming_goes_as_fast_as_it_computes(
+    simulator: Simulator, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert simulator.runs is not None
+    kept = queued(simulator, simulator.runs, SHORT, seconds_per_day=20.0)
+    assert execute(simulator, kept, Stepped([DAY_S])) == Status.INTERRUPTED
+    workers_support.lease_let_go(kept)
+    scheduling = _workers_that_end_at_once(simulator, tmp_path, monkeypatch)
+
+    scheduling.resume(kept.run_id, kept.epoch, driver=Free())
+
+    assert kept.manifest().seconds_per_day is None
+    _until(lambda: not scheduling.workers(), "the worker to end")
+
+
 def test_two_requests_to_resume_an_epoch_are_never_looking_for_its_producer_together(
     simulator: Simulator, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

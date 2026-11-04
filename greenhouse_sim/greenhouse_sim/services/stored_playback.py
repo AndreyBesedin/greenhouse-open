@@ -94,6 +94,9 @@ class PositionState(BaseModel):
     # Where what the epoch holds begins, and for a fork where it comes from.
     start_s: float = 0.0
     fork: ForkOf | None = None
+    # Whether the epoch it was forked from is still in the store: it can be
+    # deleted, and a fork stands by what it inherited.
+    parent_kept: bool = False
     targets: list[tuple[float, str, float]] = []
     commands: list[tuple[float, str, float]] = []
     crop: list[tuple[float, str, str, str]] = []
@@ -232,6 +235,13 @@ class StoredEpoch:
             break
         return counted
 
+    def parent_kept(self) -> bool:
+        """Whether the epoch this one was forked from is still in the store; an
+        epoch that is no fork has none."""
+        return self.fork is not None and self.fork.epoch in stored_epochs(
+            self.store.objects, self.fork.run_id
+        )
+
     def restore_near(self, at_s: float) -> int | None:
         """Gives the simulator's kept states the nearest checkpoint the store
         holds at or before `at_s`, so that the run's services take its state
@@ -344,6 +354,7 @@ class Position:
             duration_s=epoch.duration_s,
             start_s=epoch.start_s,
             fork=epoch.fork,
+            parent_kept=epoch.parent_kept(),
             targets=list(planned.targeted()),
             commands=list(planned.commanded()),
             crop=list(planned.crop_spelled()),

@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { LANDING_PATH, REPLAY_PATH } from "../src/landing/paths";
+import { unfold } from "./folds";
 
 const DAY_S = 86_400;
 // How long a first day of a run may take to be computed, with the other
@@ -140,6 +141,26 @@ test("a stored run is forked from the moment shown, and stays there to go back t
   await page.getByRole("link", { name: "The run it came from" }).click();
   await expect(page).toHaveURL(parent);
   await expect(page.getByTestId("replay-subtitle")).not.toContainText("forked");
+});
+
+test("a level set in a replay is read beside what the run has, until it is put back", async ({
+  page,
+}) => {
+  await replayOfANewRun(page, "47");
+  await unfold(page, "Equipment");
+  const reading = page.getByTestId("equipment-heater");
+  const slider = page.getByRole("slider", { name: "heater level" });
+  await expect(reading).toHaveText("off");
+
+  await slider.fill("100");
+
+  await expect(slider).toHaveValue("100");
+  await expect(reading).toHaveText("off, set to 100%");
+  await expect(page.getByTestId("equipment-summary")).toHaveText("Equipment: all off");
+
+  await page.getByRole("button", { name: "Put them back" }).click();
+  await expect(slider).toHaveValue("0");
+  await expect(reading).toHaveText("off");
 });
 
 test("an address that names no run, or a run that is not kept, says so and offers the way home", async ({

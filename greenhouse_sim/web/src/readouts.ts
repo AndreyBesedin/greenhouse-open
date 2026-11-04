@@ -1,4 +1,5 @@
 import type { FrameRate } from "./frameMeter";
+import { PERCENT } from "./units";
 import type { Point3 } from "./world";
 
 /** What the HUD shows about the 3D view, sampled a few times a second while
@@ -61,6 +62,16 @@ export function formatRotation(rotation: { w: number; x: number; y: number; z: n
     (axis) => `${axis} ${rotation[axis].toFixed(QUATERNION_DECIMALS)}`,
   );
   return parts.join(", ");
+}
+
+/** What a level set adds to a control's reading of the scene drawn, where that scene
+ * will not take it up, as a stored run's will not: `, set to 100%`, and nothing
+ * for a level that is the one drawn or for none set (P17.8). */
+export function setBeside(set: number | undefined, drawn: number): string {
+  if (set === undefined || Math.round(set * PERCENT) === Math.round(drawn * PERCENT)) {
+    return "";
+  }
+  return `, set to ${Math.round(set * PERCENT)}%`;
 }
 
 /** A property value as the inspector shows it: whole numbers whole, others to the hundredth. */

@@ -58,7 +58,7 @@ export function ReplayHeader({
         {STATUS_LABEL[position.status]}
       </span>
       <span className="replay-spacer" />
-      {position.fork !== null && (
+      {position.fork !== null && position.parent_kept && (
         <a href={replayAddress(position.fork.run_id, position.fork.epoch)} className="replay-back">
           The run it came from
         </a>

@@ -27,6 +27,21 @@ const LOADS = {
 } as unknown as ComponentProps<typeof ScenarioPanels>["loads"];
 
 const SNAPSHOT = { entities: [], greenhouse_id: "box" } as unknown as SceneSnapshot;
+const EQUIPPED = {
+  greenhouse_id: "box",
+  entities: [
+    ...["heater", "fan"].map((id) => ({
+      entity_id: id,
+      kind: "EQUIPMENT",
+      properties: { actuator_id: id, level: 0, does: "heats", heats_w: 10_000 },
+    })),
+    ...["roof_vent", "door"].map((id) => ({
+      entity_id: id,
+      kind: "OPENING",
+      properties: { opening_id: id, open_fraction: 0, aperture_m2: 0 },
+    })),
+  ],
+} as unknown as SceneSnapshot;
 
 function panels(more: Partial<ComponentProps<typeof ScenarioPanels>> = {}) {
   return render(
@@ -151,6 +166,29 @@ describe("a stored run's panels", () => {
     expect(fork.disabled).toBe(true);
     // What was set can still be put back.
     expect(button(rendered.container, "Put them back").disabled).toBe(false);
+  });
+
+  it("reads a level set in a replay beside what the scene drawn has, as it will not take it up", () => {
+    const set = { heater: 1, roof_vent: 0.6 };
+    rendered = panels({
+      replayed: true,
+      snapshot: EQUIPPED,
+      steering: { at: 0, asked: set, onLevels: vi.fn() },
+      forkLevels: { asked: set, onFork: vi.fn(), onPutBack: vi.fn() },
+    });
+
+    expect(said(rendered.container, "equipment-heater")).toBe("off, set to 100%");
+    expect(said(rendered.container, "equipment-fan")).toBe("off");
+    expect(said(rendered.container, "opening-roof_vent")).toBe("0%, 0 m², set to 60%");
+    expect(said(rendered.container, "opening-door")).toBe("0%, 0 m²");
+    rendered.unmount();
+
+    // Out of a replay, the scene catches up with what was asked.
+    rendered = panels({
+      snapshot: EQUIPPED,
+      steering: { at: 0, asked: set, onLevels: vi.fn() },
+    });
+    expect(said(rendered.container, "equipment-heater")).toBe("off");
   });
 
   it("names the levels set as the panels do, not by their identifiers", () => {

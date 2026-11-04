@@ -413,7 +413,7 @@ const RESOLVED_DIGESTS = {
 type ThemeName = keyof typeof RESOLVED_DIGESTS;
 const COMMENT = /\/\*[\s\S]*?\*\//g;
 const ROOT_BLOCK = /:root([^{]*)\{([^}]*)\}/g;
-const LIGHT_ROOT = /="light"\]\s*$/;
+const LIGHT_ROOT = /\[data-theme="light"\]\s*$/;
 const CUSTOM_PROPERTY = /(--[\w-]+)\s*:\s*([^;]*)/g;
 
 /** Each custom property's value in `theme`: `:root`'s, and the light block's over it. */
@@ -514,7 +514,7 @@ describe("the stylesheet with its tokens resolved (P19.1)", () => {
   it("does not see a value written as a token, a token's name, comments or white space", () => {
     const same = `
       :root { --space-3: 8px; --gap-small: 4px; --text: #111111; --pad: 12px; }
-      :root[data-panels="light"] { --text: #eeeeee; }
+      :root[data-theme="light"] { --text: #eeeeee; }
       .a {
         padding: var(--space-3) var(--pad);
         /* Its colour. */
