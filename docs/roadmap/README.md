@@ -134,9 +134,9 @@ A project's QA and a manual walk end the same way, in this order:
 3. **Plan the rest,** in the report, the project's clean-up or a project of its own.
 4. **Release.** Work that adds a feature starts again after it.
 
-The last QA is [the walk of 2026-11-04](qa-2026-11-04.md). Before its release: stopping and
-deleting a run a playback left behind, a replay saying what is the case for such a run, a
-*Delete* on the start page's list, and a fork that asks first.
+The last QA is [the walk of 2026-11-04](qa-2026-11-04.md). Before its release, what is left:
+a file from the builder's *Export* opening when it is uploaded from the start page, and
+the walk again on what was fixed.
 
 ## Order of work
 
