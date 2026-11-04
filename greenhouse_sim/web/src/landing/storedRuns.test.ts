@@ -32,6 +32,7 @@ function run(more: Partial<StoredRun> = {}): StoredRun {
     size_bytes: 8 * 1024 * 1024,
     start_s: 0,
     fork: null,
+    stopping: false,
     damaged: false,
     days_computed: 0,
     cpu_s: null,

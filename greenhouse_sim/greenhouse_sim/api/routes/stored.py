@@ -21,7 +21,11 @@ them (P17.4, decision 0065).
                                           scenario or of many
     POST /api/runs/{run}/epochs/{n}/stop  an epoch waiting for a worker or being
                                           executed, ended: interrupted, with what
-                                          it had committed
+                                          it had committed. A worker this server
+                                          did not start is asked through the store:
+                                          the epoch answered says it is `stopping`,
+                                          and it reads interrupted once its worker
+                                          has looked
     POST /api/runs/{run}/epochs/{n}/resume?seconds_per_day=10
                                           an interrupted epoch, or one still
                                           running that no one works, carried on

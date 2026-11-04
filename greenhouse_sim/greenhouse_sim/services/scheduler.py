@@ -19,6 +19,11 @@ An epoch whose worker ends without ending it, killed or lost, is told
 carried on from there (`resume`, P17.9): queued once more, taken by a worker
 that resumes it. An epoch still `queued` or `running` when the producer that
 started it is gone is found at startup (`interrupted.mark`).
+
+A worker this scheduler started is stopped by a signal, and is gone when the
+answer is given. One it did not start, such as a worker left computing by a
+server that was killed, is out of reach of any signal and may be on another
+machine: it is asked through the store, and stops at its next look.
 """
 
 import logging
@@ -34,8 +39,16 @@ from typing import Final
 from greenhouse_sim.services import forks, interrupted, scenario_files
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.interventions import Asked
+from greenhouse_sim.services.playback import plays_epoch
 from greenhouse_sim.services.resources import this_process
-from greenhouse_sim.services.run_store import EpochStore, FolderStore, Status, StoredRun, stored_run
+from greenhouse_sim.services.run_store import (
+    ENDED,
+    EpochStore,
+    FolderStore,
+    Status,
+    StoredRun,
+    stored_run,
+)
 from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.workers import (
@@ -229,9 +242,10 @@ class Scheduler:
             return [(job.run_id, job.epoch) for job in self._waiting]
 
     def cancel(self, run_id: str, epoch: int) -> StoredRun:
-        """Ends an epoch this scheduler runs or holds: one waiting is taken
-        out of the queue, one being executed has its worker ended, and both
-        are told `interrupted`, with what they had committed."""
+        """Ends an epoch: one waiting here is taken out of the queue and one
+        being executed here has its worker ended, both told `interrupted` with
+        what they had committed. Any other is left to `_stop_elsewhere`, and may
+        be on its way when this answers, as the epoch answered says."""
         key = (run_id, epoch)
         with self._lock:
             waiting = next((j for j in self._waiting if (j.run_id, j.epoch) == key), None)
@@ -243,8 +257,29 @@ class Scheduler:
                 self._end(self._running[key])
                 self._reap()
             else:
-                raise NotFound(f"epoch {epoch} of run {run_id} is neither waiting nor executed")
+                self._stop_elsewhere(run_id, epoch)
         return stored_run(self._objects, run_id, epoch)
+
+    def _stop_elsewhere(self, run_id: str, epoch: int) -> None:
+        """Under the lock: an epoch no worker of this scheduler has. One no one
+        works is told `interrupted` now. One whose worker may live is asked to
+        stop through the store, which is all there is between them, and is told
+        `interrupted` if that worker dies before it looks. A playback here is the
+        exception: it has a stop of its own, and does not look."""
+        if epoch not in stored_epochs(self._objects, run_id):
+            raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
+        kept = EpochStore(self._objects, run_id, epoch)
+        status = kept.manifest().status
+        if status in ENDED:
+            raise Conflict(f"epoch {epoch} of {run_id} is {status}: it is not being computed")
+        if plays_epoch(self._simulator, run_id, epoch):
+            raise Conflict(
+                f"epoch {epoch} of {run_id} is played in the viewer, with no worker: "
+                "it stops with its playback"
+            )
+        if interrupted.mark_epoch(self._simulator, run_id, epoch) is None:
+            kept.ask_to_stop()
+            interrupted.watch_epoch(self._simulator, run_id, epoch)
 
     def close(self) -> None:
         """Ends every worker and takes every epoch waiting out of the queue,
@@ -396,5 +431,5 @@ def fork(
 
 
 def cancel(simulator: Simulator, run_id: str, epoch: int) -> StoredRun:
-    """An epoch the simulator's workers run or hold, ended."""
+    """An epoch ended, or asked to end (`Scheduler.cancel`)."""
     return of(simulator).cancel(run_id, epoch)

@@ -1,15 +1,16 @@
 """Epochs found in the store that no one works (P17.9, decision 0065).
 
 A producer that crashed leaves its epoch `running` in the store, or `queued` if
-it never took it up. At startup, and when a person asks to carry one on, such
-an epoch is told `interrupted` with what it had committed, so that it can be
+it never took it up. At startup, and when a person asks to carry one on or to
+stop it, such an epoch is told `interrupted` with what it had committed, so that it can be
 resumed (`workers.resume`) and so that nothing reads it as still on its way.
 
 An epoch is worked if a process holds its lease (`leases`), or this simulator's
 scheduler holds it in its queue; a queued epoch is not leased, and one just
 asked for is given `leases.EXPIRES_AFTER_S` seconds to be taken up. Nothing else
 is believed: the worker of a server that was killed is a process of its own and
-writes the epoch still, and it is no one's to take over.
+writes the epoch still, and it is no one's to take over, though it can be asked
+to stop (`EpochStore.ask_to_stop`).
 
 A server started within that time of a crash finds the lease still fresh, so the
 epochs it leaves alone at startup are looked at again until each has ended or
@@ -86,6 +87,14 @@ def watch(simulator: Simulator) -> None:
         ).start()
 
 
+def watch_epoch(simulator: Simulator, run_id: str, epoch: int) -> None:
+    """Looks at an epoch again until it has ended or has been told `interrupted`:
+    one asked to stop, whose worker may die before it reads that."""
+    threading.Thread(
+        target=_watch, args=(simulator, [(run_id, epoch)]), name="epoch asked to stop", daemon=True
+    ).start()
+
+
 def _watch(simulator: Simulator, left: list[tuple[str, int]]) -> None:
     objects = simulator.runs
     while left and objects is not None and not simulator.closed:
@@ -93,7 +102,13 @@ def _watch(simulator: Simulator, left: list[tuple[str, int]]) -> None:
         if simulator.closed:
             return
         try:
-            left = [key for key in left if _tell(simulator, objects, key[0], key[1], None)[1]]
+            # One deleted meanwhile, having ended, is no longer to be looked at.
+            left = [
+                key
+                for key in left
+                if key[1] in stored_epochs(objects, key[0])
+                and _tell(simulator, objects, key[0], key[1], None)[1]
+            ]
         except Exception:
             # The next look tries again; what is left alone stays so meanwhile.
             logger.exception("the epochs left alone at startup could not be looked at again")
