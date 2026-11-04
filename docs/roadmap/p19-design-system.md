@@ -1,6 +1,6 @@
 # P19: The viewer's design system
 
-**Status:** accepted: the design below, with decision
+**Status:** in progress (P19.1 to P19.3 are done): the design below, with decision
 [0068](../decisions/0068-the-viewers-design-system-is-its-own-tokens-and-components.md).
 Part of the [simulator roadmap](README.md).
 

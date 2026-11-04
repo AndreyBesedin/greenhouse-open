@@ -43,6 +43,10 @@ from greenhouse_sim.services.runs import Commanded, RunPlan, RunRequest
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.geometry import Vector3
 
+sys.path.insert(0, str(Path(__file__).parent))
+
+from short_runs import cut, simulator_of
+
 ROOT = Path(__file__).resolve().parents[1]
 QA_FILE = ROOT / "web" / "public" / "scenes" / "qa-reference-greenhouse.json.gz"
 SCENARIO = "reference_greenhouse"
@@ -280,6 +284,40 @@ def test_the_kept_views_draw_what_they_say() -> None:
     # The young crop bears no fruit; on the opening day the first is red.
     assert moments["young"]["probes"]["fruits"] == 0
     assert moments["noon"]["probes"]["red_fruits"] > 0
+
+
+def test_a_moments_views_are_what_its_run_gives_branched_as_it_says() -> None:
+    """What the kept views are made of, on a short run of the same house and
+    season, the first day's noon and its branches an hour before: each branch
+    differs from the run where it says it does, as the kept moments do."""
+    noon_s = 12 * HOUR_S + 40 * MINUTE_S
+    branch_s = noon_s - HOUR_S
+    fans_off = tuple((branch_s, f"fan_{side}", 0.0) for side in ("left", "right"))
+    vents_shut = tuple((branch_s, f"roof_vent_{index}", 0.0) for index in (1, 2, 3))
+    velocity, temperature = AirQuantity.VELOCITY, AirQuantity.TEMPERATURE
+    with simulator_of(cut(SCENARIO, days=1, plants=(1, 1), season=True)) as simulator:
+        noon, noon_probes = _moment(
+            simulator, Moment(noon_s, channels=(velocity, temperature), openings=True)
+        )
+        off, off_probes = _moment(simulator, Moment(noon_s, fans_off, channels=(velocity,)))
+        shut, shut_probes = _moment(
+            simulator, Moment(noon_s, vents_shut, channels=(temperature,), openings=True)
+        )
+
+    assert noon["crop_day"] == off["crop_day"] == shut["crop_day"] == 0
+    assert noon["weather"] == off["weather"] == shut["weather"]
+    assert noon_probes["sun_elevation_deg"] > 0.0
+    # The fans off, the jet stops; the house as one volume does not feel it.
+    assert noon_probes["jet_m_s"] > off_probes["jet_m_s"] == 0.0
+    assert off_probes["house_air_c"] == noon_probes["house_air_c"]
+    assert noon["house"] != off["house"]
+    # The vents shut, they pass nothing, and the house's air feels it.
+    assert noon_probes["vents_exchange_m3_s"] > shut_probes["vents_exchange_m3_s"] == 0.0
+    assert shut_probes["house_air_c"] != noon_probes["house_air_c"]
+    assert "openings" not in off and "openings" in shut
+    # Each draws only the field's channels it says, of the run it branches.
+    assert [channel["quantity"] for channel in off["field"]["channels"]] == [velocity.value]
+    assert [channel["quantity"] for channel in shut["field"]["channels"]] == [temperature.value]
 
 
 @pytest.mark.slow

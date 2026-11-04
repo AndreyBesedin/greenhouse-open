@@ -101,13 +101,8 @@ def test_the_all_off_run_keeps_the_doors_and_vents_as_asked(simulator: Simulator
             400,
             "climate_box has no equipment 'boiler'",
         ),
-        (
-            "tomato_compartment/climate/probes?probes=1:1:1",
-            404,
-            "scenario 'tomato_compartment' has no climate: it has no equipment",
-        ),
     ],
-    ids=["outside", "not a point", "after the run", "unknown equipment", "no climate"],
+    ids=["outside", "not a point", "after the run", "unknown equipment"],
 )
 def test_probes_a_run_cannot_read_are_refused(
     simulator: Simulator, path: str, status: int, error: str

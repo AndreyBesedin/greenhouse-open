@@ -198,7 +198,6 @@ def test_the_api_serves_the_glazing_at_a_moment(simulator: Simulator) -> None:
     front = next(s for s in body["surfaces"] if s["surface_id"] == "end_wall_front")
     # The heater stands at the back.
     assert back["surface_c"] > front["surface_c"] > body["outside_c"]
-    assert respond(simulator, "GET", "/api/scenarios/sensor_lab/climate/glazing").status == 404
 
 
 def test_its_weathers_wind_reaches_the_glass() -> None:

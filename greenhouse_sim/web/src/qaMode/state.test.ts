@@ -49,7 +49,9 @@ describe("what each process of a run holds", () => {
       latestCommands: [{ timeS: 0, actuatorId: "heater", level: 1 }],
       cameras: [{ sensorId: "front_camera", frames: 0, latest: null }],
     });
-    expect(parseRunState({ ...SERVED, house_air: null }).houseAir).toBeNull();
+    expect(() => parseRunState({ ...SERVED, house_air: null })).toThrow(
+      "the run's state is not what the viewer expects",
+    );
     expect(() => parseRunState({ ...SERVED, latest_commands: [{ time_s: 0 }] })).toThrow(
       "the run's state is not what the viewer expects",
     );
@@ -86,8 +88,7 @@ describe("what each process of a run holds", () => {
       { id: "co2", stale: false, text: "co2: waiting" },
     ]);
     expect(said.cameras).toEqual([{ id: "front_camera", text: "front_camera: 0 frames" }]);
-    const bare = describeRunState(parseRunState({ ...SERVED, house_air: null, levels: {} }));
-    expect(bare.houseAir).toBe("none: without equipment the run has no climate");
+    const bare = describeRunState(parseRunState({ ...SERVED, levels: {} }));
     expect(bare.levels).toBe("none");
   });
 });

@@ -116,8 +116,7 @@ export function SourceChooser({
             })
           }
           onFollow={(scenarioId) =>
-            // Its climate drawn, if its layout's equipment makes one; or
-            // none, for a scenario whose airflow is its own.
+            // Its climate drawn; or none, if its fields cannot be listed.
             void loadFieldNames(scenarioId).then(({ names }) =>
               choose({
                 kind: "scenario",
