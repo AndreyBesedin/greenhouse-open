@@ -77,7 +77,7 @@ def mark(simulator: Simulator, *, now: float | None = None) -> list[StoredRun]:
 def watch(simulator: Simulator) -> None:
     """Scans the store, and looks again at the epochs it left alone, in a
     thread of its own, until each has ended, has been told `interrupted` or the
-    simulator is closed: a server started soon after a crash finds the lease
+    simulator is closed: a server started soon after a crash finds the claim
     of the epoch it left fresh, and no start would find it again."""
     left = scan(simulator).left
     if left:
