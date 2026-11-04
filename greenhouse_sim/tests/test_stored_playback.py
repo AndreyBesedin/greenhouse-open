@@ -14,8 +14,12 @@ from typing import Final
 import pytest
 from greenhouse_protocol.observation import Observation
 
+from greenhouse_sim.climate.day import window_start
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.services.climate_readings import house_air
+from greenhouse_sim.services.climate_runs import climate_day
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.services.fields import climate_key
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand, delivered
 from greenhouse_sim.services.replay import day_probes
 from greenhouse_sim.services.run_store import (
@@ -358,6 +362,23 @@ def test_no_checkpoint_is_restored_before_the_first_is_kept(
 def _kept_days(simulator: Simulator) -> list[int]:
     """The days of the states kept for the stored scenario's run."""
     return sorted(kept.day for _, kept in simulator.states.values() if kept.house[0] == STORED)
+
+
+def test_a_seek_to_a_days_end_charts_that_day_from_its_checkpoint(kept: Kept) -> None:
+    moment = 2 * DAY_S
+    with Simulator() as other:
+        _register(other)
+        position = other.positions.open(other, kept.epochs.objects, kept.run_id, kept.epoch)
+        position.seek(moment)
+        # The day it ends, and the one it starts.
+        assert _kept_days(other) == [1, 2]
+        run = position.epoch.run()
+        trace = house_air(other, run, moment)
+        house = climate_day(other, climate_key(other, run)).house
+        # Nothing of the days before the one it charts was worked out.
+        assert [m for m in house._moments if 0.0 < m < window_start(DAY_S)] == []
+        assert trace.times_s[0] == DAY_S
+        assert trace.controlled == house_air(kept.simulator, run, moment).controlled
 
 
 def test_seeking_restores_the_nearest_checkpoint_and_draws_the_straight_runs_moment(

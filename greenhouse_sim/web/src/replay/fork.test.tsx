@@ -19,7 +19,12 @@ const RUN = {
   progress: 1 / 3,
   created_at: null,
   size_bytes: 10,
+  stopping: false,
   damaged: false,
+  days_computed: 0,
+  cpu_s: null,
+  peak_memory_bytes: null,
+  reason: null,
   start_s: DAY_S,
   fork: {
     run_id: "run-1",

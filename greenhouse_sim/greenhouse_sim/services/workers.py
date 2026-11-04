@@ -25,7 +25,8 @@ the log of changes given to the epoch applied again, each at the moment it was
 given (`Playback.resume_at`).
 
 A change asked of the epoch reaches its worker through the store: the worker
-looks between its moments (`Playback.take_changes`).
+looks between its moments (`Playback.take_changes`). So does a stop, from whoever
+cannot signal the worker (`EpochStore.ask_to_stop`): it ends as if told to stop.
 
 An epoch is started with what its worker needs (decision 0067): its scenario's
 file, if the scenario is not packaged, and its pace. One written before it kept
@@ -62,6 +63,7 @@ from greenhouse_sim.services.run_store import (
     ObjectStore,
     Status,
     decompress,
+    failure_reason,
 )
 from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.runs import RunRequest
@@ -142,9 +144,10 @@ def execute(
     stop: threading.Event | None = None,
 ) -> Status:
     """Works `epoch` out into its store as `driver` advances it, and says how
-    it ended. Told to `stop` between moments, it ends `interrupted`. An epoch
-    is executed once: one that has begun is refused (`resume` carries it on),
-    as is one whose run is not the one its manifest names."""
+    it ended. Told to `stop` between moments, or asked to through the store,
+    it ends `interrupted`. An epoch is executed once: one that has begun is
+    refused (`resume` carries it on), as is one whose run is not the one its
+    manifest names."""
     manifest = epoch.manifest()
     if manifest.status != Status.QUEUED or epoch.commits():
         raise Conflict(f"epoch {epoch.epoch} of {epoch.run_id} has begun: it is {manifest.status}")
@@ -167,7 +170,9 @@ def check_resumable(epoch: EpochStore) -> float:
     """How far the epoch is kept, in seconds, if it can be carried on from
     there; else why it cannot, as a conflict. An epoch is carried on from the
     checkpoint of its last commit, which must be one this build reads, for the
-    run its scenario still is."""
+    run its scenario still is. All its commits name must be there: a list counts
+    folders and can miss a lost file, and an epoch carried on past one would stay
+    one that cannot be read whole, its days worked out for nothing."""
     status = epoch.manifest().status
     if status not in (Status.INTERRUPTED, Status.QUEUED):
         raise Conflict(
@@ -176,6 +181,11 @@ def check_resumable(epoch: EpochStore) -> float:
     if epoch.worked() and not epoch.claimed():
         raise Conflict(f"epoch {epoch.epoch} of {epoch.run_id} is worked by a process still")
     commits = epoch.commits()
+    if epoch.damaged(commits):
+        raise Conflict(
+            f"files of run {epoch.run_id}, epoch {epoch.epoch} are missing: it cannot be "
+            "carried on, and its run is to be asked for again as a new epoch"
+        )
     if not commits:
         return epoch.start_s()
     last = commits[-1]
@@ -303,9 +313,9 @@ def _drive(
                 _days(run, from_s) if isinstance(driver, Free) else driver.barriers,
                 stopping,
             )
-    except Exception:
+    except Exception as error:
         logger.exception("the epoch %s of %s failed", epoch.epoch, epoch.run_id)
-        epoch.set_status(Status.FAILED)
+        epoch.set_status(Status.FAILED, reason=failure_reason(error))
     status = epoch.manifest().status
     if status == Status.RUNNING:
         status = Status.INTERRUPTED
@@ -329,7 +339,7 @@ def _stepped(
     until the run ends (the epoch is finished by the last day written), the
     barriers do, or it is told to stop."""
     for barrier in barriers:
-        if stopping.is_set():
+        if stopping.is_set() or epoch.stop_asked():
             return
         run.take_changes()
         run.step_to(barrier)
@@ -344,7 +354,7 @@ def _paced(run: Playback, epoch: EpochStore, stopping: threading.Event) -> None:
     run.begin()
     try:
         run.command(PlaybackCommand.PLAY)
-        while epoch.manifest().status not in ENDED and not stopping.is_set():
+        while not (epoch.manifest().status in ENDED or stopping.is_set() or epoch.stop_asked()):
             run.take_changes()
             stopping.wait(WAIT_STEP_S)
     finally:

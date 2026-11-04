@@ -182,10 +182,56 @@ export const STORED_RUN_SCHEMA = {
       ],
       "default": null
     },
+    "stopping": {
+      "default": false,
+      "title": "Stopping",
+      "type": "boolean"
+    },
     "damaged": {
       "default": false,
       "title": "Damaged",
       "type": "boolean"
+    },
+    "days_computed": {
+      "default": 0,
+      "title": "Days Computed",
+      "type": "number"
+    },
+    "cpu_s": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cpu S"
+    },
+    "peak_memory_bytes": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Peak Memory Bytes"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
     }
   },
   "required": [
@@ -202,7 +248,12 @@ export const STORED_RUN_SCHEMA = {
     "size_bytes",
     "start_s",
     "fork",
-    "damaged"
+    "stopping",
+    "damaged",
+    "days_computed",
+    "cpu_s",
+    "peak_memory_bytes",
+    "reason"
   ],
   "title": "StoredRun",
   "type": "object"

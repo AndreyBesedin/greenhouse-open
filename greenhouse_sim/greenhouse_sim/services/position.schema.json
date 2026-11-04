@@ -185,6 +185,11 @@
       ],
       "default": null
     },
+    "parent_kept": {
+      "default": false,
+      "title": "Parent Kept",
+      "type": "boolean"
+    },
     "targets": {
       "default": [],
       "items": {
@@ -271,6 +276,7 @@
     "duration_s",
     "start_s",
     "fork",
+    "parent_kept",
     "targets",
     "commands",
     "crop"

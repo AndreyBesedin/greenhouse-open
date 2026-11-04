@@ -50,7 +50,7 @@ takes one checks first that it is still there.
 - [ ] A saved draft is not on the start page.
 - [x] `GET /playback` shows a red 404 in the console on a first run. None in the third
   walk: not on `/view` of any of the seven scenarios, nor on a first run from the dialog.
-- [ ] Close drops the keyboard focus. Fix in #528. A dialog opened by the address has
+- [x] Close drops the keyboard focus. Fix in #528. A dialog opened by the address has
   nothing to give focus back to, by Close or Escape.
 - [x] `/#runs=x` stays in the address, and `/#run=no_such` shows nothing.
 - [ ] Run rows are not aligned: in a dialog *Replay* and *Follow* sit above *Stop* and
@@ -92,7 +92,7 @@ panels in a replay.
 - [x] **Medium: forks cannot be told apart on the start page or in the runs dialog.**
   They read as rows of "Seed 143 · epoch N". A fork's row now says what it came from,
   as its replay's header does.
-- [ ] **Low to medium: a fork's controls stay enabled at a run's end.** "Fork from here
+- [x] **Low to medium: a fork's controls stay enabled at a run's end.** "Fork from here
   with these levels" and the targets form can still be used, and the refusal gives the
   end in seconds ("the run ends at 1209600 s"). Fix in #520.
 - [x] Each page load of a followed house with no climate sends one burst of 404s before
@@ -126,13 +126,13 @@ pale text.
   beside the others, and while they ran a seek went unanswered for over 3 s and the
   panels read "mixing" for over 40 s. The line's words are fixed in #519; the cost is not, and
   keeping the air in a checkpoint is a change to the service.
-- [ ] **A run whose server was killed cannot be stopped.** A server ended by `kill` leaves its
+- [x] **A run whose server was killed cannot be stopped.** A server ended by `kill` leaves its
   workers computing, by design (P17.9, a lease). The next server lists the run as Running, and
   its *Stop* says "No worker of this simulator has this run. One the viewer plays stops with
   its playback, and one whose worker is gone soon reads Interrupted", which does not happen
   while the worker lives; *Delete* says to stop it first. Nothing in the viewer ends it: the run
-  goes on to its end, or its process is killed. Ctrl-C ends the workers as it should. Whether a
-  stop should reach such a worker, as a change does, through a request in the store, is open.
+  goes on to its end, or its process is killed. Ctrl-C ends the workers as it should. A stop
+  now reaches such a worker through a request in the store, as a change does.
 - [x] **A replay left open across a restart stood still in silence.** It read "Running" and
   asked for its position once a second, 40 404s in 40 s. Fix in #516.
 
@@ -143,14 +143,14 @@ pale text.
 - [ ] A run's date is its date in UTC: at 00:25 on 4 November, an hour ahead of UTC, the rows
   say "Nov 3".
   A test holds UTC, so it may have been meant.
-- [ ] A disabled *Play* or *Fork from here* looks as it does enabled. Fix in #521.
-- [ ] A replay's schedule counts days from 0 under a timeline that counts from 1: at Day 40,
+- [x] A disabled *Play* or *Fork from here* looks as it does enabled. Fix in #521.
+- [x] A replay's schedule counts days from 0 under a timeline that counts from 1: at Day 40,
   01:01, "Next at day 39, 8 h 00 min". Fix in #523. By the code, a sensor's reading and a camera's
   frame are said the same way in a replay; not walked.
-- [ ] A fork's timeline has no label where it begins. Fix in #524.
-- [ ] The runs dialog keeps "still being computed: stop it, then delete it" up after Stop,
+- [x] A fork's timeline has no label where it begins. Fix in #524.
+- [x] The runs dialog keeps "still being computed: stop it, then delete it" up after Stop,
   beside a row reading Interrupted. Fix in #525.
-- [ ] The note under the levels set names their identifiers ("Set roof_vent_1"). Fix in #527.
+- [x] The note under the levels set names their identifiers ("Set roof_vent_1"). Fix in #527.
 - [ ] The address of a run with files missing still opens its replay, which says Finished. The
   lists offer no link to it, so this takes an address kept from before.
 - [ ] A fork in another layout is another run's epoch, and can read "epoch 0 · forked from

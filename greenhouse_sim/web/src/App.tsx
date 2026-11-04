@@ -13,6 +13,7 @@ import { sceneOverlaysDrawn } from "./debug/overlays";
 import { ScalarLegend } from "./debug/ScalarLegend";
 import { useDisplayOptions } from "./debug/useDisplayOptions";
 import { useSceneOverlays } from "./debug/useSceneOverlays";
+import { useTheme } from "./design/theme";
 import { arrowSpacing } from "./fields/arrows";
 import { FieldArrows } from "./fields/FieldArrows";
 import { FieldLegend } from "./fields/FieldLegend";
@@ -30,7 +31,6 @@ import { MovePanel } from "./MovePanel";
 import { PanelSide } from "./PanelSide";
 import { PlaybackPanel } from "./PlaybackPanel";
 import { usePanelFolds } from "./panelFolds";
-import { usePanelTheme } from "./panelTheme";
 import { cropAction } from "./plan/plan";
 import { useSteering } from "./plan/useSteering";
 import { LabPanels } from "./plants/LabPanels";
@@ -115,7 +115,7 @@ export function App({
   // the choice of what to show open (#201).
   const [chooseFirst] = useState(() => searchFor(addressed) === "");
   // How the panels look (#208): dark unless the person chose light.
-  const [panelTheme, setPanelTheme] = usePanelTheme();
+  const [theme, setTheme] = useTheme();
   // The sides whose panels are folded to a stripe at the view's edge (#304).
   const [folded, toggleFold, unfold] = usePanelFolds();
   // Whether the viewer shows what the simulator knows and a policy never
@@ -300,6 +300,9 @@ export function App({
     startAfresh(source, next);
   }
 
+  // The empty grid, asked for: a scene on its way, or one that could not be
+  // drawn, is not it.
+  const emptyView = scene.status === "none";
   const shownSnapshot = scene.status === "loaded" ? scene.snapshot : null;
   const grown = crop.status === "loaded" ? crop.snapshot : null;
   const snapshot = useDrawnSnapshot(shownSnapshot, grown, glazing, openingFlows);
@@ -411,6 +414,7 @@ export function App({
     <main className={replay === undefined ? "viewer" : "viewer viewer-embedded"}>
       <Viewport
         snapshot={snapshot}
+        emptyView={emptyView}
         presetRequest={presetRequest}
         selectedId={selectedId}
         colouring={display.colouring}
@@ -449,8 +453,8 @@ export function App({
             failures={failures}
             chooseFirst={chooseFirst}
             embedded={replay !== undefined}
-            theme={panelTheme}
-            onTheme={setPanelTheme}
+            theme={theme}
+            onTheme={setTheme}
             onSource={chooseSource}
           >
             {snapshot !== null && (
@@ -679,6 +683,7 @@ export function App({
                 cfdBoundaries: cfd.status === "loaded",
                 dimensions: display.showDimensions && snapshot !== null,
                 kinds: kindsShown,
+                emptyView,
                 axesLengthM,
               }}
             />

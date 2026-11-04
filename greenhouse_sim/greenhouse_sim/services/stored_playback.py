@@ -37,7 +37,7 @@ from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.outcome import ActionOutcome
 from pydantic import BaseModel, ConfigDict
 
-from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.core.clock import DAY_S, day_start, days_ended
 from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.playback import DEFAULT_SECONDS_PER_DAY, check_pace, delivered
@@ -94,6 +94,9 @@ class PositionState(BaseModel):
     # Where what the epoch holds begins, and for a fork where it comes from.
     start_s: float = 0.0
     fork: ForkOf | None = None
+    # Whether the epoch it was forked from is still in the store: it can be
+    # deleted, and a fork stands by what it inherited.
+    parent_kept: bool = False
     targets: list[tuple[float, str, float]] = []
     commands: list[tuple[float, str, float]] = []
     crop: list[tuple[float, str, str, str]] = []
@@ -232,12 +235,30 @@ class StoredEpoch:
             break
         return counted
 
+    def parent_kept(self) -> bool:
+        """Whether the epoch this one was forked from is still in the store; an
+        epoch that is no fork has none."""
+        return self.fork is not None and self.fork.epoch in stored_epochs(
+            self.store.objects, self.fork.run_id
+        )
+
     def restore_near(self, at_s: float) -> int | None:
         """Gives the simulator's kept states the nearest checkpoint the store
         holds at or before `at_s`, so that the run's services take its state
         over instead of working its days out again; the day it is of, or none
         if there is none, or it was made by another version of the scenario or
-        its models (then the days are worked out, as they were)."""
+        its models (then the days are worked out, as they were). A moment that
+        ends its day is charted through that day (`day_start`), which began a
+        checkpoint earlier: that one is given too, or the day's first moment
+        would be worked out from the run's start."""
+        charted_from = day_start(at_s)
+        if charted_from != days_ended(at_s) * DAY_S:
+            self._restored(charted_from)
+        return self._restored(at_s)
+
+    def _restored(self, at_s: float) -> int | None:
+        """Gives the simulator's kept states the checkpoint `restore_near`
+        says, and says which day it is of."""
         found = self.store.checkpoint_at(at_s)
         if found is None or found[1] != CHECKPOINT_TYPE:
             return None
@@ -333,6 +354,7 @@ class Position:
             duration_s=epoch.duration_s,
             start_s=epoch.start_s,
             fork=epoch.fork,
+            parent_kept=epoch.parent_kept(),
             targets=list(planned.targeted()),
             commands=list(planned.commanded()),
             crop=list(planned.crop_spelled()),

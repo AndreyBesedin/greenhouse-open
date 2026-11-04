@@ -62,6 +62,7 @@ const GROUND_SIZE_M = 200;
 
 export function Viewport({
   snapshot,
+  emptyView = false,
   presetRequest,
   selectedId = null,
   colouring = null,
@@ -80,6 +81,10 @@ export function Viewport({
   children = null,
 }: {
   snapshot: SceneSnapshot | null;
+  /** Without a scene, draws the empty view's axes and cube (`emptyView.ts`):
+   * only when no scene was asked for, since they say nothing of one on its way
+   * or one that could not be drawn. */
+  emptyView?: boolean;
   presetRequest: PresetRequest | null;
   selectedId?: string | null;
   colouring?: Colouring | null;
@@ -207,15 +212,7 @@ export function Viewport({
       <group rotation={WORLD_TO_VIEWER_ROTATION}>
         {/* biome-ignore lint/a11y/noStaticElementInteractions: a Three.js group in the canvas, not a page element. */}
         <group onClick={handlers.pick} ref={casters}>
-          {snapshot === null ? (
-            <>
-              <axesHelper args={[PLACEHOLDER_AXES_LENGTH_M]} />
-              <mesh position={CUBE_CENTRE}>
-                <boxGeometry args={[CUBE_SIZE_M, CUBE_SIZE_M, CUBE_SIZE_M]} />
-                <meshStandardMaterial color={CUBE_COLOR} />
-              </mesh>
-            </>
-          ) : (
+          {snapshot !== null ? (
             <SceneView
               snapshot={snapshot}
               selectedId={selectedId}
@@ -224,6 +221,16 @@ export function Viewport({
               byCategory={byCategory}
               nudged={nudged}
             />
+          ) : (
+            emptyView && (
+              <>
+                <axesHelper args={[PLACEHOLDER_AXES_LENGTH_M]} />
+                <mesh position={CUBE_CENTRE}>
+                  <boxGeometry args={[CUBE_SIZE_M, CUBE_SIZE_M, CUBE_SIZE_M]} />
+                  <meshStandardMaterial color={CUBE_COLOR} />
+                </mesh>
+              </>
+            )
           )}
           {/* An undrawn ground plane that reports where the pointer meets the ground. */}
           <mesh name={GROUND} onPointerMove={handlers.point} onPointerOut={handlers.leave}>

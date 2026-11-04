@@ -1,5 +1,5 @@
 import type { Fold } from "./folds";
-import { formatValue, onAndRest } from "./readouts";
+import { formatValue, onAndRest, setBeside } from "./readouts";
 import type { ThermostatAt } from "./scene/equipment";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { PERCENT } from "./units";
@@ -90,6 +90,7 @@ export function describeRun(piece: EquipmentState, thermostat: ThermostatAt | nu
 export function EquipmentControls({
   snapshot,
   requested,
+  notDrawn = {},
   thermostat = null,
   fold,
   onChange,
@@ -97,6 +98,9 @@ export function EquipmentControls({
   snapshot: SceneSnapshot;
   /** The levels asked for, which a control shows until the scene catches up. */
   requested: Readonly<Record<string, number>>;
+  /** Those of them no scene will catch up with, as in a stored run: the reading,
+   * still of the scene, says them beside it. */
+  notDrawn?: Readonly<Record<string, number>> | undefined;
   /** The thermostat that runs its heater at the moment drawn, if one does. */
   thermostat?: ThermostatAt | null;
   fold: Fold;
@@ -134,6 +138,7 @@ export function EquipmentControls({
               />
               <span data-testid={`equipment-${piece.actuatorId}`}>
                 {describeRun(piece, thermostat)}
+                {setBeside(notDrawn[piece.actuatorId], piece.level)}
               </span>
             </div>
           );
