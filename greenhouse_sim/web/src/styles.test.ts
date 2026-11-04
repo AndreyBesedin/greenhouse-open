@@ -407,8 +407,8 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
 // prints here, in its own diff, where review sees them; a token step must not.
 // It goes when selectors start to move (P19.6), and the page baselines hold.
 const RESOLVED_DIGESTS = {
-  dark: "c646713c6f7d5abfd5dba91064ccf162545df3f28568035be5c267fce1a10780",
-  light: "ed7d240b5a12466253e1adcaf99cafad711e9228e73766589f44e79caa388f15",
+  dark: "fc9f897f5cbad2892275efdd55f7bd184928433699317bfb8c282c780aea61fb",
+  light: "350002d6a96d726343fb33ee4e2a2b52dfc2d3e7c244b6ad6d36823de185bede",
 };
 type ThemeName = keyof typeof RESOLVED_DIGESTS;
 const COMMENT = /\/\*[\s\S]*?\*\//g;
