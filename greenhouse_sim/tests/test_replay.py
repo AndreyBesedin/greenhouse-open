@@ -1,6 +1,8 @@
 """A run replayed (P09.5): its state probed at each day's end and digested,
 the same on every replay, the same before a branch's first change and not
 after, and the reference run's first days matching the digests kept here.
+Only the digests kept hold the reference run; what a replay does is held of a
+house whose days cost a fraction of a second (`short_runs`).
 
 The kept digests are the reference run's as the simulator replays it today.
 When a deliberate change moves them, rewrite them from `greenhouse_sim/`:
@@ -27,12 +29,24 @@ from greenhouse_sim.services.replay import ROUNDED_DECIMALS, DayProbe, _rounded,
 from greenhouse_sim.services.runs import RunPlan, RunRequest
 from greenhouse_sim.services.simulator import Simulator
 
+sys.path.insert(0, str(Path(__file__).parent))
+
+import short_runs
+
 FIXTURE: Final = Path(__file__).resolve().parent / "fixtures" / "reference_replay.json"
 SCENARIO: Final = "reference_greenhouse"
+TENDED: Final = "climate_box_tended"
 # How many of the reference run's first days are kept.
 KEPT_DAYS: Final = 3
-# The reference run's heater, off an hour into its second day: a branch.
+# The run's heater, off an hour into its second day: a branch.
 BRANCH: Final = ((DAY_S + 3600.0, "heater", 0.0),)
+
+
+@pytest.fixture(scope="module")
+def tended(simulator: Simulator) -> Simulator:
+    """The module's simulator, which knows the house of one plant."""
+    simulator.catalogue.register(short_runs.tended_box(TENDED, KEPT_DAYS))
+    return simulator
 
 
 @pytest.mark.slow
@@ -48,11 +62,11 @@ def test_the_reference_runs_first_days_replay_to_the_digests_kept(simulator: Sim
 
 
 def test_a_replay_gives_the_same_digests_and_a_branch_the_same_before_its_change(
-    simulator: Simulator,
+    tended: Simulator,
 ) -> None:
-    first = day_probes(simulator, RunRequest(SCENARIO), 2)
-    again = day_probes(simulator, RunRequest(SCENARIO), 2)
-    branch = day_probes(simulator, RunRequest(SCENARIO, plan=RunPlan.requested(commands=BRANCH)), 2)
+    first = day_probes(tended, RunRequest(TENDED), 2)
+    again = day_probes(tended, RunRequest(TENDED), 2)
+    branch = day_probes(tended, RunRequest(TENDED, plan=RunPlan.requested(commands=BRANCH)), 2)
 
     assert again == first
     assert branch[0] == first[0]
@@ -63,24 +77,24 @@ def test_a_replay_gives_the_same_digests_and_a_branch_the_same_before_its_change
 
 
 def test_a_replay_gives_the_same_digests_after_a_viewer_scrubbed_the_run(
-    simulator: Simulator,
+    tended: Simulator,
     afresh: Callable[[], None],
 ) -> None:
     # A moment between the run's minutes, asked for first, changes nothing
     # that is worked out after it.
-    fresh = day_probes(simulator, RunRequest(SCENARIO), 1)
+    fresh = day_probes(tended, RunRequest(TENDED), 1)
     afresh()
-    house_air_at(simulator, RunRequest(SCENARIO), time_s=DAY_S - 30.0)
+    house_air_at(tended, RunRequest(TENDED), time_s=DAY_S - 30.0)
 
-    assert day_probes(simulator, RunRequest(SCENARIO), 1) == fresh
+    assert day_probes(tended, RunRequest(TENDED), 1) == fresh
 
 
-def test_a_probe_is_rounded_before_it_is_digested(simulator: Simulator) -> None:
+def test_a_probe_is_rounded_before_it_is_digested(tended: Simulator) -> None:
     assert _rounded({"a": [1.0000001234, "x", 2], "b": 0.1 + 0.2}) == {
         "a": [round(1.0000001234, ROUNDED_DECIMALS), "x", 2],
         "b": 0.3,
     }
-    probe = day_probes(simulator, RunRequest(SCENARIO), 1)[0]
+    probe = day_probes(tended, RunRequest(TENDED), 1)[0]
     assert isinstance(probe, DayProbe)
     assert probe.readings > 0 and probe.organs > 0
 
