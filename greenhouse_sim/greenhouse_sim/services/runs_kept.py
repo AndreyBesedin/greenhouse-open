@@ -91,11 +91,7 @@ def delete_epoch(simulator: Simulator, run_id: str, epoch: int) -> dict[str, Jso
 def _winding_down(simulator: Simulator, run_id: str, epoch: int) -> bool:
     """Whether a playback replaced by another, told to stop, is still writing
     an epoch."""
-    for retiring in simulator.playbacks.retiring():
-        state = retiring.state()
-        if (state.run_id, state.epoch) == (run_id, epoch):
-            return True
-    return False
+    return any(found.has_epoch(run_id, epoch) for found in simulator.playbacks.retiring())
 
 
 def _stored(simulator: Simulator, run_id: str, epoch: int) -> StoredEpoch:
