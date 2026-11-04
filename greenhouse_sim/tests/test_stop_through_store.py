@@ -21,7 +21,6 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import interrupted, leases
-from greenhouse_sim.services.playback import stop_playbacks
 from greenhouse_sim.services.run_store import (
     EpochManifest,
     EpochStore,
@@ -318,21 +317,18 @@ def test_a_stop_of_an_epoch_the_store_does_not_hold_is_not_found(server: Simulat
 def test_a_stop_of_an_epoch_played_in_the_viewer_says_so_and_asks_nothing(
     server: Simulator,
 ) -> None:
-    objects = _store(server)
-    try:
-        started = respond(server, "POST", f"/api/scenarios/{BOX}/playback/start?hold=true")
-        assert started.status == HTTPStatus.OK and isinstance(started.body, dict)
-        run_id, number = started.body["run_id"], started.body["epoch"]
-        assert isinstance(run_id, str) and isinstance(number, int)
-        epoch = EpochStore(objects, run_id, number)
+    # The fixture's closing the simulator stops the playback.
+    started = respond(server, "POST", f"/api/scenarios/{BOX}/playback/start?hold=true")
+    assert started.status == HTTPStatus.OK and isinstance(started.body, dict)
+    run_id, number = started.body["run_id"], started.body["epoch"]
+    assert isinstance(run_id, str) and isinstance(number, int)
+    epoch = EpochStore(_store(server), run_id, number)
 
-        answer = respond(server, "POST", _stop_path(epoch))
+    answer = respond(server, "POST", _stop_path(epoch))
 
-        assert answer.status == HTTPStatus.CONFLICT
-        assert "stops with its playback" in str(answer.body)
-        assert not epoch.stop_asked()
-    finally:
-        stop_playbacks(server)
+    assert answer.status == HTTPStatus.CONFLICT
+    assert "stops with its playback" in str(answer.body)
+    assert not epoch.stop_asked()
 
 
 def test_workers_a_killed_server_left_stop_through_the_store_and_the_run_is_deleted_or_resumed(
