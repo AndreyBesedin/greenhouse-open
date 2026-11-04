@@ -201,6 +201,45 @@ def test_a_worker_stopped_before_its_first_write_finds_the_epoch_taken(
     kept.verify()
 
 
+class _BeforeItsClaim(FolderStore):
+    """A store that does `meanwhile` as its reader first looks for the epoch's claims:
+    it has read the epoch, and has not yet tried to claim it."""
+
+    def __init__(self, root: Path, meanwhile: Callable[[], None]) -> None:
+        super().__init__(root)
+        self._meanwhile: Callable[[], None] | None = meanwhile
+
+    def names(self, prefix: str = "") -> list[str]:
+        if self._meanwhile is not None and prefix.endswith(f"/{leases.CLAIMS}/"):
+            meanwhile, self._meanwhile = self._meanwhile, None
+            meanwhile()
+        return super().names(prefix)
+
+
+@pytest.mark.parametrize("starts", [resume, execute], ids=["resume", "execute"])
+def test_a_worker_that_claims_an_epoch_another_has_worked_out_leaves_it_as_it_is(
+    tmp_path: Path, starts: Callable[..., Status]
+) -> None:
+    """Its claim stands, since the other let go: what it read before that is not true."""
+    objects = FolderStore(tmp_path)
+    with workers_support.short_simulator() as made:
+        kept = queued(made, objects, SHORT)
+
+    def another_works_it_out() -> None:
+        with workers_support.short_simulator() as another:
+            resume(another, EpochStore(objects, kept.run_id, kept.epoch), Free())
+
+    late = EpochStore(_BeforeItsClaim(tmp_path, another_works_it_out), kept.run_id, kept.epoch)
+
+    with workers_support.short_simulator() as made, pytest.raises(Conflict):
+        starts(made, late, Free())
+
+    assert kept.manifest().status == Status.FINISHED
+    assert len(kept.commits()) == workers_support.SHORT_DAYS
+    assert not kept.worked()
+    kept.verify()
+
+
 def test_an_epoch_taken_up_as_it_is_about_to_be_told_interrupted_is_not_told(
     tmp_path: Path,
 ) -> None:
