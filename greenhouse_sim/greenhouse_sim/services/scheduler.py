@@ -26,7 +26,9 @@ started it is gone is found at startup (`interrupted.mark`).
 A worker this scheduler started is stopped by a signal, and is gone when the
 answer is given. One it did not start, such as a worker left computing by a
 server that was killed, is out of reach of any signal and may be on another
-machine: it is asked through the store, and stops at its next look.
+machine: it is asked through the store, and stops at its next look. An epoch a
+playback of this simulator plays has no worker: its playback is stopped
+(`cancel`), and it ends as if it had one.
 """
 
 import logging
@@ -42,7 +44,7 @@ from typing import Final
 from greenhouse_sim.services import forks, interrupted, scenario_files
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.interventions import Asked
-from greenhouse_sim.services.playback import plays_epoch
+from greenhouse_sim.services.playback import stop_epoch
 from greenhouse_sim.services.resources import this_process
 from greenhouse_sim.services.run_store import (
     ENDED,
@@ -283,19 +285,13 @@ class Scheduler:
         """Under the lock: an epoch no worker of this scheduler has. One no one
         works is told `interrupted` now. One whose worker may live is asked to
         stop through the store, which is all there is between them, and is told
-        `interrupted` if that worker dies before it looks. A playback here is the
-        exception: it has a stop of its own, and does not look."""
+        `interrupted` if that worker dies before it looks."""
         if epoch not in stored_epochs(self._objects, run_id):
             raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
         kept = EpochStore(self._objects, run_id, epoch)
         status = kept.manifest().status
         if status in ENDED:
             raise Conflict(f"epoch {epoch} of {run_id} is {status}: it is not being computed")
-        if plays_epoch(self._simulator, run_id, epoch):
-            raise Conflict(
-                f"epoch {epoch} of {run_id} is played in the viewer, with no worker: "
-                "it stops with its playback"
-            )
         if interrupted.mark_epoch(self._simulator, run_id, epoch) is None:
             kept.ask_to_stop()
             interrupted.watch_epoch(self._simulator, run_id, epoch)
@@ -452,5 +448,8 @@ def fork(
 
 
 def cancel(simulator: Simulator, run_id: str, epoch: int) -> StoredRun:
-    """An epoch ended, or asked to end (`Scheduler.cancel`)."""
-    return of(simulator).cancel(run_id, epoch)
+    """An epoch ended, or asked to end: by stopping the playback that has it, which
+    needs no scheduler, on a store of any kind (`playback.stop_epoch`), or else by
+    its scheduler (`Scheduler.cancel`)."""
+    stopped = stop_epoch(simulator, run_id, epoch)
+    return of(simulator).cancel(run_id, epoch) if stopped is None else stopped
