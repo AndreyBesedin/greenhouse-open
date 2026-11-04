@@ -19,9 +19,9 @@ state folder is its first backend (`FolderStore`). An epoch's objects, under
   a worker and the API), and `answers/{id}.json`, why its worker did not take
   it. Each is written once, by the one side, so that no two writers share an
   object;
-- `leases/{number}.json`: who works the epoch (`leases`), which no commit names;
 - `inherited/outcomes.jsonl`: for a fork, the outcomes of its parent's up to
   where it branched, which say what its crop actions before then did;
+- `leases/{number}.json`: who works the epoch (`leases`), which no commit names;
 - `commits/{seq}.json`: written last. A commit names one segment, its
   checkpoint if there is one, the position reached in the log, and the
   trajectory digest: a running sha256 over every object the commits so far
@@ -60,7 +60,6 @@ from greenhouse_protocol.provenance import RecordSource
 from pydantic import BaseModel, ConfigDict, JsonValue
 
 from greenhouse_sim.services import leases
-from greenhouse_sim.services.errors import Conflict
 
 FORMAT: Final = "run-store-1"
 CHECKPOINT_TYPE: Final = "application/json+zstd"
@@ -80,6 +79,10 @@ EPOCH: Final = datetime(1970, 1, 1, tzinfo=UTC)
 
 class StoreCorrupt(RuntimeError):
     """An object a commit names is missing, or is not what its digest says."""
+
+
+class EpochTaken(RuntimeError):
+    """A process said an epoch runs with no claim on it, while another holds one."""
 
 
 class Status(StrEnum):
@@ -608,7 +611,7 @@ class EpochStore:
             # A worker claimed it before anything else, so this refuses only a
             # process that says an epoch runs with no claim while another works it.
             if before.status != Status.RUNNING and not self.claim():
-                raise Conflict(f"epoch {self.epoch} of {self.run_id} is worked by another process")
+                raise EpochTaken(f"epoch {self.epoch} of {self.run_id} is worked by another")
         elif status in ENDED:
             leases.release(self.objects, self._home)
 
@@ -624,10 +627,6 @@ class EpochStore:
             }
         )
         self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
-
-    def worked(self, *, now: float | None = None) -> bool:
-        """Whether a process holds the epoch's claim."""
-        return leases.alive(self.objects, self._home, now=now)
 
     def claim(self, *, now: float | None = None) -> bool:
         """Takes the epoch for this process, and says whether it has it: refused
@@ -662,6 +661,10 @@ class EpochStore:
             return False
         self.set_status(status)
         return True
+
+    def worked(self, *, now: float | None = None) -> bool:
+        """Whether a process holds the epoch's claim."""
+        return leases.alive(self.objects, self._home, now=now)
 
     def commits(self, after: int = 0) -> list[Commit]:
         """The commits in order, from number `after` (a reader that has the

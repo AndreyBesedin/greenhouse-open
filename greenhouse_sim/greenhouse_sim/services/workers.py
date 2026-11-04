@@ -147,20 +147,17 @@ def execute(
     it ended. Told to `stop` between moments, it ends `interrupted`. An epoch
     is executed once: one that has begun is refused (`resume` carries it on),
     as is one whose run is not the one its manifest names."""
-    _check_not_begun(epoch)
-    _claim(epoch)
-    try:
-        # What was read before the claim may be another's work by now.
-        _check_not_begun(epoch)
-        return _drive(simulator, epoch, Free() if driver is None else driver, stop, 0.0)
-    finally:
-        epoch.let_go()
-
-
-def _check_not_begun(epoch: EpochStore) -> None:
     manifest = epoch.manifest()
     if manifest.status != Status.QUEUED or epoch.commits():
         raise Conflict(f"epoch {epoch.epoch} of {epoch.run_id} has begun: it is {manifest.status}")
+    if not epoch.claimed():
+        _claim(epoch)
+        try:
+            # Read again under the claim: what was read may be another's work by now.
+            return execute(simulator, epoch, driver, stop=stop)
+        finally:
+            epoch.let_go()
+    return _drive(simulator, epoch, Free() if driver is None else driver, stop, 0.0)
 
 
 def _claim(epoch: EpochStore) -> None:

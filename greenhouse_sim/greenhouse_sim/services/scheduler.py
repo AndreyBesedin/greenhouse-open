@@ -11,22 +11,22 @@ store is the only channel between a worker and the API, so that whoever reads an
 epoch reads it while it is computed, as far as the last commit names
 (`stored_playback`).
 
+The queue outlives the process, so that one a scheduler put in line is not among
+those: what waits is what the store says waits, with all its worker needs (decision
+0067), and `restore` makes the queue again from those manifests, in their order, as a
+simulator starts. A worker claims its epoch before it does anything (`leases`), so
+that this needs no agreement with whoever else may be looking: of two workers given
+one epoch, as when a server starts while one it replaced is still starting a worker,
+one takes it and the other leaves.
+
 A process is the worker because P17.1 measured what a thread costs a process
 that is working: 46% of its speed against 5% for another process.
 
 An epoch whose worker ends without ending it, killed or lost, is told
 `interrupted` with what it had committed, and can be asked for again to be
 carried on from there (`resume`, P17.9): queued once more, taken by a worker
-that resumes it. An epoch still `running` when the producer that started it is
-gone is found at startup (`interrupted.mark`).
-
-The queue outlives the process: what waits is what the store says waits, with all
-its worker needs (decision 0067), and `restore` makes the queue again from the
-manifests a scheduler put in line, in their order, as a simulator starts. A worker
-claims its epoch before it does anything (`leases`), so that this needs no
-agreement with whoever else may be looking: of two workers given one epoch, as when
-a server starts while one it replaced is still starting a worker, one takes it and
-the other leaves.
+that resumes it. An epoch still `queued` or `running` when the producer that
+started it is gone is found at startup (`interrupted.mark`).
 """
 
 import logging

@@ -3,9 +3,7 @@
 A producer that crashed leaves its epoch `running` in the store, or `queued` if
 it never took it up. At startup, and when a person asks to carry one on, such
 an epoch is told `interrupted` with what it had committed, so that it can be
-resumed (`workers.resume`) and so that nothing reads it as still on its way. One
-a scheduler put in line waits again, in the queue of the scheduler that starts
-after it (`scheduler.restore`), and is that scheduler's to tell.
+resumed (`workers.resume`) and so that nothing reads it as still on its way.
 
 An epoch is worked if a process holds its claim (`leases`), or this simulator's
 scheduler holds it in its queue; one just asked for is given
@@ -20,6 +18,9 @@ has no one working it (`watch`).
 Telling an epoch `interrupted` is itself a claim on it, held for that write
 (`EpochStore.end_unless_worked`), so that no lock across processes is needed: of a
 worker taking the epoch up and this, whichever claims it first has it.
+
+An epoch a scheduler put in line waits again, in the queue of the scheduler that
+starts after it (`scheduler.restore`), and is that scheduler's to tell.
 """
 
 import logging

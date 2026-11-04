@@ -20,6 +20,7 @@ from greenhouse_sim.services.errors import Conflict
 from greenhouse_sim.services.run_store import (
     EpochManifest,
     EpochStore,
+    EpochTaken,
     FolderStore,
     Status,
 )
@@ -249,7 +250,7 @@ def test_a_process_that_says_an_epoch_runs_with_another_holding_it_is_refused(
     holder = _epoch(objects)
     assert holder.claim()
 
-    with pytest.raises(Conflict, match="worked by another"):
+    with pytest.raises(EpochTaken):
         EpochStore(objects, "run", 0).set_status(Status.RUNNING)
 
     holder.set_status(Status.RUNNING)
