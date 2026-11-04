@@ -13,6 +13,129 @@ Unreleased section holds the entries written here before that.
 
 ## Unreleased
 
+## 0.6.0 - 2026-11-04
+
+A run is now kept (P17, decisions 0065 and 0066): a run store holds each run's days as
+Parquet segments, checkpoints and commits, and a playback is a position over what it
+holds. Runs are computed by workers of their own, several at once and with the rest
+waiting, and they survive a server's restart: a run can be stopped, resumed from its last
+commit to the same result, forked from a past moment and replayed on a timeline. The viewer
+opens on a start page with the scenarios, the runs kept and the builder. A scenario is a
+file to download and upload, as a house file is. A control policy has its port (P15,
+decision 0061), in the simulator's process or over HTTP, with an experiment that steps a run
+and a budget of forecasts. An epoch counts what it used (P18, decision 0067), and Reduced-State
+TOMGRO grows the `tomgro_house` scenario, its numbers predictions and not validated.
+
+What breaks: the run ids of a built or uploaded scenario with no equipment change, once and
+with no migration: their runs kept stay listed and can be replayed or forked, and a resume is
+refused. A packaged scenario's run ids and digests do not move. Scenes are written in schema 17, which
+a viewer of schema 16 refuses, and `run_state.house_air` is no longer nullable. `POST .../stop` on an
+ended epoch answers 409 and not 404, and a failed playback answers 409 and not 500. The viewer's own
+address `/` is now the start page and `/view` the viewer, with `/?scenario=…` still opening it.
+The builder's *Export* is *Download house file*. Manifests stay in format 7 and checkpoints in format
+9, and what 0.5.0 wrote is still read.
+
+- `greenhouse-sim`: a run's capability and goal context for a principal (`Playback.context`, `services.policy_context.run_context`, decision 0061): its sensors, heat meter and crop walk with their types and cadences; its devices; its heating targets with their ranges; its crop instances by row; when it carries each kind of action out; its gateway's limits; and the principal's grants. (#421)
+- `greenhouse-sim`: a control policy's port on a run played back, in the simulator's process (`services.policy_port`, decision 0061). It is bound to one principal. It gives the run's context for that principal, the observations of its context's sources, the events with the parameters their types allow, and the principal's own plans and outcomes, through cursors of its own. It gives the principal's plans and cancellations to the run's gateway. (#423)
+- `greenhouse-sim`: an experiment that steps a run for a control policy (`greenhouse_sim.experiment`, decision 0061). `run_episode` advances a scenario's run to each decision moment, gives the policy what reached its port since the last, and gives its plan's revisions through the port. It returns an `EpisodeSummary` with a digest of what the policy was given and gave. `Playback.step_to` works a held run out to a moment and moves its clock there in the caller's thread. Example 03 runs on the experiment, naming its devices and sensors from the run's context. (#425)
+- `greenhouse-sim`: a control policy's port served over HTTP, for a policy in a process of its own (`python -m greenhouse_sim.api.policy_server`, decision 0061). It serves one scenario's run on loopback, under `/policy/v1`, and none of the local API's routes. Each request is authenticated by a bearer token, whose SHA-256 a credentials file keeps with its principal and role (`--new-credential kind:id` makes one). `greenhouse_sim.experiment` is public. (#428)
+- `greenhouse-protocol`: `contracts.policy_client.HttpPolicyPort`, a policy's port over HTTP on the standard library alone, and `PortRefused`. (#428)
+- **Added**, `greenhouse-sim`: a scenario's rows may grow Reduced-State TOMGRO (`crop_model: "reduced_tomgro"`, its section `ReducedTomgroCrop`: the `gnvman` parameter set, the `house_hours` driver profile version 1, and the canopy's height), by area on each row. Its state is kept in a checkpoint, and a run carries on from it. It takes no crop actions, and no crop work: a scenario that sets crop work for it, or whose canopy's top stands above the eaves, is refused when read. It has no plant ids, and draws nothing yet. A crop model's registration (`services.crop_models.CropRegistration`) declares `plants`, a `PlantAdapter`, or `area`, an `AreaAdapter`. `KeptState.plants` becomes `crop`, and `Growth.read` takes what a crop lived as well. The published schemas gain the model. (#432)
+- **Added**, `greenhouse-sim` and viewer: a crop grown by area is drawn as a canopy over each row, scene kind `CANOPY` (scene schema 17): a see-through volume as tall as its canopy and as dense as the light its leaves take, marked as a proxy and its numbers as predictions. Reduced-State TOMGRO draws its rows so. A viewer of scene schema 16 refuses a schema 17 scene. (#433)
+- greenhouse-sim: a policy's port can be opened under an information budget that names forecast providers. Persistence, the first, forecasts the outside air's temperature and relative humidity for each hour of the next day from the last day's readings, and `python -m greenhouse_sim.api.policy_server --forecasts persistence` serves it. Without a budget, a port gives no forecast, as before. (#439)
+- **Added**, `greenhouse-sim`: a packaged scenario, the TOMGRO house (`tomgro_house`). It is the reference greenhouse's house, season, schedule and controller, its rows growing Reduced-State TOMGRO by area through a season, its house's air the whole house's. Its crop's numbers are predictions, not validated on measured data; the P14 roadmap documents what its season predicts. (#440)
+- A run can be asked for at another seed (`&seed=7`): its weather, its sensors' noise and its crop's walk differ, and it is the same run again when asked again. A run at the scenario's own seed is unchanged. (#442)
+- A played run is now kept on disk as the clock passes each day (observations, events, outcomes and a checkpoint), listed with its seed, status and progress, and still there after the producer restarts; a run can be started at a seed. The run store is under the state folder, where the epochs were counted. (#444)
+- Example 05 shows a policy in a process of its own, knowing only a port's address and its token, steering a run over the network. (#449)
+- The viewer opens on a page where a scenario is chosen from a searchable list, with the runs kept, a link to the builder and a link to the project's repository. The viewer itself is at `/view`; links with a query (`/?scenario=…`) open it as before. (#448)
+- Choosing a scenario on the landing page opens its stored runs in a dialog, from which a run is started at a seed or removed. A run started over the API (`POST /api/scenarios/{id}/playback/start`, now with `&seed=`) is kept and listed, and a stored run is removed with `POST /api/runs/{run}/epochs/{n}/delete`. (#450)
+- greenhouse-sim: a scenario can be written out as a file, with its layout and, if wanted, its recorded weather, and read back as the same scenario. No run id, digest or manifest changes. (#455)
+- greenhouse-sim: the API downloads a scenario as a file (`GET /api/scenarios/{id}/file`) and uploads one (`POST /api/scenarios/upload`); an uploaded scenario is kept beside the run store and registered again when the simulator starts on it. No run id, digest or manifest changes. (#456)
+- A run can be asked for over the API (`POST /api/scenarios/{id}/runs`) and is executed in the background by a worker process, up to a limit, with the rest queued; several runs of one scenario can be computed at once, and an epoch being computed can be played over what is computed so far. (#457)
+- The builder offers a scenario it has run as a file to download, with or without its recorded weather. (#462)
+- The viewer has a Home button at the top left that opens the landing page, and no longer shows the line that says which scenario is shown. (#463)
+- The setup builder keeps a draft's run settings, and ends in *Save and go back* or *Save and start a run*. (#464)
+- The setup builder opens a scenario the simulator has registered from a file, at `/builder#scenario=<id>`. (#466)
+- The start page uploads a scenario file, which opens in the setup builder. (#467)
+- A run left `running` by a producer that crashed is found when the simulator starts and listed as `interrupted`. (#468)
+- A stored run can be replayed at an address that names it: a timeline over what is computed, day by day, with play, pause, a pace, and following the newest day while a run is still being computed; the landing page links each run to its replay. (#471)
+- `POST /api/runs/{run}/epochs/{n}/resume` carries on a run that was interrupted by a crash, from its last committed day, to the same result as a run that was never interrupted. (#470)
+- The landing page shows how many runs are kept and the size of their objects. (#473)
+- The landing page's *Contribute* button shows GitHub's mark. (#472)
+- viewer: following a run with a field other than the climate drawn no longer stops the drawing while the run's clock goes on. (#475)
+- viewer: following or replaying a run of a house with no equipment no longer says that each moment cannot be drawn: the view draws no air field. (#477)
+- viewer: a scenario file refused at upload says why in plain words, in the warning colour. `greenhouse-sim`: the refusals of `POST /api/scenarios/upload` are worded accordingly; their status and fields are the same. (#479)
+- viewer: a replay says so when a move is refused because its place in the run is gone, and that reloading opens it again. (#480)
+- viewer: closing a scenario's dialog with Escape no longer opens the list of scenarios over the page. (#482)
+- A change can be asked of a running stored epoch over the API, and a position over an epoch says the plan its changes make. (#485)
+- A stored run can be forked from a past moment, in the same or another layout, over the API; the fork names its parent and instant, computes nothing before its inherited state and leaves the run it came from served. (#486)
+- A replay offers *Fork from here*, its panels make forks of what they change or say why they cannot, and it draws the changes given to the run at their moments. (#487)
+- viewer: in a replay with a field other than the climate drawn, a change in the panels forks from the moment on the timeline, not from the run's start. (#497)
+- viewer: the start page and a scenario's dialog show a run's progress and status as it is computed, without a reload. (#478)
+- A scenario built in the builder or uploaded from a file now runs, resumes and forks in a worker under its own weather and site, with an epoch carrying its scenario's file and pace in the store. A run of a draft opened from a scenario file keeps that file's site and weather unless it asks for others. (#494)
+- viewer: a replay says a moment one way, in its panel and on its timeline. (#500)
+- viewer: the builder has a Home button. (#503)
+- viewer: a scene that cannot be drawn says so without "before day one"; the builder's run step asks for a seed; the builder's import words its refusals plainly. `greenhouse-sim`: the refusals of an installation file are worded accordingly; their status and fields are the same. (#505)
+- viewer: the runs dialog starts each run on a worker, several at once from one scenario, and opens its replay at the newest computed day; a built or uploaded scenario still runs by its playback.
+
+  viewer: a worker's run has Stop and Resume in the runs dialog and on the landing page; deleting a running run says which and what to do, without the run's identifier.
+
+  viewer: a run with files missing is listed as Damaged, with no replay to open; it can still be deleted. (#495)
+- viewer: a scenario opened from the start page, and a replay, start with the house framed. Addresses from before the start page (`/?scenario=x`) open as they did. (#498)
+- viewer: a replay's Play is disabled at the run's end, its legend drops "not computed yet" on a finished run, and its timeline always labels the end. (#504)
+- viewer: closing a scenario's dialog leaves the start page's bare address, and an address naming a scenario the simulator does not have says so. (#506)
+- viewer: a fork's row in the runs dialog and on the start page says what it came from. (#508)
+- viewer: a built or uploaded scenario runs on a worker too: from the runs dialog and from *Save and start a run*, which opens its replay at the newest computed day, with Stop and Resume; the builder's note says when a draft from a file keeps its weather and site. (#509)
+- A house with no equipment has a climate run: it offers the `climate` field, the viewer draws it in the sun's light, and its house air is reported, so `run_state.house_air` is no longer nullable. A packaged house's run ids and sensor readings are unchanged; its sensors still read its own airflow, not the climate drawn. (#511)
+- A replay left open while the simulator starts again says so, rather than still reading "Running" and asking for its position once a second. (#516)
+- The house air's line says "mixing…" when it shows an earlier moment than the one drawn. (#519)
+- At a run's end the fork panels of a replay say why they make no fork, and offer none. (#520)
+- A disabled button in a replay or on the start page looks disabled. (#521)
+- A fork's timeline labels where it begins. (#524)
+- The runs dialog drops a refused deletion's message once the run has been stopped or resumed. (#525)
+- The runs dialog's Close gives the keyboard focus back to the search. (#528)
+- Fixed: resuming a run just after a live playback ended it could be refused, with the run going back to interrupted, because the old playback's lease thread took the lease; and a run just ended could refuse a resume for up to 5 s. A lease now names its holder, and a thread writes only its own. (#530)
+- A replay's schedule counts its days as its timeline does. (#523)
+- The note under the levels set in a replay names them in words. (#527)
+- An epoch says what it used and why it failed: `GET /api/runs` gives the days computed, CPU seconds, peak memory and, for a failed epoch, its reason, from a report beside its manifest that is in no digest. A list of 1,000 runs that have one takes under 1 s rather than about 30 s. Epochs kept before this are listed as slowly as they were until `python -m greenhouse_sim.usage_reports <folder>` has given them their reports, once; it changes no other file, and leaves their CPU seconds and peak memory absent. A list now sees a lost commit, checkpoint or day but not a single file inside a day's folder, which opening the epoch or asking it to resume refuses in words. (#526)
+- A request whose client has gone stops working, what it worked out kept, and a drag of a replay's handle sends one seek at a time. (#533)
+- A far seek in a replay shows the house's air at once, with the same run all off arriving after it, and a seek to a day's end no longer works that day from the run's start. `GET .../climate/house` takes `&all_off=0`. (#534)
+- Fixed: a run's date in the lists is its local date, not its date in UTC. (#535)
+- Fixed: the rows of a list of runs line up, their bars one width and their controls in columns. (#536)
+- Fixed: resuming a run with no pace named keeps the pace it was asked for, instead of computing it as fast as it goes. (#537)
+- Fixed: a fork whose parent was deleted no longer links to it. A position's state gains `parent_kept`. (#539)
+- Fixed: a level set in a replay is read beside what the run has, rather than a slider at full beside "off". (#541)
+- Fixed: a fork in another layout says so, on the replay's header and in the lists of runs. (#543)
+- The viewer draws its green cube and axes only on the empty grid, no longer behind a scene that
+  could not be drawn or is still on its way. (#548)
+- Fixed: a run left computing by a server that was killed can be stopped. *Stop* asks its worker through the run store; the run reads *Stopping* until the worker's next look, up to a day's work when it runs freely, then *Interrupted*, and can be deleted or resumed. `POST .../stop` on an epoch that has ended now answers 409 and not 404, and a stored run says `stopping`. (#531)
+- Fixed: a run whose playback is paused reads Paused in the lists, not Running. `StoredRun` gains `paused`. (#546)
+- Fixed: the View panel, folded, could open moved 298 px to the left and covering the stripe that folds it, after a reload, a resized window or a change in its readings while folded. (#550)
+- Fixed: a replay of a fork made in the middle of a day opens at the moment it was made from, not at that day's start. (#538)
+- Fixed: a replay's keys and day buttons, pressed faster than the answers, move from the moment last sought, and the timeline's handle moves at once. (#542)
+- Fixed: at a phone's width the builder's page fits its window, with the house drawn under its forms. (#544)
+- Fixed: a finished run that lost its last commits read as whole, with a replay saying Finished. It now reads Damaged and its address says it cannot be replayed. (#552)
+- Fixed: a playback that failed kept its scenario from starting again, and a restart left an epoch running with no worker. A start or a restart now plays the run again as its next epoch, and the epoch that failed keeps its reason. (#553)
+- Fixed: deleting a stored run could answer 500 as a replaced playback's thread ended in failure. (#553)
+- The viewer's panels blur what lies behind them, so that a label over the scene no longer reads
+  through a panel. (#549)
+- `greenhouse-sim`: two processes claiming one epoch, however they interleave, leave exactly one working it: the run store gains `create`, an object made unless it exists, and a claim left by a crash expires and blocks no one. (#545)
+- viewer: the start page lists the latest saved drafts in its *Build a scenario* card, each opening in the builder at its own address, `/builder#draft=<id>`. (#558)
+- viewer: in a replay, a panel's fork button names the moment it forks from when the transport reads another, as while the climate field is on its way. (#559)
+- `greenhouse-sim`: a built or uploaded scenario with no equipment now has its sensors read its climate run, not its stated airflow, and its run is named as a climate run. **The run ids of these scenarios change**, once, and there is no migration: runs kept under the old ids stay listed and can be replayed or forked, and a resume of one is refused, its run to be asked for again as a new epoch. A scenario file that states a prescribed airflow still offers that field, but its sensors do not read it. The run ids, digests and records of packaged scenarios do not change, and the sensor lab keeps its prescribed gradient. (#560)
+- `greenhouse-sim`: a playback that failed answers its readers 409 with why, in place of a 500 with no words, and no longer makes `GET /consumer/v1/runs` a 500 for every scenario: that list leaves it out. The failure is logged once, as it happens.
+
+  viewer: the panel of a run played back says why it failed, and offers to play it again. (#561)
+- `greenhouse-sim`: a run waiting for a worker survives a restart, in its place, with its pace and its scenario; a worker left computing by a server that was killed counts against the limit of the next. (#556)
+- A stop now ends a run the viewer's playback plays, paused or not, with what it committed, so that it can be deleted or resumed. The runs dialog's refusal to delete follows its row and goes once it no longer applies. (#563)
+- Changed: the seed in a new run's form says that empty is the default, the scenario's own seed, and that the same scenario then gives the same run. Its placeholder has a colour of the theme's, at 6.53:1 in dark and 4.76:1 in light. (#564)
+- Changed: *Fork from here*, its levels and a heating target set in a replay say what a fork does and ask for confirmation before making the run. The fork and the moment it takes are as before. (#565)
+- The replay of a run a playback holds reads Paused, as the runs list does, and says what holds it. Neither it nor the replay of an interrupted or failed run offers Play at the frontier, where nothing comes. (#566)
+- Added: a run can be deleted from the start page's Recent runs, with the two steps and refusals of the scenario's dialog. While the control asks, the keyboard is on *Keep it*, and goes back to Delete afterwards. (#567)
+- Fixed: a house file, what the builder's *Export* wrote, uploaded from the start page opens in the builder to be given its run's settings, and a scenario file given to the builder's *Import a file* opens with its settings. (#569)
+- Changed: the builder's *Export* is now *Download house file*, and its file is `<id>.house.json`. A file of the earlier name is still read. (#569)
+- Fixed: a house file whose draft is kept says that its identifier must change to save it, and a file of neither kind is refused in plain words, with no field names. (#572)
+
 ## 0.5.0 - 2026-10-30
 
 A scenario's run is the one simulator (decision 0059): the engine's day,
