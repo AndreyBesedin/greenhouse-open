@@ -23,7 +23,7 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import forks, playback, resources, runs_kept, scheduler
 from greenhouse_sim.services.errors import Conflict
-from greenhouse_sim.services.playback import PlaybackFailed
+from greenhouse_sim.services.playback import Epochs, Playback, PlaybackFailed
 from greenhouse_sim.services.resources import ProcessUse
 from greenhouse_sim.services.run_store import (
     NO_REASON_GIVEN,
@@ -583,10 +583,7 @@ def test_an_epoch_whose_simulation_fails_says_why_and_no_more_than_that(
     monkeypatch: pytest.MonkeyPatch,
     driver: Free | Paced,
 ) -> None:
-    def failing(sim: Simulator, run: RunRequest, *args: Any, **kw: Any) -> Any:
-        raise RuntimeError(f"a failure at {A_PATH}")
-
-    monkeypatch.setattr(playback, "delivered_between", failing)
+    _fails_at_once(monkeypatch)
     epoch = queued(simulator, FolderStore(tmp_path), SHORT)
 
     assert execute(simulator, epoch, driver) == Status.FAILED
@@ -596,6 +593,45 @@ def test_an_epoch_whose_simulation_fails_says_why_and_no_more_than_that(
     assert shown.reason == epoch.manifest().reason
     held = (tmp_path / epoch.run_id / "0" / "manifest.json").read_text()
     assert A_PATH not in held and "Traceback" not in held and A_PATH not in shown.model_dump_json()
+
+
+def _fails_at_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    def failing(sim: Simulator, run: RunRequest, *args: Any, **kw: Any) -> Any:
+        raise RuntimeError(f"a failure at {A_PATH}")
+
+    monkeypatch.setattr(playback, "delivered_between", failing)
+
+
+def test_a_playback_in_the_apis_process_says_why_its_epoch_failed(
+    simulator: Simulator, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With no worker around it: only its own thread says how the epoch ended."""
+    _fails_at_once(monkeypatch)
+    epochs = Epochs(tmp_path)
+    run = Playback(simulator, SHORT, epochs=epochs)
+
+    run.begin()
+    try:
+        _until(lambda: stored_runs(epochs.objects)[0].status == Status.FAILED, "the epoch's end")
+    finally:
+        run.stop()
+
+    assert stored_runs(epochs.objects)[0].reason == "its run could not be worked out (RuntimeError)"
+
+
+def test_a_failure_found_when_a_day_is_kept_says_why_its_epoch_failed(
+    simulator: Simulator, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _fails_at_once(monkeypatch)
+    epochs = Epochs(tmp_path)
+    run = Playback(simulator, SHORT, epochs=epochs)
+
+    assert not run.work_day(0)
+    run.keep()
+
+    (shown,) = stored_runs(epochs.objects)
+    assert shown.status == Status.FAILED
+    assert shown.reason == "its run could not be worked out (RuntimeError)"
 
 
 def test_an_epoch_whose_disk_fills_says_so_without_its_path(

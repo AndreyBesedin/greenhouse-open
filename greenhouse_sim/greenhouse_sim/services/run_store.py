@@ -215,14 +215,16 @@ class FolderStore:
     def children(self, prefix: str = "") -> list[str]:
         """What is directly under the folder `prefix` names (its objects and
         its folders, by their own names, sorted), so that finding a store's
-        runs reads their folders and not their segments."""
+        runs reads their folders and not their segments. A `Path` for each entry
+        would be most of what a list of a large store costs (P18.2)."""
         directory = PurePosixPath(prefix.rstrip("/"))
         if prefix.startswith("/") or ".." in directory.parts:
             return []
-        walked = self.root / directory
-        if not walked.is_dir():
+        try:
+            found = os.listdir(self.root / directory)
+        except FileNotFoundError, NotADirectoryError:
             return []
-        return sorted(path.name for path in walked.iterdir() if path.suffix != _PARTIAL)
+        return sorted(name for name in found if not name.endswith(_PARTIAL))
 
     def delete(self, name: str) -> None:
         (self.root / name).unlink(missing_ok=True)
