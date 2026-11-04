@@ -1240,6 +1240,12 @@ class Playback:
             self._advance()
             return self._state()
 
+    def has_epoch(self, run_id: str, epoch: int) -> bool:
+        """Whether this is the epoch it plays. Asked of every playback kept, and
+        so unlike `state`: it moves no clock and raises no failure of its own."""
+        with self._lock:
+            return (self.run_id, self._epoch) == (run_id, epoch)
+
     def command(self, command: PlaybackCommand) -> PlaybackState:
         """Plays on, holds the clock, or starts the run over as a new epoch,
         playing; answers with the new state. Once replaced, the one in its
@@ -1754,8 +1760,6 @@ def plays_epoch(simulator: Simulator, run_id: str, epoch: int) -> bool:
     """Whether a playback of the simulator's, one replaced included, has this
     epoch of a run."""
     return any(
-        (state.run_id, state.epoch) == (run_id, epoch)
-        for state in (
-            found.state() for found in (*simulator.playbacks.all(), *simulator.playbacks.retiring())
-        )
+        found.has_epoch(run_id, epoch)
+        for found in (*simulator.playbacks.all(), *simulator.playbacks.retiring())
     )

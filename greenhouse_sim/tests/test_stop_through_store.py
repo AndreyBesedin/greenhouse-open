@@ -21,6 +21,7 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import interrupted, leases
+from greenhouse_sim.services.playback import PlaybackFailed
 from greenhouse_sim.services.run_store import (
     EpochManifest,
     EpochStore,
@@ -329,6 +330,33 @@ def test_a_stop_of_an_epoch_played_in_the_viewer_says_so_and_asks_nothing(
     assert answer.status == HTTPStatus.CONFLICT
     assert "stops with its playback" in str(answer.body)
     assert not epoch.stop_asked()
+
+
+def test_a_failed_playback_of_another_run_does_not_keep_a_worker_elsewhere_from_stopping(
+    server: Simulator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(*_: object, **__: object) -> None:
+        raise ArithmeticError("a numerical failure")
+
+    def failed() -> bool:
+        try:
+            server.playbacks.all()[0].state()
+        except PlaybackFailed:
+            return True
+        return False
+
+    monkeypatch.setattr("greenhouse_sim.services.playback.delivered_between", broken)
+    started = respond(server, "POST", f"/api/scenarios/{BOX}/playback/start?hold=true")
+    assert started.status == HTTPStatus.OK
+    _until(failed, "the playback to fail")
+    epoch = _epoch(_store(server), Status.RUNNING)
+    _leased(epoch)
+
+    answer = respond(server, "POST", _stop_path(epoch))
+
+    assert answer.status == HTTPStatus.OK
+    assert _run_of(answer.body).stopping
+    assert epoch.stop_asked()
 
 
 def test_workers_a_killed_server_left_stop_through_the_store_and_the_run_is_deleted_or_resumed(
