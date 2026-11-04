@@ -6,7 +6,7 @@ import socket
 import struct
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from http.server import ThreadingHTTPServer
 
 import numpy as np
@@ -33,7 +33,7 @@ def always_look(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(wanted, "LOOK_EVERY_S", 0.0)
 
 
-def _wanted_for(looks: int) -> wanted.Callable[[], bool]:
+def _wanted_for(looks: int) -> Callable[[], bool]:
     """What says the work is wanted for so many looks, and then not."""
     left = iter(range(looks))
     return lambda: next(left, None) is not None
