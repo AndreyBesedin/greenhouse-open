@@ -202,6 +202,20 @@ def test_a_pull_requests_last_section_ends_where_reviewable_appends_its_own() ->
     assert release.changelog_entry(body) == "none"
 
 
+@pytest.mark.parametrize("tick", [" ", "x", "X"])
+def test_what_ends_a_description_is_no_part_of_its_entry(tick: str) -> None:
+    ending = (
+        f"\n\n- [{tick}] I manually reviewed the complete diff\n\n"
+        "🤖 Generated with [Claude Code](https://claude.com/claude-code)\n"
+    )
+    assert release.changelog_entry(f"## Changelog\n\nnone{ending}") == "none"
+    assert release.gives_none(release.changelog_entry(f"## Changelog\nnone{ending}") or "")
+    assert (
+        release.changelog_entry(f"## Changelog\n\n- Fixed: a thing.{ending}") == "- Fixed: a thing."
+    )
+    assert release.changelog_entry(f"## Changelog\n{ending}") == ""
+
+
 @pytest.mark.parametrize(
     ("entry", "none"),
     [
