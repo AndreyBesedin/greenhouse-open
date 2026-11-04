@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  draftAddress,
+  draftAsked,
   LANDING_PATH,
   newRunAddress,
   newRunScenario,
@@ -94,5 +96,19 @@ describe("the viewer's addresses", () => {
     expect(newRunScenario("#run=")).toBeNull();
     expect(newRunScenario("#elsewhere")).toBeNull();
     expect(newRunScenario("#run=%E0%A4%A")).toBeNull();
+  });
+});
+
+describe("the address of a saved draft", () => {
+  it("is the builder's, its draft in a fragment, and reads back", () => {
+    expect(draftAddress("my house")).toBe("/builder#draft=my%20house");
+    expect(draftAsked("#draft=my%20house")).toBe("my house");
+  });
+
+  it("asks for none where it names none, or none that can be read", () => {
+    expect(draftAsked("")).toBeNull();
+    expect(draftAsked("#draft=")).toBeNull();
+    expect(draftAsked("#scenario=box")).toBeNull();
+    expect(draftAsked("#draft=%E0%A4%A")).toBeNull();
   });
 });

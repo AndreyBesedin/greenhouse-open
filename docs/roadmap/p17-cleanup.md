@@ -47,7 +47,8 @@ takes one checks first that it is still there.
 - [x] A paused playback stays "Running".
 - [x] Progress means two different things on the same page. At `bf8758ae` a row's bar and
   its words both say the days computed, on the start page and in the dialog.
-- [ ] A saved draft is not on the start page.
+- [x] A saved draft is not on the start page. The card to build a scenario lists the latest three,
+  each opening in the builder, and no list when none is saved.
 - [x] `GET /playback` shows a red 404 in the console on a first run. None in the third
   walk: not on `/view` of any of the seven scenarios, nor on a first run from the dialog.
 - [x] Close drops the keyboard focus. Fix in #528. A dialog opened by the address has
