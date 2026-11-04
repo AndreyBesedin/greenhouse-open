@@ -25,6 +25,8 @@ export type HouseAirState =
 // Each quantity's chart, in its own units, and how its range is written.
 const HEIGHT = 28;
 const RANGE_DECIMALS = 1;
+// Beside the run's air while the same run all off is on its way.
+const ALL_OFF_ON_ITS_WAY = "all off on its way";
 const CHARTED: readonly { name: string; unit: string; of: (s: HouseSeries) => number[] }[] = [
   { name: "Air", unit: "°C", of: (s) => s.temperature_c },
   { name: "Humidity", unit: "%", of: (s) => s.humidity_pct },
@@ -54,22 +56,65 @@ export function describeHouseAir(state: HouseAirState): string {
   }
 }
 
+type LoadedHouseAir = Extract<HouseAirState, { status: "loaded" }>;
+
 /** What the house's air has on show: the answer to the moment drawn, or, while
  * that is on its way, the last it had, said to be behind it. */
 export function houseAirOnShow({
   shown,
   latest,
 }: {
-  shown: Extract<HouseAirState, { status: "loaded" }> | null;
+  shown: LoadedHouseAir | null;
   latest: HouseAirState;
 }): HouseAirState {
   return latest.status === "loading" && shown !== null ? { ...shown, behind: true } : latest;
+}
+
+/** How many moments two traces share from their first: the moments of a day
+ * are its minutes and then the moment asked for, so two answers of one day part
+ * where the earlier one ends. */
+function momentsInCommon(one: readonly number[], other: readonly number[]): number {
+  let common = 0;
+  while (common < one.length && one[common] === other[common]) {
+    common += 1;
+  }
+  return common;
+}
+
+function seriesUpTo(series: HouseSeries, moments: number): HouseSeries {
+  return {
+    temperature_c: series.temperature_c.slice(0, moments),
+    humidity_pct: series.humidity_pct.slice(0, moments),
+    co2_ppm: series.co2_ppm.slice(0, moments),
+    removed_kg: series.removed_kg.slice(0, moments),
+    condensed_kg: series.condensed_kg.slice(0, moments),
+  };
+}
+
+/** The run's own air with the run all off beside it: the answer to the same
+ * moment, or until that arrives what the last answer of the same day says of the
+ * moments the two share. An answer of another day shares none. Both are of one
+ * run: the caller keeps no answer across runs. */
+export function withAllOff(own: HouseAirState, whole: LoadedHouseAir | null): HouseAirState {
+  if (own.status !== "loaded" || whole === null || whole.trace.all_off === null) {
+    return own;
+  }
+  const common = momentsInCommon(own.trace.times_s, whole.trace.times_s);
+  return common === 0
+    ? own
+    : { ...own, trace: { ...own.trace, all_off: seriesUpTo(whole.trace.all_off, common) } };
 }
 
 /** Where the house's air through a run is published, asked for as the
  * climate is, up to the moment drawn from the start of its day. */
 export function houseAirUrl(scenarioId: string, run: RunParts): string {
   return scenarioUrl(scenarioId, "climate/house", runParameters(run));
+}
+
+/** The same without the run all off, which is apart because it takes long the
+ * first time a far moment is asked of it: nothing of the run itself waits. */
+export function ownHouseAirUrl(scenarioId: string, run: RunParts): string {
+  return scenarioUrl(scenarioId, "climate/house", [...runParameters(run), "all_off=0"]);
 }
 
 const UNEXPECTED = "the house's air is not what the viewer expects";
@@ -80,7 +125,9 @@ const readHouseAir = contractReader<HouseTrace>(HOUSE_AIR_SCHEMA, UNEXPECTED);
 export function parseHouseAir(body: unknown): HouseTrace {
   const trace = readHouseAir(body);
   const moments = trace.times_s.length;
-  const series = [trace.controlled, trace.all_off].flatMap((run) => Object.values(run));
+  const series = [trace.controlled, ...(trace.all_off === null ? [] : [trace.all_off])].flatMap(
+    (run) => Object.values(run),
+  );
   if (series.some((values) => values.length !== moments)) {
     throw new Error(UNEXPECTED);
   }
@@ -127,11 +174,16 @@ export function HouseAir({ state }: { state: HouseAirState }) {
     <figure className="house-air" data-testid="house-air" aria-label="House air">
       {CHARTED.map(({ name, unit, of }) => {
         const run = of(trace.controlled);
-        const off = of(trace.all_off);
+        const off = trace.all_off === null ? [] : of(trace.all_off);
         const low = Math.min(...run, ...off);
         const high = Math.max(...run, ...off);
         const latest = run.at(-1) ?? low;
-        const text = `${name} ${latest.toFixed(RANGE_DECIMALS)} ${unit}, all off ${(off.at(-1) ?? low).toFixed(RANGE_DECIMALS)} ${unit}`;
+        const lastOff = off.at(-1);
+        const beside =
+          lastOff === undefined || off.length < run.length
+            ? ALL_OFF_ON_ITS_WAY
+            : `all off ${lastOff.toFixed(RANGE_DECIMALS)} ${unit}`;
+        const text = `${name} ${latest.toFixed(RANGE_DECIMALS)} ${unit}, ${beside}`;
         return (
           <div className="house-air-row" key={name}>
             <span data-testid={`house-air-${unit}`}>{text}</span>
@@ -142,10 +194,12 @@ export function HouseAir({ state }: { state: HouseAirState }) {
               role="img"
               aria-label={`The house's ${name.toLowerCase()} through the day`}
             >
-              <polyline
-                className="house-air-off"
-                points={polyline(trace.times_s, off, low, high)}
-              />
+              {off.length > 0 && (
+                <polyline
+                  className="house-air-off"
+                  points={polyline(trace.times_s.slice(0, off.length), off, low, high)}
+                />
+              )}
               <polyline
                 className="house-air-run"
                 points={polyline(trace.times_s, run, low, high)}

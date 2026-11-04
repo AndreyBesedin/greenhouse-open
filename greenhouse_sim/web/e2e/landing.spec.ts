@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import {
   LANDING_PATH,
   REPOSITORY_URL,
@@ -6,6 +6,25 @@ import {
   runsAddress,
   VIEWER_PATH,
 } from "../src/landing/paths";
+import type { StoredRun } from "../src/landing/storedRuns";
+import { answerAsTheSimulator, RUN, SCENARIO_ID } from "./visual/pageAnswers";
+
+// Just over the width at which a list's rows wrap (`styles.css`).
+const NARROWEST_WITH_COLUMNS = 860;
+
+/** Where each of a list's rows draws what `selector` finds of it: its left edge
+ * and width, to the pixel, for those that have one. */
+async function columnOf(rows: Locator, selector: string): Promise<string[]> {
+  const found: string[] = [];
+  for (const row of await rows.all()) {
+    const part = row.locator(selector);
+    if ((await part.count()) > 0) {
+      const box = await part.boundingBox();
+      found.push(`${Math.round(box?.x ?? 0)}+${Math.round(box?.width ?? 0)}`);
+    }
+  }
+  return found;
+}
 
 /** Everything the page reports as an error, so a test can insist on none. */
 function collectErrors(page: Page): string[] {
@@ -20,6 +39,59 @@ function collectErrors(page: Page): string[] {
   });
   return errors;
 }
+
+test("a list's rows line up, and a dialog's controls stay on their row, whatever each row has", async ({
+  page,
+}) => {
+  const runs: StoredRun[] = [
+    RUN,
+    { ...RUN, epoch: 1, status: "running", progress: 0.25 },
+    { ...RUN, epoch: 2, status: "interrupted", progress: 0.5 },
+  ];
+  await answerAsTheSimulator(page);
+  await page.route(/\/api\/(runs|scenarios\/[^/]+\/runs)$/, (route) =>
+    route.fulfill({ json: runs }),
+  );
+  const expectColumns = async (rows: Locator) => {
+    await expect(rows).toHaveCount(runs.length);
+    // One x and one width in each column: the bars, and each kind of control.
+    for (const [selector, rowsWithIt] of [
+      ["progress", 3],
+      [".landing-status", 3],
+      [".landing-run-replay", 3],
+      [".landing-run-follow", 1],
+      [".landing-run-control", 2],
+    ] as const) {
+      const column = await columnOf(rows, selector);
+      expect(column).toHaveLength(rowsWithIt);
+      if (selector !== ".landing-status") {
+        expect(new Set(column).size, `${selector}: ${column.join(", ")}`).toBe(1);
+      }
+    }
+  };
+
+  await page.goto(LANDING_PATH);
+  await expectColumns(page.locator(".landing-run"));
+
+  await page.goto("about:blank");
+  await page.goto(runsAddress(SCENARIO_ID));
+  const rows = page.getByRole("dialog").locator(".landing-run");
+  await expectColumns(rows);
+  expect(new Set(await columnOf(rows, ".landing-run-delete")).size).toBe(1);
+  // Replay and Follow beside Stop and Delete, not above them, down to the width
+  // the rows give way at.
+  await page.setViewportSize({ width: NARROWEST_WITH_COLUMNS, height: 800 });
+  const running = rows.nth(1);
+  const tops = await Promise.all(
+    [
+      ".landing-run-replay",
+      ".landing-run-follow",
+      ".landing-run-control",
+      ".landing-run-delete",
+    ].map(async (selector) => (await running.locator(selector).boundingBox())?.y),
+  );
+  expect(new Set(tops).size, `the tops of a row's controls: ${tops.join(", ")}`).toBe(1);
+});
 
 test("the bare address is the page where a person decides what to do", async ({ page }) => {
   const errors = collectErrors(page);

@@ -53,6 +53,7 @@ from greenhouse_sim.climate.transport import (
     AIR_HEAT_CAPACITY_J_KG_K,
     GRAMS_PER_KG,
 )
+from greenhouse_sim.core.wanted import give_up_if_unwanted
 from greenhouse_sim.units import AIR_DENSITY_KG_M3
 from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.world.capabilities import Heats
@@ -660,10 +661,9 @@ class WholeHouse:
                 continue
             up_to = min(time_s, until)
             while True:
-                # Only this request writes what this house keeps: `_working`
-                # is held. The two `_keeping` locks are never held together,
-                # since two houses may carry on from each other.
-                since = self._moments[bisect_right(self._moments, up_to) - 1]
+                # The two `_keeping` locks are never held together, since two
+                # houses may carry on from each other.
+                since = self._latest_kept(up_to)
                 with other._kept_changed:
                     first = bisect_right(other._moments, since)
                     last = bisect_right(other._moments, up_to)
@@ -691,10 +691,13 @@ class WholeHouse:
     def seed(self, moment_s: float, air: HouseAir) -> None:
         """Take `air` as this house's at `moment_s`, from a checkpoint of the
         same run (P09.5): later moments carry on from it, unless the house
-        has worked out its own there."""
-        with self._working:
+        has worked out its own there. It does not wait for a request working
+        the house's air on, which a seek would otherwise wait for: that air is
+        the same as this."""
+        with self._keeping:
             if moment_s not in self._kept:
-                self._keep(moment_s, air)
+                insort(self._moments, moment_s)
+                self._kept[moment_s] = air
 
     def mean_between(self, from_s: float, until_s: float) -> HouseAir:
         """The house's mean air from `from_s` to `until_s`: its temperature,
@@ -745,9 +748,14 @@ class WholeHouse:
                 insort(self._moments, moment)
             self._kept[moment] = air
 
+    def _latest_kept(self, time_s: float) -> float:
+        """The latest moment kept at or before `time_s`."""
+        with self._keeping:
+            return self._moments[bisect_right(self._moments, time_s) - 1]
+
     def _worked_to(self, time_s: float) -> HouseAir:
         self._take_over(time_s)
-        start = self._moments[bisect_right(self._moments, time_s) - 1]
+        start = self._latest_kept(time_s)
         if start == time_s:
             return self._kept[start]
         with self._keeping:
@@ -769,6 +777,7 @@ class WholeHouse:
         now = start
         for until in sorted(changes | steps | {time_s}):
             if until > now:
+                give_up_if_unwanted()
                 air = self._through(air, now, until)
                 now = until
                 if until in steps:
@@ -819,13 +828,13 @@ class HouseSeries(BaseModel):
 
 class HouseTrace(BaseModel):
     """The house's air through a climate run, and through the same run with
-    everything off, at each of its moments, in seconds."""
+    everything off unless left out, at each of its moments, in seconds."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     times_s: list[float]
     controlled: HouseSeries
-    all_off: HouseSeries
+    all_off: HouseSeries | None
 
 
 def _series(house: WholeHouse, times_s: Sequence[float]) -> HouseSeries:
@@ -840,12 +849,12 @@ def _series(house: WholeHouse, times_s: Sequence[float]) -> HouseSeries:
 
 
 def house_trace(
-    run: WholeHouse, everything_off: WholeHouse, times_s: Sequence[float]
+    run: WholeHouse, everything_off: WholeHouse | None, times_s: Sequence[float]
 ) -> HouseTrace:
-    """The house's air through `run` and through `everything_off` at each of
-    `times_s`."""
+    """The house's air through `run`, and through `everything_off` if given,
+    at each of `times_s`."""
     return HouseTrace(
         times_s=list(times_s),
         controlled=_series(run, times_s),
-        all_off=_series(everything_off, times_s),
+        all_off=None if everything_off is None else _series(everything_off, times_s),
     )
