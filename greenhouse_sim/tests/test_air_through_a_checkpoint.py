@@ -8,6 +8,7 @@ import json
 
 import pytest
 
+from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.day import window_start
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import checkpoints, climate_readings, fields
@@ -90,3 +91,18 @@ def test_the_air_through_a_checkpoint_is_the_air_from_the_start(
         # The checkpoint's own moment charts the day it ends, before the checkpoint.
         moment = DAY * DAY_S
         assert _air_at(restored, run, moment) == _air_at(from_the_start, run, moment)
+
+
+def test_the_run_all_off_is_worked_out_only_when_it_is_asked_for() -> None:
+    path = "/api/scenarios/climate_box/climate/house?t=600"
+    with Simulator() as simulator:
+        without = respond(simulator, "GET", f"{path}&all_off=0").body
+        assert isinstance(without, dict)
+        assert without["all_off"] is None
+        assert len(simulator.climate_runs.values()) == 1
+
+        whole = respond(simulator, "GET", path).body
+        assert isinstance(whole, dict)
+        assert whole["all_off"] is not None
+        assert whole["controlled"] == without["controlled"]
+        assert whole["times_s"] == without["times_s"]
