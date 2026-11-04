@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DAY_S } from "../clock";
 import {
@@ -42,6 +42,10 @@ function run(more: Partial<StoredRun> = {}): StoredRun {
 }
 
 describe("the runs the simulator has kept", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("reads a list of runs as the simulator sends them", () => {
     expect(parseStoredRuns([run(), run({ seed: null, created_at: null })])).toHaveLength(2);
   });
@@ -123,10 +127,20 @@ describe("the runs the simulator has kept", () => {
     expect(KEPT_SIZE_NOTE).toContain("not of the disk");
   });
 
-  it("writes sizes and start days the same wherever they are read", () => {
+  it("writes sizes the same wherever they are read", () => {
     expect([512, 2048, 8 * 1024 * 1024].map(sizeText)).toEqual(["512 B", "2 kB", "8.0 MB"]);
-    expect(startedText(run())).toBe("Oct 28");
-    expect(startedText(run({ created_at: "2026-10-28T23:30:00-05:00" }))).toBe("Oct 29");
+  });
+
+  it("writes a run's start as the day it was where it is read", () => {
+    const justAfterMidnightInParis = run({ created_at: "2026-11-03T23:25:00Z" });
+    vi.stubEnv("TZ", "Europe/Paris");
+    expect(startedText(justAfterMidnightInParis)).toBe("Nov 4");
+    vi.stubEnv("TZ", "America/New_York");
+    expect(startedText(justAfterMidnightInParis)).toBe("Nov 3");
+    expect(startedText(run({ created_at: "2026-11-04T02:00:00Z" }))).toBe("Nov 3");
+  });
+
+  it("writes no start day when the start is not known", () => {
     expect(startedText(run({ created_at: null }))).toBe("");
     expect(startedText(run({ created_at: "not a date" }))).toBe("");
   });
