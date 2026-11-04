@@ -5,37 +5,27 @@ original does, and a branch sharing every day before its own."""
 import dataclasses
 import json
 import math
-import sys
 from collections.abc import Callable
 from http import HTTPStatus
-from pathlib import Path
-from typing import Any, Final
+from typing import Any
 
 import pytest
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.parts import Part
+from greenhouse_sim.scenarios.manifest_files import manifest_digest
 from greenhouse_sim.scenarios.registry import MODELS
 from greenhouse_sim.services import checkpoints, kept_states
 from greenhouse_sim.services.climate_runs import climate_run
 from greenhouse_sim.services.crop import run_crop
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.runs import RunPlan, RunRequest
-from greenhouse_sim.services.scenarios import version
 from greenhouse_sim.services.simulator import Simulator
 
-sys.path.insert(0, str(Path(__file__).parent))
-
-import short_runs
-
-# A house with what a checkpoint keeps of the reference run, every part's model:
-# one plant, a heating loop and an organ crop.
-TENDED: Final = "climate_box_tended"
-DAYS: Final = 3
-PLANT = f"{TENDED}_plant_001"
+PLANT = "reference_greenhouse_plant_001"
 HOUR_S = 3600.0
-# The run's heater, off an hour into its second day: a branch.
+# The reference run's heater, off an hour into its second day: a branch.
 BRANCH = ((DAY_S + HOUR_S, "heater", 0.0),)
 
 
@@ -50,12 +40,6 @@ NOT_NAMED_BY = {
 # Each test starts with no run, crop or checkpoint kept, as after the API
 # restarts.
 pytestmark = pytest.mark.usefixtures("afresh")
-
-
-@pytest.fixture(scope="module")
-def simulator(simulator: Simulator) -> Simulator:
-    simulator.catalogue.register(short_runs.tended_box(TENDED, DAYS))
-    return simulator
 
 
 def _restarted(simulator: Simulator, afresh: Callable[[], None]) -> None:
@@ -77,18 +61,20 @@ def _body(simulator: Simulator, method: str, path: str, body: bytes = b"") -> An
 
 
 def test_a_checkpoint_keeps_a_runs_state_at_the_start_of_its_day(simulator: Simulator) -> None:
-    saved = checkpoints.save_checkpoint(simulator, RunRequest(TENDED), time_s=1.5 * DAY_S)
+    saved = checkpoints.save_checkpoint(
+        simulator, RunRequest("reference_greenhouse"), time_s=1.5 * DAY_S
+    )
     kept = checkpoints.checkpoint(simulator, saved.checkpoint_id)
-    _, climate = climate_run(simulator, RunRequest(TENDED))
-    crop = run_crop(simulator, RunRequest(TENDED))
+    _, climate = climate_run(simulator, RunRequest("reference_greenhouse"))
+    crop = run_crop(simulator, RunRequest("reference_greenhouse"))
 
-    assert (saved.day, saved.time_s, saved.plants) == (1, DAY_S, 1)
+    assert (saved.day, saved.time_s, saved.plants) == (1, DAY_S, 32)
     assert kept.house == climate.house.air_at(DAY_S)
     # And an hour before its day, where its first hour's field starts.
     assert kept.house_before == climate.house.air_at(DAY_S - HOUR_S)
     assert kept.crop.plants == list(crop.plants_on(1))
     assert kept.crop.lived == crop.lived_through(1)
-    assert kept.manifest == version(simulator.catalogue, TENDED)
+    assert kept.manifest == manifest_digest("reference_greenhouse")
     assert (kept.layout, kept.weather, kept.plan.daily) == ("default", "default", None)
     assert checkpoints.checkpoints(simulator) == [saved]
 
@@ -120,14 +106,16 @@ def test_it_keeps_the_commands_given_before_its_day_and_its_daily_ones(
 def test_a_restored_run_carries_on_as_the_original_does(
     simulator: Simulator, afresh: Callable[[], None]
 ) -> None:
-    later = f"/api/scenarios/{TENDED}/crop/{PLANT}?t={2 * DAY_S:.0f}"
+    later = f"/api/scenarios/reference_greenhouse/crop/{PLANT}?t={2 * DAY_S:.0f}"
     original = _body(simulator, "GET", later)
-    original_air = climate_run(simulator, RunRequest(TENDED))[1].house.air_at(2 * DAY_S + HOUR_S)
-    checkpoints.save_checkpoint(simulator, RunRequest(TENDED), time_s=DAY_S)
+    original_air = climate_run(simulator, RunRequest("reference_greenhouse"))[1].house.air_at(
+        2 * DAY_S + HOUR_S
+    )
+    checkpoints.save_checkpoint(simulator, RunRequest("reference_greenhouse"), time_s=DAY_S)
 
     _restarted(simulator, afresh)
     restored = _body(simulator, "GET", later)
-    house = climate_run(simulator, RunRequest(TENDED))[1].house
+    house = climate_run(simulator, RunRequest("reference_greenhouse"))[1].house
 
     assert restored == original
     assert house.air_at(2 * DAY_S + HOUR_S) == pytest.approx(original_air)
@@ -140,12 +128,16 @@ def test_a_restored_run_draws_its_days_first_hour_from_the_checkpoint(
     afresh: Callable[[], None],
 ) -> None:
     first_hour = DAY_S + 20 * 60.0
-    original = _body(simulator, "GET", f"/api/scenarios/{TENDED}/fields/climate?t={first_hour:.0f}")
-    checkpoints.save_checkpoint(simulator, RunRequest(TENDED), time_s=DAY_S)
+    original = _body(
+        simulator, "GET", f"/api/scenarios/reference_greenhouse/fields/climate?t={first_hour:.0f}"
+    )
+    checkpoints.save_checkpoint(simulator, RunRequest("reference_greenhouse"), time_s=DAY_S)
 
     _restarted(simulator, afresh)
-    restored = _body(simulator, "GET", f"/api/scenarios/{TENDED}/fields/climate?t={first_hour:.0f}")
-    house = climate_run(simulator, RunRequest(TENDED))[1].house
+    restored = _body(
+        simulator, "GET", f"/api/scenarios/reference_greenhouse/fields/climate?t={first_hour:.0f}"
+    )
+    house = climate_run(simulator, RunRequest("reference_greenhouse"))[1].house
 
     # Its grid run starts an hour before the day began, from the air the
     # checkpoint kept then: none of the day before is worked out.
@@ -162,15 +154,17 @@ def test_a_checkpoint_on_a_runs_first_day_keeps_no_earlier_air(simulator: Simula
 def test_a_branch_shares_every_day_before_its_own(
     simulator: Simulator, afresh: Callable[[], None]
 ) -> None:
-    checkpoints.save_checkpoint(simulator, RunRequest(TENDED), time_s=DAY_S)
-    trunk = run_crop(simulator, RunRequest(TENDED))
+    checkpoints.save_checkpoint(simulator, RunRequest("reference_greenhouse"), time_s=DAY_S)
+    trunk = run_crop(simulator, RunRequest("reference_greenhouse"))
     trunk_days = trunk.environments(PLANT, 2)
 
     _restarted(simulator, afresh)
-    branch = run_crop(simulator, RunRequest(TENDED, plan=RunPlan.requested(commands=BRANCH)))
-    house = climate_run(simulator, RunRequest(TENDED, plan=RunPlan.requested(commands=BRANCH)))[
-        1
-    ].house
+    branch = run_crop(
+        simulator, RunRequest("reference_greenhouse", plan=RunPlan.requested(commands=BRANCH))
+    )
+    house = climate_run(
+        simulator, RunRequest("reference_greenhouse", plan=RunPlan.requested(commands=BRANCH))
+    )[1].house
     branch_days = branch.environments(PLANT, 2)
 
     assert branch_days[0] == trunk_days[0]
@@ -181,7 +175,9 @@ def test_a_branch_shares_every_day_before_its_own(
     # A run that differs before the checkpoint's day takes nothing over.
     other = run_crop(
         simulator,
-        RunRequest(TENDED, plan=RunPlan.requested(commands=((HOUR_S, "heater", 0.0),))),
+        RunRequest(
+            "reference_greenhouse", plan=RunPlan.requested(commands=((HOUR_S, "heater", 1.0),))
+        ),
     )
     assert other.environments(PLANT, 1)[0] != trunk_days[0]
 
@@ -205,7 +201,9 @@ def test_the_opening_days_are_kept_beside_the_last_checkpoints_saved(simulator: 
 def test_a_checkpoint_downloads_and_uploads_as_it_was(
     simulator: Simulator, afresh: Callable[[], None]
 ) -> None:
-    saved = _body(simulator, "POST", f"/api/scenarios/{TENDED}/checkpoints?t={DAY_S:.0f}")
+    saved = _body(
+        simulator, "POST", f"/api/scenarios/reference_greenhouse/checkpoints?t={DAY_S:.0f}"
+    )
     downloaded = _body(simulator, "GET", f"/api/checkpoints/{saved['checkpoint_id']}")
     listed = _body(simulator, "GET", "/api/checkpoints")
 
@@ -233,7 +231,9 @@ def _refusal(simulator: Simulator, document: Any) -> str:
 
 
 def test_a_checkpoint_no_run_could_reach_is_refused(simulator: Simulator) -> None:
-    saved = checkpoints.save_checkpoint(simulator, RunRequest(TENDED), time_s=2 * DAY_S)
+    saved = checkpoints.save_checkpoint(
+        simulator, RunRequest("reference_greenhouse"), time_s=2 * DAY_S
+    )
     good = checkpoints.checkpoint(simulator, saved.checkpoint_id).model_dump(mode="json")
     house = good["house"]
     plants = good["models"]["crop"]["state"]["plants"]
@@ -264,27 +264,27 @@ def test_a_clean_slate_forgets_the_runs_that_took_a_checkpoints_state(
     simulator: Simulator,
     afresh: Callable[[], None],
 ) -> None:
-    checkpoints.save_checkpoint(simulator, RunRequest(TENDED), time_s=DAY_S)
+    checkpoints.save_checkpoint(simulator, RunRequest("reference_greenhouse"), time_s=DAY_S)
     _restarted(simulator, afresh)
-    seeded = climate_run(simulator, RunRequest(TENDED))[1]
+    seeded = climate_run(simulator, RunRequest("reference_greenhouse"))[1]
 
     afresh()
 
-    assert climate_run(simulator, RunRequest(TENDED))[1] is not seeded
+    assert climate_run(simulator, RunRequest("reference_greenhouse"))[1] is not seeded
 
 
 def test_a_checkpoint_that_does_not_fit_its_run_is_refused(simulator: Simulator) -> None:
-    saved = checkpoints.save_checkpoint(simulator, RunRequest(TENDED), time_s=DAY_S)
+    saved = checkpoints.save_checkpoint(simulator, RunRequest("reference_greenhouse"), time_s=DAY_S)
     good = checkpoints.checkpoint(simulator, saved.checkpoint_id).model_dump(mode="json")
 
     assert "another version" in _refusal(simulator, good | {"manifest": "0" * 16})
     assert "format 1" in _refusal(simulator, good | {"checkpoint_format": 1})
     assert "an hour before its day" in _refusal(simulator, good | {"house_before": None})
-    assert f"plants are {TENDED}'s" in _refusal(
+    assert "plants are reference_greenhouse's" in _refusal(
         simulator, _crop(good, plants=good["models"]["crop"]["state"]["plants"][1:])
     )
     assert "lived 1 days" in _refusal(simulator, _crop(good, lived=[]))
-    assert f"days 0 to {DAYS}" in _refusal(simulator, good | {"day": DAYS + 1})
+    assert "days 0 to 120" in _refusal(simulator, good | {"day": 121})
     assert "has no equipment 'boiler'" in _refusal(simulator, good | {"levels": {"boiler": 1.0}})
     assert "not a checkpoint" in _refusal(simulator, {"checkpoint_format": 2})
     garbled = respond(simulator, "POST", "/api/checkpoints", b"{")
@@ -317,7 +317,7 @@ def test_a_checkpoint_let_go_takes_its_own_state_not_one_kept_since(simulator: S
 def test_a_checkpoint_keeps_each_parts_model_its_version_and_its_state(
     simulator: Simulator,
 ) -> None:
-    saved = checkpoints.save_checkpoint(simulator, RunRequest(TENDED), time_s=DAY_S)
+    saved = checkpoints.save_checkpoint(simulator, RunRequest("reference_greenhouse"), time_s=DAY_S)
     kept = checkpoints.checkpoint(simulator, saved.checkpoint_id)
 
     assert {part: (run.model, run.version) for part, run in kept.models.items()} == {
@@ -332,7 +332,7 @@ def test_a_checkpoint_keeps_each_parts_model_its_version_and_its_state(
     }
     # Only the organ crop keeps a state: its plants and the days they lived.
     assert [part for part, run in kept.models.items() if run.state is not None] == [Part.CROP]
-    assert len(kept.crop.plants) == saved.plants == 1
+    assert len(kept.crop.plants) == saved.plants == 32
 
 
 @pytest.mark.parametrize(("written_in", "unnamed"), NOT_NAMED_BY.items())
@@ -343,7 +343,7 @@ def test_a_checkpoint_of_an_earlier_format_names_the_parts_there_were_then(
     the house's air, then the controller (P14.6): read with theirs at the
     version every model had then, and refused without one of its own, as
     this format is without any part."""
-    saved = checkpoints.save_checkpoint(simulator, RunRequest(TENDED), time_s=DAY_S)
+    saved = checkpoints.save_checkpoint(simulator, RunRequest("reference_greenhouse"), time_s=DAY_S)
     current = checkpoints.checkpoint(simulator, saved.checkpoint_id).model_dump(mode="json")
     then = {part: kept for part, kept in current["models"].items() if part not in unnamed}
     older = current | {"checkpoint_format": written_in, "models": then}
@@ -364,7 +364,7 @@ def test_a_checkpoint_of_an_earlier_format_names_the_parts_there_were_then(
 def test_a_checkpoint_of_another_model_or_version_is_refused_naming_the_part(
     simulator: Simulator,
 ) -> None:
-    saved = checkpoints.save_checkpoint(simulator, RunRequest(TENDED), time_s=DAY_S)
+    saved = checkpoints.save_checkpoint(simulator, RunRequest("reference_greenhouse"), time_s=DAY_S)
     good = checkpoints.checkpoint(simulator, saved.checkpoint_id).model_dump(mode="json")
     crop = good["models"]["crop"]
 
@@ -397,8 +397,11 @@ def _bumped(monkeypatch: pytest.MonkeyPatch, part: Part, name: str) -> None:
 def test_a_checkpoint_keeps_the_model_of_the_weather_its_run_is_under(
     simulator: Simulator, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The house's own weather is seasonal; its run under a preset, synthetic."""
-    saved = checkpoints.save_checkpoint(simulator, RunRequest(TENDED, weather="cold_spring_day"))
+    """The reference greenhouse's own weather is seasonal; its run under a
+    preset, synthetic."""
+    saved = checkpoints.save_checkpoint(
+        simulator, RunRequest("reference_greenhouse", weather="cold_spring_day")
+    )
     kept = checkpoints.checkpoint(simulator, saved.checkpoint_id)
 
     assert (kept.models[Part.WEATHER].model, kept.models[Part.WEATHER].version) == (
@@ -414,7 +417,7 @@ def test_a_checkpoint_keeps_the_model_of_the_weather_its_run_is_under(
 def test_a_format_4_checkpoints_plants_are_its_organ_crops_state(
     simulator: Simulator, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    saved = checkpoints.save_checkpoint(simulator, RunRequest(TENDED), time_s=DAY_S)
+    saved = checkpoints.save_checkpoint(simulator, RunRequest("reference_greenhouse"), time_s=DAY_S)
     kept = checkpoints.checkpoint(simulator, saved.checkpoint_id)
     written = kept.model_dump(mode="json", exclude={"models"})
     state = kept.crop.model_dump(mode="json")
