@@ -7,8 +7,8 @@ import { BUILDER_PATH, LANDING_PATH } from "../src/landing/paths";
 // A scenario file sent in from the start page (P17.11): the simulator reads it
 // and registers its scenario, and the setup builder opens it as a draft not
 // saved, never a run. The file is the simulator's own download of the Climate
-// box, under another identifier. An installation's file, the builder's Export,
-// opens there too, to be given its run's settings.
+// box, under another identifier. An installation's file, the builder's house
+// file, opens there too, to be given its run's settings.
 
 // On CI the simulator may still be working out what the spec before this
 // one asked for.
@@ -127,10 +127,10 @@ async function draftedHouse(page: Page, id: string, rows: number): Promise<void>
   );
 }
 
-/** The file the builder's Export offers for the house shown. */
+/** The house file the builder offers for the house shown. */
 async function exported(page: Page): Promise<Picked> {
   const downloading = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export" }).click();
+  await page.getByRole("button", { name: "Download house file" }).click();
   const download = await downloading;
   return {
     name: download.suggestedFilename(),
@@ -139,7 +139,7 @@ async function exported(page: Page): Promise<Picked> {
   };
 }
 
-test("a house built, exported and uploaded from the start page opens in the builder", async ({
+test("a house built, downloaded and uploaded from the start page opens in the builder", async ({
   page,
 }) => {
   const id = `round_${Date.now()}`;
@@ -149,6 +149,7 @@ test("a house built, exported and uploaded from the start page opens in the buil
   await save.click();
   await expect(status).toHaveText("Saved as revision 1.", ARRIVES);
   const file = await exported(page);
+  expect(file.name).toBe(`${id}.house.json`);
 
   await page.goto(LANDING_PATH);
   await page.locator(".landing-upload input[type=file]").setInputFiles(file);
@@ -232,7 +233,7 @@ test("a file of neither kind is told what it needs to be, on either side", async
   await page.goto(LANDING_PATH);
   await page.locator(".landing-upload input[type=file]").setInputFiles(file);
   await expect(page.getByRole("alert").filter({ hasText: "notes.json" })).toContainText(
-    "a scenario file names its scenario in greenhouse_id, and an installation file its house in installation_id",
+    "a scenario file names its scenario in greenhouse_id, and a house file its house in installation_id",
     ARRIVES,
   );
   await expect(page).toHaveURL(/\/$/);
@@ -240,7 +241,7 @@ test("a file of neither kind is told what it needs to be, on either side", async
   await page.goto(BUILDER_PATH);
   await page.locator(".builder-start input[type=file]").setInputFiles(file);
   await expect(page.getByTestId("builder-status")).toContainText(
-    "notes.json cannot be opened: not a scenario file or an installation file",
+    "notes.json cannot be opened: not a scenario file or a house file",
     ARRIVES,
   );
 });

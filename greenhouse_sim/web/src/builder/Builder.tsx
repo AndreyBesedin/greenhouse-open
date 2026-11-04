@@ -54,6 +54,10 @@ import { FIRST_RUN, type RunFields, RunStep, settingsOf } from "./RunStep";
 import { ShareScenario } from "./ShareScenario";
 import { offerFile } from "./scenarioFile";
 
+/** What an installation's file is called when it is downloaded, as a scenario's
+ * is `.scenario.json`. */
+const HOUSE_FILE_SUFFIX = ".house.json";
+
 /** What outlines an item an error names, on the house. */
 const FINDING_COLOR = "#e5484d";
 
@@ -640,11 +644,14 @@ export function Builder({
       return;
     }
     if (editsUnderWay.current > 0) {
-      setStatus("Not exported: an edit is still being made. Export once it is.");
+      setStatus("Not downloaded: an edit is still being made. Download the file once it is.");
       return;
     }
     const present = editing.history.present;
-    offerFile(`${present.installation_id}.json`, installationFile(editing.schemaVersion, present));
+    offerFile(
+      `${present.installation_id}${HOUSE_FILE_SUFFIX}`,
+      installationFile(editing.schemaVersion, present),
+    );
   }
 
   async function run(settings: RunSettings): Promise<void> {
@@ -781,7 +788,7 @@ export function Builder({
                 Save
               </button>
               <button type="button" disabled={busy} onClick={exportFile}>
-                Export
+                Download house file
               </button>
             </div>
           )}

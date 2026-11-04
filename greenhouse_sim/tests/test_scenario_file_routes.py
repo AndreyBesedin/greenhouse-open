@@ -282,7 +282,7 @@ def test_a_malformed_installation_file_gets_the_builders_refusal_naming_the_fiel
         status, body = _upload(receiver, json.dumps(document))
 
     assert status == HTTPStatus.BAD_REQUEST
-    assert body["error"].startswith("not a greenhouse installation file: envelope:")
+    assert body["error"].startswith("not a house file: envelope:")
     assert [problem["field"] for problem in body["problems"]] == ["envelope"]
 
 
@@ -301,7 +301,7 @@ def test_a_file_of_neither_kind_is_told_what_it_needs_to_be(text: str, said: str
         status, body = _upload(receiver, text)
 
     assert status == HTTPStatus.BAD_REQUEST
-    assert body["error"].startswith("not a scenario file or an installation file: ")
+    assert body["error"].startswith("not a scenario file or a house file: ")
     assert said in body["error"]
     assert "None" not in body["error"]
 

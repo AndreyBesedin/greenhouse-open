@@ -324,7 +324,7 @@ describe("the setup builder (P12.2)", () => {
       return "blob:exported";
     });
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
-    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const offered = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     shown = render(<Builder />);
     const page = shown.container;
     await settled();
@@ -333,15 +333,18 @@ describe("the setup builder (P12.2)", () => {
 
     placeAHeater(page);
     await settled();
-    expect(button(page, "Export").disabled).toBe(true);
-    click(button(page, "Export"));
+    expect(button(page, "Download house file").disabled).toBe(true);
+    click(button(page, "Download house file"));
     expect(exported).toEqual([]);
 
     edits.release();
     await settled();
-    click(button(page, "Export"));
+    click(button(page, "Download house file"));
     const [file] = exported;
     expect(exported).toHaveLength(1);
+    expect((offered.mock.contexts[0] as HTMLAnchorElement).download).toBe(
+      `${STARTING_HOUSE.installation.installation_id}.house.json`,
+    );
     expect(JSON.parse(await (file as Blob).text()).layout.equipment).toMatchObject([
       { actuator_id: "heater_1" },
     ]);
@@ -795,17 +798,14 @@ describe("the setup builder (P12.2)", () => {
     });
 
     it("says at its import why a file is refused, and stays where it is", async () => {
-      simulator(
-        [],
-        answer({ error: "not a scenario file or an installation file: not JSON" }, 400),
-      );
+      simulator([], answer({ error: "not a scenario file or a house file: not JSON" }, 400));
       shown = render(<Builder />);
       await settled();
 
       await imported(shown.container, "notes.json");
 
       expect(said(shown.container, "builder-status")).toBe(
-        "notes.json cannot be opened: not a scenario file or an installation file: not JSON",
+        "notes.json cannot be opened: not a scenario file or a house file: not JSON",
       );
       expect(button(shown.container, "Import a file")).toBeDefined();
     });

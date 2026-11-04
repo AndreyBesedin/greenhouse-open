@@ -209,7 +209,7 @@ def holds_an_installation(text: str) -> bool:
         return True
     raise ScenarioFileError(
         "",
-        f"a scenario file names its scenario in {_SCENARIO_ID_KEY}, and an installation file "
+        f"a scenario file names its scenario in {_SCENARIO_ID_KEY}, and a house file "
         f"its house in {_INSTALLATION_ID_KEY}; this file has neither",
     )
 

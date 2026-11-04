@@ -203,7 +203,7 @@ def test_a_file_refused_says_which_field_is_at_fault() -> None:
         "envelope.length",
         "row_crops[1].crop_model",
     ]
-    assert str(refused.value).startswith("not a greenhouse installation file: envelope.length:")
+    assert str(refused.value).startswith("not a house file: envelope.length:")
     assert str(refused.value).endswith("(and 1 more)")
 
 

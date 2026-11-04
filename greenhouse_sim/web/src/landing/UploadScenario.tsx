@@ -72,7 +72,7 @@ export function UploadScenario({ navigate }: { navigate: (address: string) => vo
         }}
       />
       <p id={hint} className="landing-note">
-        A scenario file, or a house exported from the builder, opens in the builder, where it can be
+        A scenario file, or a house file from the builder, opens in the builder, where it can be
         changed before it is run.
       </p>
       <p role="status" className="landing-note">

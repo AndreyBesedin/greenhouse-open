@@ -213,8 +213,8 @@ serving, the dev server) answers each with the viewer's page.
 A scenario is an installation (the house part, decision 0050) and what a run
 adds to it: the period, site, seed, weather and the models' settings, which
 a scenario's manifest holds (decision 0031). Today the builder's file is the
-installation alone (`builder.portable`, with *Export* and a start from a
-file), and a draft takes its run settings (`DraftRun`) only when it is run,
+installation alone (`builder.portable`, with *Download house file* and a start
+from a file), and a draft takes its run settings (`DraftRun`) only when it is run,
 so a file sent to a colleague carries the house and not what makes it a
 scenario.
 
@@ -234,9 +234,9 @@ out, edited and read back.
   scenario as a draft's run is (decision 0048), and opens it in the setup
   builder, never straight into a run: the builder shows the house and the run
   settings, and ends in *save and start a run* or *save and go back*. An
-  installation file, which has no settings, opens there to be given them, as a
-  draft not saved: a draft of its identifier stays as it is, and the file is
-  saved under another. The simulator says which kind a file is, and the
+  installation file, a *house file* on the page, which has no settings, opens
+  there to be given them, as a draft not saved: a draft of its identifier stays
+  as it is, and the file is saved under another. The simulator says which kind a file is, and the
   builder's own import takes either. A scenario whose identifier is a packaged
   scenario's, or another's registered, is refused.
 - **A recorded weather is carried or named, as the sender chooses.** A scenario

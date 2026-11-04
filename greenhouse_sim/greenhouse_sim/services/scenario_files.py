@@ -159,7 +159,7 @@ def upload(simulator: Simulator, text: str) -> ScenarioUploaded | InstallationUp
         is_installation = holds_an_installation(text)
     except ScenarioFileError as error:
         raise InvalidRequest(
-            f"not a scenario file or an installation file: {error.message}",
+            f"not a scenario file or a house file: {error.message}",
             [(error.field, error.message)],
         ) from None
     if is_installation:
