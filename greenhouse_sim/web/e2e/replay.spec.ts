@@ -145,6 +145,35 @@ test("keys pressed faster than the answers move from the moment last sought", as
   expect(sought.at(-1)).toBe(String(DAY_S));
 });
 
+test("a panel's fork names the moment it takes while the climate field is on its way", async ({
+  page,
+}) => {
+  test.setTimeout(WAITS_FOR_A_DAY);
+  await replayOfANewRun(page, "46");
+  const handle = page.getByRole("slider", { name: "Position in the run" });
+  await expect
+    .poll(async () => Number(await handle.getAttribute("aria-valuemax")), { timeout: COMPUTES })
+    .toBeGreaterThanOrEqual(DAY_S);
+  const fork = page.getByTestId("fork-levels").getByRole("button").first();
+  await expect(fork).toHaveText("Fork from here with these levels", { timeout: COMPUTES });
+
+  let answer = () => {};
+  const answered = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  await page.route("**/fields/climate*", async (route) => {
+    await answered;
+    await route.continue();
+  });
+  await handle.focus();
+  await page.keyboard.press("PageUp");
+  await expect(handle).toHaveAttribute("aria-valuetext", "Day 1, 24:00");
+  await expect(fork).toHaveText("Fork from Day 1, 00:00 with these levels");
+
+  answer();
+  await expect(fork).toHaveText("Fork from here with these levels", { timeout: COMPUTES });
+});
+
 test("a stored run is forked from the moment shown, and stays there to go back to", async ({
   page,
 }) => {

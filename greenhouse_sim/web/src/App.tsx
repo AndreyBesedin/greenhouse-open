@@ -45,7 +45,7 @@ import { QaPanel } from "./qaMode/QaPanel";
 import { useQaLoads } from "./qaMode/useQaLoads";
 import type { ViewSample } from "./readouts";
 import type { ForkChange } from "./replay/fork";
-import { forkMoment, withPlanOf } from "./replay/replaySource";
+import { forkMoment, forkMomentNamed, withPlanOf } from "./replay/replaySource";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { WhatAmISeeing } from "./SeenInTheView";
 import { DEFAULT_LAYOUT, loadScenarios, ownDaily, SCENARIOS_URL } from "./scenarios";
@@ -535,6 +535,7 @@ export function App({
                           replay.forkWith({ kind: "levels", levels: replayLevels }, forkFrom),
                         onPutBack: () => setReplayLevels({}),
                         noFork: replay.noFork,
+                        from: forkMomentNamed(forkFrom, replay.momentS),
                       },
                     })}
                 played={

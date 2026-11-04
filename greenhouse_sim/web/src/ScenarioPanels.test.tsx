@@ -149,6 +149,17 @@ describe("a stored run's panels", () => {
     expect(onPutBack).toHaveBeenCalledOnce();
   });
 
+  it("names the moment a fork of levels takes when the transport reads another", () => {
+    const onFork = vi.fn();
+    rendered = panels({
+      replayed: true,
+      forkLevels: { asked: { heater: 0.5 }, onFork, onPutBack: vi.fn(), from: "Day 1, 24:00" },
+    });
+
+    click(button(rendered.container, "Fork from Day 1, 24:00 with these levels"));
+    expect(onFork).toHaveBeenCalledOnce();
+  });
+
   it("says why no fork of levels can be made at a run's end, and offers none", () => {
     const onFork = vi.fn();
     rendered = panels({

@@ -253,12 +253,10 @@ def default_epochs() -> Epochs:
     return Epochs(root, legacy=root.parent / "playback-epochs")
 
 
-class PlaybackFailed(RuntimeError):
-    """A playback's run could not be worked out, unexpectedly: a failure of
-    the simulator's, not of a request, answered and logged as such."""
-
-    def __init__(self, run_id: str) -> None:
-        super().__init__(f"the playback of {run_id} could not work its run out")
+class PlaybackFailed(Conflict):
+    """Why a playback's run could not be worked out, as its epoch keeps it
+    (`failure_reason`), answered to whoever reads the playback until a start plays
+    the run again. The failure itself is logged once, as it happens."""
 
 
 class PlaybackCommand(StrEnum):
@@ -812,10 +810,12 @@ class Playback:
                     return self._state()
 
     def epoch_held(self) -> int | None:
-        """The epoch whose clock it holds, by a pause; none while it plays, or
-        once its run has ended."""
+        """The epoch whose clock it holds, by a pause; none while it plays, once
+        its run has ended, or once it has said its epoch ended, which is then no
+        more its own: a worker may have taken it up."""
         with self._lock:
-            return None if self._playing or self._time_s >= self.end_s else self._epoch
+            over = self._playing or self._time_s >= self.end_s or self._store_ended
+            return None if over else self._epoch
 
     def plays(self, layout: str | None, seed: int | None = None) -> bool:
         """Whether it plays the run of `layout` at `seed`: its own layout,
@@ -1159,10 +1159,12 @@ class Playback:
         except Stopped:
             return False
         except Exception as error:
+            logger.exception("the playback of %s failed", self.run_id)
             with self._lock:
                 self._failure = error
             return False
         if not run.plan.actions and run_id != self.run_id:
+            logger.error("the playback of %s worked out another run: %s", self.run_id, run_id)
             with self._lock:
                 self._failure = RuntimeError(f"its run is another now: {run_id}")
             return False
@@ -1260,9 +1262,7 @@ class Playback:
 
     def _state(self) -> PlaybackState:
         if self._failure is not None:
-            if isinstance(self._failure, ServiceError):
-                raise self._failure
-            raise PlaybackFailed(self.run_id) from self._failure
+            raise PlaybackFailed(failure_reason(self._failure)) from self._failure
         planned = self._executor.plan()
         return PlaybackState(
             scenario_id=self.scenario_id,
@@ -1288,18 +1288,35 @@ class Playback:
             self._advance()
             return self._state()
 
+    def standing(self) -> PlaybackState | None:
+        """Where it stands, as `state` says, or None if it failed."""
+        with self._lock:
+            self._advance()
+            return None if self._failure is not None else self._state()
+
     def has_epoch(self, run_id: str, epoch: int) -> bool:
         """Whether this is the epoch it plays. Asked of every playback kept, and
         so unlike `state`: it moves no clock and raises no failure of its own."""
         with self._lock:
             return (self.run_id, self._epoch) == (run_id, epoch)
 
-    def has_ended(self) -> bool:
-        """Whether the epoch it plays has ended, as the store says, or it keeps
-        none: there is nothing for a stop to end."""
+    def stop_if_working(self, run_id: str, epoch: int) -> bool:
+        """Tells it to stop if this is the epoch it works, and says whether it did:
+        one step, under the lock a restart moves its epoch under, so that a stop never
+        reaches the epoch after the one it was asked of. Not one it keeps none of, nor
+        one it has said ended, or the store has, which is no more its own: a worker
+        may have taken it up, whose status says nothing of this playback. Once told,
+        it starts nothing over, so the epoch it has stays the one asked of."""
         with self._lock:
-            store = self._store
-        return store is None or store.manifest().status in ENDED
+            if (
+                (self.run_id, self._epoch) != (run_id, epoch)
+                or self._store is None
+                or self._store_ended
+                or self._store.manifest().status in ENDED
+            ):
+                return False
+            self._stopped.set()
+            return True
 
     def stopped(self) -> StoredRun:
         """Its epoch, as a stop answers with it, once it was told to stop: said to
@@ -1307,7 +1324,7 @@ class Playback:
         through the store, for it to read `stopping` until the thread says so."""
         with self._lock:
             store = self._store
-        assert store is not None  # one with none is not stopped: `has_ended`
+        assert store is not None  # one with none is not stopped: `stop_if_working`
         if self.working:
             store.ask_to_stop()
         else:
@@ -1641,10 +1658,12 @@ class Playbacks:
 
     def _let_go(self, _: str, found: Playback) -> None:
         """Stops a playback let go: by the deadline of all of them, while
-        they all stop, or its own."""
+        they all stop, or its own. One among those replaced is waited for by whoever
+        put it there, once `rearranging` is released (`stop_epoch`)."""
         deadline = self._stopping_by
         found.stop(wait=False)
-        found.finish(monotonic() + STOP_WAIT_S if deadline is None else deadline)
+        if not any(found is held for held in self._replaced):
+            found.finish(monotonic() + STOP_WAIT_S if deadline is None else deadline)
 
     def refuse_if_closed(self) -> None:
         """Under `rearranging`: a playback is added to none closed."""
@@ -1686,25 +1705,28 @@ class Playbacks:
             return [found for found in self._replaced if found.working]
 
     def stop_epoch(self, run_id: str, epoch: int) -> Playback | None:
-        """The playback that has this epoch, unless it has ended: told to stop,
-        waited for `STOP_WAIT_S` at most, and no longer kept, so that its scenario's
-        next start is a new one, the run's next epoch. It stays among those
+        """The playback that works this epoch, if one does (`stop_if_working`): told
+        to stop, no longer kept, so that its scenario's next start is a new one, the
+        run's next epoch, and waited for `STOP_WAIT_S` at most. It stays among those
         `retiring` until its thread has ended, for the epoch not to be deleted
         under it."""
         with self.rearranging:
             found = next(
-                (held for held in (*self.all(), *self._replaced) if held.has_epoch(run_id, epoch)),
+                (
+                    held
+                    for held in (*self.all(), *self._replaced)
+                    if held.stop_if_working(run_id, epoch)
+                ),
                 None,
             )
-            if found is None or found.has_ended():
+            if found is None:
                 return None
-            found.tell_to_stop()
             others = [held for held in self._replaced if held.working and held is not found]
             self._replaced = [*others, found]
-        # Outside the lock: a stop that takes its time holds up no other start.
-        deadline = monotonic() + STOP_WAIT_S
-        self._store.drop(found.scenario_id, found)
-        found.finish(deadline)
+            # Under the lock, or a start would be given the one stopped.
+            self._store.drop(found.scenario_id, found)
+        # Outside it: a stop that takes its time holds up no other start.
+        found.finish(monotonic() + STOP_WAIT_S)
         return found
 
     def replace(self, scenario_id: str, replacing: Playback, replaced: Playback) -> None:
