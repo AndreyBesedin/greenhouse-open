@@ -21,6 +21,7 @@ import pytest
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import leases, scheduler, workers
+from greenhouse_sim.services.checkpoints import upload_checkpoint
 from greenhouse_sim.services.errors import Conflict
 from greenhouse_sim.services.run_store import (
     EpochManifest,
@@ -228,14 +229,13 @@ def test_a_resume_making_ready_for_longer_than_a_beat_keeps_the_epoch_its_own(
         assert workers.execute(made, kept, workers.Stepped([DAY_S])) == Status.INTERRUPTED
         # The thread of the claim it let go, which is not the one this test wakes.
         beats.newest()
-        real = workers.upload_checkpoint
         another = EpochStore(objects, kept.run_id, kept.epoch)
         taken = []
 
         def restores_slowly(*args: Any) -> Any:
             assert beats.wake(beats.newest())
             taken.append(another.claim())
-            return real(*args)
+            return upload_checkpoint(*args)
 
         monkeypatch.setattr(workers, "upload_checkpoint", restores_slowly)
         resumed = EpochStore(objects, kept.run_id, kept.epoch)
