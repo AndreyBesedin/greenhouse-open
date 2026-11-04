@@ -179,6 +179,18 @@ describe("the runs of a scenario, in a dialog", () => {
       expect(asked).toEqual([{ url: `${RUNS_URL}?seed=75&seconds_per_day=4`, method: "POST" }]);
     });
 
+    it("says what the seed's default is and means, as a placeholder and not a value", () => {
+      const { container, field } = shown([], true);
+      const seed = field("Seed");
+
+      expect(seed.value).toBe("");
+      expect(seed.placeholder).toBe("The scenario's own");
+      const note = container.querySelector(`[id="${seed.getAttribute("aria-describedby")}"]`);
+      expect(note?.textContent).toBe(
+        "The default. With no seed, the run uses the scenario's own, so the same scenario gives the same run.",
+      );
+    });
+
     it("leaves out a seed and a pace not entered: the scenario's own, as fast as it computes", async () => {
       const asked = simulator({ [`POST ${RUNS_URL}?`]: { status: 200, body: STARTED } });
       const { container, field, navigate } = shown([], true);
@@ -278,7 +290,95 @@ describe("the runs of a scenario, in a dialog", () => {
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(
       "The run with seed 1, epoch 0 is still being computed: stop it, then delete it.",
     );
-    expect(onChanged).not.toHaveBeenCalled();
+    // The row is read again: what is said of it stands only while it does.
+    expect(onChanged).toHaveBeenCalledTimes(1);
+  });
+
+  describe("a refused deletion, as its row is read again", () => {
+    const KEPT = run({ status: "running" });
+
+    function listed(runs: StoredRun[]) {
+      drawn?.rerender(
+        <RunsDialog
+          scenario={SCENARIO}
+          runs={runs}
+          navigate={vi.fn()}
+          onClose={vi.fn()}
+          onChanged={vi.fn()}
+        />,
+      );
+    }
+
+    async function refused(): Promise<Element> {
+      simulator({}, { status: 409, body: { error: "being computed" } });
+      const { container } = shown([KEPT]);
+      click(button(container, "Delete the run with seed 1, epoch 0"));
+      click(button(container, "Delete the run with seed 1, epoch 0"));
+      await vi.waitFor(() => expect(container.querySelector('[role="alert"]')).not.toBeNull());
+      return container;
+    }
+
+    it.each([
+      ["interrupted", [run({ status: "interrupted" })]],
+      ["finished", [run({ status: "finished" })]],
+      ["failed", [run({ status: "failed" })]],
+      ["gone", []],
+    ] as const)("goes once the run has %s, and does not come back", async (_, runs) => {
+      const container = await refused();
+
+      listed([...runs]);
+      expect(container.querySelector('[role="alert"]')).toBeNull();
+
+      // Resumed, it is computed again, and nothing was refused of it since.
+      listed([KEPT]);
+      expect(container.querySelector('[role="alert"]')).toBeNull();
+    });
+
+    it.each([
+      [
+        "paused, not over: stop it",
+        run({ status: "running", paused: true }),
+        "The run with seed 1, epoch 0 is paused, not over: stop it, then delete it.",
+      ],
+      [
+        "stopping",
+        run({ status: "running", stopping: true }),
+        "The run with seed 1, epoch 0 is stopping: delete it once it reads Interrupted.",
+      ],
+      [
+        "waiting for a worker",
+        run({ status: "queued" }),
+        "The run with seed 1, epoch 0 is waiting for a worker: stop it, then delete it.",
+      ],
+    ])("says the run is %s once its row reads so", async (_, now, said) => {
+      const container = await refused();
+
+      listed([now]);
+
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe(said);
+    });
+
+    it("says one over by its status is being written still, and to try again", async () => {
+      simulator({}, { status: 409, body: { error: "being computed" } });
+      const { container } = shown([run({ status: "interrupted" })]);
+
+      click(button(container, "Delete the run with seed 1, epoch 0"));
+      click(button(container, "Delete the run with seed 1, epoch 0"));
+
+      await vi.waitFor(() =>
+        expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+          "The run with seed 1, epoch 0 is still being written: try again.",
+        ),
+      );
+    });
+
+    it("stays over another run's row changing", async () => {
+      const container = await refused();
+
+      listed([KEPT, run({ epoch: 1, status: "finished" })]);
+
+      expect(container.querySelector('[role="alert"]')).not.toBeNull();
+    });
   });
 
   it("offers to stop a run computing or waiting and to resume one interrupted, and nothing else", () => {
@@ -410,9 +510,7 @@ describe("the runs of a scenario, in a dialog", () => {
       {},
       {
         status: 409,
-        body: {
-          error: `epoch 0 of ${RUN_ID} is played in the viewer, with no worker: it stops with its playback`,
-        },
+        body: { error: `epoch 0 of ${RUN_ID} is finished: it is not being computed` },
       },
     );
     const { container, onChanged } = shown([run({ status: "running" })]);
@@ -421,7 +519,7 @@ describe("the runs of a scenario, in a dialog", () => {
 
     await vi.waitFor(() =>
       expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-        "this run is played in the viewer, with no worker: it stops with its playback",
+        "this run is finished: it is not being computed",
       ),
     );
     expect(onChanged).not.toHaveBeenCalled();

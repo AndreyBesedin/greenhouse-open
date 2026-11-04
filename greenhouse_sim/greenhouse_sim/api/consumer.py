@@ -9,8 +9,9 @@
     GET /consumer/v1/runs/{run_id}/outcomes?after=     -> OutcomeBatch
 
 `limit=` caps a batch, which the simulator caps lower too. An unknown run
-or path is `404`, a cursor or limit that is not a whole number `400`, and
-any other method `405`, each with a `detail` saying why.
+or path is `404`, a cursor or limit that is not a whole number `400`, a run
+that failed `409`, and any other method `405`, each with a `detail` saying
+why.
 
 A surface of its own, apart from the viewer's API: it reaches the simulator
 through `services.consumer` alone, and so reaches observed records only,
@@ -27,7 +28,7 @@ from pydantic import BaseModel
 
 from greenhouse_sim.api.responses import Response
 from greenhouse_sim.services import consumer
-from greenhouse_sim.services.errors import InvalidRequest, NotFound, ServiceError
+from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound, ServiceError
 
 _PREFIX: Final = [segment for segment in consumer.ROUTES_PREFIX.split("/") if segment]
 
@@ -90,6 +91,8 @@ def _answer(call: Callable[[], BaseModel]) -> Response:
         return Response(HTTPStatus.OK, call().model_dump(mode="json"))
     except NotFound as error:
         return _detail(HTTPStatus.NOT_FOUND, error.message)
+    except Conflict as error:
+        return _detail(HTTPStatus.CONFLICT, error.message)
     except ServiceError as error:
         return _detail(HTTPStatus.BAD_REQUEST, error.message)
 

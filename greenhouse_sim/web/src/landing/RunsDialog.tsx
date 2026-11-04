@@ -7,10 +7,24 @@ import { replayAddress, viewerAddress } from "./paths";
 import { RunControls } from "./RunControls";
 import { FollowLink, ReplayLink, RunProgress, StatusChip } from "./RunParts";
 import { DEFAULT_PACE_S, startRun } from "./startRun";
-import { type StoredRun, sizeText, startedText } from "./storedRuns";
+import { isComputing, runKey, type StoredRun, sizeText, startedText } from "./storedRuns";
 
 /** How the simulator refuses to delete a run being computed. */
 const STILL_COMPUTED = 409;
+
+/** Why a run the list says is not over is not deleted yet, as its row now reads. */
+function notDeleted(run: StoredRun): string {
+  const who = whoIs(run);
+  if (run.stopping) {
+    return `The run with ${who} is stopping: delete it once it reads Interrupted.`;
+  }
+  if (run.paused) {
+    return `The run with ${who} is paused, not over: stop it, then delete it.`;
+  }
+  return run.status === "queued"
+    ? `The run with ${who} is waiting for a worker: stop it, then delete it.`
+    : `The run with ${who} is still being computed: stop it, then delete it.`;
+}
 
 /** Who a run is, as a list of one scenario's says it. */
 function whoIs(run: StoredRun): string {
@@ -41,12 +55,18 @@ export function RunsDialog({
   onChanged: () => void;
 }) {
   const heading = useId();
+  const seedSays = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const [formOpen, setFormOpen] = useState(newRun);
   const [seed, setSeed] = useState("");
   const [pace, setPace] = useState(DEFAULT_PACE_S);
   const [problem, setProblem] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
+  // The run whose deletion was refused for not being over: what is said of it is
+  // read off its row, as the list has it now, and goes once the row is over or gone.
+  const [refused, setRefused] = useState<string | null>(null);
+  const refusedRun = runs.find((run) => runKey(run) === refused) ?? null;
+  const notOver = refusedRun !== null && isComputing(refusedRun) ? refusedRun : null;
   // A second press of Start while the first is answered would be a second run.
   const [starting, setStarting] = useState(false);
 
@@ -61,6 +81,13 @@ export function RunsDialog({
       }
     }
   }, []);
+
+  // Not said again if the same run comes to be computed again, once resumed.
+  useEffect(() => {
+    if (refused !== null && notOver === null) {
+      setRefused(null);
+    }
+  }, [refused, notOver]);
 
   /** Closes the dialog as Escape does, for the browser to give focus back to
    * what had it, which it does not for a dialog merely taken off the page; its
@@ -101,13 +128,15 @@ export function RunsDialog({
     ).catch(() => null);
     setConfirming(null);
     if (response?.status === STILL_COMPUTED) {
-      setProblem(
-        run.stopping
-          ? `The run with ${whoIs(run)} is stopping: delete it once it reads Interrupted.`
-          : `The run with ${whoIs(run)} is still being computed: stop it, then delete it.`,
-      );
+      // The row may have moved on since it was read: it is what is said of it. One
+      // over by its status is being written still, by a playback replaced.
+      const over = !isComputing(run);
+      setProblem(over ? `The run with ${whoIs(run)} is still being written: try again.` : null);
+      setRefused(over ? null : runKey(run));
+      onChanged();
       return;
     }
+    setRefused(null);
     if (response === null || !response.ok) {
       setProblem(
         response === null ? "The simulator could not be reached." : await refusal(response),
@@ -142,17 +171,24 @@ export function RunsDialog({
 
       {formOpen && (
         <form className="landing-form" onSubmit={(event) => void submit(event)}>
-          <label className="landing-field">
-            <span>Seed</span>
-            <input
-              className="landing-input"
-              type="text"
-              inputMode="numeric"
-              placeholder="The scenario's own"
-              value={seed}
-              onChange={(event) => setSeed(event.target.value.replace(/\D/g, ""))}
-            />
-          </label>
+          <div className="landing-seed">
+            <label className="landing-field">
+              <span>Seed</span>
+              <input
+                className="landing-input"
+                type="text"
+                inputMode="numeric"
+                placeholder="The scenario's own"
+                aria-describedby={seedSays}
+                value={seed}
+                onChange={(event) => setSeed(event.target.value.replace(/\D/g, ""))}
+              />
+            </label>
+            <p id={seedSays} className="landing-note">
+              The default. With no seed, the run uses the scenario's own, so the same scenario gives
+              the same run.
+            </p>
+          </div>
           <label className="landing-field">
             <span>Seconds per simulated day</span>
             <input
@@ -180,6 +216,7 @@ export function RunsDialog({
       )}
 
       {problem !== null && <p role="alert">{problem}</p>}
+      {notOver !== null && <p role="alert">{notDeleted(notOver)}</p>}
       {runs.length === 0 ? (
         <p className="landing-empty">No runs of this scenario yet. Start one with New run.</p>
       ) : (
@@ -209,6 +246,7 @@ export function RunsDialog({
                   onChanged={() => {
                     // What a refused deletion said was of the run as it stood.
                     setProblem(null);
+                    setRefused(null);
                     onChanged();
                   }}
                 />
