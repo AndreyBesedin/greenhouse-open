@@ -11,8 +11,13 @@ store is the only channel between a worker and the API, so that whoever reads an
 epoch reads it while it is computed, as far as the last commit names
 (`stored_playback`).
 
-A worker claims its epoch before it does anything (`leases`), so that of two
-workers given one epoch one takes it and the other leaves.
+The queue outlives the process, so that one a scheduler put in line is not among
+those: what waits is what the store says waits, with all its worker needs (decision
+0067), and `restore` makes the queue again from those manifests, in their order, as a
+simulator starts. A worker claims its epoch before it does anything (`leases`), so
+that this needs no agreement with whoever else may be looking: of two workers given
+one epoch, as when a server starts while one it replaced is still starting a worker,
+one takes it and the other leaves.
 
 A process is the worker because P17.1 measured what a thread costs a process
 that is working: 46% of its speed against 5% for another process.
@@ -35,8 +40,9 @@ import logging
 import multiprocessing
 import threading
 from collections import deque
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from multiprocessing.context import SpawnProcess
 from pathlib import Path
 from typing import Final
@@ -75,6 +81,8 @@ END_WITHIN_S: Final = 10.0
 # What a worker exits with that found its epoch another's, or no longer waiting:
 # it has done nothing to it, and nothing is to be said of it.
 LEFT_TO_ANOTHER: Final = 3
+# What a manifest a scheduler put in line says while it has not ended.
+_IN_LINE: Final = (Status.QUEUED, Status.RUNNING)
 
 
 def work(root: str, run_id: str, epoch: int) -> None:
@@ -151,6 +159,9 @@ class Scheduler:
         self._waiting: deque[_Job] = deque()
         self._running: dict[tuple[str, int], SpawnProcess] = {}
         self._cancelled: set[tuple[str, int]] = set()
+        # Epochs a worker this scheduler did not start has: one a server before this
+        # left computing, which counts against the limit as long as it is believed.
+        self._elsewhere: set[tuple[str, int]] = set()
         # The running workers that were asked to carry an epoch on.
         self._resuming: set[tuple[str, int]] = set()
         self._closed = threading.Event()
@@ -179,6 +190,7 @@ class Scheduler:
                 layout=layout,
                 seed=seed,
                 seconds_per_day=pace,
+                queued_at=datetime.now(UTC),
             )
             self._waiting.append(_Job(epoch.run_id, epoch.epoch))
             self._launch()
@@ -244,6 +256,7 @@ class Scheduler:
                 layout=layout,
                 changes=changes,
                 seconds_per_day=pace,
+                queued_at=datetime.now(UTC),
             )
             self._waiting.append(_Job(made.run_id, made.epoch, resuming=True))
             self._launch()
@@ -262,17 +275,47 @@ class Scheduler:
         with self._lock:
             return [(job.run_id, job.epoch) for job in self._waiting]
 
+    def take_up(self, left: Iterable[EpochStore]) -> None:
+        """The epochs in line in the store as this scheduler begins (`restore`): one
+        with a worker still is counted against the limit, one that waits is put in
+        the queue in its place, and one whose worker could not run it is told
+        `interrupted`, for whoever asks to carry it on to be told why."""
+        with self._lock:
+            for kept in sorted(left, key=_place_in_line):
+                if kept.worked():
+                    self._elsewhere.add((kept.run_id, kept.epoch))
+                elif kept.manifest().status == Status.QUEUED:
+                    self._wait_again(kept)
+            self._launch()
+
+    def _wait_again(self, kept: EpochStore) -> None:
+        try:
+            scenario_file_of(self._simulator, kept)
+        except Conflict as refused:
+            logger.warning("%s: it waits no longer", refused.message)
+            kept.end_unless_worked(Status.INTERRUPTED)
+            return
+        manifest = kept.manifest()
+        resuming = manifest.resumed or manifest.fork is not None or bool(kept.commits())
+        self._waiting.append(_Job(kept.run_id, kept.epoch, resuming=resuming))
+
     def cancel(self, run_id: str, epoch: int) -> StoredRun:
         """Ends an epoch: one waiting here is taken out of the queue and one
         being executed here has its worker ended, both told `interrupted` with
         what they had committed. Any other is left to `_stop_elsewhere`, and may
-        be on its way when this answers, as the epoch answered says."""
+        be on its way when this answers, as the epoch answered says: so is one
+        waiting here that another server's worker has taken up, or that has ended
+        there, since a queue made from the store is not the only one that may."""
         key = (run_id, epoch)
         with self._lock:
             waiting = next((j for j in self._waiting if (j.run_id, j.epoch) == key), None)
             if waiting is not None:
                 self._waiting.remove(waiting)
-                self._say(key, Status.INTERRUPTED)
+                kept = EpochStore(self._objects, run_id, epoch)
+                if self._status(key) != Status.QUEUED or not kept.end_unless_worked(
+                    Status.INTERRUPTED
+                ):
+                    self._stop_elsewhere(run_id, epoch)
             elif key in self._running:
                 self._cancelled.add(key)
                 self._end(self._running[key])
@@ -297,13 +340,11 @@ class Scheduler:
             interrupted.watch_epoch(self._simulator, run_id, epoch)
 
     def close(self) -> None:
-        """Ends every worker and takes every epoch waiting out of the queue,
-        each told `interrupted`; starts none after."""
+        """Ends every worker, each epoch told `interrupted`, and starts none after.
+        An epoch waiting is left so in the store, for the next scheduler to take up."""
         self._closed.set()
         with self._lock:
-            while self._waiting:
-                job = self._waiting.popleft()
-                self._say((job.run_id, job.epoch), Status.INTERRUPTED)
+            self._waiting.clear()
             self._cancelled.update(self._running)
             for process in self._running.values():
                 process.terminate()
@@ -323,9 +364,19 @@ class Scheduler:
                 logger.exception("the workers' scheduler could not look at them")
 
     def _launch(self) -> None:
-        """Under the lock: a worker for each epoch waiting while there is room."""
-        while self._waiting and len(self._running) < self._limit:
+        """Under the lock: a worker for each epoch waiting while there is room. One
+        the store no longer has waiting, told otherwise or deleted by another
+        process, is passed over, and one another server's worker has begun is counted
+        as that worker's until it is told."""
+        self._look_elsewhere()
+        while self._waiting and len(self._running) + len(self._elsewhere) < self._limit:
             job = self._waiting.popleft()
+            key = (job.run_id, job.epoch)
+            status = self._status(key)
+            if status == Status.RUNNING:
+                self._elsewhere.add(key)
+            if status != Status.QUEUED:
+                continue
             process = self._context.Process(
                 target=work,
                 args=(str(self._root), job.run_id, job.epoch),
@@ -338,13 +389,25 @@ class Scheduler:
                 # The machine's limit of processes, say: this epoch is told,
                 # and the ones behind it are given workers as there is room.
                 logger.exception("no worker could be started for %s", job.run_id)
-                self._say(
-                    (job.run_id, job.epoch), Status.FAILED, reason="no worker could be started"
-                )
+                self._say(key, Status.FAILED, reason="no worker could be started")
                 continue
-            self._running[(job.run_id, job.epoch)] = process
+            self._running[key] = process
             if job.resuming:
-                self._resuming.add((job.run_id, job.epoch))
+                self._resuming.add(key)
+
+    def _look_elsewhere(self) -> None:
+        """Under the lock: an epoch worked elsewhere whose claim is no longer believed
+        is told so if it had not ended, and leaves room."""
+        for key in list(self._elsewhere):
+            if not EpochStore(self._objects, *key).worked():
+                self._elsewhere.discard(key)
+                interrupted.mark_epoch(self._simulator, *key)
+
+    def _status(self, key: tuple[str, int]) -> Status | None:
+        """What the store says of an epoch, if it has it still."""
+        if key[1] not in stored_epochs(self._objects, key[0]):
+            return None
+        return EpochStore(self._objects, *key).manifest().status
 
     def _reap(self) -> None:
         """Under the lock: says how each epoch ended whose worker has."""
@@ -369,9 +432,10 @@ class Scheduler:
         itself; else interrupted, if it had begun, was cancelled or was being
         carried on, failed if its worker never began it."""
         if exit_code == LEFT_TO_ANOTHER:
+            self._elsewhere.add(key)
             return
-        status = EpochStore(self._objects, *key).manifest().status
-        if status in (Status.FINISHED, Status.FAILED, Status.INTERRUPTED):
+        status = self._status(key)
+        if status is None or status in (Status.FINISHED, Status.FAILED, Status.INTERRUPTED):
             return
         if cancelled or status == Status.RUNNING or resuming:
             # An epoch asked to be carried on, whose worker ended before it
@@ -392,6 +456,32 @@ class Scheduler:
         if process.is_alive():
             process.kill()
             process.join()
+
+
+def _place_in_line(kept: EpochStore) -> tuple[datetime, str, int]:
+    queued_at = kept.manifest().queued_at
+    assert queued_at is not None  # all that `restore` gives
+    return queued_at, kept.run_id, kept.epoch
+
+
+def restore(simulator: Simulator) -> None:
+    """Gives a simulator starting on a folder the queue its store says it has: every
+    epoch a scheduler put in line that has not ended (`Scheduler.take_up`), for which
+    a scheduler is made. An epoch no scheduler put in line says nothing of who was to
+    take it up, as one kept from before this does, or one a process of its own was to
+    work: `interrupted` finds it."""
+    objects = simulator.runs
+    if not isinstance(objects, FolderStore):
+        return
+    left = []
+    for run_id in objects.children():
+        for number in stored_epochs(objects, run_id):
+            kept = EpochStore(objects, run_id, number)
+            manifest = kept.manifest()
+            if manifest.queued_at is not None and manifest.status in _IN_LINE:
+                left.append(kept)
+    if left:
+        of(simulator).take_up(left)
 
 
 def of(simulator: Simulator) -> Scheduler:

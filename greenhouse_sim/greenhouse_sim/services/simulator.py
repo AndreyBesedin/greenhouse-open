@@ -92,6 +92,11 @@ class Simulator:
         # The scenarios uploaded as files beside the run store are known
         # again (P17.11).
         scenario_files.restore(self)
+        # The runs left waiting wait again (P18.4), before anything else is said
+        # of them. Imported here, as a worker's process makes a simulator.
+        from greenhouse_sim.services import scheduler
+
+        scheduler.restore(self)
         # Epochs a producer that crashed left `running` are interrupted, and
         # can be resumed (P17.9).
         interrupted.watch(self)
