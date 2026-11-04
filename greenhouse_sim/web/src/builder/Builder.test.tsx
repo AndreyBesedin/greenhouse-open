@@ -160,6 +160,7 @@ const STARTED = {
   size_bytes: 0,
   start_s: 0,
   fork: null,
+  stopping: false,
   damaged: false,
 };
 

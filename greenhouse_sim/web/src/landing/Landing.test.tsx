@@ -55,6 +55,7 @@ function run(more: Partial<StoredRun>): StoredRun {
     size_bytes: 1024,
     start_s: 0,
     fork: null,
+    stopping: false,
     damaged: false,
     ...more,
   };

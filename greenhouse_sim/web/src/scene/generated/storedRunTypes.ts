@@ -21,6 +21,7 @@ export interface StoredRun {
   size_bytes: number;
   start_s: number;
   fork: ForkOf | null;
+  stopping: boolean;
   damaged: boolean;
 }
 /**

@@ -182,6 +182,11 @@ export const STORED_RUN_SCHEMA = {
       ],
       "default": null
     },
+    "stopping": {
+      "default": false,
+      "title": "Stopping",
+      "type": "boolean"
+    },
     "damaged": {
       "default": false,
       "title": "Damaged",
@@ -202,6 +207,7 @@ export const STORED_RUN_SCHEMA = {
     "size_bytes",
     "start_s",
     "fork",
+    "stopping",
     "damaged"
   ],
   "title": "StoredRun",

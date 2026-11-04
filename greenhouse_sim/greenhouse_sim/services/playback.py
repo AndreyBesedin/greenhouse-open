@@ -1748,3 +1748,14 @@ def set_targets(
 def stop_playbacks(simulator: Simulator) -> None:
     """Stops and forgets every playback of the simulator's."""
     simulator.playbacks.stop()
+
+
+def plays_epoch(simulator: Simulator, run_id: str, epoch: int) -> bool:
+    """Whether a playback of the simulator's, one replaced included, has this
+    epoch of a run."""
+    return any(
+        (state.run_id, state.epoch) == (run_id, epoch)
+        for state in (
+            found.state() for found in (*simulator.playbacks.all(), *simulator.playbacks.retiring())
+        )
+    )
