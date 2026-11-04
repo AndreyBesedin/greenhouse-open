@@ -26,7 +26,13 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import interrupted, leases, playback
 from greenhouse_sim.services.errors import Conflict
-from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand, PlaybackFailed
+from greenhouse_sim.services.playback import (
+    Epochs,
+    Playback,
+    PlaybackCommand,
+    PlaybackFailed,
+    PlaybackState,
+)
 from greenhouse_sim.services.run_store import (
     EpochManifest,
     EpochStore,
@@ -39,6 +45,7 @@ from greenhouse_sim.services.run_store import (
 )
 from greenhouse_sim.services.sensors import Stopped
 from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.services.stores import Store
 from greenhouse_sim.services.workers import Free, Stepped, execute, queued, resume
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -60,6 +67,9 @@ LONG_AGO: Final = timedelta(seconds=leases.EXPIRES_AFTER_S * 10)
 LEASE_LEFT_S: Final = 2.0
 START_HELD: Final = f"/api/scenarios/{BOX}/playback/start?hold=true"
 DELIVERED: Final = "greenhouse_sim.services.playback.delivered_between"
+# How long a request forced between two steps of another has to overlap it: it
+# takes this long where nothing keeps it out, and is held off where something does.
+OVERLAP_S: Final = 1.0
 
 # A server that starts a run of each kind, says what it started and stays, until
 # it is killed: its workers are processes of their own.
@@ -667,6 +677,152 @@ def test_a_stop_its_thread_is_slow_to_heed_reads_stopping_and_nothing_deletes_un
     assert epoch.manifest().status == Status.INTERRUPTED
     assert not stored_run(_store(server), epoch.run_id, epoch.epoch).stopping
     assert respond(server, "POST", _delete_path(epoch)).status == HTTPStatus.OK
+
+
+def _worked_again(epoch: EpochStore) -> None:
+    """The epoch taken up again, as a worker takes up one asked to resume: this
+    test's object holds its claim, as that worker's process would."""
+    epoch.queue_again(scenario_file=None, seconds_per_day=None)
+    epoch.set_status(Status.RUNNING)
+
+
+def test_a_stop_after_a_stopped_playback_s_epoch_was_resumed_reaches_its_worker(
+    server: Simulator,
+) -> None:
+    epoch = _epoch_of(server, _held_with_a_day_kept(server))
+    assert respond(server, "POST", _stop_path(epoch)).status == HTTPStatus.OK
+    _worked_again(epoch)
+
+    answer = respond(server, "POST", _stop_path(epoch))
+
+    assert answer.status == HTTPStatus.OK
+    assert _run_of(answer.body).stopping
+    assert epoch.stop_asked()
+
+
+def test_a_playback_kept_that_gave_its_epoch_up_neither_stops_nor_pauses_the_one_who_took_it(
+    server: Simulator,
+) -> None:
+    playback.start(server, BOX, hold=True)
+    found = playback.playback(server, BOX)
+    epoch = _epoch_of(server, found)
+    # Its thread ended, and the epoch said so, with the playback still kept.
+    found.stop(wait=False)
+    found.finish(monotonic() + WAIT_S)
+    assert epoch.manifest().status == Status.INTERRUPTED
+    assert server.playbacks.get(BOX) is found
+    _worked_again(epoch)
+
+    listed = respond(server, "GET", f"/api/runs/{epoch.run_id}/epochs/{epoch.epoch}")
+    answer = respond(server, "POST", _stop_path(epoch))
+
+    assert _run_of(listed.body).paused is False
+    assert answer.status == HTTPStatus.OK
+    assert _run_of(answer.body).stopping
+    assert epoch.stop_asked()
+
+
+def _in_another_thread(work: Callable[[], object]) -> tuple[threading.Thread, list[object]]:
+    """A thread that keeps what `work` answers or raises."""
+    said: list[object] = []
+
+    def run() -> None:
+        try:
+            said.append(work())
+        except Conflict as refused:
+            said.append(refused)
+
+    return threading.Thread(target=run), said
+
+
+def test_a_restart_as_a_stop_looks_at_the_epoch_stops_neither_the_next_epoch_nor_is_lost(
+    server: Simulator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    found = _played(server)
+    epoch = _epoch_of(server, found)
+    restart, said = _in_another_thread(lambda: found.command(PlaybackCommand.RESTART))
+    read = EpochStore.manifest
+
+    def reading(store: EpochStore) -> EpochManifest:
+        # What the stop reads of the epoch, and a restart before it acts on that: it
+        # would stop the next epoch, had it let go of the playback's lock by then.
+        manifest = read(store)
+        if not restart.ident:
+            restart.start()
+            restart.join(OVERLAP_S)
+        return manifest
+
+    with monkeypatch.context() as patch:
+        patch.setattr(EpochStore, "manifest", reading)
+        answer = respond(server, "POST", _stop_path(epoch))
+    restart.join(WAIT_S)
+
+    assert answer.status == HTTPStatus.OK
+    assert (_run_of(answer.body).epoch, _run_of(answer.body).status) == (
+        epoch.epoch,
+        Status.INTERRUPTED,
+    )
+    assert isinstance(said[0], Conflict)
+    assert [run.epoch for run in stored_runs(_store(server))] == [epoch.epoch]
+
+
+def test_a_stop_of_an_epoch_a_restart_has_left_does_not_stop_the_next_one(
+    server: Simulator,
+) -> None:
+    found = _played(server)
+    epoch = _epoch_of(server, found)
+    found.command(PlaybackCommand.RESTART)
+    following = EpochStore(_store(server), epoch.run_id, epoch.epoch + 1)
+
+    answer = respond(server, "POST", _stop_path(epoch))
+
+    assert answer.status == HTTPStatus.CONFLICT
+    assert "is interrupted: it is not being computed" in str(answer.body)
+    assert server.playbacks.get(BOX) is found
+    assert following.manifest().status == Status.RUNNING
+    assert not following.stop_asked()
+
+
+def test_a_start_as_a_stop_lets_the_playback_go_is_the_next_epoch_not_the_one_stopped(
+    server: Simulator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    found = _played(server)
+    epoch = _epoch_of(server, found)
+    start, said = _in_another_thread(lambda: playback.start(server, BOX, hold=True))
+    dropped = Store.drop
+
+    def dropping(store: Store[str, Playback], key: str, kept: Playback | None = None) -> None:
+        if not start.ident:
+            start.start()
+            start.join(OVERLAP_S)
+        dropped(store, key, kept)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Store, "drop", dropping)
+        assert respond(server, "POST", _stop_path(epoch)).status == HTTPStatus.OK
+    start.join(WAIT_S)
+
+    assert isinstance(said[0], PlaybackState)
+    assert said[0].epoch == epoch.epoch + 1
+    assert server.playbacks.get(BOX) is not found
+
+
+def test_a_stop_waiting_for_its_thread_holds_up_no_start(
+    server: Simulator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    epoch = _epoch_of(server, _played(server))
+    waited = Playback.finish
+    locked: list[bool] = []
+
+    def finishing(found: Playback, deadline: float) -> None:
+        locked.append(server.playbacks.rearranging.locked())
+        waited(found, deadline)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Playback, "finish", finishing)
+        assert respond(server, "POST", _stop_path(epoch)).status == HTTPStatus.OK
+
+    assert locked == [False]
 
 
 def test_a_failed_playback_of_another_run_does_not_keep_a_worker_elsewhere_from_stopping(
