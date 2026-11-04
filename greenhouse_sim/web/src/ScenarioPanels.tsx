@@ -20,6 +20,7 @@ import { useFolds } from "./folds";
 import { OpeningControls, openingsIn } from "./OpeningControls";
 import { PanelCard } from "./PanelCard";
 import { dayLabel } from "./replay/timeline";
+import { useForkQuestion } from "./replay/useForkQuestion";
 import {
   levelsAt,
   openingsAt,
@@ -70,7 +71,8 @@ export interface ScenarioLoads {
  * is the viewer's.
  */
 /** In a replay, levels set are not drawn: they make a fork of the run from the
- * moment shown, once asked for, a slider moving many times to one level. */
+ * moment shown, once asked for and confirmed, a slider moving many times to one
+ * level. */
 function ForkLevels({
   asked,
   onFork,
@@ -84,6 +86,7 @@ function ForkLevels({
   noFork?: string | null;
 }) {
   const none = Object.keys(asked).length === 0;
+  const { trigger, ask, question } = useForkQuestion({ about: JSON.stringify(asked) });
   return (
     <div className="move-actions" data-testid="fork-levels">
       <p className="targets-note">
@@ -94,12 +97,18 @@ function ForkLevels({
               .join(", ")}: not yet this run's or a fork's.`}
       </p>
       {noFork !== null && <p className="targets-note">{noFork}</p>}
-      <button type="button" disabled={none || noFork !== null} onClick={onFork}>
+      <button
+        ref={trigger}
+        type="button"
+        disabled={none || noFork !== null}
+        onClick={() => ask(onFork)}
+      >
         Fork from here with these levels
       </button>
       <button type="button" disabled={none} onClick={onPutBack}>
         Put them back
       </button>
+      {question}
     </div>
   );
 }

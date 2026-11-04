@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { useFolds } from "../folds";
 import { formatValue } from "../readouts";
+import { useForkQuestion } from "../replay/useForkQuestion";
 import type { ThermostatAt } from "../scene/equipment";
 import { describeTime } from "./ClimateTime";
 
@@ -114,6 +115,7 @@ function TargetsForm({
     const value = Number(given);
     return given !== "" && value >= LOWEST_C && value <= HIGHEST_C;
   });
+  const { trigger, ask, question } = useForkQuestion({ about: JSON.stringify(changed) });
   const from = forking
     ? "in a fork of this run, from its next minute"
     : followed
@@ -124,7 +126,11 @@ function TargetsForm({
       className="targets-form"
       onSubmit={(event) => {
         event.preventDefault();
-        onSet(changed);
+        if (forking) {
+          ask(() => onSet(changed));
+        } else {
+          onSet(changed);
+        }
       }}
     >
       <label>
@@ -150,12 +156,14 @@ function TargetsForm({
         />
       </label>{" "}
       <button
+        ref={trigger}
         type="submit"
         disabled={!valid || Object.keys(changed).length === 0 || noFork !== null}
       >
         Set {from}
       </button>
       {noFork !== null && <p className="targets-note">{noFork}</p>}
+      {question}
     </form>
   );
 }

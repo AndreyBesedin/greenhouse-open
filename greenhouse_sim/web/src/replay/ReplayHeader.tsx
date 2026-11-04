@@ -4,6 +4,7 @@ import { STATUS_LABEL } from "../landing/storedRuns";
 import { whyNoFork } from "./fork";
 import type { PositionState } from "./position";
 import { forkedText } from "./timeline";
+import { useForkQuestion } from "./useForkQuestion";
 
 /** The run, in words: whose it is, at which seed, and which epoch. The
  * store keeps every epoch whole until a store can keep only the present. */
@@ -18,7 +19,7 @@ export function runSubtitle(position: PositionState): string {
  * Where the replay's header says what is replayed (P17.6): the way home, the
  * run's name, its seed and epoch, in what state it is (a word, never a
  * colour alone), and the way to its other runs; and a fork of the run from
- * the moment shown (P17.8), or why there can be none.
+ * the moment shown (P17.8), asked first, or why there can be none.
  */
 export function ReplayHeader({
   name,
@@ -38,6 +39,7 @@ export function ReplayHeader({
   onFork: () => void;
 }) {
   const noFork = whyNoFork(position);
+  const { trigger, ask, question } = useForkQuestion({ buttonClass: "replay-button" });
   return (
     <header className="replay-header">
       <HomeButton />
@@ -64,17 +66,19 @@ export function ReplayHeader({
         </a>
       )}
       <button
+        ref={trigger}
         type="button"
         className="replay-button"
         data-testid="replay-fork"
         disabled={forking || noFork !== null}
-        onClick={onFork}
+        onClick={() => ask(onFork)}
       >
         {forking ? "Forking…" : "Fork from here"}
       </button>
       <a href={otherRunsHref} className="replay-back">
         Other runs
       </a>
+      {question}
     </header>
   );
 }

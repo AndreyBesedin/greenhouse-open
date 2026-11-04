@@ -160,6 +160,9 @@ test("a stored run is forked from the moment shown, and stays there to go back t
   await expect(page.getByTestId("replay-moment")).toHaveText("Day 1, 24:00");
 
   await page.getByTestId("replay-fork").click();
+  await expect(page.getByTestId("fork-question")).toContainText("beside the others");
+  await expect(page).toHaveURL(parent);
+  await page.getByRole("button", { name: "Make the fork" }).click();
 
   // A new epoch, at an address of its own, naming where it comes from.
   await expect(page).not.toHaveURL(parent);
