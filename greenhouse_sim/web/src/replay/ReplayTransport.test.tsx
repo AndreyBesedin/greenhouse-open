@@ -186,8 +186,8 @@ describe("what moves a position over a stored run", () => {
     });
   });
 
-  describe("a run interrupted", () => {
-    const AT_ITS_FRONTIER = { status: "interrupted", time_s: 41 * DAY_S } as const;
+  describe.each(["interrupted", "failed"] as const)("a run %s", (status) => {
+    const AT_ITS_FRONTIER = { status, time_s: 41 * DAY_S };
 
     it("offers no play at its frontier, with nothing to come", () => {
       const { container, onPlay } = shown(position(AT_ITS_FRONTIER));
@@ -201,7 +201,7 @@ describe("what moves a position over a stored run", () => {
     });
 
     it("plays what is kept before its frontier", () => {
-      const { container, onPlay } = shown(position({ status: "interrupted" }));
+      const { container, onPlay } = shown(position({ status }));
 
       click(button(container, "Play"));
       expect(onPlay).toHaveBeenCalledOnce();

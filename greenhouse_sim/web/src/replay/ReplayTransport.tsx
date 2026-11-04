@@ -60,10 +60,10 @@ export function ReplayTransport({
 }) {
   const span = spanOf(position);
   const from = heading ?? position.time_s;
-  // At the frontier of a run a playback holds, or one interrupted, nothing comes for
-  // it to play over.
+  // At the frontier of a run a playback holds, or one interrupted or failed, nothing
+  // comes for it to play over.
   const nothingToCome =
-    (position.paused || position.status === "interrupted") &&
+    (position.paused || position.status === "interrupted" || position.status === "failed") &&
     position.time_s >= position.frontier_s;
   const atItsEnd = position.duration_s !== null && position.time_s >= position.duration_s;
   const paceId = useId();
