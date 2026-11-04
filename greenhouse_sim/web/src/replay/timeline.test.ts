@@ -82,6 +82,17 @@ describe("the days", () => {
     ]);
   });
 
+  it("label where a fork's timeline begins, in place of a tick too near it", () => {
+    const from = (first: number, end: number) =>
+      dayTicks({ startS: first * DAY_S, frontierS: first * DAY_S, endS: end * DAY_S });
+
+    expect(from(2, 14)).toEqual([2, 7, 14]);
+    expect(from(1, 120)).toEqual([1, 30, 60, 90, 120]);
+    expect(from(29, 120)).toEqual([29, 60, 90, 120]);
+    // A start that is itself a tick is not labelled twice.
+    expect(from(30, 120)).toEqual([30, 60, 90, 120]);
+  });
+
   it("always label the timeline's end, in place of a tick too near it", () => {
     const of = (days: number) => dayTicks({ startS: 0, frontierS: DAY_S, endS: days * DAY_S });
 

@@ -775,7 +775,7 @@ What P05 simplifies on purpose, kept here until a later step removes it:
 The final report's open questions, as decided:
 
 - **The CI's time** is left for after P09 (see the
-  [roadmap](README.md#projects)).
+  [roadmap](future-work.md#test-suite-and-ci-time)).
 - **A climate run's colours** keep the range its moments have reached as it
   plays, rather than rescaling at every moment.
 - **The approximations** above (no buoyancy, no transpiration, condensation's

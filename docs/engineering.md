@@ -128,7 +128,8 @@ planning tool or document.
   criteria and the final QA scenario.
 - **Steps have public identifiers** such as `P-1.2`. Commits and pull requests
   may cite them, because the roadmap document defines them. The pull request
-  that delivers a step updates its status in that document.
+  that delivers a step updates its status in that document, and the
+  [roadmap](roadmap/README.md)'s table when the project's state changes.
 - **Decisions** live in [`docs/decisions/`](decisions/README.md) as short,
   numbered records. A change that sets or reverses a lasting technical
   direction records a decision in the same pull request: architecture
@@ -188,7 +189,8 @@ Copilot review should use **Balanced** effort. The repository instructions in
 architecture, tests and repository invariants over style nits that Ruff already
 handles.
 
-Dependabot's pull requests take the same path (decision 0033). A minor or
+Dependabot's pull requests take the same path (decision 0033,
+[its setup](dependency-updates.md)). A minor or
 patch update that changes no code merges by itself once the required checks
 pass. The rest wait for a review: when the risk gate holds one, review
 the diff and approve the pull request's latest commit, which the gate

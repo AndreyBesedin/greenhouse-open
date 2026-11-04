@@ -18,6 +18,7 @@ import json
 import sys
 from http import HTTPStatus
 from itertools import pairwise
+from pathlib import Path
 from typing import Any, Final
 
 import pytest
@@ -45,6 +46,10 @@ from greenhouse_sim.services.runs import RunPlan, RunRequest
 from greenhouse_sim.services.scenarios import scenario_summaries
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import HOUR_S
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+from short_runs import cut, simulator_of
 
 SCENARIO: Final = "reference_greenhouse"
 # Its crop near its opening day is some 12,000 organs' entities; without a
@@ -166,6 +171,29 @@ def test_the_crop_stays_whole_through_the_days_about_its_opening(simulator: Simu
 
     assert min(entities) > WHOLE_CROP_ENTITIES
     assert all(later >= KEPT_SHARE * earlier for earlier, later in pairwise(entities))
+
+
+def test_a_run_carried_on_from_a_kept_day_replays_as_from_its_start() -> None:
+    """What a kept opening day is for, on a short run of its scenario: a day
+    worked out on from a checkpoint downloaded and kept is the same day
+    replayed from the run's start, its plants and its house's air, at its
+    start and an hour before."""
+    config, run = cut(SCENARIO, days=3, plants=(1, 2)), RunRequest(SCENARIO)
+    with simulator_of(config) as first:
+        saved = checkpoints.save_checkpoint(first, run, time_s=DAY_S)
+        kept = checkpoints.checkpoint(first, saved.checkpoint_id).model_dump(mode="json")
+    with simulator_of(config) as carrying_on:
+        assert checkpoints.upload_checkpoint(carrying_on, kept).day == 1
+        on = checkpoints.save_checkpoint(carrying_on, run, time_s=2 * DAY_S)
+        carried = _state(checkpoints.checkpoint(carrying_on, on.checkpoint_id))
+        worked = climate_run(carrying_on, run)[1].house._kept
+    with simulator_of(config) as replaying:
+        again = checkpoints.save_checkpoint(replaying, run, time_s=2 * DAY_S)
+        replayed = _state(checkpoints.checkpoint(replaying, again.checkpoint_id))
+
+    assert carried == replayed
+    # It carried on from the kept day: no moment of the first was worked out.
+    assert [moment for moment in worked if 0.0 < moment < DAY_S - HOUR_S] == []
 
 
 @pytest.mark.slow

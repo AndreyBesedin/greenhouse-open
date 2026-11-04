@@ -2047,6 +2047,11 @@
   cursor: pointer;
 }
 
+.landing-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .landing-button-primary {
   border-color: var(--action);
   color: var(--action);
@@ -2184,6 +2189,11 @@
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
+}
+
+.replay-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .replay-play {

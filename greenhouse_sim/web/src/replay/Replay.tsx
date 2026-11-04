@@ -6,6 +6,7 @@ import { replayTarget, runsAddress } from "../landing/paths";
 import { loadScenarios, SCENARIOS_URL } from "../scenarios";
 import { replayedMoment } from "../scene/useReplayMoment";
 import { useLoad } from "../useLoad";
+import { whyNoFork } from "./fork";
 import { ReplayHeader } from "./ReplayHeader";
 import { ReplayTransport } from "./ReplayTransport";
 import { planKey, replaySource } from "./replaySource";
@@ -102,6 +103,7 @@ function ReplayOf({
             seek,
             forkWith: (change, timeS) => void fork({ timeS, changes: [change] }),
             forkInLayout: (forkLayout, timeS) => fork({ timeS, layout: forkLayout }),
+            noFork: whyNoFork(position),
           }}
         />
       </div>

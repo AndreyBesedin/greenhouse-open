@@ -4,6 +4,7 @@ back against a clock (decision 0041), with observed records only."""
 
 import ast
 import json
+import sys
 import threading
 import time
 import urllib.request
@@ -34,9 +35,15 @@ from greenhouse_sim.services.playback import Epochs, PlaybackCommand
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
 
+sys.path.insert(0, str(Path(__file__).parent))
+
+from short_runs import cut, simulator_of
+
 SCENARIO = "climate_box"
 PACKAGE = Path(__file__).resolve().parents[1] / "greenhouse_sim"
 PREFIX = "/consumer/v1"
+# How long a consumer follows a run over HTTP, in real seconds: a day of it.
+FOLLOWED_S = 2.0
 
 
 class Clock:
@@ -52,6 +59,14 @@ def _get(simulator: Simulator, path: str) -> Mapping[str, object]:
     assert answer is not None and answer.status == 200, answer
     assert isinstance(answer.body, dict)
     return answer.body
+
+
+@pytest.fixture(scope="module")
+def simulator() -> Iterator[Simulator]:
+    """A simulator of the climate box cut short: what a consumer reads is what
+    a run delivers, whichever model of its air worked it out."""
+    with simulator_of(cut(SCENARIO)) as made:
+        yield made
 
 
 @pytest.fixture
@@ -257,7 +272,7 @@ def test_a_consumer_follows_a_progressing_run_over_http(
         assert host == "127.0.0.1"
         polls: list[ObservationBatch] = []
         after = 0
-        deadline = time.monotonic() + 6.0
+        deadline = time.monotonic() + FOLLOWED_S
         while time.monotonic() < deadline:
             batch = ObservationBatch.model_validate(
                 _fetch(f"{base}/runs/{run_id}/observations?after={after}")

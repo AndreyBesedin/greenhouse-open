@@ -43,6 +43,7 @@ export function TargetsPanel({
   time,
   followed,
   forking = false,
+  noFork = null,
   onSet,
 }: {
   /** The thermostat at the moment drawn, with its setpoints then; null
@@ -54,6 +55,8 @@ export function TargetsPanel({
   followed: boolean;
   /** Whether setting them makes a fork of a stored run, which stays as it was. */
   forking?: boolean;
+  /** Why no fork can be made at the moment drawn, if none can. */
+  noFork?: string | null;
   /** Sets the targets changed, by name, in °C. */
   onSet: (targets: Record<string, number>) => void;
 }) {
@@ -72,6 +75,7 @@ export function TargetsPanel({
           time={time}
           followed={followed}
           forking={forking}
+          noFork={noFork}
           onSet={onSet}
         />
       )}
@@ -84,12 +88,14 @@ function TargetsForm({
   time,
   followed,
   forking,
+  noFork,
   onSet,
 }: {
   thermostat: ThermostatAt;
   time: number;
   followed: boolean;
   forking: boolean;
+  noFork: string | null;
   onSet: (targets: Record<string, number>) => void;
 }) {
   const [day, setDay] = useState(String(thermostat.dayC));
@@ -143,9 +149,13 @@ function TargetsForm({
           onChange={(event) => setNight(event.target.value)}
         />
       </label>{" "}
-      <button type="submit" disabled={!valid || Object.keys(changed).length === 0}>
+      <button
+        type="submit"
+        disabled={!valid || Object.keys(changed).length === 0 || noFork !== null}
+      >
         Set {from}
       </button>
+      {noFork !== null && <p className="targets-note">{noFork}</p>}
     </form>
   );
 }
