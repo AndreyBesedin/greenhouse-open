@@ -6,6 +6,7 @@ import { loadScenarios, SCENARIOS_URL, type ScenariosState } from "../scenarios"
 import { useLoad } from "../useLoad";
 import { newRunScenario, REPOSITORY_URL, runsScenario } from "./paths";
 import { RunControls } from "./RunControls";
+import { RunDelete, useRunDeletion } from "./RunDelete";
 import { FollowLink, ReplayLink, RunProgress, StatusChip } from "./RunParts";
 import { RunsDialog } from "./RunsDialog";
 import { SavedDrafts } from "./SavedDrafts";
@@ -21,6 +22,7 @@ import {
   type StoredRun,
   type StoredRunsState,
   startedText,
+  whoIs,
 } from "./storedRuns";
 import { UploadScenario } from "./UploadScenario";
 
@@ -236,6 +238,9 @@ function RunRow({
 }) {
   const started = startedText(run);
   const whose = name ?? run.scenario_id;
+  const named = `the run of ${whose} with ${whoIs(run)}`;
+  const deletion = useRunDeletion([run], () => named, onChanged);
+  const refusal = deletion.problem ?? deletion.notOver;
   return (
     <li className="landing-run">
       <div className="landing-run-name">
@@ -250,7 +255,21 @@ function RunRow({
       <RunProgress run={run} name={`the run of ${whose}`} />
       <ReplayLink run={run} />
       <FollowLink run={run} />
-      <RunControls key={run.status} run={run} name={`the run of ${whose}`} onChanged={onChanged} />
+      <RunControls
+        key={run.status}
+        run={run}
+        name={`the run of ${whose}`}
+        onChanged={() => {
+          deletion.forget();
+          onChanged();
+        }}
+      />
+      <RunDelete name={named} onDelete={() => deletion.remove(run)} />
+      {refusal !== null && (
+        <p role="alert" className="landing-note">
+          {refusal}
+        </p>
+      )}
     </li>
   );
 }

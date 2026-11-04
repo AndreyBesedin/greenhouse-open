@@ -249,9 +249,10 @@ describe("the runs of a scenario, in a dialog", () => {
     const { container, onChanged } = shown([run({ epoch: 3, seed: 5 })]);
 
     click(button(container, "Delete the run with seed 5, epoch 3"));
+    expect(document.activeElement).toBe(button(container, "Keep it"));
     click(button(container, "Keep it"));
     expect(asked).toEqual([]);
-    expect(button(container, "Delete the run with seed 5, epoch 3")).toBeDefined();
+    expect(document.activeElement).toBe(button(container, "Delete the run with seed 5, epoch 3"));
 
     click(button(container, "Delete the run with seed 5, epoch 3"));
     click(button(container, "Delete the run with seed 5, epoch 3"));

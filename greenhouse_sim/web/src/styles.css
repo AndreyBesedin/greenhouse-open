@@ -1976,10 +1976,10 @@
 
 /* Every row shares the list's columns, so that what a row has lines up with the
  * rows above and below it, and a row leaves empty what it does not have: its
- * name, its status, how far it is computed, Replay, Follow, Stop or Resume. */
+ * name, its status, how far it is computed, Replay, Follow, Stop or Resume, Delete. */
 .landing-runs {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) max-content minmax(0, 1fr) repeat(3, max-content);
+  grid-template-columns: minmax(0, 2fr) max-content minmax(0, 1fr) repeat(4, max-content);
   column-gap: var(--space-7);
   margin: var(--space-4) 0 0;
   padding: 0;
@@ -2208,14 +2208,12 @@
   justify-content: flex-end;
 }
 
-/* Room for a run's controls on one line, at a dialog's width, and a column for
- * its Delete. */
+/* Room for a run's controls on one line, at a dialog's width. */
 .landing-dialog .landing-run-name {
   flex-basis: 150px;
 }
 
 .landing-dialog .landing-runs {
-  grid-template-columns: minmax(0, 2fr) max-content minmax(0, 1fr) repeat(4, max-content);
   column-gap: var(--space-5);
   margin: 0;
   border: 0;
