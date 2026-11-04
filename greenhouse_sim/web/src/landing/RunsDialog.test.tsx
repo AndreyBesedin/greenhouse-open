@@ -179,6 +179,18 @@ describe("the runs of a scenario, in a dialog", () => {
       expect(asked).toEqual([{ url: `${RUNS_URL}?seed=75&seconds_per_day=4`, method: "POST" }]);
     });
 
+    it("says what the seed's default is and means, as a placeholder and not a value", () => {
+      const { container, field } = shown([], true);
+      const seed = field("Seed");
+
+      expect(seed.value).toBe("");
+      expect(seed.placeholder).toBe("The scenario's own");
+      const note = container.querySelector(`[id="${seed.getAttribute("aria-describedby")}"]`);
+      expect(note?.textContent).toBe(
+        "The default. With no seed, the run uses the scenario's own, so the same scenario gives the same run.",
+      );
+    });
+
     it("leaves out a seed and a pace not entered: the scenario's own, as fast as it computes", async () => {
       const asked = simulator({ [`POST ${RUNS_URL}?`]: { status: 200, body: STARTED } });
       const { container, field, navigate } = shown([], true);

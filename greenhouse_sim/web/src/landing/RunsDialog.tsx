@@ -38,6 +38,7 @@ export function RunsDialog({
   onChanged: () => void;
 }) {
   const heading = useId();
+  const seedSays = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const [formOpen, setFormOpen] = useState(newRun);
   const [seed, setSeed] = useState("");
@@ -112,17 +113,24 @@ export function RunsDialog({
 
       {formOpen && (
         <form className="landing-form" onSubmit={(event) => void submit(event)}>
-          <label className="landing-field">
-            <span>Seed</span>
-            <input
-              className="landing-input"
-              type="text"
-              inputMode="numeric"
-              placeholder="The scenario's own"
-              value={seed}
-              onChange={(event) => setSeed(event.target.value.replace(/\D/g, ""))}
-            />
-          </label>
+          <div className="landing-seed">
+            <label className="landing-field">
+              <span>Seed</span>
+              <input
+                className="landing-input"
+                type="text"
+                inputMode="numeric"
+                placeholder="The scenario's own"
+                aria-describedby={seedSays}
+                value={seed}
+                onChange={(event) => setSeed(event.target.value.replace(/\D/g, ""))}
+              />
+            </label>
+            <p id={seedSays} className="landing-note">
+              The default. With no seed, the run uses the scenario's own, so the same scenario gives
+              the same run.
+            </p>
+          </div>
           <label className="landing-field">
             <span>Seconds per simulated day</span>
             <input
