@@ -101,16 +101,18 @@ export function computedText(span: Span): string {
 }
 
 /** The day numbers a timeline labels, from 0, at a step that gives it about
- * as many as read well; the last is always the timeline's end, in place of a tick
- * too near it to be read beside it. */
+ * as many as read well; the first is always where the timeline begins and the last
+ * its end, each in place of a tick too near it to be read beside it. */
 export function dayTicks(span: Span): number[] {
   const days = Math.max(1, Math.ceil(extent(span) / DAY_S));
   const first = Math.floor(span.startS / DAY_S);
   const step = TICK_STEPS_DAYS.find((s) => days / s <= MOST_TICKS) ?? days;
   const last = first + days;
-  const ticks: number[] = [];
+  const ticks: number[] = [first];
   for (let day = Math.ceil(first / step) * step; day <= last; day += step) {
-    ticks.push(day);
+    if (day !== first && day - first >= step / NEAR_SHARE) {
+      ticks.push(day);
+    }
   }
   const before = ticks.at(-1);
   if (before !== last) {
