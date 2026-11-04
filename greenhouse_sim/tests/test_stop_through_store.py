@@ -21,7 +21,7 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import interrupted, leases
-from greenhouse_sim.services.playback import PlaybackFailed
+from greenhouse_sim.services.playback import Playback, PlaybackFailed
 from greenhouse_sim.services.run_store import (
     EpochManifest,
     EpochStore,
@@ -338,17 +338,14 @@ def test_a_failed_playback_of_another_run_does_not_keep_a_worker_elsewhere_from_
     def broken(*_: object, **__: object) -> None:
         raise ArithmeticError("a numerical failure")
 
-    def failed() -> bool:
-        try:
-            server.playbacks.all()[0].state()
-        except PlaybackFailed:
-            return True
-        return False
-
+    # Its day worked here and not by its thread, which is never started: it has
+    # failed by the time it is kept, as one that failed while it played is.
     monkeypatch.setattr("greenhouse_sim.services.playback.delivered_between", broken)
-    started = respond(server, "POST", f"/api/scenarios/{BOX}/playback/start?hold=true")
-    assert started.status == HTTPStatus.OK
-    _until(failed, "the playback to fail")
+    failed = Playback(server, BOX)
+    assert not failed.work_day(0)
+    server.playbacks.made_once(BOX, lambda _: failed)
+    with pytest.raises(PlaybackFailed):
+        failed.state()
     epoch = _epoch(_store(server), Status.RUNNING)
     _leased(epoch)
 
