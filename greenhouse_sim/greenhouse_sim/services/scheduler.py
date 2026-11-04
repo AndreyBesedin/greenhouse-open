@@ -43,14 +43,7 @@ from typing import Final
 from greenhouse_sim.services import forks, interrupted, scenario_files
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.interventions import Asked
-from greenhouse_sim.services.run_store import (
-    ENDED,
-    EpochStore,
-    FolderStore,
-    Status,
-    StoredRun,
-    stored_run,
-)
+from greenhouse_sim.services.run_store import EpochStore, FolderStore, Status, StoredRun, stored_run
 from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.workers import (
@@ -72,6 +65,8 @@ END_WITHIN_S: Final = 10.0
 # What a worker exits with that found its epoch another's, or no longer waiting:
 # it has done nothing to it, and nothing is to be said of it.
 LEFT_TO_ANOTHER: Final = 3
+# What a manifest a scheduler put in line says while it has not ended.
+_IN_LINE: Final = (Status.QUEUED, Status.RUNNING)
 
 
 def work(root: str, run_id: str, epoch: int) -> None:
@@ -393,7 +388,7 @@ class Scheduler:
             self._elsewhere.add(key)
             return
         status = self._status(key)
-        if status is None or status in ENDED:
+        if status is None or status in (Status.FINISHED, Status.FAILED, Status.INTERRUPTED):
             return
         if cancelled or status == Status.RUNNING or resuming:
             # An epoch asked to be carried on, whose worker ended before it
@@ -436,7 +431,7 @@ def restore(simulator: Simulator) -> None:
         for number in stored_epochs(objects, run_id):
             kept = EpochStore(objects, run_id, number)
             manifest = kept.manifest()
-            if manifest.queued_at is not None and manifest.status not in ENDED:
+            if manifest.queued_at is not None and manifest.status in _IN_LINE:
                 left.append(kept)
     if left:
         of(simulator).take_up(left)

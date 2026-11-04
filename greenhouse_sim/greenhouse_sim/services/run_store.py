@@ -621,9 +621,9 @@ class EpochStore:
         manifest = self.manifest().model_copy(
             update={
                 "status": Status.QUEUED,
-                "queued_at": datetime.now(UTC),
                 "scenario_file": scenario_file,
                 "seconds_per_day": seconds_per_day,
+                "queued_at": datetime.now(UTC),
             }
         )
         self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
