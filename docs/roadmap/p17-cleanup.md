@@ -27,10 +27,10 @@ takes one checks first that it is still there.
   run. Its sensors and its run's id stay its own airflow's, so that no run or record
   changes. The sensor lab, the one packaged house with sensors and no equipment, reads
   its prescribed gradient on purpose, about 8 °C from the climate drawn beside it.
-- [ ] **Low: a built house with sensors and no equipment.** Its climate run and its sensors
+- [x] **Low: a built house with sensors and no equipment.** Its climate run and its sensors
   read two different airs, as the sensor lab's do, but nothing in such a house says the
-  gradient was meant. Decide what its sensors read, and keep the packaged houses' runs and
-  records as they are.
+  gradient was meant. A scenario that is not packaged now reads its climate run, under a
+  climate run's name, and the packaged houses' runs and records stay as they are.
 
 ### Low to medium
 
