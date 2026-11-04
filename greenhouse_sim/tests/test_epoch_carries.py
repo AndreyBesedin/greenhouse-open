@@ -80,7 +80,9 @@ RECORDING: Final = "timestamp,outside_air_temperature_c,outside_relative_humidit
 @pytest.fixture(autouse=True)
 def leases_written_often(monkeypatch: pytest.MonkeyPatch) -> None:
     """So that `workers_support.lease_let_go` does not wait for a lease's thread to
-    wake, from this test or the one before it."""
+    wake, from this test or the one before it. A thread that read the manifest just
+    before the epoch ended writes the lease once more: a test that asks anything of
+    an epoch it worked here waits for that thread first."""
     monkeypatch.setattr(leases, "REFRESH_EVERY_S", workers_support.LEASE_BEAT_S)
 
 
@@ -283,6 +285,7 @@ def _left_by_older_code(objects: FolderStore) -> EpochStore:
     with workers_support.short_simulator() as made:
         kept = queued(made, objects, SHORT)
         assert execute(made, kept, Stepped([DAY_S])) == Status.INTERRUPTED
+        workers_support.lease_let_go(kept)
     _as_older_code_left(objects, kept)
     _no_scenario_files(objects)
     return kept
@@ -329,6 +332,7 @@ def test_an_epoch_whose_scenario_file_is_gone_is_refused_when_it_is_asked_to_go_
         made.runs = objects
         kept = queued(made, objects, SHORT)
         assert execute(made, kept, Stepped([DAY_S])) == Status.INTERRUPTED
+        workers_support.lease_let_go(kept)
         _no_scenario_files(objects)
         made.scheduler = Scheduler(made, objects.root, limit=1)
 

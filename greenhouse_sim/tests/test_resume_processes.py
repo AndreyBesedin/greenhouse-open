@@ -37,7 +37,9 @@ SECONDS_PER_DAY: Final = 3
 @pytest.fixture(autouse=True)
 def leases_written_often(monkeypatch: pytest.MonkeyPatch) -> None:
     """So that `workers_support.lease_let_go` does not wait for a lease's thread to
-    wake, from this test or the one before it."""
+    wake, from this test or the one before it. A thread that read the manifest just
+    before the epoch ended writes the lease once more: a test that asks anything of
+    an epoch it worked here waits for that thread first."""
     monkeypatch.setattr(leases, "REFRESH_EVERY_S", workers_support.LEASE_BEAT_S)
 
 
