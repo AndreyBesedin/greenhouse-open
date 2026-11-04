@@ -8,6 +8,7 @@ import { newRunScenario, REPOSITORY_URL, runsScenario } from "./paths";
 import { RunControls } from "./RunControls";
 import { FollowLink, ReplayLink, RunProgress, StatusChip } from "./RunParts";
 import { RunsDialog } from "./RunsDialog";
+import { SavedDrafts } from "./SavedDrafts";
 import { ScenarioCombobox } from "./ScenarioCombobox";
 import {
   isComputing,
@@ -118,6 +119,7 @@ export function Landing({
               Open the builder
             </a>
             <UploadScenario navigate={navigate} />
+            <SavedDrafts />
           </section>
         </div>
         <section aria-labelledby="landing-recent">

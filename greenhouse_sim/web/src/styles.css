@@ -1854,6 +1854,29 @@
   font-weight: 600;
 }
 
+.landing-drafts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--font-sm);
+}
+
+.landing-card .landing-drafts p + p {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.landing-drafts a {
+  overflow: hidden;
+  color: var(--action);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-drafts span {
+  flex: none;
+}
+
 .landing-card p.landing-problem {
   color: var(--warn);
 }

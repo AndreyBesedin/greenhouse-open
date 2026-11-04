@@ -2,6 +2,7 @@ import { CLIMATE_FIELD } from "../fields/source";
 import { DEFAULT_LAYOUT, DEFAULT_WEATHER } from "../scenarios";
 import type { SceneSource } from "../scene/source";
 import type { PositionState } from "./position";
+import { dayLabel } from "./timeline";
 
 // A seed rides the weather's name, after this mark (`default#7`): the
 // simulator reads `default` as the scenario's own weather.
@@ -51,6 +52,13 @@ export function forkMoment(
   askedS: number | null,
 ): number {
   return (field === CLIMATE_FIELD ? shownS : null) ?? askedS ?? 0;
+}
+
+/** The moment a panel's fork takes, in words, if the transport reads another at
+ * `askedS`: its button then names it. None if they read alike. */
+export function forkMomentNamed(forkS: number, askedS: number | null): string | null {
+  const named = dayLabel(forkS);
+  return askedS === null || named === dayLabel(askedS) ? null : named;
 }
 
 /** What identifies the plan of a replay's scene: a running epoch's grows. */

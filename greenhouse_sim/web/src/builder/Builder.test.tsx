@@ -218,6 +218,40 @@ describe("the setup builder (P12.2)", () => {
     vi.restoreAllMocks();
   });
 
+  it("opens the draft the address names, or says why it cannot", async () => {
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === "/api/drafts/my_greenhouse") {
+        return answer({
+          ...STARTING_HOUSE,
+          draft: { draft_id: "my_greenhouse", revision: 3, saved_at: "2026-10-23T12:00:00Z" },
+        });
+      }
+      if (url.startsWith("/api/builder/assess")) {
+        return answer(STARTING_HOUSE);
+      }
+      if (url === "/api/drafts") {
+        return answer([]);
+      }
+      return answer({ error: "no draft gone" }, 404);
+    });
+    shown = render(<Builder hash="#draft=my_greenhouse" />);
+    await settled();
+
+    expect(said(shown.container, "builder-status")).toBe("Opened My greenhouse, revision 3.");
+    expect(said(shown.container, "builder-draft")).toBe(
+      "My greenhouse (my_greenhouse), revision 3",
+    );
+    shown.unmount();
+
+    shown = render(<Builder hash="#draft=gone" />);
+    await settled();
+
+    expect(said(shown.container, "builder-status")).toBe(
+      "The draft cannot be opened: no draft gone",
+    );
+  });
+
   it("keeps an edit made while a save is on its way, as changed since", async () => {
     const saves = holdingSaves();
     shown = render(<Builder />);
