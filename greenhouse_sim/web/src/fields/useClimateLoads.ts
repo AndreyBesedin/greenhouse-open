@@ -1,4 +1,4 @@
-import type { ScenarioRun } from "../scene/run";
+import { runApartFromItsMoment, type ScenarioRun } from "../scene/run";
 import { useLoad, useLoadProgress } from "../useLoad";
 import type { Point3 } from "../world";
 import { glazingUrl, loadGlazing } from "./glazing";
@@ -10,8 +10,8 @@ import { loadProbeCharts, probeChartsUrl } from "./ProbeCharts";
  * What a climate run drawn (`climate`, null without one) holds besides its
  * field: what the probes read through it, and through the same run all off,
  * up to the moment drawn; the house's air as one volume, likewise, the run's
- * own apart from the same run all off, for which it does not wait; the
- * glazing at the moment drawn, each wall's and roof slope's temperature, for
+ * own apart from the same run all off, for which it does not wait, each kept
+ * on show across the run's moments and never into another run's; the glazing at the moment drawn, each wall's and roof slope's temperature, for
  * "Colour by"; and what the open doors and vents pass, for "Colour by" and
  * their arrows.
  */
@@ -22,15 +22,18 @@ export function useClimateLoads(climate: ScenarioRun | null, probes: readonly Po
       : probeChartsUrl(climate.scenarioId, { ...climate, probes }),
     loadProbeCharts,
   );
+  const run = { group: climate === null ? undefined : runApartFromItsMoment(climate) };
   const ownHouseAir = houseAirOnShow(
     useLoadProgress(
       climate === null ? null : ownHouseAirUrl(climate.scenarioId, climate),
       loadHouseAir,
+      run,
     ),
   );
   const wholeHouseAir = useLoadProgress(
     climate === null ? null : houseAirUrl(climate.scenarioId, climate),
     loadHouseAir,
+    run,
   );
   const houseAir = withAllOff(ownHouseAir, wholeHouseAir.shown);
   const glazing = useLoad(

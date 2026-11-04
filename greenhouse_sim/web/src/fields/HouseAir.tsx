@@ -70,15 +70,39 @@ export function houseAirOnShow({
   return latest.status === "loading" && shown !== null ? { ...shown, behind: true } : latest;
 }
 
+/** How many moments two traces share from their first: the moments of a day
+ * are its minutes and then the moment asked for, so two answers of one day part
+ * where the earlier one ends. */
+function momentsInCommon(one: readonly number[], other: readonly number[]): number {
+  let common = 0;
+  while (common < one.length && one[common] === other[common]) {
+    common += 1;
+  }
+  return common;
+}
+
+function seriesUpTo(series: HouseSeries, moments: number): HouseSeries {
+  return {
+    temperature_c: series.temperature_c.slice(0, moments),
+    humidity_pct: series.humidity_pct.slice(0, moments),
+    co2_ppm: series.co2_ppm.slice(0, moments),
+    removed_kg: series.removed_kg.slice(0, moments),
+    condensed_kg: series.condensed_kg.slice(0, moments),
+  };
+}
+
 /** The run's own air with the run all off beside it: the answer to the same
- * moment, or the last there was of the same day, up to an earlier moment, until
- * that arrives. A day's first moment tells its day. */
+ * moment, or until that arrives what the last answer of the same day says of the
+ * moments the two share. An answer of another day shares none. Both are of one
+ * run: the caller keeps no answer across runs. */
 export function withAllOff(own: HouseAirState, whole: LoadedHouseAir | null): HouseAirState {
-  if (own.status !== "loaded" || whole === null) {
+  if (own.status !== "loaded" || whole === null || whole.trace.all_off === null) {
     return own;
   }
-  const sameDay = own.trace.times_s[0] === whole.trace.times_s[0];
-  return sameDay ? { ...own, trace: { ...own.trace, all_off: whole.trace.all_off } } : own;
+  const common = momentsInCommon(own.trace.times_s, whole.trace.times_s);
+  return common === 0
+    ? own
+    : { ...own, trace: { ...own.trace, all_off: seriesUpTo(whole.trace.all_off, common) } };
 }
 
 /** Where the house's air through a run is published, asked for as the
@@ -150,8 +174,7 @@ export function HouseAir({ state }: { state: HouseAirState }) {
     <figure className="house-air" data-testid="house-air" aria-label="House air">
       {CHARTED.map(({ name, unit, of }) => {
         const run = of(trace.controlled);
-        // An answer of the same day may reach further, or not so far.
-        const off = trace.all_off === null ? [] : of(trace.all_off).slice(0, trace.times_s.length);
+        const off = trace.all_off === null ? [] : of(trace.all_off);
         const low = Math.min(...run, ...off);
         const high = Math.max(...run, ...off);
         const latest = run.at(-1) ?? low;
