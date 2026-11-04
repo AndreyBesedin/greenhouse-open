@@ -14,6 +14,7 @@ from greenhouse_protocol.contracts.consumer import ObservationBatch
 from greenhouse_protocol.enums import ObservationType, SourceType
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.provenance import RecordSource
+from pydantic import JsonValue
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
@@ -349,6 +350,48 @@ def test_an_epoch_a_playback_is_working_on_is_refused_until_it_stops(
     assert refused[0] == HTTPStatus.CONFLICT
     assert "being computed" in str(refused[1])
     assert allowed[0] == HTTPStatus.OK
+
+
+def test_a_paused_playback_is_listed_as_paused_while_it_is_held(
+    simulator: Simulator, no_playbacks: Callable[[], None]
+) -> None:
+    try:
+        started = respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start")
+        assert started.status == HTTPStatus.OK and isinstance(started.body, dict)
+        epoch_path = f"/api/runs/{started.body['run_id']}/epochs/{started.body['epoch']}"
+
+        def said() -> tuple[StoredRun, StoredRun, StoredRun]:
+            one = respond(simulator, "GET", epoch_path).body
+            every = respond(simulator, "GET", "/api/runs").body
+            of_scenario = respond(simulator, "GET", f"/api/scenarios/{SCENARIO}/runs").body
+            assert isinstance(every, list) and isinstance(of_scenario, list)
+
+            def listed(runs: list[JsonValue]) -> StoredRun:
+                kept = (StoredRun.model_validate(r) for r in runs)
+                return next(r for r in kept if r.run_id != RUN)
+
+            return StoredRun.model_validate(one), listed(every), listed(of_scenario)
+
+        assert [(r.status, r.paused) for r in said()] == [(Status.RUNNING, False)] * 3
+
+        respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/pause")
+        assert [(r.status, r.paused) for r in said()] == [(Status.RUNNING, True)] * 3
+
+        respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/play")
+        assert [(r.status, r.paused) for r in said()] == [(Status.RUNNING, False)] * 3
+    finally:
+        no_playbacks()
+
+
+def test_an_epoch_of_another_run_is_not_paused_by_a_playback_held(
+    simulator: Simulator, no_playbacks: Callable[[], None]
+) -> None:
+    try:
+        respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true")
+        shown = respond(simulator, "GET", f"/api/runs/{RUN}/epochs/0").body
+        assert StoredRun.model_validate(shown).paused is False
+    finally:
+        no_playbacks()
 
 
 def test_a_run_is_started_at_a_seed_and_a_seed_that_is_not_one_is_refused(

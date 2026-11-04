@@ -796,6 +796,12 @@ class Playback:
                 with self._lock:
                     return self._state()
 
+    def epoch_held(self) -> int | None:
+        """The epoch whose clock it holds, by a pause; none while it plays, or
+        once its run has ended."""
+        with self._lock:
+            return None if self._playing or self._time_s >= self.end_s else self._epoch
+
     def plays(self, layout: str | None, seed: int | None = None) -> bool:
         """Whether it plays the run of `layout` at `seed`: its own layout,
         when None, and the seed it has, when None."""
