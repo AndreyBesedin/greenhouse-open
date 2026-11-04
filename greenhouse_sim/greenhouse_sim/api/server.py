@@ -24,7 +24,9 @@ import argparse
 import faulthandler
 import json
 import logging
+import select
 import signal
+import socket
 import sys
 import time
 import traceback
@@ -48,6 +50,7 @@ from greenhouse_sim.services.gateway import (
 )
 from greenhouse_sim.services.run_store import FolderStore, ObjectStore
 from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.services.wanted import NoLongerWanted, wanted_while
 
 LOOPBACK: Final = "127.0.0.1"
 # What a client is told when the simulator fails on its request unexpectedly.
@@ -71,6 +74,8 @@ READ_TIMEOUT_S: Final = 30.0
 # its fields and its CFD boundaries at once, and its browser tests open
 # several viewers together; past this, macOS refuses a connection outright.
 PENDING_CONNECTIONS: Final = 64
+# What a request is told, and the log says, once its client has gone.
+CLIENT_LEFT: Final = "the client left before its answer"
 # The simulator's own log, beside each request's line on stderr: when, from
 # which module, and what it says.
 LOG_FORMAT: Final = "%(asctime)s %(name)s: %(message)s"
@@ -154,6 +159,9 @@ class JsonHandler(BaseHTTPRequestHandler):
         """The route's answer, or a 500 if the simulator failed unexpectedly."""
         try:
             return answer()
+        except NoLongerWanted:
+            self.close_connection = True
+            return Response(HTTPStatus.SERVICE_UNAVAILABLE, {"error": CLIENT_LEFT})
         except Exception:  # every failure is answered, and logged
             self.log_error("failed to answer %s %s", self.command, self.path)
             traceback.print_exc()
@@ -174,7 +182,19 @@ class JsonHandler(BaseHTTPRequestHandler):
             self.wfile.write(body)
         except BrokenPipeError, ConnectionResetError:
             self.close_connection = True
-            self.log_message('"%s": the client left before its answer', self.requestline)
+            self.log_message('"%s": %s', self.requestline, CLIENT_LEFT)
+
+    def _client_is_there(self) -> bool:
+        """Whether the client still holds the connection: one it has closed
+        reads as ended, and a request is all this server reads from one, so
+        that nothing else is there to read."""
+        connection = self.connection
+        assert isinstance(connection, socket.socket)
+        try:
+            readable, _, _ = select.select([connection], [], [], 0.0)
+            return not readable or connection.recv(1, socket.MSG_PEEK) != b""
+        except OSError:
+            return False
 
 
 class _Handler(JsonHandler):
@@ -183,15 +203,18 @@ class _Handler(JsonHandler):
 
     def do_GET(self) -> None:
         started = time.perf_counter()
-        consumers = self._safely(lambda: consumer_respond(self._simulator, "GET", self.path))
-        if consumers is not None:
-            self._send(consumers, started)
-            return
-        acts = self._safely(lambda: actuation_respond(self._simulator, "GET", self.path))
-        if acts is not None:
-            self._send(acts, started)
-            return
-        self._send(self._safely(lambda: respond(self._simulator, "GET", self.path)), started)
+        # What is only read is given up once its client has gone, as a viewer
+        # goes from a moment it has moved on from.
+        with wanted_while(self._client_is_there):
+            consumers = self._safely(lambda: consumer_respond(self._simulator, "GET", self.path))
+            if consumers is not None:
+                self._send(consumers, started)
+                return
+            acts = self._safely(lambda: actuation_respond(self._simulator, "GET", self.path))
+            if acts is not None:
+                self._send(acts, started)
+                return
+            self._send(self._safely(lambda: respond(self._simulator, "GET", self.path)), started)
 
     def do_POST(self) -> None:
         started = time.perf_counter()

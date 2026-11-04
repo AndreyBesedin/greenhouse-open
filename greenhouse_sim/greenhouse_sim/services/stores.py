@@ -33,6 +33,7 @@ from collections.abc import Callable, Hashable
 from concurrent.futures import Future
 from typing import Literal
 
+from greenhouse_sim.core.wanted import wanted_while
 from greenhouse_sim.digests import short_digest
 
 logger = logging.getLogger(__name__)
@@ -101,7 +102,9 @@ class Store[K: Hashable, V]:
         started = time.perf_counter()
         try:
             from_kept = _made(others)
-            value = make(from_kept)
+            # Others may wait for it, whether its asker stays or not.
+            with wanted_while(None):
+                value = make(from_kept)
         except BaseException as error:
             promised.set_exception(error)
             with self._lock:

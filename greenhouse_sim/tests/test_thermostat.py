@@ -242,6 +242,7 @@ def test_the_reference_greenhouses_run_with_everything_off_runs_no_heater(
     assert off.house.heated_j(0.0, HOUR_S) == 0.0
     assert day.house.heated_j(0.0, HOUR_S) > 0.0
     trace = house_air(simulator, RunRequest("reference_greenhouse"), until_s=HOUR_S)
+    assert trace.all_off is not None
     assert trace.all_off.temperature_c[-1] < trace.controlled.temperature_c[-1]
 
 

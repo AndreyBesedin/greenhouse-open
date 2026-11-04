@@ -112,8 +112,8 @@ export function keptText(runs: readonly StoredRun[]): string | null {
 export const KEPT_SIZE_NOTE =
   "The size of the runs' own objects (their records and checkpoints), not of the disk they are on.";
 
-/** The day a run was started, in UTC so that it reads the same wherever it is
- * read; nothing when its start is not known. */
+/** The day a run was started, where it is read; nothing when its start is not
+ * known. */
 export function startedText(run: StoredRun): string {
   if (run.created_at === null) {
     return "";
@@ -121,7 +121,7 @@ export function startedText(run: StoredRun): string {
   const started = new Date(run.created_at);
   return Number.isNaN(started.getTime())
     ? ""
-    : started.toLocaleDateString("en", { month: "short", day: "numeric", timeZone: "UTC" });
+    : started.toLocaleDateString("en", { month: "short", day: "numeric" });
 }
 
 /** What names a stored epoch, among the runs the simulator keeps. */

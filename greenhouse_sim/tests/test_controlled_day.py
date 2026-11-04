@@ -74,6 +74,7 @@ def test_a_schedule_opens_and_shuts_a_vent(whole_house: Simulator) -> None:
 
 def test_the_controlled_house_is_warmer_through_the_night(simulator: Simulator) -> None:
     trace = _controlled(simulator, 24 * HOUR_S)
+    assert trace.all_off is not None
     by_hour = {round(time / HOUR_S, 6): index for index, time in enumerate(trace.times_s)}
     controlled, unheated = trace.controlled.temperature_c, trace.all_off.temperature_c
 
@@ -88,6 +89,7 @@ def test_the_controlled_house_is_warmer_through_the_night(simulator: Simulator) 
 
 def test_the_two_runs_diverge_as_the_night_falls(simulator: Simulator) -> None:
     trace = _controlled(simulator, 24 * HOUR_S)
+    assert trace.all_off is not None
     gap = [
         c - u
         for c, u in zip(trace.controlled.temperature_c, trace.all_off.temperature_c, strict=True)

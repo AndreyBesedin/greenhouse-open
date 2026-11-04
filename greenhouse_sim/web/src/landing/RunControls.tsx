@@ -41,7 +41,7 @@ export function RunControls({
     <>
       <button
         type="button"
-        className="landing-button"
+        className="landing-button landing-run-action landing-run-control"
         aria-label={`${word} ${name}`}
         disabled={busy || run.stopping}
         onClick={() => void act()}

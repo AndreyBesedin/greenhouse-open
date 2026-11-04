@@ -75,19 +75,29 @@ def _moments(until_s: float, from_s: float = 0.0) -> list[float]:
 
 
 def house_air(
-    simulator: Simulator, run: RunRequest, until_s: float = 0.0, from_s: float | None = None
+    simulator: Simulator,
+    run: RunRequest,
+    until_s: float = 0.0,
+    from_s: float | None = None,
+    *,
+    all_off: bool = True,
 ) -> HouseTrace:
     """The house's air as one well-mixed volume (`greenhouse_sim.climate.house`)
     every `PROBE_EVERY_S` from `from_s`, by default the start of the day
     `until_s` belongs to (`services.runs`), to `until_s` of a run's climate,
-    and of the same run with everything off. Asked as its climate field is,
-    and refused as it is."""
+    and of the same run with everything off, unless left out. Asked as its
+    climate field is, and refused as it is.
+
+    A checkpoint of the run shortens its own air to a day's work at most; the
+    same run all off shares none of it, and is worked from its start the first
+    time a far moment is asked of it, so a client that should not wait for
+    that asks for it apart."""
     scenario_id = run.scenario_id
     first = checked_window(scenario(simulator.catalogue, scenario_id), from_s, until_s)
     key = climate_key(simulator, run)
     return house_trace(
         climate_day(simulator, key).house,
-        everything_off(simulator, key).house,
+        everything_off(simulator, key).house if all_off else None,
         _moments(until_s, first),
     )
 

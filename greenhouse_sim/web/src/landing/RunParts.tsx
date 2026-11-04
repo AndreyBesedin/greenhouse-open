@@ -58,7 +58,7 @@ export function ReplayLink({ run, label }: { run: StoredRun; label?: string }) {
     !run.damaged && (
       <a
         href={replayAddress(run.run_id, run.epoch)}
-        className="landing-link-button"
+        className="landing-link-button landing-run-action landing-run-replay"
         aria-label={label}
       >
         Replay
@@ -73,7 +73,10 @@ export function FollowLink({ run }: { run: StoredRun }) {
   return (
     isComputing(run) &&
     !run.damaged && (
-      <a href={replayAddress(run.run_id, run.epoch, true)} className="landing-link-button">
+      <a
+        href={replayAddress(run.run_id, run.epoch, true)}
+        className="landing-link-button landing-run-action landing-run-follow"
+      >
         Follow
       </a>
     )

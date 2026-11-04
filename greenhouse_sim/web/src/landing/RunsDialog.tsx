@@ -232,7 +232,7 @@ export function RunsDialog({
                 ) : (
                   <button
                     type="button"
-                    className="landing-button"
+                    className="landing-button landing-run-action landing-run-delete"
                     aria-label={`Delete the run with ${who}`}
                     onClick={() => setConfirming(key)}
                   >
