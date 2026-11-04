@@ -700,14 +700,12 @@ class EpochStore:
     def usage(self) -> EpochUsage | None:
         """What the epoch's report says it used: none if it has none, as an
         epoch has before its first commit or from before they were written, or
-        one this build cannot read, which is a report and fails nothing."""
-        data = self.objects.get(f"{self._home}/{_USAGE}")
-        if data is None:
-            return None
+        one that cannot be read, which is a report and fails nothing."""
         try:
-            return EpochUsage.model_validate_json(data)
-        except ValidationError:
-            logger.warning("the report of what %s used cannot be read", self._home)
+            data = self.objects.get(f"{self._home}/{_USAGE}")
+            return None if data is None else EpochUsage.model_validate_json(data)
+        except OSError, ValidationError:
+            logger.warning("the report of what %s used cannot be read", self._home, exc_info=True)
             return None
 
     def counted_by(self, meter: Callable[[], ProcessUse]) -> None:

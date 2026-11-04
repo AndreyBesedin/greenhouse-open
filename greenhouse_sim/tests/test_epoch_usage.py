@@ -226,6 +226,25 @@ def test_a_report_this_build_cannot_read_fails_nothing(tmp_path: Path) -> None:
     assert not shown.damaged
 
 
+def test_a_report_the_disk_will_not_give_fails_neither_a_list_nor_a_worker(tmp_path: Path) -> None:
+    class Unreadable(FolderStore):
+        def get(self, name: str) -> bytes | None:
+            if name.endswith(USAGE):
+                raise PermissionError(errno.EACCES, "Permission denied", A_PATH)
+            return super().get(name)
+
+    _two_days(tmp_path)
+    objects = Unreadable(tmp_path)
+
+    (shown,) = stored_runs(objects)
+    assert shown.frontier_s == 2 * DAY_S and shown.size_bytes == _on_disk(tmp_path)
+    assert shown.cpu_s is None and not shown.damaged
+
+    worker = EpochStore(objects, "run_a", 0)
+    worker.counted_by(_meter(4.0, 100))
+    assert worker.usage() is None
+
+
 # What a resume and a fork count.
 
 
