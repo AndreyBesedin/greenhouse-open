@@ -52,6 +52,11 @@ A change given to a run kept in the store is the epoch's own (P17.8, decision
 at, before it is acted on, so that applying the log again gives the same epoch.
 One asked of an epoch a worker in another process works reaches it through the
 store (`take_changes`), the only channel there is between them.
+
+An epoch it keeps is stopped as any other is (`stop_epoch`), whoever is watching
+and whether or not its clock moves: the playback goes, as if it had never been
+started, and the epoch reads interrupted with what it had committed, which is
+carried on, or deleted, as any is.
 """
 
 import gzip
@@ -138,6 +143,7 @@ from greenhouse_sim.services.interventions import (
 )
 from greenhouse_sim.services.policy_context import run_context
 from greenhouse_sim.services.run_store import (
+    ENDED,
     Answer,
     EpochManifest,
     EpochStore,
@@ -147,10 +153,12 @@ from greenhouse_sim.services.run_store import (
     LogEntry,
     ObjectStore,
     Status,
+    StoredRun,
     compress,
     default_root,
     failure_reason,
     started_epochs,
+    stored_run,
 )
 from greenhouse_sim.services.runs import (
     Commanded,
@@ -560,10 +568,15 @@ class Playback:
         )
 
     def begin(self) -> None:
-        """Starts working the run's days out, ahead of the clock."""
+        """Starts working the run's days out, ahead of the clock. A thread that
+        cannot be started leaves its epoch failed, not running with no one at it."""
         if self._store is not None:
             self._store.set_status(Status.RUNNING)
-        self._worker.start()
+        try:
+            self._worker.start()
+        except RuntimeError as error:
+            self._end_store(Status.FAILED, reason=failure_reason(error))
+            raise
 
     def resume_at(self, time_s: float) -> None:
         """Carries on an epoch kept through `time_s`, a whole number of days
@@ -797,10 +810,12 @@ class Playback:
                     return self._state()
 
     def epoch_held(self) -> int | None:
-        """The epoch whose clock it holds, by a pause; none while it plays, or
-        once its run has ended."""
+        """The epoch whose clock it holds, by a pause; none while it plays, once
+        its run has ended, or once it has said its epoch ended, which is then no
+        more its own: a worker may have taken it up."""
         with self._lock:
-            return None if self._playing or self._time_s >= self.end_s else self._epoch
+            over = self._playing or self._time_s >= self.end_s or self._store_ended
+            return None if over else self._epoch
 
     def plays(self, layout: str | None, seed: int | None = None) -> bool:
         """Whether it plays the run of `layout` at `seed`: its own layout,
@@ -996,13 +1011,17 @@ class Playback:
                 if not self._work_day(day, run, changes, assigned):
                     return
         finally:
-            # Its work failed, or it was stopped.
-            with self._lock:
-                failure = self._failure
-            if failure is None:
-                self._end_store(Status.INTERRUPTED)
-            else:
-                self._end_store(Status.FAILED, reason=failure_reason(failure))
+            self._say_how_it_ended()
+
+    def _say_how_it_ended(self) -> None:
+        """Says in the run store that its work is over: it failed, or it was
+        stopped."""
+        with self._lock:
+            failure = self._failure
+        if failure is None:
+            self._end_store(Status.INTERRUPTED)
+        else:
+            self._end_store(Status.FAILED, reason=failure_reason(failure))
 
     def _end_store(
         self, status: Status, store: EpochStore | None = None, *, reason: str | None = None
@@ -1011,14 +1030,20 @@ class Playback:
         finished, failed and why, or interrupted by the producer stopping. Given the
         `store` of the epoch whose end it says, it says nothing once a restart
         has put another epoch's store in its place, which said that one was
-        interrupted: the new epoch is not ended for the old one."""
+        interrupted: the new epoch is not ended for the old one. One the store
+        could not be told of can be told again."""
         with self._lock:
             current = self._store
             another = store is not None and store is not current
             if current is None or self._store_ended or another:
                 return
             self._store_ended = True
-        current.set_status(status, reason=reason)
+        try:
+            current.set_status(status, reason=reason)
+        except Exception:
+            with self._lock:
+                self._store_ended = False
+            raise
 
     def keep(self) -> None:
         """Writes to the run store the days the clock has passed and not yet
@@ -1275,10 +1300,42 @@ class Playback:
         with self._lock:
             return (self.run_id, self._epoch) == (run_id, epoch)
 
+    def stop_if_working(self, run_id: str, epoch: int) -> bool:
+        """Tells it to stop if this is the epoch it works, and says whether it did:
+        one step, under the lock a restart moves its epoch under, so that a stop never
+        reaches the epoch after the one it was asked of. Not one it keeps none of, nor
+        one it has said ended, or the store has, which is no more its own: a worker
+        may have taken it up, whose status says nothing of this playback. Once told,
+        it starts nothing over, so the epoch it has stays the one asked of."""
+        with self._lock:
+            if (
+                (self.run_id, self._epoch) != (run_id, epoch)
+                or self._store is None
+                or self._store_ended
+                or self._store.manifest().status in ENDED
+            ):
+                return False
+            self._stopped.set()
+            return True
+
+    def stopped(self) -> StoredRun:
+        """Its epoch, as a stop answers with it, once it was told to stop: said to
+        have ended, or if its thread has not yet, as `finish` gave it up, asked
+        through the store, for it to read `stopping` until the thread says so."""
+        with self._lock:
+            store = self._store
+        assert store is not None  # one with none is not stopped: `stop_if_working`
+        if self.working:
+            store.ask_to_stop()
+        else:
+            self._say_how_it_ended()
+        return stored_run(store.objects, store.run_id, store.epoch)
+
     def command(self, command: PlaybackCommand) -> PlaybackState:
         """Plays on, holds the clock, or starts the run over as a new epoch,
         playing; answers with the new state. Once replaced, the one in its
-        place does."""
+        place does. One stopped that keeps its epochs starts nothing over: no
+        thread would work the epoch it opened, which no one could then end."""
         with self._lock:
             successor = self._successor
             if successor is None:
@@ -1289,6 +1346,9 @@ class Playback:
                     case PlaybackCommand.PAUSE:
                         self._playing = False
                     case PlaybackCommand.RESTART:
+                        over = self._stopped.is_set() or self._failure is not None
+                        if over and self._epochs is not None:
+                            raise Conflict(f"the playback of {self.run_id} no longer works")
                         self._epoch += 1
                         if self._epochs is not None:
                             if self._store is not None and not self._store_ended:
@@ -1598,10 +1658,12 @@ class Playbacks:
 
     def _let_go(self, _: str, found: Playback) -> None:
         """Stops a playback let go: by the deadline of all of them, while
-        they all stop, or its own."""
+        they all stop, or its own. One among those replaced is waited for by whoever
+        put it there, once `rearranging` is released (`stop_epoch`)."""
         deadline = self._stopping_by
         found.stop(wait=False)
-        found.finish(monotonic() + STOP_WAIT_S if deadline is None else deadline)
+        if not any(found is held for held in self._replaced):
+            found.finish(monotonic() + STOP_WAIT_S if deadline is None else deadline)
 
     def refuse_if_closed(self) -> None:
         """Under `rearranging`: a playback is added to none closed."""
@@ -1632,6 +1694,31 @@ class Playbacks:
         but not waited for, so that their epochs are being written yet."""
         with self.rearranging:
             return [found for found in self._replaced if found.working]
+
+    def stop_epoch(self, run_id: str, epoch: int) -> Playback | None:
+        """The playback that works this epoch, if one does (`stop_if_working`): told
+        to stop, no longer kept, so that its scenario's next start is a new one, the
+        run's next epoch, and waited for `STOP_WAIT_S` at most. It stays among those
+        `retiring` until its thread has ended, for the epoch not to be deleted
+        under it."""
+        with self.rearranging:
+            found = next(
+                (
+                    held
+                    for held in (*self.all(), *self._replaced)
+                    if held.stop_if_working(run_id, epoch)
+                ),
+                None,
+            )
+            if found is None:
+                return None
+            others = [held for held in self._replaced if held.working and held is not found]
+            self._replaced = [*others, found]
+            # Under the lock, or a start would be given the one stopped.
+            self._store.drop(found.scenario_id, found)
+        # Outside it: a stop that takes its time holds up no other start.
+        found.finish(monotonic() + STOP_WAIT_S)
+        return found
 
     def replace(self, scenario_id: str, replacing: Playback, replaced: Playback) -> None:
         """Keeps `replacing` in `replaced`'s place, under `rearranging`; those
@@ -1795,10 +1882,10 @@ def stop_playbacks(simulator: Simulator) -> None:
     simulator.playbacks.stop()
 
 
-def plays_epoch(simulator: Simulator, run_id: str, epoch: int) -> bool:
-    """Whether a playback of the simulator's, one replaced included, has this
-    epoch of a run."""
-    return any(
-        found.has_epoch(run_id, epoch)
-        for found in (*simulator.playbacks.all(), *simulator.playbacks.retiring())
-    )
+def stop_epoch(simulator: Simulator, run_id: str, epoch: int) -> StoredRun | None:
+    """Stops the playback of the simulator's that has this epoch, one replaced
+    included, whoever is watching and whether it plays, holds its clock or has
+    failed: the epoch as it stands then, told how it ended with what it had
+    committed, or none if no playback has it or it has ended already."""
+    found = simulator.playbacks.stop_epoch(run_id, epoch)
+    return None if found is None else found.stopped()
