@@ -14,6 +14,9 @@ import { BUILDER_PATH, LANDING_PATH } from "../src/landing/paths";
 // one asked for.
 const ARRIVES = { timeout: 60_000 };
 
+const NEITHER_KIND =
+  "notes.json cannot be opened: not a scenario file or a house file, which the builder's Download buttons make";
+
 interface Picked {
   name: string;
   mimeType: string;
@@ -158,7 +161,7 @@ test("a house built, downloaded and uploaded from the start page opens in the bu
   // The draft it came from is kept, and is not touched: this one is not saved.
   await expect(status).toHaveText(
     `Imported Round trip from ${file.name}; not saved yet. ` +
-      `A draft ${id} is kept already: rename this one to save it.`,
+      `A draft with the identifier ${id} is kept already: change this one's identifier to save it.`,
     ARRIVES,
   );
   await expect(page.getByTestId("builder-draft")).toHaveText(`Round trip (${id}), not saved`);
@@ -170,7 +173,11 @@ test("a house built, downloaded and uploaded from the start page opens in the bu
 
   // Saved as it is, it is refused, and the draft stays at its revision.
   await save.click();
-  await expect(status).toContainText("It is not saved:", ARRIVES);
+  await expect(status).toHaveText(
+    `It is not saved: a draft with the identifier '${id}' is kept already, at revision 1: ` +
+      "change this one's identifier to save it",
+    ARRIVES,
+  );
   const kept = (await (await page.request.get(`/api/drafts/${id}`)).json()) as {
     draft: { revision: number };
   };
@@ -223,7 +230,7 @@ test("a scenario file given to the builder's import opens as an upload does", as
   expect(await keptRunsOf(page, id)).toEqual([]);
 });
 
-test("a file of neither kind is told what it needs to be, on either side", async ({ page }) => {
+test("a file of neither kind is refused in plain words, on either side", async ({ page }) => {
   const file = {
     name: "notes.json",
     mimeType: "application/json",
@@ -232,18 +239,15 @@ test("a file of neither kind is told what it needs to be, on either side", async
 
   await page.goto(LANDING_PATH);
   await page.locator(".landing-upload input[type=file]").setInputFiles(file);
-  await expect(page.getByRole("alert").filter({ hasText: "notes.json" })).toContainText(
-    "a scenario file names its scenario in greenhouse_id, and a house file its house in installation_id",
+  await expect(page.getByRole("alert").filter({ hasText: "notes.json" })).toHaveText(
+    NEITHER_KIND,
     ARRIVES,
   );
   await expect(page).toHaveURL(/\/$/);
 
   await page.goto(BUILDER_PATH);
   await page.locator(".builder-start input[type=file]").setInputFiles(file);
-  await expect(page.getByTestId("builder-status")).toContainText(
-    "notes.json cannot be opened: not a scenario file or a house file",
-    ARRIVES,
-  );
+  await expect(page.getByTestId("builder-status")).toHaveText(NEITHER_KIND, ARRIVES);
 });
 
 test("a scenario that is not there is said not to open, and the first form is shown", async ({

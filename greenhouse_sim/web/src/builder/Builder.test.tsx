@@ -731,7 +731,7 @@ describe("the setup builder (P12.2)", () => {
       await settled();
 
       expect(said(shown.container, "builder-status")).toContain(
-        `A draft ${houseId} is kept already: rename this one to save it.`,
+        `A draft with the identifier ${houseId} is kept already: change this one's identifier to save it.`,
       );
       expect(said(shown.container, "builder-draft")).toContain("not saved");
     });

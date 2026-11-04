@@ -286,7 +286,11 @@ export function Builder({
     setRan(null);
     const id = next.history.present.installation_id;
     const kept = next.saved === null && known?.some((draft) => draft.draft_id === id);
-    setStatus(kept ? `${said} A draft ${id} is kept already: rename this one to save it.` : said);
+    setStatus(
+      kept
+        ? `${said} A draft with the identifier ${id} is kept already: change this one's identifier to save it.`
+        : said,
+    );
   }
 
   async function draftHouse(values: BasicSetup): Promise<void> {
