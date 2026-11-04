@@ -189,7 +189,7 @@ def test_a_run_is_followed_while_it_is_computed(simulator: Simulator, objects: F
     _scheduler(simulator).cancel(shown.run_id, shown.epoch)
 
 
-def test_closing_the_simulator_ends_its_workers_and_tells_the_epochs(
+def test_closing_the_simulator_ends_its_workers_and_leaves_what_waits_waiting(
     tmp_path: Path,
 ) -> None:
     objects = FolderStore(tmp_path)
@@ -203,7 +203,7 @@ def test_closing_the_simulator_ends_its_workers_and_tells_the_epochs(
 
     assert scheduling.workers() == [] and scheduling.waiting() == []
     assert _status(objects, running) == Status.INTERRUPTED
-    assert _status(objects, waiting) == Status.INTERRUPTED
+    assert _status(objects, waiting) == Status.QUEUED
     with pytest.raises(ProcessLookupError):
         os.kill(worker.pid, 0)
     with pytest.raises(Conflict):
