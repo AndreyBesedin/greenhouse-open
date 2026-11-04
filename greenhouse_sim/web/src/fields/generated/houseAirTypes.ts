@@ -3,12 +3,12 @@
 
 /**
  * The house's air through a climate run, and through the same run with
- * everything off, at each of its moments, in seconds.
+ * everything off unless left out, at each of its moments, in seconds.
  */
 export interface HouseTrace {
   times_s: number[];
   controlled: HouseSeries;
-  all_off: HouseSeries;
+  all_off: HouseSeries | null;
 }
 /**
  * The house's air at each moment of a trace: its temperature (°C),

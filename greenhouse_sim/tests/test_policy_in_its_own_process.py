@@ -9,7 +9,7 @@ work out and its heater, on no thermostat, turned on and off by the policy
 alone. `GREENHOUSE_QA_HOURS` runs the QA of record instead, on the reference
 greenhouse's own run, served by `python -m greenhouse_sim.api.policy_server`:
 it steered a whole day (`GREENHOUSE_QA_HOURS=24`, about 25 minutes of wall
-time).
+time), and a slow test runs it for a short stretch.
 
 The port's server and the policy are real processes. The server plays the
 run on the wall clock, since nothing on the port moves a held run's clock.
@@ -58,16 +58,24 @@ HOURS_VARIABLE: Final = "GREENHOUSE_QA_HOURS"
 OF_RECORD: Final = os.environ.get(HOURS_VARIABLE)
 HOURS: Final = 0.5 if OF_RECORD is None else float(OF_RECORD)
 END_S: Final = HOURS * 3600.0
-SCENARIO: Final = CUT_SCENARIO if OF_RECORD is None else "reference_greenhouse"
+REFERENCE_SCENARIO: Final = "reference_greenhouse"
+# How much of it the slow test steers.
+REFERENCE_HOURS: Final = 1.0
+SCENARIO: Final = CUT_SCENARIO if OF_RECORD is None else REFERENCE_SCENARIO
 SERVER: Final = (
     (str(Path(__file__).parent / "policy_port_on_a_short_run.py"),)
     if OF_RECORD is None
     else ("-m", "greenhouse_sim.api.policy_server")
 )
-# A simulated day on the server's wall clock, in seconds: the cut run's is
-# slow enough that the policy's last decision has more than a second and a
-# half of wall clock to fall in (`LAST_DECISION_STEPS`).
-SECONDS_PER_DAY: Final = 120.0 if OF_RECORD is None else 20.0
+# A simulated day on the server's wall clock, in seconds: the cut run's, and
+# the slow test's, are slow enough that the policy's last decision has more
+# than a second and a half of wall clock to fall in (`LAST_DECISION_STEPS`).
+# The QA of record's is 20 s, unless `GREENHOUSE_QA_SECONDS_PER_DAY` says otherwise.
+SECONDS_PER_DAY_VARIABLE: Final = "GREENHOUSE_QA_SECONDS_PER_DAY"
+UNHURRIED_DAY_S: Final = 120.0
+SECONDS_PER_DAY: Final = (
+    UNHURRIED_DAY_S if OF_RECORD is None else float(os.environ.get(SECONDS_PER_DAY_VARIABLE, "20"))
+)
 # How long the server may take to say where it is, and the policy to finish.
 SERVER_WAIT_S: Final = 180.0
 POLICY_WAIT_S: Final = 1800.0
@@ -100,8 +108,9 @@ def _simulator(authorisation: AuthorisationConfig) -> Simulator:
 
 
 def _clean_environment(**extra: str) -> dict[str, str]:
-    """The environment a child runs in: this one without the git hooks'."""
-    return {k: v for k, v in os.environ.items() if not k.startswith("GIT_")} | extra
+    """The environment a child runs in: this one without the git hooks' or
+    the running pytest's."""
+    return {k: v for k, v in os.environ.items() if not k.startswith(("GIT_", "PYTEST_"))} | extra
 
 
 @dataclass(frozen=True)
@@ -338,3 +347,38 @@ def test_examples_03_and_05_hold_the_same_rule() -> None:
             ).digest
 
     assert digest(REMOTE) == digest(IN_PROCESS)
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(OF_RECORD is not None, reason="this run is on the reference greenhouse")
+def test_the_same_holds_on_the_reference_greenhouses_own_run(tmp_path: Path) -> None:
+    """Every test above once more, in a pytest of its own, in the QA of record's
+    mode for a short stretch: the server is `python -m greenhouse_sim.api.policy_server`
+    itself, and a thermostat runs the heater the policy steers. The waits for
+    that pytest's server and policy bound how long it takes."""
+    record = tmp_path / "record"
+    done = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            __file__,
+            # Not slow: never this test again, whatever its environment says.
+            *("-q", "-m", "not slow"),
+            *("-p", "no:cacheprovider", "--basetemp", str(tmp_path / "pytest")),
+        ],
+        capture_output=True,
+        text=True,
+        env=_clean_environment(
+            **{
+                HOURS_VARIABLE: str(REFERENCE_HOURS),
+                SECONDS_PER_DAY_VARIABLE: str(UNHURRIED_DAY_S),
+                RECORD_VARIABLE: str(record),
+            }
+        ),
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    # They ran, on that scenario, and not on the cut run or not at all.
+    for kept in ("remote.json", "runner.json"):
+        run_id = json.loads((record / kept).read_text())["run_id"]
+        assert run_id.startswith(f"{REFERENCE_SCENARIO}-climate-")

@@ -42,7 +42,8 @@ crop and its timeline, each of the run a query asks for (`run_request`).
                                           volume every minute up to &t=600,
                                           from the start of that moment's day
                                           or &from=0, and of the same run all
-                                          off; asked as its climate field is
+                                          off, unless &all_off=0; asked as its
+                                          climate field is
     GET /api/scenarios/{id}/climate/glazing its walls' and roof slopes' air,
                                           temperature and heat passed &t=600
                                           seconds into its climate run; asked
@@ -142,7 +143,11 @@ def get(simulator: Simulator, segments: list[str], query: Query) -> Response | N
         case ["api", "scenarios", scenario_id, "climate", "house"]:
             return answer(
                 lambda: climate_readings.house_air(
-                    simulator, run_request(scenario_id, query), seconds(query), since(query)
+                    simulator,
+                    run_request(scenario_id, query),
+                    seconds(query),
+                    since(query),
+                    all_off=last(query, "all_off") != "0",
                 )
             )
         case ["api", "scenarios", scenario_id, "climate", "glazing"]:
