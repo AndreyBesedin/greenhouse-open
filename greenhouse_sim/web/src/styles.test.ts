@@ -67,8 +67,11 @@ function rawColours(stylesheet: string): string[] {
 const COLOUR_ROLE =
   /^--(?:surface-\w+|text(?:-\w+)?|border|action|warn|mark|scheme|chart-[\w-]+|data-\w+)$/;
 
+// And the size tokens, each scale's steps written out, so that a new step is too.
+const SIZE_STEP = /^--(?:font-(?:xs|sm|md|lg|xl|[234]xl)|radius-(?:sm|md|lg|xl|pill)|target)$/;
+
 function misnamedTokens(names: Iterable<string>): string[] {
-  return [...names].filter((name) => !COLOUR_ROLE.test(name));
+  return [...names].filter((name) => !COLOUR_ROLE.test(name) && !SIZE_STEP.test(name));
 }
 
 describe("the stylesheet", () => {
@@ -102,15 +105,33 @@ describe("the stylesheet", () => {
     ]);
   });
 
-  it("names each colour for what it does, not where it stands (P19.3)", () => {
+  it("names each colour for what it does, and each size for its scale (P19.3, P19.4)", () => {
     expect(misnamedTokens(tokenValues(STYLES, "dark").keys())).toEqual([]);
   });
 
-  it("refuses a token named for a place", () => {
-    expect(misnamedTokens(["--text-soft", "--panel-text", "--landing-bg", "--textual"])).toEqual([
+  it("refuses a token named for a place, or a step no scale has", () => {
+    expect(
+      misnamedTokens([
+        "--text-soft",
+        "--font-2xl",
+        "--radius-pill",
+        "--target",
+        "--panel-text",
+        "--landing-bg",
+        "--textual",
+        "--font-13",
+        "--font-5xl",
+        "--radius",
+        "--target-small",
+      ]),
+    ).toEqual([
       "--panel-text",
       "--landing-bg",
       "--textual",
+      "--font-13",
+      "--font-5xl",
+      "--radius",
+      "--target-small",
     ]);
   });
 
@@ -542,5 +563,161 @@ describe("the stylesheet with its tokens resolved (P19.1)", () => {
     expect(withImports("/s/styles.css", (path) => files[path] ?? "")).toBe(
       ":root { --b: 2px; }\n\n:root { --a: 1px; }\n\n.page { gap: var(--a); }\n\n.last { top: 0; }\n",
     );
+  });
+});
+
+// The sizes held so far (P19.4), each with the token its value must name. Spacing
+// joins them in its own step (P19.5).
+const SIZE_SCALES: readonly { property: RegExp; token: RegExp }[] = [
+  { property: /^font(?:-size)?$/, token: /^var\(--font-[\w-]+\)$/ },
+  { property: /^border(?:-[a-z]+)*-radius$/, token: /^var\(--radius-[\w-]+\)$/ },
+  { property: /^min-(?:width|height|inline-size|block-size)$/, token: /^var\(--target\)$/ },
+];
+// What is not on a scale by nature: nothing at all, the browser's own, what its
+// text gave it, or a share of its box.
+const NEEDS_NO_SCALE = /^(?:0|auto|inherit|\d*\.?\d+(?:em|%))$/i;
+
+// What stays written as a value, with why, until a visual step (P19.12) moves it
+// onto a scale: moving one draws something else, which a neutral step must not.
+// A new entry is a finding about the scales, for review to weigh.
+const OFF_SCALE: Readonly<Record<string, string>> = {
+  ".controls-device { min-width: 64px }": "a column for the device's name; nothing to press",
+  ".controls-open kbd { border-radius: 3px }": "a key's cap, smaller than any control",
+  ".controls-open kbd { font-size: 11px }": "a key's cap, under the text of its line",
+  ".category-legend .swatch { border-radius: 2px }": "a 12 px swatch; QA baselines draw it",
+  ".scalar-bar { border-radius: 2px }": "a legend's 12 px bar, on a QA page",
+  ".debug-label { border-radius: 3px }": "a label over the scene; QA baselines draw it",
+  ".climate-schedule-bar span.daily { border-radius: 1px }": "an 8 px marker, meant to look square",
+  ".panel-stripe { font-size: 10px }": "the mark on a stripe 14 px wide",
+  ".landing-combobox .landing-input { min-height: 48px }": "the landing's search, above the target",
+  ".landing-dialog { border-radius: 14px }": "the runs dialog, a step above a card's 12",
+  ".replay-play { min-width: 52px }": "the transport's main button, wider than its neighbours",
+  ".replay-track { border-radius: 7px }": "half the height of the 14 px band it holds",
+  ".replay-computed { border-radius: 7px 0 0 7px }": "the rounded end of that 14 px band",
+};
+// Not pixels: a chart's geometry, which grows with its drawing.
+const IN_A_VIEWBOX: Readonly<Record<string, string>> = {
+  ".wind-compass-north { font-size: 8px }": "the compass's N, in its viewBox's units",
+};
+
+/** Each declaration in `stylesheet`, outside the tokens' `:root` blocks, that
+ * sets a held size to anything but its scale's token, as `selector { property:
+ * value }`. A value counts as a whole: a raw size in a `calc()` or a `var()`'s
+ * fallback is still raw. */
+function sizesOffTheScales(stylesheet: string): string[] {
+  const rules = stylesheet.replace(COMMENT, "").replace(ROOT_BLOCK, "");
+  return [...rules.matchAll(/([^{};]*)\{([^{}]*)\}/g)].flatMap(([, prelude, body]) => {
+    const selector = (prelude ?? "").trim().replace(/\s+/g, " ");
+    return [...(body ?? "").matchAll(/(?:^|;)\s*([a-z-]+)\s*:\s*([^;]*)/gi)].flatMap(
+      ([, name, written]) => {
+        const property = (name ?? "").toLowerCase();
+        const value = (written ?? "").trim();
+        const scale = SIZE_SCALES.find((each) => each.property.test(property));
+        const held =
+          scale === undefined ||
+          value.split(/\s+/).every((word) => NEEDS_NO_SCALE.test(word) || scale.token.test(word));
+        return held ? [] : [`${selector} { ${property}: ${value} }`];
+      },
+    );
+  });
+}
+
+/** What `found` holds that `listed` does not name, and what `listed` names that
+ * is no longer found: each entry answers for one declaration. */
+function againstTheList(
+  found: readonly string[],
+  listed: readonly string[],
+): { unlisted: string[]; gone: string[] } {
+  const gone = [...listed];
+  const unlisted = found.filter((declaration) => {
+    const entry = gone.indexOf(declaration);
+    if (entry === -1) {
+      return true;
+    }
+    gone.splice(entry, 1);
+    return false;
+  });
+  return { unlisted, gone };
+}
+
+describe("the stylesheet's sizes (P19.4)", () => {
+  it("are their scale's tokens, or named here with why", () => {
+    expect(
+      againstTheList(sizesOffTheScales(STYLES), [
+        ...Object.keys(OFF_SCALE),
+        ...Object.keys(IN_A_VIEWBOX),
+      ]),
+    ).toEqual({ unlisted: [], gone: [] });
+  });
+
+  it("refuse a raw size wherever it is written, and however", () => {
+    const written = `
+      .a { font-size: 13px; border-radius: 6px; min-height: 44px; min-width: 44px; }
+      .b { font: 13px/1.4 system-ui; border-top-left-radius: 6px; }
+      .c { border-radius: 7px 0 0 7px; font-size: 1rem; FONT-SIZE: 13PX; }
+      .d { font-size: 13px !important; font-size: small; min-block-size: 44px; }
+      .e { min-height: calc(var(--target) - 2px); border-radius: var(--radius-md, 6px); }
+      @media (min-width: 600px) { .f, .g > .h { min-height: 48px; } }
+    `;
+    expect(sizesOffTheScales(written)).toEqual([
+      ".a { font-size: 13px }",
+      ".a { border-radius: 6px }",
+      ".a { min-height: 44px }",
+      ".a { min-width: 44px }",
+      ".b { font: 13px/1.4 system-ui }",
+      ".b { border-top-left-radius: 6px }",
+      ".c { border-radius: 7px 0 0 7px }",
+      ".c { font-size: 1rem }",
+      ".c { font-size: 13PX }",
+      ".d { font-size: 13px !important }",
+      ".d { font-size: small }",
+      ".d { min-block-size: 44px }",
+      ".e { min-height: calc(var(--target) - 2px) }",
+      ".e { border-radius: var(--radius-md, 6px) }",
+      ".f, .g > .h { min-height: 48px }",
+    ]);
+  });
+
+  it("refuse a token of another scale", () => {
+    const written = `
+      .a { font-size: var(--radius-md); border-radius: var(--font-sm); }
+      .b { min-height: var(--font-sm); }
+    `;
+    expect(sizesOffTheScales(written)).toEqual([
+      ".a { font-size: var(--radius-md) }",
+      ".a { border-radius: var(--font-sm) }",
+      ".b { min-height: var(--font-sm) }",
+    ]);
+  });
+
+  it("let through a token, what follows its text or its box, and what they do not hold", () => {
+    const written = `
+      /* .gone { font-size: 13px; } */
+      :root { --font-sm: 13px; --radius-md: 6px; }
+      .a { font-size: var(--font-sm); border-radius: var(--radius-md) 0 0 var(--radius-md); }
+      .b { font: inherit; font-size: inherit; min-height: var(--target); min-width: 0; }
+      .c { font-size: 0.7em; min-height: 1.4em; border-radius: 50%; min-width: 100%; }
+      .d { height: 44px; width: 13px; top: 44px; gap: 6px; font-weight: 600; }
+      .e::after { content: ""; }
+    `;
+    expect(sizesOffTheScales(written)).toEqual([]);
+  });
+
+  it("refuse what the list does not name, and a name no longer found", () => {
+    expect(
+      againstTheList(
+        [".a { font-size: 11px }", ".new { font-size: 11px }"],
+        [".a { font-size: 11px }", ".moved { font-size: 10px }"],
+      ),
+    ).toEqual({ unlisted: [".new { font-size: 11px }"], gone: [".moved { font-size: 10px }"] });
+  });
+
+  it("let one name answer for one declaration, not for every copy of it", () => {
+    expect(
+      againstTheList(
+        [".a { font-size: 11px }", ".a { font-size: 11px }"],
+        [".a { font-size: 11px }"],
+      ),
+    ).toEqual({ unlisted: [".a { font-size: 11px }"], gone: [] });
   });
 });
