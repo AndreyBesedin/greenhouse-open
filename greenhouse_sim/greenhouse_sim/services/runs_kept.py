@@ -41,13 +41,13 @@ def runs_of(simulator: Simulator, scenario_id: str) -> list[StoredRun]:
     the simulator does not know is not found."""
     if simulator.catalogue.entry(scenario_id) is None:
         raise NotFound(f"there is no scenario {scenario_id!r}")
-    return stored_runs(_objects(simulator), scenario_id)
+    return _pauses_said(simulator, stored_runs(_objects(simulator), scenario_id))
 
 
 def all_runs(simulator: Simulator) -> list[StoredRun]:
     """Every stored epoch, the newest started first and those with no start
     time last: what a landing page shows of the runs of all scenarios."""
-    found = stored_runs(_objects(simulator))
+    found = _pauses_said(simulator, stored_runs(_objects(simulator)))
     return sorted(
         found,
         key=lambda run: (
@@ -64,7 +64,23 @@ def epoch_of(simulator: Simulator, run_id: str, epoch: int) -> StoredRun:
     objects = _objects(simulator)
     if epoch not in stored_epochs(objects, run_id):
         raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
-    return stored_run(objects, run_id, epoch)
+    return _pauses_said(simulator, [stored_run(objects, run_id, epoch)])[0]
+
+
+def _pauses_said(simulator: Simulator, runs: list[StoredRun]) -> list[StoredRun]:
+    """`runs`, those running that a playback of this simulator holds said to be
+    paused: the store calls them running, and they stand still."""
+    held = {
+        (playback.run_id, epoch)
+        for playback in simulator.playbacks.all()
+        if (epoch := playback.epoch_held()) is not None
+    }
+    return [
+        run.model_copy(update={"paused": True})
+        if run.status == Status.RUNNING and (run.run_id, run.epoch) in held
+        else run
+        for run in runs
+    ]
 
 
 def delete_epoch(simulator: Simulator, run_id: str, epoch: int) -> dict[str, JsonValue]:
@@ -192,9 +208,10 @@ def _outcomes(
 def open_position(
     simulator: Simulator, run_id: str, epoch: int, seconds_per_day: float | None = None
 ) -> PositionState:
-    """A new position at the start of a stored epoch, paused. One with files
-    missing is refused in words: a list counts its folders and can miss a lost
-    file, and here its objects are looked at, before a read comes to the gap."""
+    """A new position at the start of a stored epoch, or for a fork at the moment
+    it was made from, paused. One with files missing is refused in words: a list
+    counts its folders and can miss a lost file, and here its objects are looked
+    at, before a read comes to the gap."""
     objects = _objects(simulator)
     if epoch in stored_epochs(objects, run_id) and stored_run(objects, run_id, epoch).damaged:
         raise Conflict(f"files of run {run_id}, epoch {epoch} are missing: it is not read whole")
