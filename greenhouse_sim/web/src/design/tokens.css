@@ -59,3 +59,22 @@
   --data-red: #c0392b;
   --data-sky: #2e86c1;
 }
+
+/* Sizes, the same in both themes: the scales the stylesheet mostly used already
+ * (P19). `--target` is what a pointer or a finger is given to hit. */
+:root {
+  --font-xs: 12px;
+  --font-sm: 13px;
+  --font-md: 14px;
+  --font-lg: 15px;
+  --font-xl: 16px;
+  --font-2xl: 18px;
+  --font-3xl: 22px;
+  --font-4xl: 28px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-pill: 999px;
+  --target: 44px;
+}

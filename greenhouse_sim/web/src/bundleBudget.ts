@@ -21,8 +21,11 @@ export interface BundleWeight {
  * scripts by the replay page, 1,739 kB with the scenario file's; by forks in a
  * replay (P17.8) and the runs kept moving on while one computes, 1,750 kB; and
  * by runs started on workers, 1,751.2 kB, with room for their controls.
+ * Its styles again by the design system's tokens (P19.4, decision 0068): a
+ * token is longer than the value it names, 29.11 kB with type, radii and the
+ * target, and 31.66 kB once spacing follows them, as measured on a copy.
  */
-export const BUNDLE_BUDGET_KB: BundleWeight = { js: 1760, css: 29 };
+export const BUNDLE_BUDGET_KB: BundleWeight = { js: 1760, css: 32 };
 
 const BYTES_PER_KB = 1000;
 
