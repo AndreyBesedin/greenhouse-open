@@ -447,6 +447,25 @@ describe("the runs of a scenario, in a dialog", () => {
     expect(button(container, "Resume the run with seed 1, epoch 0")).toBeDefined();
   });
 
+  it("drops what a refused deletion said once the run has been stopped as it asked", async () => {
+    simulator({
+      [`POST /api/runs/${RUN_ID}/epochs/0/delete`]: { status: 409, body: { error: "computing" } },
+      [`POST /api/runs/${RUN_ID}/epochs/0/stop`]: {
+        status: 200,
+        body: run({ status: "interrupted" }),
+      },
+    });
+    const { container, onChanged } = shown([run({ status: "running" })]);
+    click(button(container, "Delete the run with seed 1, epoch 0"));
+    click(button(container, "Delete the run with seed 1, epoch 0"));
+    await vi.waitFor(() => expect(container.querySelector('[role="alert"]')).not.toBeNull());
+
+    click(button(container, "Stop the run with seed 1, epoch 0"));
+
+    await vi.waitFor(() => expect(onChanged).toHaveBeenCalled());
+    await vi.waitFor(() => expect(container.querySelector('[role="alert"]')).toBeNull());
+  });
+
   it("is closed by its button, and when the browser closes it", () => {
     const { container, onClose } = shown([]);
 
