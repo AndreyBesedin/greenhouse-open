@@ -356,16 +356,6 @@ describe("the runs of a scenario, in a dialog", () => {
     expect(asked).toEqual([{ url: `/api/runs/${RUN_ID}/epochs/3/stop`, method: "POST" }]);
   });
 
-  it("calls a run paused while its playback holds it, and running once it plays", () => {
-    const { rows } = shown([
-      run({ epoch: 1, status: "running", paused: true }),
-      run({ epoch: 0, status: "running" }),
-    ]);
-    const statuses = rows().map((row) => row.querySelector(".landing-status")?.textContent);
-
-    expect(statuses).toEqual(["Paused", "Running"]);
-  });
-
   it("resumes a run as fast as it computes, through the epoch's route", async () => {
     const asked = simulator({
       [`POST /api/runs/${RUN_ID}/epochs/3/resume`]: {
@@ -379,6 +369,16 @@ describe("the runs of a scenario, in a dialog", () => {
 
     await vi.waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
     expect(asked).toEqual([{ url: `/api/runs/${RUN_ID}/epochs/3/resume`, method: "POST" }]);
+  });
+
+  it("calls a run paused while its playback holds it, and running once it plays", () => {
+    const { rows } = shown([
+      run({ epoch: 1, status: "running", paused: true }),
+      run({ epoch: 0, status: "running" }),
+    ]);
+    const statuses = rows().map((row) => row.querySelector(".landing-status")?.textContent);
+
+    expect(statuses).toEqual(["Paused", "Running"]);
   });
 
   it("asks once for two presses while the first is answered", async () => {
