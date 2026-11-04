@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { DAY_S } from "../clock";
+import { WHAT_A_FORK_DOES } from "../replay/useForkQuestion";
 import type { ScenarioSource } from "../scene/edits";
 import { withTargetsSet } from "../scene/edits";
 import type { ThermostatAt } from "../scene/equipment";
@@ -71,6 +72,43 @@ describe("the heating targets (#274)", () => {
     const set = button(view.container, "Set in a fork of this run, from its next minute");
     expect(set.disabled).toBe(true);
     expect(view.container.textContent).toContain("The run ends here");
+    view.unmount();
+  });
+
+  it("in a stored run say what a fork does first, and make it once that is confirmed", () => {
+    const onSet = vi.fn();
+    const view = render(
+      <TargetsPanel thermostat={THERMOSTAT} time={0} followed={false} forking onSet={onSet} />,
+    );
+    enter(inputs(view.container)[0] as HTMLInputElement, "21");
+    const set = button(view.container, "Set in a fork of this run, from its next minute");
+
+    click(set);
+    expect(onSet).not.toHaveBeenCalled();
+    expect(said(view.container, "fork-question")).toContain(WHAT_A_FORK_DOES);
+    click(button(view.container, "Cancel"));
+    expect(onSet).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(set);
+
+    click(set);
+    click(button(view.container, "Make the fork"));
+    expect(onSet).toHaveBeenCalledExactlyOnceWith({ heating_day: 21 });
+    view.unmount();
+  });
+
+  it("in a stored run are not forked as they stood once they have changed", () => {
+    const onSet = vi.fn();
+    const view = render(
+      <TargetsPanel thermostat={THERMOSTAT} time={0} followed={false} forking onSet={onSet} />,
+    );
+    const day = inputs(view.container)[0] as HTMLInputElement;
+    enter(day, "21");
+
+    click(button(view.container, "Set in a fork of this run, from its next minute"));
+    enter(day, "22");
+
+    expect(view.container.querySelector('[data-testid="fork-question"]')).toBeNull();
+    expect(onSet).not.toHaveBeenCalled();
     view.unmount();
   });
 

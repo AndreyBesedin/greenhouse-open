@@ -2295,6 +2295,30 @@
   border-bottom-width: 1px;
 }
 
+/* What a fork does, asked on a line of its own before it is made, as a run's
+ * Delete asks. */
+.replay-fork-question {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.replay-fork-question p {
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--text-soft);
+}
+
+.replay-header > .replay-fork-question {
+  justify-content: flex-end;
+}
+
 .replay-title h1 {
   margin: 0;
   font-size: var(--font-xl);

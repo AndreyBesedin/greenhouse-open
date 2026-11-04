@@ -6,9 +6,10 @@ export type Status = "queued" | "running" | "finished" | "failed" | "interrupted
 /**
  * Where a position stands over its epoch: the epoch, the moment, both as
  * an instant and as seconds into the run (as the viewer asks for a moment),
- * whether it plays or follows, how far the epoch is committed, and the
- * changes given to it, as its plan holds them, spelled as a run's `&targets=`,
- * `&schedule=` and `&crop=` write them, for the viewer to draw it under.
+ * whether it plays or follows, how far the epoch is committed, whether a playback
+ * holds the epoch's clock, as the runs listed say, and the changes given to it, as
+ * its plan holds them, spelled as a run's `&targets=`, `&schedule=` and `&crop=`
+ * write them, for the viewer to draw it under.
  */
 export interface PositionState {
   position_id: string;
@@ -18,6 +19,7 @@ export interface PositionState {
   layout: string;
   seed: number | null;
   status: Status;
+  paused: boolean;
   started_at: string;
   simulated_now: string;
   time_s: number;
