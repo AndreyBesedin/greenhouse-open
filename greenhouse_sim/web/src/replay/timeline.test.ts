@@ -8,6 +8,7 @@ import {
   dayAway,
   dayLabel,
   dayTicks,
+  forkedText,
   fractionOf,
   momentAt,
   movedByKey,
@@ -80,6 +81,18 @@ describe("the days", () => {
     expect(dayTicks({ startS: 0, frontierS: 3 * DAY_S, endS: 5 * DAY_S })).toEqual([
       0, 1, 2, 3, 4, 5,
     ]);
+  });
+
+  it("say a fork's other layout, in words, or nothing of one that stays in its own", () => {
+    const fork = { epoch: 0, at_s: DAY_S * 1.5 };
+
+    expect(forkedText({ ...fork, layout: null })).toBe("forked from epoch 0 at Day 2, 12:00");
+    expect(forkedText({ ...fork, layout: "open" })).toBe(
+      "forked from epoch 0 at Day 2, 12:00 into layout open",
+    );
+    expect(forkedText({ ...fork, layout: "default~heater:-1:0.5" })).toBe(
+      "forked from epoch 0 at Day 2, 12:00 into layout default with items moved",
+    );
   });
 
   it("label where a fork's timeline begins, in place of a tick too near it", () => {

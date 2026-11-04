@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
 import type { BuildInfo } from "./buildInfo";
+import type { Theme } from "./design/theme";
 import { HomeButton } from "./landing/HomeButton";
-import type { PanelTheme } from "./panelTheme";
 import { SceneFailures, SceneStatus } from "./SceneStatus";
 import { SourceChooser } from "./SourceChooser";
 import type { ScenariosState } from "./scenarios";
@@ -34,8 +34,8 @@ export function InfoPanel({
    * way home, and no other scene is chosen, for it would not be the run. */
   embedded?: boolean;
   /** How the panels look, and how to change it (#208), if they can be. */
-  theme?: PanelTheme;
-  onTheme?: (theme: PanelTheme) => void;
+  theme?: Theme;
+  onTheme?: (theme: Theme) => void;
   onSource: (source: SceneSource) => void;
   /** Display options for the scene, shown under its choice. */
   children?: ReactNode;

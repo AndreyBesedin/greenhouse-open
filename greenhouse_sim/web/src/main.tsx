@@ -3,9 +3,9 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
 import { BUILDER_PATH, Builder } from "./builder/Builder";
+import { showTheme, storedTheme } from "./design/theme";
 import { Landing } from "./landing/Landing";
 import { pageAt } from "./landing/paths";
-import { showPanels, storedPanelTheme } from "./panelTheme";
 import { QA_AIRFLOW_PATH } from "./qa/airflowViews";
 import { QA_GREENHOUSE_PATH } from "./qa/greenhouseViews";
 import { QA_LAYOUT_PATH } from "./qa/layoutViews";
@@ -60,9 +60,9 @@ const page =
 // panels they were drawn with (#208); the viewer and the builder show the
 // theme chosen. Set before the first render, so that the panels never show
 // the other first.
-showPanels(
+showTheme(
   page.type === App || page.type === Builder || page.type === Landing || page.type === Replay
-    ? storedPanelTheme()
+    ? storedTheme()
     : "light",
 );
 

@@ -1,4 +1,5 @@
 import { DAY_S, runDay } from "../clock";
+import { baseLayout, MOVES_MARK } from "../scene/moves";
 
 /**
  * What a replay's timeline covers (P17.6, decision 0065): a position is a
@@ -82,9 +83,16 @@ export function dayLabel(timeS: number): string {
   return `Day ${day + 1}, ${String(hours).padStart(TWO_DIGITS, "0")}:${String(minutes).padStart(TWO_DIGITS, "0")}`;
 }
 
-/** What a fork came from, in words. */
-export function forkedText(fork: { epoch: number; at_s: number }): string {
-  return `forked from epoch ${fork.epoch} at ${dayLabel(fork.at_s)}`;
+/** What a fork came from, in words, and the layout it goes on in if another: that
+ * is another run's epoch, so its number alone may read as its own. Moves are
+ * only said to be there, as their name in the address says nothing to a reader. */
+export function forkedText(fork: { epoch: number; at_s: number; layout: string | null }): string {
+  const from = `forked from epoch ${fork.epoch} at ${dayLabel(fork.at_s)}`;
+  if (fork.layout === null) {
+    return from;
+  }
+  const moved = fork.layout.includes(MOVES_MARK) ? " with items moved" : "";
+  return `${from} into layout ${baseLayout(fork.layout)}${moved}`;
 }
 
 /** How many days are computed, whole: a day counts once its last moment is. */
