@@ -124,7 +124,7 @@ def scenario_house(installation: Installation) -> ScenarioHouse:
     """What a scenario's run grows in an installation: its rows of planting
     positions, each row growing the one crop all of them grow. Refused if
     its layout has no crop rows, a row has no crop, or rows grow different
-    crops, which a run cannot grow yet (P12.5)."""
+    crops, which a run cannot grow yet (P21)."""
     rows = installation.layout.crop_rows
     if rows is None:
         raise CannotRun("it has no crop rows")

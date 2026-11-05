@@ -141,7 +141,7 @@ neither held to a published result. Planned then:
 - **Then cucumber, strawberry and sweet pepper,** once the tomato's
   reproductions have tested the registry's crop interface: a survey of each
   first, then each a crop model of the registry, with its parameters for
-  each variety (P12.4), its organs drawn by the viewer, its records (fruit
+  each variety (P20), its organs drawn by the viewer, its records (fruit
   counts and mass) in the protocol's terms, and a conformance test with
   the crop part's other models.
 - **Each model held to its sources:** the data it was validated against
