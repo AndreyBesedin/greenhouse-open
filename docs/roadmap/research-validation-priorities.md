@@ -28,7 +28,7 @@ data.
 2. **Finish the setup builder as far as P12.3.** P12.0 to P12.3 are done.
    What is left of them is [P12](p12-setup-builder.md)'s QA scenario, run
    in the browser and recorded, and its open questions, answered or
-   carried into P12.4 to P12.6. Nothing more is added to the viewer for
+   carried into P20 and P21. Nothing more is added to the viewer for
    now, and no assistant.
 3. **Finish what a first experiment needs of P14, P11 and P13.** Of
    [P14](p14-models-by-manifest.md), each model registered with its
@@ -108,7 +108,7 @@ data.
    Climate-only experiments can run early; claims on yield or economics
    wait for the crop models of item 4. Forecasts and perception stay with
    the intelligence components, on the same foundation.
-8. **P12.4, crop parameters as versioned assets,** once the registry and
+8. **[P20](p20-crop-parameter-assets.md), crop parameters as versioned assets,** once the registry and
    the first published model carry versioned parameters. A calibration
    never changes a model's published defaults.
 
@@ -118,7 +118,7 @@ up the first reproduction.
 
 **Later, as the roadmap records them:** cucumber, strawberry and sweet
 pepper, after the tomato's reproduction has tested the registry's crop
-interface; P12.5's rows of different crops and P12.6's publication; crop
+interface; [P21](p21-rows-of-different-crops.md)'s rows of different crops; crop
 work within the day; the CO₂ and light targets; the second CI pass; the
 second audit; and the assistant in the viewer, after it.
 

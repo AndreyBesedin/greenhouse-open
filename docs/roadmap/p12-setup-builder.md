@@ -1,8 +1,10 @@
 # P12: The setup builder
 
 **Status:** in progress: P12.0 to P12.3 are done, and their QA scenario
-[recorded](#recorded-at-88f35bae): all but its first day's check passed. The
-rest is proposed. Part of the [simulator roadmap](README.md).
+[recorded](#recorded-at-88f35bae): all but its first day's check passed.
+What came after them has moved: [P20](p20-crop-parameter-assets.md) takes the crops'
+parameters and [P21](p21-rows-of-different-crops.md) rows of different crops.
+Part of the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -105,8 +107,8 @@ builder.
    synthetic. More settings stay under "Advanced".
 7. **Simulate:** a draft without errors, resolved to a scenario, runs as
    any scenario does.
-8. **Share:** the file, or a reviewed pull request adding it as a packaged
-   scenario.
+8. **Share:** the file. A packaged scenario is still added by a reviewed pull
+   request, which a person opens with that file.
 
 An "Advanced" panel reaches every field the models have, schema-driven,
 where no dedicated control exists yet; it is a fallback, not a second way
@@ -120,9 +122,9 @@ to describe a house.
 | P12.1 | A manifest holds or names an installation, by a manifest migration; a draft resolved into a scenario and registered at runtime; drafts and revisions kept locally | A packaged scenario's run id unchanged by the migration; a draft without errors runs; drafts saved, reopened and reverted; files exchanged without the store | Done |
 | P12.2 | The builder in the viewer: start, house form, preview, rows chosen together, the scenario step | Create, preview, import, export, save, reopen and run a house in the browser, by keyboard too; its browser QA | Done: the builder page at `/builder` (a start from the form, a draft, a file or a scenario's house; rows chosen together; undo and redo; save, export, and the scenario step and run), with its browser tests. The findings are listed by the rows they concern; shown on the house, and every field reached, with P12.3's property inspector |
 | P12.3 | Equipment and openings: palettes, surface-mounted doors and vents, many items placed, copied and spaced at once, a property inspector | Items placed many at a time with valid geometry and stable ids; collisions explained or refused; every field editable | Done: the simulator's edits of many items at once (`builder.items`): equipment, sensors, zones, fixtures placed one by one, doors and vents, with its findings of items that collide; the API's `POST /api/builder/edit`; the builder's palette and its items chosen many at once; and the inspector: every field of an item and of the house's envelope and rows, items chosen in the view (a pipe run or a rail by any of its parts), and the items an error names outlined on the house; with their browser tests |
-| P12.4 | Crop model parameters as versioned assets, edited by schema-driven forms | A tomato parameter set edited, saved, compared, exported, and a run reproduced from its version | Proposed, building on [P14](p14-models-by-manifest.md), models chosen by the manifest |
-| P12.5 | Rows of different crops run | Different models or varieties per row simulated reproducibly, or refused by name | Proposed |
-| P12.6 | Publication: a reviewed pull request from the builder, files carrying their models' parameter versions, every model field reachable | A re-imported installation is the same, with the same model references | Proposed |
+| P12.4 | Crop model parameters as versioned assets, edited by schema-driven forms | | Moved to [P20](p20-crop-parameter-assets.md), as P20.1 |
+| P12.5 | Rows of different crops run | | Moved to [P21](p21-rows-of-different-crops.md), as P21.1 |
+| P12.6 | Publication | | Split. A pull request made from the builder is dropped: a house file, downloaded and uploaded, already moves a house, and a person can open a pull request with it. Files carrying their parameter versions and every model field reachable moved to [P20](p20-crop-parameter-assets.md), as P20.2 |
 
 ### P12.0: what it does, and what it leaves
 
@@ -136,7 +138,7 @@ the file (`export_installation`, `import_installation`, refusing with a
 `Problem` per field at fault, and `installation.schema.json`).
 
 It keeps no draft, resolves nothing into a scenario, places no equipment,
-and runs no row of another crop; P12.1 to P12.5 do.
+and runs no row of another crop; P12.1 to P12.3 and P21 do.
 
 ### P12.1: the manifest's installation, drafts kept, and drafts run
 
@@ -148,7 +150,7 @@ the crop every row grows. The installation's model,
 imports it. `scenario_house` gives a scenario its house from it, the
 layout's crop rows and their planting positions as the run's rows and
 columns, and refuses an installation a run cannot grow: no crop rows, a
-row without a crop, rows of different crops (P12.5).
+row without a crop, rows of different crops (P21).
 
 A format 3 manifest is migrated: its house fields become its installation,
 named for its scenario, every row growing its crop. The packaged manifests
@@ -183,20 +185,6 @@ packaged scenario's name, or one registered otherwise, is a conflict.
 The browser tests' server keeps drafts in that default file too: a test
 that saves one gives the server a file of its own, so as never to write
 to the user's.
-
-### P12.4 and the models chosen by the manifest
-
-The audit plans a project for models chosen by the manifest: a model's
-identity and version, its state in a checkpoint, reproducibility, how the
-viewer meets models it was not built with, and the simple model's numbers
-in a section of their own, by a versioned manifest migration. P12.4 starts
-when that project has given a crop model an identity, a version and typed
-parameters: its forms edit those parameters, and its assets are those
-versions. P12.4 adds no registry of its own.
-
-Until then a form cannot author a growth algorithm: new models are Python,
-with their conformance tests, and a form edits the parameters of an
-existing one within their bounds.
 
 ## Tests and review
 
