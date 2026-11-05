@@ -92,7 +92,9 @@ class OrganRung:
     (`greenhouse_sim.biology.tomato.organ.transplants`), drawn from its
     `seed`, each living its days by the organ model's development, and the
     crop work its operations (`greenhouse_sim.core.crop_actions`); its
-    crown rises where its stem does, as tall as its standing stem."""
+    crown rises where its stem does, as tall as its standing stem. Of the
+    day the run gives each plant it reads everything: the mean temperature,
+    the light, the CO₂ and the water status."""
 
     def __init__(self, seed: int) -> None:
         self._seed = seed
