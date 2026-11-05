@@ -796,9 +796,15 @@ class EpochStore:
         self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
 
     def budget(self) -> Budget | None:
-        """What its worker keeps to: none if no scheduler put it in line."""
+        """What its worker keeps to: none if no scheduler put it in line, or if what
+        one wrote cannot be read, as a later version's might not be, which is no reason
+        for a server not to start: one that takes the epoch up writes it again."""
         data = self.objects.get(f"{self._home}/{_BUDGET}")
-        return None if data is None else Budget.model_validate_json(data)
+        try:
+            return None if data is None else Budget.model_validate_json(data)
+        except ValidationError:
+            logger.warning("the budget of %s cannot be read", self._home)
+            return None
 
     def give_budget(self, budget: Budget) -> None:
         """Says what its next worker keeps to. One that has read it already keeps to

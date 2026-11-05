@@ -250,9 +250,10 @@ class Scheduler:
                     "only an interrupted one resumes"
                 )
             check_resumable(kept)
-            scenario_file = scenario_file_of(self._simulator, kept)
             budget = self._simulator.limits.budget
             _check_within(kept, budget)
+            # Last, since it may give an epoch from before P18.1 its scenario's file.
+            scenario_file = scenario_file_of(self._simulator, kept)
             pace = kept.manifest().seconds_per_day if driver is None else asked_pace
             kept.give_budget(budget)
             kept.queue_again(scenario_file=scenario_file, seconds_per_day=pace)

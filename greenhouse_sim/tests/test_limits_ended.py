@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 from collections.abc import Callable, Iterator
+from datetime import UTC, datetime
 from http import HTTPStatus
 from pathlib import Path
 from typing import Final
@@ -193,6 +194,41 @@ def test_it_is_refused_a_resume_while_the_limit_stands_then_ends_as_a_run_never_
     assert ended.budget() == UNLIMITED.budget
     assert (shown.run_id, shown.epoch) == (ended.run_id, ended.epoch)
     assert _digests(ended) == _digests(never_ended)
+
+
+def test_a_resume_refused_for_a_limit_writes_nothing_of_what_an_older_epoch_lacks(
+    tmp_path: Path,
+) -> None:
+    objects = FolderStore(tmp_path)
+    with workers_support.short_simulator() as first:
+        first.runs = objects
+        kept = workers_support.with_one_day_committed(first, objects)
+    workers_support.as_from_before_it_carried_a_file(objects, kept)
+    written = sorted(path for path in tmp_path.rglob("*") if path.is_file())
+    manifest = kept.manifest()
+
+    with (
+        _simulator(tmp_path, Limits(epoch_bytes=1)) as simulator,
+        pytest.raises(Conflict) as refused,
+    ):
+        scheduler.resume(simulator, kept.run_id, kept.epoch)
+
+    _in_words(refused.value.message, "it kept", "1 B")
+    assert sorted(path for path in tmp_path.rglob("*") if path.is_file()) == written
+    assert kept.manifest() == manifest
+
+
+def test_a_budget_that_cannot_be_read_stops_no_server_and_is_written_again(tmp_path: Path) -> None:
+    objects = FolderStore(tmp_path)
+    with workers_support.short_simulator() as first:
+        waiting = queued(first, objects, SHORT, queued_at=datetime.now(UTC))
+    objects.put(f"{waiting.run_id}/{waiting.epoch}/budget.json", b"not a budget")
+    assert waiting.budget() is None
+
+    limits = Limits(workers=1, waiting_runs=1)
+    with Simulator(runs=objects, limits=limits) as second:
+        scheduler.of(second)
+        assert waiting.budget() == limits.budget
 
 
 def test_a_fork_of_it_is_the_fork_of_a_run_never_ended(
