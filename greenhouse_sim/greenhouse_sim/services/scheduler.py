@@ -228,6 +228,9 @@ class Scheduler:
                 raise Conflict("the workers are closed")
             if key in self._running or any((j.run_id, j.epoch) == key for j in self._waiting):
                 raise Conflict(f"epoch {epoch} of {run_id} is waiting for a worker or has one")
+            # First: all that follows may write, finding the epoch interrupted or
+            # giving it its scenario's file, which no refusal for room is to do.
+            self._check_room()
             interrupted.mark_epoch(self._simulator, run_id, epoch)
             if kept.manifest().status != Status.INTERRUPTED:
                 raise Conflict(
@@ -236,7 +239,6 @@ class Scheduler:
                 )
             check_resumable(kept)
             scenario_file = scenario_file_of(self._simulator, kept)
-            self._check_room()
             pace = kept.manifest().seconds_per_day if driver is None else asked_pace
             kept.queue_again(scenario_file=scenario_file, seconds_per_day=pace)
             self._waiting.append(_Job(run_id, epoch, resuming=True))
@@ -279,9 +281,11 @@ class Scheduler:
     def _check_room(self) -> None:
         """Under the lock: refuses a run the simulator's limits have no room for,
         before anything of it is written, saying which limit and the figures. A run
-        that a free worker takes at once does not wait, so is not refused for that."""
+        that a free worker takes at once does not wait, so is not refused for that. A
+        server's limit may be lower than the workers a server before it left, and those
+        are not runs waiting."""
         limits = self._simulator.limits
-        free_workers = self._limit - len(self._running) - len(self._elsewhere)
+        free_workers = max(0, self._limit - len(self._running) - len(self._elsewhere))
         waiting = len(self._waiting)
         if limits.waiting_runs is not None and waiting - free_workers >= limits.waiting_runs:
             raise Conflict(too_many_waiting(waiting, limits.waiting_runs))

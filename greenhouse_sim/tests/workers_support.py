@@ -2,6 +2,7 @@
 (`short_runs`), registered with a test's simulator, whose worker has them from the
 store; and workers that end at once or are killed, which a process imports by name."""
 
+import json
 import os
 import signal
 import time
@@ -11,6 +12,7 @@ from typing import Final
 import short_runs
 
 from greenhouse_sim.core.clock import DAY_S
+from greenhouse_sim.services import scenario_files
 from greenhouse_sim.services.run_store import EpochStore, FolderStore, ObjectStore, Status
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.workers import Stepped, execute, queued
@@ -36,6 +38,17 @@ def with_one_day_committed(simulator: Simulator, objects: ObjectStore) -> EpochS
     epoch = queued(simulator, objects, SHORT)
     execute(simulator, epoch, Stepped([DAY_S]))
     return epoch
+
+
+def as_from_before_it_carried_a_file(objects: ObjectStore, epoch: EpochStore) -> None:
+    """An epoch as a version before it carried its scenario left it: its manifest
+    names no file, and the store holds none."""
+    home = f"{epoch.run_id}/{epoch.epoch}/manifest.json"
+    written = json.loads(objects.get(home) or b"")
+    del written["scenario_file"]
+    objects.put(home, json.dumps(written).encode())
+    for name in objects.names(scenario_files.KEPT_FOLDER):
+        objects.delete(name)
 
 
 def holds_its_place(root: str, run_id: str, epoch: int) -> None:

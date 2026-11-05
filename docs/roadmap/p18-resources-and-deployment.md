@@ -225,7 +225,11 @@ free: free some space, or lower that limit".
 - A run a free worker takes at once does not wait, so that it is not refused for waiting.
   So with two workers free and room for 200, 202 are let in, and 98 of 300 are refused.
 - What waits as a server starts keeps waiting if the limit has been lowered since; only
-  what is asked for after that is refused.
+  what is asked for after that is refused. Workers a server before it left, more than its
+  limit, leave no worker free and are not counted as waiting.
+- A resume is asked about room first, before it finds the epoch interrupted or gives one
+  from before P18.1 its scenario's file, so that a refusal writes nothing. One that could not
+  be carried on anyway, asked for while there is no room, is told of the room.
 - `free_bytes` is a store's operation, of which a store with no disk of its own says none,
   and then no run is refused for it. A folder not made yet says what its nearest parent's
   disk has free.

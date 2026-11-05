@@ -8,6 +8,7 @@ import os
 import sys
 import time
 from collections.abc import Callable
+from datetime import UTC, datetime
 from http import HTTPStatus
 from pathlib import Path
 from typing import Final
@@ -30,6 +31,7 @@ from greenhouse_sim.services.limits import (
 )
 from greenhouse_sim.services.run_store import FolderStore, Status, held_bytes, stored_runs
 from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.services.workers import queued
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -209,6 +211,85 @@ def test_a_fork_and_a_resume_are_refused_as_a_run_is_for_want_of_room(
         _refused_in_words(resumed.value, "no run wait")
         assert ended.manifest().status == Status.INTERRUPTED
         assert _in_store(tmp_path) == written
+
+
+def test_workers_left_past_a_lowered_limit_are_not_counted_as_runs_waiting(
+    tmp_path: Path, held_workers: None
+) -> None:
+    objects = FolderStore(tmp_path)
+    with workers_support.short_simulator() as first:
+        left = [
+            queued(first, objects, SHORT, seed=seed, queued_at=datetime.now(UTC)) for seed in (1, 2)
+        ]
+    for kept in left:
+        assert kept.claim()
+
+    # Two workers of a server before this one, and room for one: no worker free, and
+    # the queue is as long as the limit says all the same.
+    limits = Limits(workers=1, waiting_runs=1)
+    with Simulator(runs=objects, limits=limits) as second:
+        made = scheduler.of(second)
+        asked = made.start(SHORT, seed=3)
+        assert made.waiting() == [(asked.run_id, asked.epoch)] and made.workers() == []
+
+        with pytest.raises(Conflict) as refused:
+            made.start(SHORT, seed=4)
+
+        _refused_in_words(refused.value, "1 run waiting", "1 run wait")
+    for kept in left:
+        kept.let_go()
+
+
+def test_a_resume_refused_for_room_writes_nothing_of_what_an_older_epoch_lacks(
+    tmp_path: Path, held_workers: None
+) -> None:
+    objects = FolderStore(tmp_path)
+    with workers_support.short_simulator() as first:
+        first.runs = objects
+        kept = workers_support.with_one_day_committed(first, objects)
+    workers_support.as_from_before_it_carried_a_file(objects, kept)
+    written = _in_store(tmp_path)
+    manifest = kept.manifest()
+
+    # Refused for the disk first, on which a write of its scenario might not fit.
+    with (
+        _simulator(tmp_path, Limits(free_disk_bytes=10**18)) as simulator,
+        pytest.raises(Conflict) as refused,
+    ):
+        scheduler.resume(simulator, kept.run_id, kept.epoch)
+    _refused_in_words(refused.value, "free")
+    assert _in_store(tmp_path) == written and kept.manifest() == manifest
+
+    # Then for what waits, with a worker busy.
+    with _simulator(tmp_path, Limits(workers=1, waiting_runs=0)) as simulator:
+        scheduler.start(simulator, SHORT, seed=9)
+        written = _in_store(tmp_path)
+        with pytest.raises(Conflict) as refused:
+            scheduler.resume(simulator, kept.run_id, kept.epoch)
+        _refused_in_words(refused.value, "no run wait")
+        assert _in_store(tmp_path) == written and kept.manifest() == manifest
+
+
+def test_a_resume_refused_for_room_tells_an_epoch_nothing(
+    tmp_path: Path, held_workers: None
+) -> None:
+    objects = FolderStore(tmp_path)
+    with workers_support.short_simulator() as first:
+        first.runs = objects
+        kept = workers_support.with_one_day_committed(first, objects)
+    # As a producer that was killed left it: it says it runs, and no one holds it.
+    kept.set_status(Status.RUNNING)
+    kept.let_go()
+    written = _in_store(tmp_path)
+
+    with (
+        _simulator(tmp_path, Limits(free_disk_bytes=10**18)) as simulator,
+        pytest.raises(Conflict),
+    ):
+        scheduler.resume(simulator, kept.run_id, kept.epoch)
+
+    assert kept.manifest().status == Status.RUNNING
+    assert _in_store(tmp_path) == written
 
 
 def test_a_run_on_a_disk_under_its_floor_is_refused_in_words_with_nothing_written(
