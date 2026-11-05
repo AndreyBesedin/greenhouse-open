@@ -83,7 +83,7 @@ manifest and others by code:
   format, which P14.1 and P14.2 change next.
 - **Devices wait for P13.3.** P14.5's devices come after P13.3, whose
   executor carries out actions on devices.
-- **P12.4 builds on it:** its versioned crop parameter sets build on the
+- **P20 builds on it:** its versioned crop parameter sets build on the
   models' sections.
 
 ## What stays stable
@@ -234,7 +234,7 @@ the audit asks: **the simple crop as a rung of the run.**
 | P14.7 | **The recipes and the QA:** the guides (`add-a-plant-model`, `add-an-air-model`, `add-a-device`, `add-a-sensor-kind`) rewritten for the registry; the QA scenario below. | Done for the recipes: a plant model registered as the registry and its registration's declarations have it (`PlantAdapter`, `CropActions`), with a pointer to the area-based contract of P14.9; a model of the house's air beside `grid` and `whole_house`, its parameters, its days and its choice; a device as a kind registered by itself, acted on by its capabilities; a sensor kind as an instrument of the sensors' one model, with its truth; and the recipes' index naming each part's models. The QA scenario stays proposed: its fogger needs a capability that adds water to the air, which no device has yet |
 | P14.8 | **The crop part generalised ([0062](../decisions/0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md), milestone B's first phase):** a pure refactor, with the simple and organ models alone. First, the registration as declarations: what a model that grows single plants is asked of them, a typed adapter, and the run's own crop actions it takes, by kind, routed by them; no service asks which model it holds. Then the run's crop over instances, each a model on a spatial scope, its plants keeping their ids. Every pinned run id, the reference greenhouse's opening day and its replay's day digests unchanged, and `test_crop_rungs.py` as it stands. | Done: the registration's declarations (`services.crop_models`: `PlantAdapter`, `CropActions`), the gateway and the run routing crop actions by the kinds a model declares, and a test that no service names a model's rung or the simple crop's plants; and what every run's crop keeps of its days, whatever grows it (`core.crop_days.CropDays` and its `Growth`, `core.crop_steps.CropSteps` since P16.1), the per-plant crop one growth on it (`core.crop.PlantGrowth`, `RunCrop`). No pin moved. The instances come with their scopes in P14.9: a per-plant crop's instance is its row, read from its layout, so its checkpoint state stays its plants and needs no new format; an area-based crop's state, per instance, is a member of the crop's state of its own |
 | P14.9 | **A crop grown by area:** the area-based contract beside the per-plant one; a scope's geometry and areas, with every conversion to a model's reference area explicit and conserved across layouts; the first driver profile (the whole house's air hour by hour, the PAR above a scope); a measurement part of the registry; each in its own pull request, before any area-based model. | Done: the area-based contract (`biology.area_contract`: `AreaRung`, `DayCourse`, `HourDrivers`) and the run's crop of it (`core.area_crop.AreaCrop`, #415); a scope per row, its cultivated area and floor kept apart, with the explicit conversions between them (`world.scopes`, #412); the PAR above a scope's canopy (`solar.scopes.ScopeLight`, #414); and the first driver profile, `house_hours` version 1, the whole house's air hour by hour (`core.drivers`, #415). The measurement part of the registry is the crop walk's, as decision 0062 has it, which a run's identity and its checkpoints already cover: beside the walk among plants, a model that measures a crop grown by area, `canopy_sample` (`scenarios.crop_parameters.CanopySample`): every so many days, each scope's quantities as its model declares them (`AreaAdapter.sampled`), per m² of its floor, with its noise and its bias, each reading naming its scope (`Observation.scope_id`). It is what a manifest asks for, so no packaged run moved: the TOMGRO house, on the part's default, measures nothing of its crop until its manifest names it. Its readings are delivered as they are taken, and take nothing from the canopy. |
-| P14.10 | **The two published models as crop models of the run** ([0060](../decisions/0060-two-published-tomato-models-become-crop-models-of-the-run.md), milestone B): Reduced-State TOMGRO, then Vanthoor's model as Katzin simplified it, each from its reproduction (milestone A), on a scope per row, registered with its version and named parameter set, held to the area-based contract test, and shown in a documented scenario, its outputs labelled predictions. | In progress: Reduced-State TOMGRO as an area-based model, held to its reproduction's reference output on every state and day (`biology.tomato.tomgro`, `core.tomgro_crop.TomgroRung`, #416); registered, its rows a scenario's choice (#432); drawn as each row's canopy, a proxy (#433); and grown in the TOMGRO house, whose season is documented below. Still to come: the driver profile's effect measured against the reproduction's forcing, and Vanthoor's model. |
+| P14.10 | **The two published models as crop models of the run** ([0060](../decisions/0060-two-published-tomato-models-become-crop-models-of-the-run.md), milestone B): Reduced-State TOMGRO, then Vanthoor's model as Katzin simplified it, each from its reproduction (milestone A), on a scope per row, registered with its version and named parameter set, held to the area-based contract test, and shown in a documented scenario, its outputs labelled predictions. | In progress: Reduced-State TOMGRO as an area-based model, held to its reproduction's reference output on every state and day (`biology.tomato.tomgro`, `core.tomgro_crop.TomgroRung`, #416); registered, its rows a scenario's choice (#432); drawn as each row's canopy, a proxy (#433); and grown in the TOMGRO house, whose season is documented below. Vanthoor's model as an area-based model, at an hour's step, held to its reproduction's reference output on every state and hour, and what hour means change from that forcing held to what was measured (`biology.tomato.vanthoor`, `core.vanthoor_crop.VanthoorRung`). Still to come: Vanthoor's model registered and in a documented scenario, and each driver profile's effect measured against the reproduction's forcing. |
 
 ## Settled in P14.5
 
@@ -366,7 +366,7 @@ still to be measured, as milestone B asks.
 Settled with P14.1, as decision 0054 records: the simple crop is the pilot;
 a model's version enters the run's identity with P14.2; models from other
 packages wait until one asks (no entry point in P14); the crop's section
-gives the parameters of the model the rows grow, P12.4's parameters for
+gives the parameters of the model the rows grow, P20's parameters for
 each variety built on it; and capabilities and actions share one
 vocabulary, decided with P13's executor step. The questions as they were
 asked:
@@ -385,9 +385,9 @@ asked:
    code in the simulator's process, and its package and version are part
    of the run's identity.
 4. **The crop part and rows.** Rows name their crop model and variety
-   (decision 0050), and P12.5 runs rows of different crops. Should the crop
-   part's section hold the model's parameters for each variety, as P12.4's
-   versioned parameter sets would? P12.4 builds on the answer.
+   (decision 0050), and P21 runs rows of different crops. Should the crop
+   part's section hold the model's parameters for each variety, as P20's
+   versioned parameter sets would? P20 builds on the answer.
 5. **Capabilities and actions.** P13 acts on a device by its kind's
    commands, while capabilities name what a device does. One vocabulary for
    both is proposed, decided with P13's executor step.

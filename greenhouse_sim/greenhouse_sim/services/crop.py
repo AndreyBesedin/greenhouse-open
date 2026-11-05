@@ -57,12 +57,10 @@ from greenhouse_sim.services.runs import (
 )
 from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, scenario
 from greenhouse_sim.services.stores import Store
-from greenhouse_sim.services.sunlight import plant_light
-from greenhouse_sim.solar.inside import Sunlight
+from greenhouse_sim.services.sunlight import plant_light, scope_light
 from greenhouse_sim.solar.plants import Crown, PlantLight
 from greenhouse_sim.solar.scopes import ScopeLight
 from greenhouse_sim.solar.shadows import Shadows
-from greenhouse_sim.world.scopes import row_scopes
 
 if TYPE_CHECKING:
     # Typed only: the simulator imports the services that take it.
@@ -206,12 +204,13 @@ def _new_crop(
     scenario_id, layout, weather, *_ = run_key
     config = _run_config(simulator, run_key)
     grown_by = registration(config)
-    sunlight = plant_light(simulator, scenario_id, layout, weather).sunlight
-    if grown_by.area is not None:
-        return _area_crop(config, grown_by.area, climate, sunlight)
+    above_scopes = scope_light(simulator, scenario_id, layout, weather)
+    if grown_by.area is not None and above_scopes is not None:
+        return _area_crop(config, grown_by.area, climate, above_scopes)
     if grown_by.plants is None:
         raise InvalidRequest(f"{scenario_id}'s crop model grows neither plants nor an area")
     rung = grown_by.plants.rung(config)
+    sunlight = plant_light(simulator, scenario_id, layout, weather).sunlight
 
     def light(_day: int, crowns: Sequence[Crown]) -> PlantLight:
         shadows = Shadows.of(config.envelope, config.layout, [crown.solid() for crown in crowns])
@@ -232,11 +231,12 @@ def _new_crop(
 
 
 def _area_crop(
-    config: ScenarioConfig, area: AreaAdapter[Any], climate: ClimateDay, sunlight: Sunlight
+    config: ScenarioConfig, area: AreaAdapter[Any], climate: ClimateDay, light: ScopeLight
 ) -> AreaCrop[Any]:
     """A run's crop grown by area from its first day: its model on each
     row's scope, each of its steps in its course as its driver profile gives
-    it, the house's air and the light above each scope under `sunlight`.
+    it, the house's air and the light above each scope, as `light` keeps it
+    for every run of the house.
     Refused if its profile does not give a driver its model reads, or cannot
     give its model's step, or if that step does not divide a day. A scenario
     that sets crop work for it is refused when it is read
@@ -250,10 +250,8 @@ def _area_crop(
         steps_a_day(rung.step_s)
     except ValueError as error:
         raise InvalidRequest(f"{config.greenhouse_id}: {error}") from error
-    scopes = row_scopes(config.layout, config.envelope)
-    light = ScopeLight(sunlight, scopes, rung.canopy_height_m)
     return AreaCrop(
-        scopes,
+        light.scopes,
         rung=rung,
         courses=step_courses(profile, climate.house.mean_between, light, step_s=rung.step_s),
         days=config.duration_days,

@@ -715,7 +715,7 @@
     },
     "OrganCrop": {
       "additionalProperties": false,
-      "description": "The organ crop's settings (`greenhouse_sim.biology.tomato.organ`):\nnone a scenario chooses yet, its variety's being its own (P12.4).",
+      "description": "The organ crop's settings (`greenhouse_sim.biology.tomato.organ`):\nnone a scenario chooses yet, its variety's being its own (P20).",
       "properties": {},
       "title": "OrganCrop",
       "type": "object"
