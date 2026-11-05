@@ -83,7 +83,7 @@ manifest and others by code:
   format, which P14.1 and P14.2 change next.
 - **Devices wait for P13.3.** P14.5's devices come after P13.3, whose
   executor carries out actions on devices.
-- **P12.4 builds on it:** its versioned crop parameter sets build on the
+- **P20 builds on it:** its versioned crop parameter sets build on the
   models' sections.
 
 ## What stays stable
@@ -366,7 +366,7 @@ still to be measured, as milestone B asks.
 Settled with P14.1, as decision 0054 records: the simple crop is the pilot;
 a model's version enters the run's identity with P14.2; models from other
 packages wait until one asks (no entry point in P14); the crop's section
-gives the parameters of the model the rows grow, P12.4's parameters for
+gives the parameters of the model the rows grow, P20's parameters for
 each variety built on it; and capabilities and actions share one
 vocabulary, decided with P13's executor step. The questions as they were
 asked:
@@ -385,9 +385,9 @@ asked:
    code in the simulator's process, and its package and version are part
    of the run's identity.
 4. **The crop part and rows.** Rows name their crop model and variety
-   (decision 0050), and P12.5 runs rows of different crops. Should the crop
-   part's section hold the model's parameters for each variety, as P12.4's
-   versioned parameter sets would? P12.4 builds on the answer.
+   (decision 0050), and P21 runs rows of different crops. Should the crop
+   part's section hold the model's parameters for each variety, as P20's
+   versioned parameter sets would? P20 builds on the answer.
 5. **Capabilities and actions.** P13 acts on a device by its kind's
    commands, while capabilities name what a device does. One vocabulary for
    both is proposed, decided with P13's executor step.

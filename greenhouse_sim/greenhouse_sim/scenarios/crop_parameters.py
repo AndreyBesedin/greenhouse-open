@@ -79,7 +79,7 @@ class SimpleCrop(BaseModel):
 
 class OrganCrop(BaseModel):
     """The organ crop's settings (`greenhouse_sim.biology.tomato.organ`):
-    none a scenario chooses yet, its variety's being its own (P12.4)."""
+    none a scenario chooses yet, its variety's being its own (P20)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
