@@ -432,8 +432,9 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
 // adding them moves nothing a page draws.
 //
 // It goes when selectors start to move (P19.8). Until then it holds what nothing else
-// does: of the stylesheet's 370 rules, 206 match nothing on the pages the no-tolerance
-// baselines draw, and the guards below read how a value is written, not which it is.
+// does: at `c0262394`, 206 of the stylesheet's 370 rules match nothing on the pages the
+// no-tolerance baselines draw, and the guards below read how a value is written, not
+// which it is.
 const RESOLVED_DIGESTS = {
   dark: "ab704d70264c7abbe8ae0b2062d37a1fcb4e36f0505231903e1dba9b531b6d9d",
   light: "491325346cbd151d8cc513d8fdf882ea7ef7c6d1d69453a2ac3a09c15af27482",
