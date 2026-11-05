@@ -275,11 +275,13 @@ def _sampled(
     observations = []
     for scope_id, quantities in sampled_truly(config, crop, day).items():
         rng = seeded_rng(config.random_seed, CANOPY_SAMPLE, scope_id, day)
+        # A scope's name is its greenhouse's own, as a plant's id is not.
+        identified_by = f"{config.greenhouse_id}_{scope_id}"
         for kind, value in quantities.items():
             error_pct = section.bias_pct + rng.normal(0.0, section.noise_pct)
             observations.append(
                 Observation(
-                    observation_id=observation_id(scope_id, at, kind.value),
+                    observation_id=observation_id(identified_by, at, kind.value),
                     greenhouse_id=config.greenhouse_id,
                     plant_id=None,
                     scope_id=scope_id,

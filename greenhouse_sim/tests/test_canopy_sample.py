@@ -15,6 +15,7 @@ from typing import Any, Final
 import pytest
 from greenhouse_protocol.context import CapabilityContext, CropBasis, SourceKind
 from greenhouse_protocol.contracts.gateway import GatewayLimits
+from greenhouse_protocol.contracts.memory import InMemoryObservations
 from greenhouse_protocol.enums import ObservationType, SourceType
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.plan import Principal, PrincipalKind
@@ -129,6 +130,21 @@ def test_it_reads_each_scope_on_the_days_it_samples_naming_its_scope_and_no_plan
         assert by_scope[row, ObservationType.ABOVE_GROUND_DRY_WEIGHT_G_M2] == round(
             canopy[row].w, 3
         )
+
+
+def test_two_greenhouses_samples_are_told_apart_in_one_store() -> None:
+    """A store keeps readings by their ids, of any greenhouse, as a walk's and
+    a heat meter's are told apart: each scope's name is its own greenhouse's."""
+    one, other = _config("one"), _config("other")
+    store = InMemoryObservations()
+    with _simulator(one, other) as simulator:
+        for config in (one, other):
+            store.save_many(_records(simulator, RunRequest(config.greenhouse_id), 2))
+
+    for config in (one, other):
+        kept = store.list_for_greenhouse(config.greenhouse_id)
+        assert {reading.scope_id for reading in kept} == set(ROWS)
+        assert len(kept) == len(ROWS) * len(SAMPLED)
 
 
 def test_its_errors_are_its_own_parameters_and_are_seeded() -> None:
