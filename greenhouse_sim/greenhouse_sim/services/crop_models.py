@@ -18,8 +18,8 @@ its declarations:
   organs and their plants' mean thermal time, none for a model without
   organs;
 - **how it grows by area** (`area`, an `AreaAdapter`), if it does: its
-  rung, its driver profile, and how its instances are drawn (decision
-  0062);
+  rung, its driver profile, how its instances are drawn, and what a sample
+  of an instance reads (`sampled`) (decision 0062);
 - **the run's own crop actions it takes** (`crop_actions`), by kind: the
   harvests, lowerings, leaves removed and inspections a plan asks for
   (P13.5), which the run routes to it; none for a model that takes none,
@@ -35,11 +35,12 @@ route's, which asks what its plants are (`CropRung.plant_type`).
 """
 
 import math
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Final
 
 from greenhouse_protocol.actions import ActionKind
+from greenhouse_protocol.enums import ObservationType
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.biology.area_contract import AreaRung, StepCourse
@@ -181,14 +182,16 @@ class PlantAdapter[PlantT: CropPlant]:
 class AreaAdapter[StateT: BaseModel]:
     """What the services ask of a crop model grown by area (decision 0062):
     its rung, built from a scenario; the driver profile through which the
-    run gives it its drivers, as its parameters name it; and how its
-    instances are drawn, none of them as plants."""
+    run gives it its drivers, as its parameters name it; how its instances
+    are drawn, none of them as plants; and what a sample of a state reads,
+    each quantity per m² of the model's basis, without a sample's errors."""
 
     rung: Callable[[ScenarioConfig], AreaRung[StateT]]
     profile: Callable[[ScenarioConfig], DriverProfile]
     drawn: Callable[
         [Sequence[AreaInstance[StateT]], Sequence[CropScope], ScenarioConfig], list[SceneEntity]
     ]
+    sampled: Callable[[StateT], Mapping[ObservationType, float]]
 
 
 @dataclass(frozen=True)
@@ -416,6 +419,17 @@ def _tomgro_drawn(
     return drawn
 
 
+def _tomgro_sampled(state: TomgroState) -> dict[ObservationType, float]:
+    """Its leaf area index and its dry weights, in its own quantities. Its
+    nodes are a plant's, not an area's."""
+    return {
+        ObservationType.LEAF_AREA_INDEX: state.lai,
+        ObservationType.ABOVE_GROUND_DRY_WEIGHT_G_M2: state.w,
+        ObservationType.FRUIT_DRY_WEIGHT_G_M2: state.wf,
+        ObservationType.MATURE_FRUIT_DRY_WEIGHT_G_M2: state.wm,
+    }
+
+
 # The run's own crop actions the organ crop takes: every kind a plan may
 # ask of a plant (`greenhouse_sim.services.runs.CROP_KINDS`).
 ORGAN_CROP_ACTIONS: Final = CropActions(
@@ -463,6 +477,7 @@ REDUCED_TOMGRO: Final = CropRegistration[Any](
             _tomgro_crop(config).driver_profile, _tomgro_crop(config).driver_profile_version
         ),
         drawn=_tomgro_drawn,
+        sampled=_tomgro_sampled,
     ),
     # Its harvest is the model's own rule; it takes none of a plan's.
     crop_actions=None,

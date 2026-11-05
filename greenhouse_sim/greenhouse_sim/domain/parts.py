@@ -11,6 +11,7 @@ class Part(StrEnum):
     WEATHER = "weather"
     AIR_FIELD = "air_field"
     CROP = "crop"
+    # What measures the crop: its measurement models (decision 0062).
     CROP_WALK = "crop_walk"
     # The sun's and the sky's light, through the glazing, onto the house and
     # its crop (P08, `greenhouse_sim.solar`).
