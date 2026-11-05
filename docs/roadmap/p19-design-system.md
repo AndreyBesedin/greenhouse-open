@@ -355,7 +355,8 @@ look or words takes that page's new images from CI's `visual-results`, as any
 baseline does (decision 0014).
 
 **What is disturbed.** Tokens, the split and the components disturb no baseline:
-if one moves, the step is wrong. Of the 27 QA baselines, only a visual step that
+if one moves, the step is wrong, but for a control moved to `compact`, a named
+visual change. Of the 27 QA baselines, only a visual step that
 reaches the captions, the legends or the scene's labels can move any: the caption's
 values (13 px, radius 6, padding 4 and 8) are on the scale, while the legend's
 swatches (radius 2), the label's radius (3) and `#ff8c1a` are the ones to watch.
@@ -374,12 +375,12 @@ no digest changed.
 | P19.3 | Colour tokens take their role names. | neutral | Done: the digests did not move, and a test refuses a colour token not named for a role. `--chart-*` keep their names, as the design has it |
 | P19.4 | Type, radii and `--target`; the guard on them, with `OFF_SCALE`; the styles' budget raised. | neutral | Done: the digests did not move. 64 values became tokens: 35 font sizes, 18 radii, 11 minimum sizes. `OFF_SCALE` holds 13 declarations, and the compass's text in its viewBox's units stands beside it. The styles went from 28.20 to 29.11 kB; on a copy with spacing's tokens as well, 31.66 kB, so the budget went to 32 kB, as this step was settled to |
 | P19.5 | Spacing, and the guard on it. Theme: `data-theme` and `design/theme.ts`. | neutral | Done: the digests did not move. 227 values in 189 declarations became `--space-*`. `OFF_SCALE` took 23 more declarations, at 10, 14, 18 and 20 px, and `HAIRLINES_AND_OFFSETS` names 5. `--focus-width` and `--focus-offset` hold the two focus rings and the guard holds `outline*`, the chosen option's outline in `OFF_SCALE`. `design/theme.ts` writes `data-theme`; the key a choice is stored under, the default and the QA pages' light theme did not change. The styles weigh 32.72 kB: spacing and the focus tokens, and the columns of a list of runs, which landed beside them. So the budget went to 34 kB, with room for P19.6's `.ds-` rules |
-| P19.6 | `Button`, `LinkButton`, `IconButton`, `.ds-` rules and the guard on them; the reference page, its two baselines and its browser test; the contrast test with today's failures listed. The digest test goes, if the rest holds what it held. | neutral: nothing yet uses them | Done: the digests did not move, as they now leave out `design/components.css`, and they stay. A raw value fails the guards, and a token moved by the least fails the reference page's baselines, each token's draw being held by `e2e/design.spec.ts`; but 206 of the stylesheet's 370 rules, at `c0262394`, match nothing on the pages the no-tolerance baselines draw, so that a token swapped for another, or a property off the scales changed, in one of those fails only the digest. `--target-compact` (24 px) is new, as `OFF_SCALE` may not grow. `FOCUS_RINGS` names the four rings there are until P19.12, and a page's own `:focus-visible` fails. `CONTRAST_FAILURES` lists 18 pairs by name: in the audit's light `--chart-soft`, 2.64 is `--chart-off`'s; its own is 2.70. The page's own rules are written in `QaDesign.tsx`, as with them in a stylesheet the styles were over their budget. They weigh 33.93 kB against 34, 0.79 kB of it these rules, so that P19.7's will need a raise; `.ds-page` waits for P19.8, which uses it, as with it here they weighed 34.05 kB. The scripts weigh 1,758.22 kB against 1,760, the page 3.50 kB of them. `.visually-hidden` moves with the first cut of a stylesheet, P19.8 |
-| P19.7 | `Field`, `StatusChip`, `Notice`, `Fold`, on the reference page. | neutral | Proposed |
-| P19.8 | The digest goes, its rules starting to move; `.ds-page`. The landing page: its stylesheet moved in two parts, then its controls moved to components. **After the changes in progress to `RunsDialog.tsx` and the new-run form have merged,** since they touch the same lines. | neutral | Proposed |
-| P19.9 | The builder: its stylesheet, then its controls, `compact`. Selectors `e2e/builder.spec.ts` reads change with it, to roles where they can. | neutral | Proposed |
+| P19.6 | `Button`, `LinkButton`, `IconButton`, `.ds-` rules and the guard on them; the reference page, its two baselines and its browser test; the contrast test with today's failures listed. The digest test goes, if the rest holds what it held. | neutral: nothing yet uses them | Done: the digests did not move, as they now leave out `design/components.css`, and they stay. A raw value fails the guards, and a token moved by the least fails the reference page's baselines, each token's draw being held by `e2e/design.spec.ts`; but 206 of the stylesheet's 370 rules, at `c0262394`, match nothing on the pages the no-tolerance baselines draw, so that a token swapped for another, or a property off the scales changed, in one of those fails only the digest. `--target-compact` (24 px) is new, as `OFF_SCALE` may not grow. `FOCUS_RINGS` names the four rings there are until P19.12, and a page's own `:focus-visible` fails. `CONTRAST_FAILURES` lists 18 pairs by name: in the audit's light `--chart-soft`, 2.64 is `--chart-off`'s; its own is 2.70. The page's own rules and ground are written in `QaDesign.tsx`, so that the styles gain only the `.ds-` rules, 0.79 kB. The pages having grown to 33.88 kB, the budget went to 34.7 kB, the least that holds them: the styles weigh 34.67 kB. The scripts weigh 1,764.30 kB against 1,765, the page 3.51 kB of them. `.visually-hidden` moves with the first cut of a stylesheet, P19.8 |
+| P19.7 | `Field`, `StatusChip`, `Notice`, `Fold`, on the reference page; `.ds-page` moved to a stylesheet; the styles' budget to 36 kB. | neutral | Proposed |
+| P19.8 | The digest goes, its rules starting to move. The landing page: its stylesheet moved in two parts, then its controls moved to components. **After the changes in progress to `RunsDialog.tsx` and the new-run form have merged,** since they touch the same lines. | neutral | Proposed |
+| P19.9 | The builder: its stylesheet, then its controls. Moving them to `compact` is a named visual change and not neutral: they go from the browser's drawing at 21 px to the tokens' at 24. Selectors `e2e/builder.spec.ts` reads change with it, to roles where they can. | its stylesheet neutral; `compact` names what moves | Proposed |
 | P19.10 | The replay: its stylesheet, its transport to `IconButton`, its four icons to `src/icons/`. | neutral | Proposed |
-| P19.11 | The viewer's panels, a folder a pull request; `Fold` first. Baselines of a run's panels are added first, with a fixture of one scenario's answers, as `/view?scene=example` shows few. | neutral | Proposed |
+| P19.11 | The viewer's panels, a folder a pull request; `Fold` first. Baselines of a run's panels are added first, with a fixture of one scenario's answers, as `/view?scene=example` shows few. Moving a panel's controls to `compact` is a named visual change and not neutral, as in P19.9. | its stylesheets neutral; `compact` names what moves | Proposed |
 | P19.12 | The named visual changes below, one pull request each, each taken or not on its own. | names what moves | Proposed |
 
 ### Named visual changes
@@ -390,7 +391,7 @@ Separate from the above, each seen in review, none required by it:
 | --- | --- |
 | Off-scale values onto the scale (`OFF_SCALE`, 40) | Page baselines; `renderer` and others with a legend or label |
 | One focus ring on every control | Keyboard focus only; the reference page |
-| `compact` at 24 px at least (WCAG 2.2's 2.5.8), from 13 to 21 | Panels and builder grow taller: 59 of 63 and 20 of 20 controls |
+| `compact` at 24 px at least (WCAG 2.2's 2.5.8), from 13 to 21: what moving a control to it does, `--target-compact` being its floor since P19.6 | Panels and builder grow taller: 59 of 63 and 20 of 20 controls |
 | The four button families' differences: padding 12 or 18, a page's ground or none | Landing, replay |
 | `Button` drawn from tokens on the builder and panels, not by the browser | All panels: the largest change here |
 | Alerts in `--warn`: the 17 bare ones | Panels, when each shows |
@@ -413,7 +414,7 @@ above; the charts' drawing; a component library published for others; a new page
 - `styles.test.ts` fails on a raw colour or size anywhere outside the tokens, its
   exceptions named, and `OFF_SCALE` holds only what is still there.
 - P19.1's digest and the page baselines are unchanged from before P19.2 to after
-  P19.5, and the page baselines through P19.11.
+  P19.5, and the page baselines through P19.11, but for moves to `compact`.
 - A control on the reference page has a name and its target, in both themes.
 - The contrast test computes every declared pair in both themes, and lists its
   failures by name.
