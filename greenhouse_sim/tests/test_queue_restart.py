@@ -23,6 +23,7 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import leases, scenario_files, scheduler
 from greenhouse_sim.services.errors import Conflict, NotFound
+from greenhouse_sim.services.limits import Limits
 from greenhouse_sim.services.run_store import EpochStore, FolderStore, Status, delete_epoch
 from greenhouse_sim.services.scheduler import Scheduler
 from greenhouse_sim.services.simulator import Simulator
@@ -143,7 +144,7 @@ def test_closed_with_runs_waiting_a_server_finds_them_again_and_runs_each_once_w
 
     most = 0
     # A simulator that knows the scenario only from the store.
-    with Simulator(runs=objects, workers=1) as second:
+    with Simulator(runs=objects, limits=Limits(workers=1)) as second:
         made = second.scheduler
         assert made is not None
         assert made.waiting() == [_key(kept[1])]
@@ -195,7 +196,7 @@ def test_a_run_whose_worker_is_alive_is_left_to_it_and_counted_against_the_limit
     if status == Status.RUNNING:
         worked.set_status(status)
 
-    with Simulator(runs=objects, workers=1) as simulator:
+    with Simulator(runs=objects, limits=Limits(workers=1)) as simulator:
         made = simulator.scheduler
         assert made is not None
         assert made.waiting() == [_key(behind)]
@@ -219,7 +220,7 @@ def test_a_worker_gone_since_the_restart_is_told_interrupted_and_leaves_room(
     # A worker's claim, which nothing here writes again.
     assert leases.claim(objects, f"{worked.run_id}/{worked.epoch}") == 0
 
-    with Simulator(runs=objects, workers=1):
+    with Simulator(runs=objects, limits=Limits(workers=1)):
         assert behind.manifest().status == Status.QUEUED
 
         _expired(worked)
@@ -237,7 +238,7 @@ def test_a_worker_that_found_its_run_anothers_counts_that_run_until_it_is_told(
     left, behind = _in_line(objects, [1, 2])
     _rewritten(left, created_at=IN_LINE_AT)
 
-    with Simulator(runs=objects, workers=1) as simulator:
+    with Simulator(runs=objects, limits=Limits(workers=1)) as simulator:
         made = simulator.scheduler
         assert made is not None
         _until(lambda: left.worked() and not made.workers(), "the worker to leave")
@@ -258,7 +259,7 @@ def test_a_run_another_server_started_while_it_waited_here_counts_until_it_is_to
     holding, started, behind = _in_line(objects, [1, 2, 3])
     assert holding.claim()
 
-    with Simulator(runs=objects, workers=1) as simulator:
+    with Simulator(runs=objects, limits=Limits(workers=1)) as simulator:
         made = simulator.scheduler
         assert made is not None
         assert made.waiting() == [_key(started), _key(behind)]
@@ -296,7 +297,7 @@ def test_a_server_killed_leaves_a_worker_computing_which_the_next_counts_and_a_r
         before = computing.frontier_s()
         _until(lambda: computing.frontier_s() > before, "its worker to go on with no server")
 
-        with Simulator(runs=objects, workers=1) as second:
+        with Simulator(runs=objects, limits=Limits(workers=1)) as second:
             made = second.scheduler
             assert made is not None
             # Its one worker is the one that was left.
@@ -357,7 +358,10 @@ def test_an_epoch_deleted_while_it_waits_is_passed_over(
     worked, deleted, behind = _in_line(objects, [1, 2, 3])
     assert worked.claim()
 
-    with caplog.at_level(logging.ERROR), Simulator(runs=objects, workers=1) as simulator:
+    with (
+        caplog.at_level(logging.ERROR),
+        Simulator(runs=objects, limits=Limits(workers=1)) as simulator,
+    ):
         made = simulator.scheduler
         assert made is not None
         assert made.waiting() == [_key(deleted), _key(behind)]
@@ -380,7 +384,10 @@ def test_an_epoch_deleted_under_its_worker_is_told_nothing(
     objects = FolderStore(tmp_path)
     (left,) = _in_line(objects, [1])
 
-    with caplog.at_level(logging.ERROR), Simulator(runs=objects, workers=1) as simulator:
+    with (
+        caplog.at_level(logging.ERROR),
+        Simulator(runs=objects, limits=Limits(workers=1)) as simulator,
+    ):
         made = simulator.scheduler
         assert made is not None
         _until(lambda: not made.workers() and not made.waiting(), "the worker to be let go")
@@ -476,7 +483,7 @@ def test_a_worker_that_ends_before_taking_up_a_run_found_again_says_what_it_says
                 scheduling.resume(left.run_id, left.epoch)
         scheduling.close()
 
-    with Simulator(runs=objects, workers=1):
+    with Simulator(runs=objects, limits=Limits(workers=1)):
         _until(lambda: left.manifest().status != Status.QUEUED, "the epoch to be told")
 
     assert left.manifest().status == (Status.FAILED if kind == "new" else Status.INTERRUPTED)
@@ -490,7 +497,7 @@ def test_a_stop_of_a_run_waiting_here_that_another_server_took_up_asks_its_worke
     objects = FolderStore(tmp_path)
     (left,) = _in_line(objects, [1])
 
-    with Simulator(runs=objects, workers=1) as simulator:
+    with Simulator(runs=objects, limits=Limits(workers=1)) as simulator:
         made = simulator.scheduler
         assert made is not None
         assert made.waiting() == [_key(left)]
@@ -513,7 +520,7 @@ def test_a_stop_of_a_run_waiting_here_that_ended_elsewhere_changes_nothing(tmp_p
     objects = FolderStore(tmp_path)
     (left,) = _in_line(objects, [1])
 
-    with Simulator(runs=objects, workers=1) as simulator:
+    with Simulator(runs=objects, limits=Limits(workers=1)) as simulator:
         made = simulator.scheduler
         assert made is not None
         _rewritten(left, status=Status.FINISHED)
@@ -530,7 +537,7 @@ def test_a_stop_of_a_run_waiting_here_that_was_deleted_is_not_found(tmp_path: Pa
     objects = FolderStore(tmp_path)
     (left,) = _in_line(objects, [1])
 
-    with Simulator(runs=objects, workers=1) as simulator:
+    with Simulator(runs=objects, limits=Limits(workers=1)) as simulator:
         made = simulator.scheduler
         assert made is not None
         delete_epoch(objects, left.run_id, left.epoch)
@@ -546,7 +553,7 @@ def test_a_run_whose_worker_is_alive_is_asked_through_the_store_to_stop(tmp_path
     (worked,) = _in_line(objects, [1])
     assert worked.claim()
 
-    with Simulator(runs=objects, workers=1) as simulator:
+    with Simulator(runs=objects, limits=Limits(workers=1)) as simulator:
         path = f"/api/runs/{worked.run_id}/epochs/{worked.epoch}/stop"
         stopped = respond(simulator, "POST", path)
 
@@ -564,7 +571,7 @@ def test_a_run_found_waiting_with_a_stop_asked_ends_at_its_workers_first_look(
     (left,) = _in_line(objects, [1])
     left.ask_to_stop()
 
-    with Simulator(runs=objects, workers=1) as simulator:
+    with Simulator(runs=objects, limits=Limits(workers=1)) as simulator:
         made = simulator.scheduler
         assert made is not None
         _until(lambda: left.manifest().status == Status.INTERRUPTED, "its worker to look")

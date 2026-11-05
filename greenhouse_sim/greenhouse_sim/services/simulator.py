@@ -3,11 +3,11 @@
 A `Simulator` owns what a simulator keeps and runs: the scenarios it knows,
 packaged and registered (`scenarios.catalogue`), the runs it plays back,
 the cursors it has given consumers, the installations' drafts it is given a
-store of (`builder.drafts`, decision 0051), and who may act on its runs
-(`authorisation`, decision 0052). The server makes one, or is given
-one; a test makes its own. Closing it stops what it runs, waiting for each
-run's thread and ending each worker's process (`scheduler`), and it starts
-nothing after.
+store of (`builder.drafts`, decision 0051), who may act on its runs
+(`authorisation`, decision 0052), and what its runs may use (`limits`, decision
+0067). The server makes one, or is given one; a test makes its own. Closing it
+stops what it runs, waiting for each run's thread and ending each worker's
+process (`scheduler`), and it starts nothing after.
 
 The services that keep runs reach what they keep through it: its climate
 runs, crops, sunlight, checkpoints and the states runs take over from them,
@@ -17,7 +17,7 @@ each a store of its own, which no other simulator shares. Forgetting them
 
 import threading
 from types import TracebackType
-from typing import TYPE_CHECKING, Final, Self
+from typing import TYPE_CHECKING, Self
 
 from greenhouse_protocol.authorisation import AuthorisationConfig
 
@@ -34,15 +34,13 @@ from greenhouse_sim.services import (
 )
 from greenhouse_sim.services.consumer import Cursors
 from greenhouse_sim.services.gateway import LOCAL_AUTHORISATION, NO_CREW, Crew
+from greenhouse_sim.services.limits import Limits
 from greenhouse_sim.services.playback import Playbacks
 from greenhouse_sim.services.run_store import ObjectStore
 from greenhouse_sim.services.stored_playback import Positions
 
 if TYPE_CHECKING:
     from greenhouse_sim.services.scheduler import Scheduler
-
-# How many epochs a simulator's workers execute at once; the rest wait.
-DEFAULT_WORKERS: Final = 2
 
 
 class Simulator:
@@ -54,7 +52,7 @@ class Simulator:
         authorisation: AuthorisationConfig = LOCAL_AUTHORISATION,
         crew: Crew = NO_CREW,
         runs: ObjectStore | None = None,
-        workers: int = DEFAULT_WORKERS,
+        limits: Limits | None = None,
     ) -> None:
         self.catalogue = Catalogue() if catalogue is None else catalogue
         # Who may do what on its runs: each run's gateway enforces it. One
@@ -71,9 +69,9 @@ class Simulator:
         # run store (decision 0065), which outlives it, and the scenario
         # files uploaded to it (P17.11).
         self.runs = runs
-        # How many epochs its workers execute into it at once, and the
-        # scheduler that runs them, made when the first is asked for.
-        self.workers = workers
+        # What its runs may use, and the scheduler that runs them, made when
+        # the first is asked for.
+        self.limits = Limits() if limits is None else limits
         self.scheduler: Scheduler | None = None
         self.scheduling = threading.Lock()
         # Set under `scheduling` when it closes: no scheduler is made after.

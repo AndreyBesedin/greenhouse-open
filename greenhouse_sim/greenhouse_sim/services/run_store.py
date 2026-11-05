@@ -51,6 +51,7 @@ import logging
 import math
 import os
 import secrets
+import shutil
 import tempfile
 import time
 from collections.abc import Callable, Iterable, Sequence
@@ -174,6 +175,11 @@ class ObjectStore(Protocol):
 
     def delete(self, name: str) -> None: ...
 
+    def free_bytes(self) -> int | None:
+        """How many more bytes it has room for, or none if it cannot say, as a
+        store of objects with no disk of its own cannot."""
+        ...
+
 
 def default_root() -> Path:
     """Where a run store is kept on this machine: the user's state folder
@@ -276,6 +282,16 @@ class FolderStore:
 
     def delete(self, name: str) -> None:
         (self.root / name).unlink(missing_ok=True)
+
+    def free_bytes(self) -> int | None:
+        """What is free on the folder's disk: on the nearest folder there is, since
+        a store's own is made by its first object."""
+        for folder in (self.root, *self.root.parents):
+            try:
+                return shutil.disk_usage(folder).free
+            except OSError:
+                continue
+        return None
 
 
 class ForkOf(BaseModel):
@@ -1353,6 +1369,23 @@ def _listed(objects: ObjectStore, run_id: str, manifest: EpochManifest) -> Store
         stopping=manifest.status not in ENDED and epoch.stop_asked(),
         damaged=False,
     )
+
+
+def held_bytes(objects: ObjectStore) -> int:
+    """How many bytes a store holds, as far as its epochs' reports say, which may lag
+    a worker by a commit: each epoch costs its report, and the walk of one with none;
+    what is under a folder that holds no epoch, such as the scenarios' shared files,
+    is walked, and a report's own bytes are not counted."""
+    total = 0
+    for top in objects.children():
+        numbers = [name for name in objects.children(f"{top}/") if name.isdigit()]
+        if not numbers:
+            total += sum(objects.size(name) or 0 for name in objects.names(f"{top}/"))
+        for number in numbers:
+            epoch = EpochStore(objects, top, int(number))
+            usage = epoch.usage()
+            total += epoch.size_bytes() if usage is None else usage.bytes_kept
+    return total
 
 
 def stored_runs(objects: ObjectStore, scenario_id: str | None = None) -> list[StoredRun]:

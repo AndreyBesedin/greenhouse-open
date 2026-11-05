@@ -67,6 +67,9 @@ them (P17.4, decision 0065).
 
 A position is the viewer's place over an epoch, not the epoch's clock: moving
 it changes nothing a consumer reads.
+
+A run, a resume or a fork the simulator's limits have no room for is refused with
+a 409 that says which limit and the figures, and nothing of it is written.
 """
 
 from pydantic import BaseModel
