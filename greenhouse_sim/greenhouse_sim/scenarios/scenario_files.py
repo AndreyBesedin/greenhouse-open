@@ -60,6 +60,8 @@ _BRACKETS: Final = re.compile(r'"(?:[^"\\]|\\.)*"|[\[\]{}]')
 RECORDED_WEATHER: Final = "recorded_weather"
 _VERSION_KEY: Final = "schema_version"
 _INSTALLATION_KEY: Final = "installation"
+_SCENARIO_ID_KEY: Final = "greenhouse_id"
+_INSTALLATION_ID_KEY: Final = "installation_id"
 _MODELS_KEY: Final = "models"
 _SHA256: Final = re.compile(r"[0-9a-f]{64}")
 # What a manifest has that a file has not: where the viewer opens a packaged
@@ -172,10 +174,10 @@ def import_scenario_file(text: str) -> ScenarioFile:
         raise ScenarioFileError(_VERSION_KEY, f"{said}; this simulator reads {_formats_read()}")
     if _NOT_IN_A_FILE in document:
         raise ScenarioFileError(_NOT_IN_A_FILE, "a scenario file has no kept opening day")
-    scenario_id = document.get("greenhouse_id")
+    scenario_id = document.get(_SCENARIO_ID_KEY)
     if not isinstance(scenario_id, str) or not SCENARIO_ID.fullmatch(scenario_id):
         raise ScenarioFileError(
-            "greenhouse_id",
+            _SCENARIO_ID_KEY,
             f"a scenario is named by lowercase letters, digits and _, not {scenario_id!r}",
         )
     written = {key: value for key, value in document.items() if key != RECORDED_WEATHER}
@@ -191,6 +193,20 @@ def import_scenario_file(text: str) -> ScenarioFile:
         config = config.model_copy(update={"weather": recording.carried})
     canonical = json.dumps(document, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return ScenarioFile(config, recording, short_digest(canonical, DIGEST_LENGTH))
+
+
+def holds_an_installation(text: str) -> bool | None:
+    """Whether an uploaded file is an installation's, not a scenario's, as each
+    names what it holds: a scenario by its `greenhouse_id`, and a house by its
+    `installation_id`; None if it names neither. Refused if it is too large or
+    not JSON. A file naming both is a scenario's, whose reader refuses the other
+    field."""
+    if len(text.encode("utf-8")) > MAX_IMPORT_BYTES:
+        raise ScenarioFileError("", f"larger than {MAX_IMPORT_BYTES} bytes")
+    document = _parsed(text)
+    if document.get(_SCENARIO_ID_KEY) is not None:
+        return False
+    return True if document.get(_INSTALLATION_ID_KEY) is not None else None
 
 
 def _models(config: ScenarioConfig) -> dict[str, JsonValue]:

@@ -34,8 +34,11 @@ its layout, its weather and its CFD geometry.
     POST /api/scenarios/upload            a scenario file, the body, validated,
                                           registered and, with a run store, kept;
                                           answers it, its house and its run
-                                          settings. Refused: 400 with `problems`;
-                                          a taken identifier: 409
+                                          settings. An installation's file is
+                                          read, not kept, and answers its house
+                                          assessed; `kind` says which. Refused:
+                                          400 with `problems`; a taken
+                                          identifier: 409
 """
 
 from greenhouse_sim.api.responses import Response

@@ -77,6 +77,11 @@ _COMMENT = re.compile(r"<!--.*?(?:-->|\Z)", re.DOTALL)
 # part of the section above it.
 _REVIEWABLE = re.compile(r"<!-- Reviewable:start -->.*?<!-- Reviewable:end -->", re.DOTALL)
 _CHANGELOG_SECTION = re.compile(r"^## Changelog[ \t]*$", re.MULTILINE)
+# What ends a description below its last section, no part of any entry: the
+# manual review's item, and the attribution's line.
+_BELOW_THE_ENTRY = re.compile(
+    r"^ {0,3}- \[[ xX]\] I manually reviewed|^🤖 Generated with", re.MULTILINE
+)
 # `none`, alone or with its reason after a stop, a colon or a parenthesis:
 # "None: documentation only.", "none (examples only)".
 _NONE = re.compile(r"none\s*(?:[.:(].*)?", re.IGNORECASE | re.DOTALL)
@@ -139,15 +144,22 @@ class Merged:
 
 def changelog_entry(description: str) -> str | None:
     """A pull request's changelog entry, as its description gives it under
-    `## Changelog`, without the template's comments or what Reviewable
-    appends: empty where it gives nothing there, and None without the
-    section."""
+    `## Changelog`, without the template's comments, what Reviewable appends,
+    the manual review's item or the attribution's line below it: empty where
+    it gives nothing there, and None without the section."""
     text = _COMMENT.sub("", _REVIEWABLE.sub("", description.replace("\r\n", "\n")))
     found = _CHANGELOG_SECTION.search(text)
     if found is None:
         return None
-    following = _HEADING.search(text, found.end())
-    return text[found.end() : following.start() if following else len(text)].strip()
+    ends = [
+        match.start()
+        for match in (
+            _HEADING.search(text, found.end()),
+            _BELOW_THE_ENTRY.search(text, found.end()),
+        )
+        if match is not None
+    ]
+    return text[found.end() : min(ends, default=len(text))].strip()
 
 
 def gives_none(entry: str) -> bool:

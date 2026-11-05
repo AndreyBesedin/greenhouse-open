@@ -3,6 +3,7 @@ import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CLIMATE_FIELD } from "./fields/source";
+import { WHAT_A_FORK_DOES } from "./replay/useForkQuestion";
 import { ScenarioPanels } from "./ScenarioPanels";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { button, click, type Rendered, render, said } from "./testing/render";
@@ -43,8 +44,8 @@ const EQUIPPED = {
   ],
 } as unknown as SceneSnapshot;
 
-function panels(more: Partial<ComponentProps<typeof ScenarioPanels>> = {}) {
-  return render(
+function panelsElement(more: Partial<ComponentProps<typeof ScenarioPanels>> = {}) {
+  return (
     <ScenarioPanels
       source={{
         kind: "scenario",
@@ -69,8 +70,12 @@ function panels(more: Partial<ComponentProps<typeof ScenarioPanels>> = {}) {
       onPlayingClimate={vi.fn()}
       onOwnRange={vi.fn()}
       {...more}
-    />,
+    />
   );
+}
+
+function panels(more: Partial<ComponentProps<typeof ScenarioPanels>> = {}) {
+  return render(panelsElement(more));
 }
 
 describe("a stored run's panels", () => {
@@ -144,9 +149,47 @@ describe("a stored run's panels", () => {
     });
     expect(said(rendered.container, "fork-levels")).toMatch(/Set heater/);
     click(fork());
+    expect(onFork).not.toHaveBeenCalled();
+    expect(said(rendered.container, "fork-question")).toContain(WHAT_A_FORK_DOES);
+    click(button(rendered.container, "Make the fork"));
     expect(onFork).toHaveBeenCalledOnce();
     click(button(rendered.container, "Put them back"));
     expect(onPutBack).toHaveBeenCalledOnce();
+  });
+
+  it("gives up the question of a fork of levels if the levels change, or are cancelled", () => {
+    const onFork = vi.fn();
+    const forkLevels = (asked: Record<string, number>) => ({
+      replayed: true,
+      forkLevels: { asked, onFork, onPutBack: vi.fn() },
+    });
+    rendered = panels(forkLevels({ heater: 0.5 }));
+    const { container } = rendered;
+    const fork = button(container, "Fork from here with these levels");
+    const question = () => container.querySelector('[data-testid="fork-question"]');
+
+    click(fork);
+    click(button(container, "Cancel"));
+    expect(question()).toBeNull();
+    expect(document.activeElement).toBe(fork);
+
+    click(fork);
+    expect(question()).not.toBeNull();
+    rendered.rerender(panelsElement(forkLevels({ heater: 0.75 })));
+    expect(question()).toBeNull();
+    expect(onFork).not.toHaveBeenCalled();
+  });
+
+  it("names the moment a fork of levels takes when the transport reads another", () => {
+    const onFork = vi.fn();
+    rendered = panels({
+      replayed: true,
+      forkLevels: { asked: { heater: 0.5 }, onFork, onPutBack: vi.fn(), from: "Day 1, 24:00" },
+    });
+
+    click(button(rendered.container, "Fork from Day 1, 24:00 with these levels"));
+    click(button(rendered.container, "Make the fork"));
+    expect(onFork).toHaveBeenCalledOnce();
   });
 
   it("says why no fork of levels can be made at a run's end, and offers none", () => {

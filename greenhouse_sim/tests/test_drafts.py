@@ -103,7 +103,13 @@ def test_a_change_on_a_revision_no_longer_the_latest_is_refused(tmp_path: Path) 
 
     with pytest.raises(StaleDraft, match="at revision 2, not 1: another was saved since"):
         store.save(_house(name="Saved here"), on=1)
-    with pytest.raises(StaleDraft, match="kept already, at revision 2"):
+    with pytest.raises(
+        StaleDraft,
+        match=(
+            "the identifier 'my_greenhouse' is kept already, at revision 2: "
+            "change this one's identifier to save it"
+        ),
+    ):
         store.save(_house(name="A new one"), on=None)
     with pytest.raises(StaleDraft, match="at revision 2, not 1"):
         store.revert("my_greenhouse", 1, on=1)

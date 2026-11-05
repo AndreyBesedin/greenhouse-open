@@ -93,10 +93,10 @@ and what it changes, never anyone's plans, events or deadlines.
 - Write the section's opening paragraph of step 4 above its entries.
 - The roadmap: mark Done only the steps that the merged work completes,
   in `docs/roadmap/README.md` and in the project's own document.
-- The walk-through, `greenhouse_sim/web/e2e/demo.spec.ts`: when the release
-  adds something a viewer can see, add a step that shows it, as 0.3.0 did
-  for heating targets, with its caption. Run it as a browser test before
-  recording.
+- The walk-through, `greenhouse_sim/web/e2e/readme-demo.spec.ts`: it shows the main
+  features only, under a minute. When the release adds a main feature, give
+  it a step and a caption, in place of what matters less. When the walk-through
+  changed, run it as a browser test before recording.
 - Run the checks that `AGENTS.md` asks for. `uv run check --fast` always
   runs. When the walk-through changed, also run `uv run viewer-checks` and
   the walk-through as a browser test.
@@ -112,28 +112,34 @@ and what it changes, never anyone's plans, events or deadlines.
 
 ## 6. The demo video
 
-Record it from the release branch, after the version commit, so that the
-viewer's build line in the video names the version.
+The README's video stays under 1 minute and shows the main features only.
+**Ask the owner, at each release,** which it is to be: a new README video, as
+below, or a walk-through of the release's features on YouTube, linked from the
+README, whose own video stays as it is. `docs/demo.md` says how the long one
+was recorded; its upload is the owner's. With no new README video wanted, the
+rest of this section is skipped.
+
+Record it from the release branch, after the version commit, so that it shows
+what the release holds and is named for its version.
 
 1. `uv run record-demo` plays the walk-through in Chromium on the
    graphics card, with a caption on each step. It needs ffmpeg and takes
-   about three minutes. It prints three paths: the recording, the video cut
-   for the README (`greenhouse-open-<version>.mp4`), and the video's first
-   frame as a PNG.
+   about fourteen minutes, eleven of them a worker computing the days the
+   video replays. It prints three paths: the recording, the video cut for the README
+   (`greenhouse-open-<version>.mp4`), and the video's first frame as a PNG.
 2. **Look at the first frame** (Read the PNG). It is the README's preview,
-   and it must show the whole house with its crop, as the caption "1. Opened
-   on day 86, its first day with red fruit" introduces it. The info panel
-   should name day 86 and its entities (12912 in 0.3.0), and the panels
-   should be filled in. A blank page, a loading message, or the house
-   without plants, with "before day one" in the info panel, means the cut
-   came too early. Do not
-   upload it. Find what the opening shot did not wait for (the mark is
-   written in `demo.spec.ts` once the view is drawn), fix that, and record
-   again.
+   and it must show the whole house, the panels folded away from it, with
+   its crop grown along the rows, under the caption "A simulated greenhouse:
+   the house, its climate, each plant organ by organ". A blank page, a loading
+   message, or the house without plants means the cut came too early. Do not
+   upload it. Find what the opening shot did not wait for (the mark is written
+   in `readme-demo.spec.ts` once the view is drawn), fix that, and record again.
 3. Look at a few frames through the video as well (the command is in
    `references/commands.md`). Each caption should sit on the view it names.
 4. The command refuses a video over 10 MB, the most GitHub takes as an
-   upload.
+   upload, and one over 60 s. Over 60 s, shorten the walk-through or its
+   pause (`DEMO_PAUSE_MS`, in `npm run demo:record`) and record again;
+   `DEMO_STORE=<a folder>` keeps the days computed for the next try.
 5. **The upload is the user's.** GitHub plays a video in a README only when
    it hosts it at `github.com/user-attachments`, and it offers no API for
    that. Ask the user to drag the MP4, by its full path, into a comment on
@@ -148,9 +154,9 @@ viewer's build line in the video names the version.
    caption's version. Commit `docs(readme): the demo video recorded from
    <version>`, signed off, and push it to the release branch.
 
-Without a machine that can record, leave the README as it is: its caption
-keeps the earlier video's version, which is still true. Say so in the pull
-request.
+Without a machine that can record, or with no new video wanted, leave the
+README as it is: its caption keeps the earlier video's version, which is
+still true. Say so in the pull request.
 
 ## 7. Hand it to the owner
 

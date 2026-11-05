@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
+import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DAY_S } from "../clock";
-import { type Rendered, render, said } from "../testing/render";
+import { click, button as named, type Rendered, render, said } from "../testing/render";
 import type { PositionState } from "./position";
 import { ReplayHeader, runSubtitle } from "./ReplayHeader";
+import { WHAT_A_FORK_DOES } from "./useForkQuestion";
 
 const FORK: PositionState["fork"] = {
   run_id: "parent run",
@@ -26,6 +28,7 @@ function position(more: Partial<PositionState> = {}): PositionState {
     layout: "default",
     seed: 2,
     status: "running",
+    paused: false,
     started_at: "2026-03-01T00:00:00Z",
     simulated_now: "2026-03-01T00:00:00Z",
     time_s: 0,
@@ -106,24 +109,103 @@ describe("the replay's header", () => {
     }
   });
 
+  it("calls a run a playback holds paused, as the runs listed do, not running", () => {
+    rendered = render(
+      <ReplayHeader
+        name={null}
+        position={position({ paused: true })}
+        otherRunsHref="/"
+        onFork={noFork}
+      />,
+    );
+
+    expect(said(rendered.container, "replay-status")).toBe("Paused");
+  });
+
   it("says a run of the scenario's own seed without a number", () => {
     expect(runSubtitle(position({ seed: null }))).toBe(
       "the scenario's seed · epoch 3 · everything kept",
     );
   });
 
-  it("forks the run from the moment shown, and says it is at it", () => {
-    const onFork = vi.fn();
-    rendered = render(
-      <ReplayHeader name={null} position={position()} otherRunsHref="/" onFork={onFork} />,
-    );
-    const button = rendered.container.querySelector<HTMLButtonElement>(
-      '[data-testid="replay-fork"]',
-    );
+  describe("a fork from the moment shown", () => {
+    function shown(onFork: () => void) {
+      rendered = render(
+        <ReplayHeader name={null} position={position()} otherRunsHref="/" onFork={onFork} />,
+      );
+      const { container } = rendered;
+      const pressed = container.querySelector('[data-testid="replay-fork"]') as HTMLButtonElement;
+      return { container, pressed };
+    }
 
-    expect(button?.textContent).toBe("Fork from here");
-    button?.click();
-    expect(onFork).toHaveBeenCalledOnce();
+    it("says what it does first, and is made only once that is confirmed", () => {
+      const onFork = vi.fn();
+      const { container, pressed } = shown(onFork);
+      expect(pressed.textContent).toBe("Fork from here");
+      expect(container.querySelector('[data-testid="fork-question"]')).toBeNull();
+
+      click(pressed);
+
+      expect(onFork).not.toHaveBeenCalled();
+      expect(said(container, "fork-question")).toContain(WHAT_A_FORK_DOES);
+      // Ready to be answered from the keyboard.
+      expect(document.activeElement).toBe(named(container, "Make the fork"));
+
+      click(named(container, "Make the fork"));
+
+      expect(onFork).toHaveBeenCalledOnce();
+      expect(container.querySelector('[data-testid="fork-question"]')).toBeNull();
+    });
+
+    it("is not made if cancelled, with the keyboard back on what was pressed", () => {
+      const onFork = vi.fn();
+      const { container, pressed } = shown(onFork);
+
+      click(pressed);
+      click(named(container, "Cancel"));
+
+      expect(onFork).not.toHaveBeenCalled();
+      expect(container.querySelector('[data-testid="fork-question"]')).toBeNull();
+      expect(document.activeElement).toBe(pressed);
+    });
+
+    it("is cancelled by Escape, which is not left for the view", () => {
+      const onFork = vi.fn();
+      const { container, pressed } = shown(onFork);
+
+      click(pressed);
+      const pressedKey = new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      });
+      act(() => document.activeElement?.dispatchEvent(pressedKey));
+
+      expect(onFork).not.toHaveBeenCalled();
+      expect(pressedKey.defaultPrevented).toBe(true);
+      expect(container.querySelector('[data-testid="fork-question"]')).toBeNull();
+      expect(document.activeElement).toBe(pressed);
+    });
+
+    it("takes the moment shown when it was asked for, while the replay plays on", () => {
+      const fromThen = vi.fn();
+      const fromNow = vi.fn();
+      const { container, pressed } = shown(fromThen);
+
+      click(pressed);
+      rendered?.rerender(
+        <ReplayHeader
+          name={null}
+          position={position({ time_s: 2 * DAY_S })}
+          otherRunsHref="/"
+          onFork={fromNow}
+        />,
+      );
+      click(named(container, "Make the fork"));
+
+      expect(fromThen).toHaveBeenCalledOnce();
+      expect(fromNow).not.toHaveBeenCalled();
+    });
   });
 
   it("offers no fork at the run's end, and says why", () => {

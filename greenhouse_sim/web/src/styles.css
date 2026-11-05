@@ -1855,6 +1855,29 @@
   font-weight: 600;
 }
 
+.landing-drafts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--font-sm);
+}
+
+.landing-card .landing-drafts p + p {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.landing-drafts a {
+  overflow: hidden;
+  color: var(--action);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-drafts span {
+  flex: none;
+}
+
 .landing-card p.landing-problem {
   color: var(--warn);
 }
@@ -1954,10 +1977,10 @@
 
 /* Every row shares the list's columns, so that what a row has lines up with the
  * rows above and below it, and a row leaves empty what it does not have: its
- * name, its status, how far it is computed, Replay, Follow, Stop or Resume. */
+ * name, its status, how far it is computed, Replay, Follow, Stop or Resume, Delete. */
 .landing-runs {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) max-content minmax(0, 1fr) repeat(3, max-content);
+  grid-template-columns: minmax(0, 2fr) max-content minmax(0, 1fr) repeat(4, max-content);
   column-gap: var(--space-7);
   margin: var(--space-4) 0 0;
   padding: 0;
@@ -2127,6 +2150,26 @@
   color: var(--text-soft);
 }
 
+/* What stands in for a value left empty: fainter than a value entered, and read
+ * as text. `styles.test.ts` holds its contrast in both themes. */
+.landing-form .landing-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+/* The seed, on a line of its own beside what leaving it empty means. */
+.landing-seed {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3) var(--space-5);
+}
+
+.landing-seed .landing-note {
+  flex: 1 1 240px;
+}
+
 .landing-note {
   flex-basis: 100%;
   margin: 0;
@@ -2186,14 +2229,12 @@
   justify-content: flex-end;
 }
 
-/* Room for a run's controls on one line, at a dialog's width, and a column for
- * its Delete. */
+/* Room for a run's controls on one line, at a dialog's width. */
 .landing-dialog .landing-run-name {
   flex-basis: 150px;
 }
 
 .landing-dialog .landing-runs {
-  grid-template-columns: minmax(0, 2fr) max-content minmax(0, 1fr) repeat(4, max-content);
   column-gap: var(--space-5);
   margin: 0;
   border: 0;
@@ -2253,6 +2294,30 @@
   gap: var(--space-4) 14px;
   padding: 10px 20px;
   border-bottom-width: 1px;
+}
+
+/* What a fork does, asked on a line of its own before it is made, as a run's
+ * Delete asks. */
+.replay-fork-question {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.replay-fork-question p {
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--text-soft);
+}
+
+.replay-header > .replay-fork-question {
+  justify-content: flex-end;
 }
 
 .replay-title h1 {

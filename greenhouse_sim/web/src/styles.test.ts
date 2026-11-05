@@ -432,11 +432,12 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
 // adding them moves nothing a page draws.
 //
 // It goes when selectors start to move (P19.8). Until then it holds what nothing else
-// does: of the stylesheet's 370 rules, 206 match nothing on the pages the no-tolerance
-// baselines draw, and the guards below read how a value is written, not which it is.
+// does: at `c0262394`, 206 of the stylesheet's 370 rules match nothing on the pages the
+// no-tolerance baselines draw, and the guards below read how a value is written, not
+// which it is.
 const RESOLVED_DIGESTS = {
-  dark: "f93136eb4f2e3c6a08d17538f4eb046e2189438aaa9eef448cf49e6aa72895d5",
-  light: "ee1f52fe685eae6fb3492008ceb6f726e6f1b3438598e6a98b8132a9408e22bd",
+  dark: "ab704d70264c7abbe8ae0b2062d37a1fcb4e36f0505231903e1dba9b531b6d9d",
+  light: "491325346cbd151d8cc513d8fdf882ea7ef7c6d1d69453a2ac3a09c15af27482",
 };
 type ThemeName = keyof typeof RESOLVED_DIGESTS;
 const STYLES_OF_THE_PAGES = withImports(ENTRY, (file) =>

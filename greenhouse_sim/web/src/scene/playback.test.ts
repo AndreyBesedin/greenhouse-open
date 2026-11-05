@@ -81,6 +81,17 @@ describe("a run played back, as the viewer reads it", () => {
     });
   });
 
+  it("says it failed, and why, by the simulator's words", async () => {
+    const failed = answering(409, { error: "its run could not be worked out (ArithmeticError)" });
+    const said = {
+      status: "failed",
+      reason: "its run could not be worked out (ArithmeticError)",
+    };
+
+    expect(await loadPlayback("climate_box", failed)).toEqual(said);
+    expect(await commandPlayback("climate_box", "play", failed)).toEqual(said);
+  });
+
   it("is said not to be read when its answer is not JSON, rather than lost", async () => {
     const broken: typeof fetch = vi.fn(async () => new Response("{ truncated", { status: 200 }));
 

@@ -8,7 +8,8 @@ playing at a pace, paused, seeking to any moment up to the frontier, or
 following the frontier as it advances. It is not a clock the epoch keeps: any
 number of positions read one epoch, none changes it, and a seek is never a new
 epoch (so a viewer that scrubs moves nothing a consumer reads). An epoch still
-computing is played over what is computed; a position waits at its frontier.
+computing is played over what is computed; a position waits at its frontier,
+and goes no further while a playback holds that epoch's clock, as it says (`paused`).
 
 The scene at a position is drawn on demand, as the viewer's by-moment services
 draw any moment of a run: for the run the epoch's manifest names (`run`).
@@ -69,9 +70,10 @@ ID_BYTES: Final = 6
 class PositionState(BaseModel):
     """Where a position stands over its epoch: the epoch, the moment, both as
     an instant and as seconds into the run (as the viewer asks for a moment),
-    whether it plays or follows, how far the epoch is committed, and the
-    changes given to it, as its plan holds them, spelled as a run's `&targets=`,
-    `&schedule=` and `&crop=` write them, for the viewer to draw it under."""
+    whether it plays or follows, how far the epoch is committed, whether a playback
+    holds the epoch's clock, as the runs listed say, and the changes given to it, as
+    its plan holds them, spelled as a run's `&targets=`, `&schedule=` and `&crop=`
+    write them, for the viewer to draw it under."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -82,6 +84,9 @@ class PositionState(BaseModel):
     layout: str
     seed: int | None
     status: Status
+    # Its status is running, and a playback holds its clock: the frontier stands
+    # still until that plays on, however this position plays.
+    paused: bool = False
     started_at: datetime
     simulated_now: datetime
     time_s: float
@@ -160,6 +165,10 @@ class StoredEpoch:
 
     def status(self) -> Status:
         return self.store.manifest().status
+
+    def held(self) -> bool:
+        """Whether a playback of the simulator's holds its clock."""
+        return (self.run_id, self.epoch) in self._simulator.playbacks.held()
 
     def commits(self) -> list[Commit]:
         """Its commits, those read before kept: they are written once."""
@@ -351,6 +360,7 @@ class Position:
             layout=epoch.layout,
             seed=epoch.seed,
             status=self._status,
+            paused=self._status == Status.RUNNING and epoch.held(),
             started_at=epoch.start,
             simulated_now=epoch.start + timedelta(seconds=self._time_s),
             time_s=self._time_s,

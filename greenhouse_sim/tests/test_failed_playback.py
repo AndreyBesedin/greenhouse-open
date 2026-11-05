@@ -4,6 +4,7 @@ the run again as a new playback and its next epoch. Its work is failed here by
 `work_day`, with no thread to race against: it has failed by the time it is
 kept, as one that failed while it played has."""
 
+import logging
 import sys
 from collections.abc import Iterator
 from http import HTTPStatus
@@ -11,9 +12,13 @@ from pathlib import Path
 from typing import Final
 
 import pytest
+from greenhouse_protocol.contracts.consumer import RunList
 
+from greenhouse_sim.api.consumer import consumer_respond
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.services import playback
+from greenhouse_sim.services.consumer import run_descriptor
+from greenhouse_sim.services.errors import NotFound
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackFailed
 from greenhouse_sim.services.run_store import (
     EpochManifest,
@@ -78,8 +83,7 @@ def test_a_start_after_a_failure_gets_a_new_playback_and_the_failed_one_still_sa
     server: Simulator, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     failed = _failed(server, monkeypatch)
-    with pytest.raises(PlaybackFailed):
-        respond(server, "GET", READ)
+    assert respond(server, "GET", READ).status == HTTPStatus.CONFLICT
 
     started = respond(server, "POST", START_HELD)
 
@@ -101,6 +105,69 @@ def test_a_start_after_a_failure_gets_a_new_playback_and_the_failed_one_still_sa
     assert respond(server, "POST", START_HELD).status == HTTPStatus.OK
     assert playback.state(server, BOX).epoch == 1
     assert started_epochs(_store(server), failed.run_id) == [0, 1]
+
+
+def test_a_failed_playback_says_why_as_its_epoch_keeps_it_in_the_words_any_reader_gets(
+    server: Simulator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    failed = _failed(server, monkeypatch)
+    reason = stored_run(_store(server), failed.run_id, 0).reason
+    assert reason == "its run could not be worked out (ArithmeticError)"
+
+    answered = respond(server, "GET", READ)
+    assert answered.status == HTTPStatus.CONFLICT
+    assert answered.body == {"error": reason}
+    # A consumer that reads it by its run.
+    consumer = consumer_respond(server, "GET", f"/consumer/v1/runs/{failed.run_id}")
+    assert consumer is not None
+    assert consumer.status == HTTPStatus.CONFLICT
+    assert consumer.body == {"detail": reason}
+
+
+def test_a_failure_a_service_said_is_answered_in_its_words_as_any_other_failure(
+    server: Simulator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def refused(*_: object, **__: object) -> None:
+        raise NotFound("no such run")
+
+    failed = Playback(server, BOX, epochs=Epochs(objects=_store(server)))
+    with monkeypatch.context() as patch:
+        patch.setattr(DELIVERED, refused)
+        assert not failed.work_day(0)
+    server.playbacks.made_once(BOX, lambda _: failed)
+
+    # Not a 404, which would say it was never started.
+    answered = respond(server, "GET", READ)
+    assert answered.status == HTTPStatus.CONFLICT
+    assert answered.body == {"error": "no such run"}
+
+
+def test_a_failed_playback_leaves_the_list_of_runs_to_the_other_scenarios(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    box = cut("climate_box", days=2, sensors=ONE_SENSOR, greenhouse_id=BOX)
+    other = cut("climate_box", days=2, sensors=ONE_SENSOR, greenhouse_id="other_box")
+    with simulator_of(box, other) as simulator:
+        _failed(simulator, monkeypatch)
+        played = Playback(simulator, "other_box")
+        simulator.playbacks.made_once("other_box", lambda _: played)
+
+        answered = consumer_respond(simulator, "GET", "/consumer/v1/runs")
+
+    assert answered is not None
+    assert answered.status == HTTPStatus.OK
+    assert RunList.model_validate(answered.body).runs == (run_descriptor(played.state()),)
+
+
+def test_a_failure_is_logged_once_as_it_happens_and_not_at_each_read(
+    server: Simulator, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.ERROR, logger="greenhouse_sim.services.playback"):
+        _failed(server, monkeypatch)
+        for _ in range(3):
+            assert respond(server, "GET", READ).status == HTTPStatus.CONFLICT
+
+    assert [record.exc_info is not None for record in caplog.records] == [True]
 
 
 def test_a_restart_after_a_failure_gets_a_new_playback_and_leaves_no_epoch_nobody_works(
@@ -140,8 +207,7 @@ def test_a_start_whose_own_playback_fails_at_once_is_not_started_again(
     monkeypatch.setattr(DELIVERED, _broken)
     monkeypatch.setattr(Playback, "begin", fails_as_it_begins)
 
-    with pytest.raises(PlaybackFailed):
-        respond(server, "POST", START_HELD)
+    assert respond(server, "POST", START_HELD).status == HTTPStatus.CONFLICT
 
     run_id = playback.playback(server, BOX).run_id
     assert started_epochs(_store(server), run_id) == [0]

@@ -1,23 +1,16 @@
-import { writeFile } from "node:fs/promises";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { VIEWER_PATH } from "../src/landing/paths";
 import { QA_REFERENCE_PATH } from "../src/qa/referencePage.ts";
 import { chooser } from "./chooser";
+import { markOpening, say } from "./demoSteps";
 import { unfold } from "./folds";
 
 // P09.9: the final QA of P09 (docs/demo.md), walked through as one scripted
-// demo of the reference greenhouse. As a browser test it runs on its own,
-// after the other day-by-day specs; `npm run demo:record` records it as a
-// video (playwright.demo.config.ts), lingering on each step for
-// DEMO_PAUSE_MS and captioning it.
-//
-// The video starts with the page, blank until the house is drawn: the
-// moment the opening shot is ready, in seconds into the video, is written
-// beside it as OPENING_MARK, from which `uv run record-demo` cuts it
-// (tools/greenhouse_dev/demo_video.py), so that its first frame, the
-// README's preview, shows the whole house.
+// tour of the reference greenhouse: the long video recorded from 0.5.0. As a
+// browser test it runs on its own, after the other day-by-day specs, and it
+// can be recorded again (docs/demo.md). The README's short video is
+// `readme-demo.spec.ts`'s.
 
-const PAUSE_MS = Number(process.env.DEMO_PAUSE_MS ?? 0);
 const ARRIVES = { timeout: 180_000 };
 const HOUR_S = 3_600;
 const DAY_S = 24 * HOUR_S;
@@ -29,34 +22,6 @@ const CLIMATE_BOX_RUN_S = 14 * DAY_S;
 // rather than its corner at the world's origin, where the default camera
 // looks.
 const ON_THE_HOUSE = "-5:-14:11,5:4.8:1";
-const STARTED = Date.now();
-const OPENING_MARK = "opening.json";
-
-/** Shows a step's caption over the page, for the video, and lingers on it. */
-async function say(page: Page, caption: string): Promise<void> {
-  console.log(`STEP ${((Date.now() - STARTED) / 1000).toFixed(0)} s: ${caption}`);
-  await page.evaluate((text) => {
-    const shown =
-      document.getElementById("demo-caption") ??
-      document.body.appendChild(
-        Object.assign(document.createElement("div"), { id: "demo-caption" }),
-      );
-    shown.textContent = text;
-    shown.setAttribute(
-      "style",
-      "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:1000;" +
-        "padding:8px 14px;border-radius:6px;background:rgb(0 0 0 / 75%);color:#fff;" +
-        "font:16px system-ui;pointer-events:none",
-    );
-  }, caption);
-  await linger(page);
-}
-
-async function linger(page: Page): Promise<void> {
-  if (PAUSE_MS > 0) {
-    await page.waitForTimeout(PAUSE_MS);
-  }
-}
 
 test("the reference greenhouse's demo walks through P09's final QA", async ({ page }, testInfo) => {
   // The video started with the page, a moment before the test's body.
@@ -79,10 +44,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
   // The house is drawn before its crop: the opening shot waits for both.
   await expect(page.getByTestId("scene-status")).toContainText("day 86,", ARRIVES);
-  await writeFile(
-    testInfo.outputPath(OPENING_MARK),
-    JSON.stringify({ opening_s: (Date.now() - recording) / 1000 }),
-  );
+  await markOpening(testInfo, recording);
   await say(page, "1. Opened on day 86, its first day with red fruit");
 
   // 2. The house's dimensions and the crop's layout.
