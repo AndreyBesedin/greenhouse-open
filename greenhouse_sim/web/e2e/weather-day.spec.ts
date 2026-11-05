@@ -170,6 +170,8 @@ test("weather-day: the climate box through a cold spring day", async ({ page }) 
 
   await test.step("the replay is the same every time", async () => {
     await at(page, CONTROLLED, 20 * H, "20 h 00 min");
+    // Read once what it compares with the same day all off has arrived.
+    await expect(house.getByTestId("house-air-°C")).not.toContainText("on its way", ARRIVES);
     const first = [
       await house.getByTestId("house-air-°C").textContent(),
       await probe.textContent(),
@@ -177,7 +179,7 @@ test("weather-day: the climate box through a cold spring day", async ({ page }) 
     await page.reload();
     await expect(page.getByTestId("climate-time")).toHaveText("20 h 00 min", ARRIVES);
     await unfold(page, "House air");
-    await expect(house.getByTestId("house-air-°C")).toHaveText(first[0] ?? "");
+    await expect(house.getByTestId("house-air-°C")).toHaveText(first[0] ?? "", ARRIVES);
     await expect(probe).toHaveText(first[1] ?? "", ARRIVES);
   });
 });
