@@ -289,9 +289,15 @@ const WHITE: Colour = { red: 255, green: 255, blue: 255, alpha: 1 };
 const BLACK: Colour = { red: 0, green: 0, blue: 0, alpha: 1 };
 
 /** `ink`'s contrast on `surface` at its worst: what lies behind a translucent surface
- * can be anything, between white and black. */
+ * can be anything, between white and black, and a translucent ink lets the surface
+ * through in turn. */
 function worstContrast(ink: Colour, surface: Colour): number {
-  return Math.min(ratio(ink, over(surface, WHITE)), ratio(ink, over(surface, BLACK)));
+  return Math.min(
+    ...[WHITE, BLACK].map((backdrop) => {
+      const ground = over(surface, backdrop);
+      return ratio(over(ink, ground), ground);
+    }),
+  );
 }
 
 /** Each pair of `pairs` under what it needs, in `stylesheet`'s themes, by name, with
@@ -338,6 +344,15 @@ describe("the tokens' contrast (P19.6)", () => {
       1,
     );
     expect(worstContrast(WHITE, BLACK)).toBeCloseTo(21, 5);
+  });
+
+  it("draws translucent words or lines over what they sit on, not as if opaque", () => {
+    const panel = colourOf("rgb(17 24 39 / 90%)");
+    expect(worstContrast(colourOf("rgb(229 233 240 / 1%)"), panel)).toBeLessThan(1.1);
+    expect(worstContrast(colourOf("rgb(255 255 255 / 50%)"), BLACK)).toBeCloseTo(5.28, 1);
+
+    const faded = STYLES.replace("--text: #e5e9f0", "--text: rgb(229 233 240 / 1%)");
+    expect(contrastFailures(faded)).toHaveProperty(["dark: --text on --surface-panel, needs 4.5"]);
   });
 
   it("is computed per theme, and reads a change of a token in one of them", () => {
