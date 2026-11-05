@@ -48,6 +48,7 @@ from greenhouse_protocol.plan import (
     PlannedAction,
     Recurrence,
 )
+from greenhouse_protocol.run import RunEpoch
 
 START = datetime(2026, 3, 1, 6, tzinfo=UTC)
 HOUR = timedelta(hours=1)
@@ -117,6 +118,67 @@ def test_a_lost_report_ends_unconfirmed_and_cancels_what_waits_for_it() -> None:
     ends = {o.ref.action_id: o.status for o in gateway.outcomes().outcomes}
 
     assert ends == {"vent": OutcomeStatus.UNCONFIRMED, "after": OutcomeStatus.CANCELLED}
+
+
+class _Reconfigured(InMemoryGateway):
+    """A gateway whose run loses a device between its epochs, which P13's
+    final scenario asks of the in-memory gateway and its interface does not
+    offer."""
+
+    def lose(self, device: str) -> None:
+        self._items = self._items.model_copy(
+            update={"devices": self._items.devices - frozenset({device})}
+        )
+
+
+def test_a_device_gone_when_the_clock_continues_is_refused_as_it_is_carried() -> None:
+    """Step 11: the action that sets it is refused with that reason, as the
+    first outcome of the new epoch. The others keep their identifiers,
+    principals and dependencies, and each is carried out once."""
+    executor = MemoryExecutor(START, lead_s=2 * HOUR.total_seconds())
+    gateway = _Reconfigured(conformance_authorisation(), START, executor=executor)
+    gateway.submit(
+        _plan(
+            gateway,
+            _vent("soon", timing=At(at=START + 2 * HOUR)),
+            _vent("then", timing=At(at=START + 4 * HOUR), after=("soon",)),
+            _vent(
+                "gone",
+                action=SetLevel(device_id="heater", level=1.0),
+                timing=At(at=START + 3 * HOUR),
+            ),
+            _vent("far", timing=At(at=START + 30 * HOUR)),
+        ),
+        by=OPERATOR,
+    )
+    gateway.advance(START + HOUR)
+    assert {str(s.ref): s.state for s in gateway.actions()}["soon"] == ActionStateKind.ASSIGNED
+    before = gateway.run()
+
+    gateway.lose("heater")
+    gateway.restart(continue_clock=True)
+
+    (refused,) = gateway.outcomes().outcomes
+    assert (str(refused.ref), refused.status, refused.reason, refused.epoch) == (
+        "gone",
+        OutcomeStatus.REFUSED,
+        "the run has no heater, as it was carried",
+        before.epoch + 1,
+    )
+    carried = gateway.actions()
+    assert [str(s.ref) for s in carried] == ["soon", "then", "far"]
+    assert {s.principal for s in carried} == {OPERATOR}
+    assert [str(ref) for ref in carried[1].waiting_for] == ["soon"]
+    assert {s.carried_from for s in carried} == {RunEpoch(run_id=before.run_id, epoch=before.epoch)}
+
+    gateway.advance(START + 40 * HOUR)
+
+    assert [(str(each.ref), each.status) for each in gateway.outcomes().outcomes[1:]] == [
+        ("soon", OutcomeStatus.EXECUTED),
+        ("then", OutcomeStatus.EXECUTED),
+        ("far", OutcomeStatus.EXECUTED),
+    ]
+    assert len(executor.reports()) == 3
 
 
 def test_a_critical_action_given_late_is_missed_and_its_dependents_cancelled() -> None:

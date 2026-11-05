@@ -55,6 +55,8 @@ const ONE_BY_ONE = [
   "replay.spec.ts",
   // Two workers at once, which is all a simulator runs by default.
   "worker-runs.spec.ts",
+  // A plan through the reference greenhouse's first days, on a playback of its own.
+  "plan-qa.spec.ts",
   // P09.9's final QA, walked through whole, and the README's short demo, last of all.
   "p09-final-qa.spec.ts",
   "readme-demo.spec.ts",
