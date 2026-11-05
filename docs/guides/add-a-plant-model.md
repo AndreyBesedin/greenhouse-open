@@ -62,7 +62,8 @@ or its cultivated ground, `greenhouse_sim/greenhouse_sim/world/scopes.py`),
 and each row's instance lives its steps in its course
 (`greenhouse_sim/greenhouse_sim/core/area_crop.py`). Its registration
 declares `area`, an `AreaAdapter`, in place of `plants`: its rung, its
-driver profile by name and version, and how its instances are drawn, each
+driver profile by name and version, what a sample of it reads, and how its
+instances are drawn, each
 a canopy over its row (`canopy_entity` in
 `greenhouse_sim/greenhouse_sim/scene/snapshot.py`), as dense as the light
 its leaves take and marked as a proxy, never as plants it does not have. Its
@@ -71,9 +72,14 @@ TOMGRO is the first (`greenhouse_sim/greenhouse_sim/core/tomgro_crop.py`),
 held to its reproduction's reference by
 `greenhouse_sim/tests/test_tomgro.py`, to the contract by
 `greenhouse_sim/tests/test_area_crop.py`, and to a scenario's run by
-`greenhouse_sim/tests/test_run_tomgro.py`. What is measured of it, its
-measurement models, is still to come in P14.9 of the
-[P14 roadmap](../roadmap/p14-models-by-manifest.md).
+`greenhouse_sim/tests/test_run_tomgro.py`. What is measured of it is a
+measurement model's, a model of the crop walk's part that a manifest chooses
+([decision 0062](../decisions/0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md)):
+its `AreaAdapter.sampled` says what a sample reads of a state, in its own
+quantities, and the `canopy_sample` model reads it with its errors
+(`greenhouse_sim/tests/test_canopy_sample.py`). A quantity no
+`ObservationType` names is one more member of that type in
+`greenhouse_protocol`.
 
 ## Steps
 

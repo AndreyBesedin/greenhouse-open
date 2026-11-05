@@ -18,6 +18,12 @@ at noon, and measures each plant as its model has it:
 
 The run's own crop actions are the organ crop's: the simple crop is given
 none (`runs.crop_moment_refusal`).
+
+A crop grown by area has no plants to walk among, nor their harvests. What
+is measured of it is its measurement model's (decision 0062), which a
+scenario chooses: with the part's default, the walk, nothing is; with a
+canopy sample (`CanopySample`), each scope is read at the walk's moment on
+the days it samples, each reading naming its scope, per m² of its floor.
 """
 
 from collections.abc import Sequence
@@ -40,17 +46,21 @@ from greenhouse_protocol.outcome import (
 )
 from greenhouse_protocol.provenance import RecordSource
 
+from greenhouse_sim.core.area_crop import AreaCrop
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.core.crop_actions import CropAction
 from greenhouse_sim.core.rng import seeded_rng
+from greenhouse_sim.domain.scopes import AreaBasis
 from greenhouse_sim.records import event_id, observation_id
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.services.crop import of_plants, scenario_crop
+from greenhouse_sim.scenarios.crop_parameters import CANOPY_SAMPLE, CanopySample, CropWalk
+from greenhouse_sim.services.crop import AnyCrop, of_plants, scenario_crop
 from greenhouse_sim.services.crop_models import Measured, registration
 from greenhouse_sim.services.gateway import Carried
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario, with_weather
 from greenhouse_sim.units import HOUR_S
+from greenhouse_sim.world.scopes import converted
 
 if TYPE_CHECKING:
     # Typed only: the simulator imports the services that take it.
@@ -59,6 +69,8 @@ if TYPE_CHECKING:
 # When the day's walk through the crop is, in seconds into its day: noon.
 WALK_S: Final = 12 * HOUR_S
 CM_PER_M: Final = 100.0
+# What a canopy sample's readings are rounded to.
+SAMPLE_DECIMALS: Final = 3
 # A count that a walk gets wrong is off by one, one way or the other.
 MISCOUNTS: Final = (-1, 1)
 # The event a crop action done makes, by its kind.
@@ -82,9 +94,8 @@ def crop_records(
     crop = scenario_crop(simulator, run)
     grown_by = registration(config).plants
     if grown_by is None or not of_plants(crop):
-        # A crop grown by area has no plants to walk among, nor their
-        # harvests: what is measured of it is its measurement models'.
-        return [], []
+        source = RecordSource(type=SourceType.SIMULATION, source_id=run_id)
+        return _sampled(config, crop, day, walk_moment(start, day), source), []
     day_start = start + timedelta(seconds=day * DAY_S)
     plants = crop.plants_on(day)
     before = crop.plants_on(day - 1) if day > 0 else plants
@@ -226,17 +237,76 @@ def walked_truly(plant: Measured) -> dict[ObservationType, float]:
     }
 
 
+def samples_on(config: ScenarioConfig, day: int) -> bool:
+    """Whether a run of a scenario samples its canopy on its day `day`."""
+    section = config.crop_walk
+    return isinstance(section, CanopySample) and day % section.every_days == 0
+
+
+def sampled_truly(
+    config: ScenarioConfig, crop: AreaCrop[Any], day: int
+) -> dict[str, dict[ObservationType, float]]:
+    """What a canopy sample reads of each scope on the run's day `day`,
+    without its errors, per m² of the scope's floor, by scope: for evaluation
+    (`greenhouse_sim.ground_truth`), and what its readings are made from."""
+    area = registration(config).area
+    if area is None:
+        raise ValueError(f"{config.greenhouse_id}'s crop is not grown by area")
+    basis = area.rung(config).basis
+    scopes = {scope.scope_id: scope for scope in crop.scopes}
+    return {
+        instance.scope_id: {
+            kind: converted(value, scopes[instance.scope_id], basis, AreaBasis.FLOOR)
+            for kind, value in area.sampled(instance.state).items()
+        }
+        for instance in crop.at(day * DAY_S + WALK_S)
+    }
+
+
+def _sampled(
+    config: ScenarioConfig, crop: AnyCrop, day: int, at: datetime, source: RecordSource
+) -> list[Observation]:
+    """A run's canopy samples on its day `day`, if it takes any then: each
+    scope's quantities, each with its own error, which no other scope's or
+    day's draws change."""
+    section = config.crop_walk
+    if not isinstance(section, CanopySample) or of_plants(crop) or not samples_on(config, day):
+        return []
+    observations = []
+    for scope_id, quantities in sampled_truly(config, crop, day).items():
+        rng = seeded_rng(config.random_seed, CANOPY_SAMPLE, scope_id, day)
+        for kind, value in quantities.items():
+            error_pct = section.bias_pct + rng.normal(0.0, section.noise_pct)
+            observations.append(
+                Observation(
+                    observation_id=observation_id(scope_id, at, kind.value),
+                    greenhouse_id=config.greenhouse_id,
+                    plant_id=None,
+                    scope_id=scope_id,
+                    timestamp=at,
+                    observation_type=kind,
+                    value=round(max(0.0, value * (1 + error_pct / 100)), SAMPLE_DECIMALS),
+                    source=source,
+                )
+            )
+    return observations
+
+
 def _walk(
     plant: Measured, config: ScenarioConfig, day: int, at: datetime, source: RecordSource
 ) -> Sequence[Observation]:
     """A plant as the day's walk records it: its fruits and its ripe ones
     counted, sometimes one off; the ripe ones' mass estimated; and how high
     it stands, measured; each with the scenario's own errors."""
+    walk = config.crop_walk
+    if not isinstance(walk, CropWalk):
+        # A scenario that samples a canopy grows none of the plants walked.
+        return []
     rng = seeded_rng(config.random_seed, "crop walk", plant.plant_id, day)
     estimated_g = max(
-        0.0, plant.ripe_mass_g * (1 + rng.normal(0.0, config.crop_walk.ripe_mass_noise_pct / 100))
+        0.0, plant.ripe_mass_g * (1 + rng.normal(0.0, walk.ripe_mass_noise_pct / 100))
     )
-    measured_cm = max(0.0, plant.height_cm + rng.normal(0.0, config.crop_walk.height_noise_cm))
+    measured_cm = max(0.0, plant.height_cm + rng.normal(0.0, walk.height_noise_cm))
 
     def observed(kind: ObservationType, value: float) -> Observation:
         return Observation(
@@ -250,19 +320,19 @@ def _walk(
         )
 
     return [
-        observed(ObservationType.VISIBLE_FRUIT_COUNT, _counted(plant.fruits, config, rng)),
-        observed(ObservationType.RIPE_FRUIT_COUNT, _counted(plant.ripe, config, rng)),
+        observed(ObservationType.VISIBLE_FRUIT_COUNT, _counted(plant.fruits, walk, rng)),
+        observed(ObservationType.RIPE_FRUIT_COUNT, _counted(plant.ripe, walk, rng)),
         observed(ObservationType.ESTIMATED_RIPE_MASS_G, round(estimated_g, 1)),
         observed(ObservationType.VISIBLE_HEIGHT_CM, round(measured_cm, 1)),
     ]
 
 
-def _counted(count: int, config: ScenarioConfig, rng: np.random.Generator) -> float:
+def _counted(count: int, walk: CropWalk, rng: np.random.Generator) -> float:
     """A count as a walk records it: one off, either way, now and then, as a
     fruit is missed or counted twice; but none where there is none, which
     is no fruit to miscount. The draws are made either way, so that a plant
     without fruit leaves the others' counts as they were."""
-    if rng.uniform() < config.crop_walk.fruit_count_noise_probability:
+    if rng.uniform() < walk.fruit_count_noise_probability:
         miscount = int(rng.choice(MISCOUNTS))
         if count > 0:
             count += miscount

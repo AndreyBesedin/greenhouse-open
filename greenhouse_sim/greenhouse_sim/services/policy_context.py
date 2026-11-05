@@ -10,7 +10,9 @@ says nothing of how the simulated world works:
     consumer's cadence;
   - the heat meter, hourly, when the run has a heater (`heat_log`);
   - the crop walk, a measurement model's, daily, when the run grows
-    plants (`crop_log`).
+    plants (`crop_log`);
+  - a canopy sample of each of its crop's scopes, a measurement model's, on
+    the days it samples, when its scenario chooses one (`crop_log`).
 
   Not a camera, whose frames are not observations. Not a sensor's noise,
   drift or faults, nor its position, which are the simulated world's;
@@ -56,6 +58,7 @@ from greenhouse_sim.climate.commands import TARGET_EVERY_S
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.equipment import Target
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.crop_parameters import CanopySample
 from greenhouse_sim.sensors.air import OBSERVATION_TYPES
 from greenhouse_sim.services import heat_log
 from greenhouse_sim.services.climate_runs import SETPOINT_RANGE_C, most_heating_c
@@ -72,6 +75,7 @@ from greenhouse_sim.world.sensors import PointSensor
 # so that none is a sensor's too.
 HEAT_METER: Final = "meter:heating"
 CROP_WALK: Final = "measurement:crop_walk"
+CANOPY_SAMPLE_SOURCE: Final = "measurement:canopy_sample"
 # What a door or a vent does, at a level: it opens.
 OPENS: Final = "opens"
 CELSIUS: Final = "°C"
@@ -153,7 +157,29 @@ def _sources(config: ScenarioConfig, every_s: float) -> tuple[ObservationSource,
         *sensors,
         *([meter] if heat_log.heats(config) else []),
         *([walk] if described_plants(config) else []),
+        *_canopy_samples(config),
     )
+
+
+def _canopy_samples(config: ScenarioConfig) -> list[ObservationSource]:
+    """A source on each scope of a crop a scenario samples, by what its
+    model's samples read."""
+    section, area = config.crop_walk, registration(config).area
+    if not isinstance(section, CanopySample) or area is None:
+        return []
+    kinds = area.sampled(area.rung(config).planted())
+    return [
+        ObservationSource(
+            source_id=f"{CANOPY_SAMPLE_SOURCE}:{scope.scope_id}",
+            kind=SourceKind.MEASUREMENT,
+            scope_id=scope.scope_id,
+            quantities=tuple(
+                ObservedQuantity(observation_type=kind, every_s=section.every_days * DAY_S)
+                for kind in kinds
+            ),
+        )
+        for scope in row_scopes(config.layout, config.envelope)
+    ]
 
 
 def _devices(config: ScenarioConfig) -> tuple[DeviceControl, ...]:
@@ -198,7 +224,7 @@ def _crops(config: ScenarioConfig) -> tuple[CropInstance, ...]:
         CropInstance(
             scope_id=scope.scope_id,
             scope_kind=scope.kind,
-            grown_by=CropBasis.PLANT,
+            grown_by=CropBasis.PLANT if registration(config).area is None else CropBasis.AREA,
             cultivated_m2=scope.cultivated_m2,
             floor_m2=scope.floor_m2,
             plants=tuple(plants[plant_id] for plant_id in held[scope.scope_id]),

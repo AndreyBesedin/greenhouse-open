@@ -1176,7 +1176,7 @@ class Playback:
             return False
         observations = sorted(
             [*readings, *walked, *heated],
-            key=lambda r: (delivered(r), r.sensor_id or r.plant_id or ""),
+            key=lambda r: (delivered(r), r.sensor_id or r.scope_id or r.plant_id or ""),
         )
         # Each event at its moment: the day's crop work by plant, then the
         # run's own crop actions in the order they apply, so that one given

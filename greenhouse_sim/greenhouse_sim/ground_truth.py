@@ -26,7 +26,8 @@ Each true reading is what a perfect instrument would have read in place of
 one of the run's observations: a sensor's, at its sample's moment, the air
 or the weather it sampled (`greenhouse_sim.evaluation.sensor_truth`); the
 walk's, a plant as its crop model measures it
-(`CropRegistration.measured`). Values no observation measures, such as a
+(`CropRegistration.measured`); a canopy sample's, a scope as its model has
+it (`crop_log.sampled_truly`). Values no observation measures, such as a
 plant's growth multiplier, stay inside the run (decision 0059).
 """
 
@@ -38,22 +39,30 @@ from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import crop, sensors
-from greenhouse_sim.services.crop_log import WALK_S, walk_moment, walked_truly
+from greenhouse_sim.services.crop_log import (
+    WALK_S,
+    sampled_truly,
+    samples_on,
+    walk_moment,
+    walked_truly,
+)
 from greenhouse_sim.services.crop_models import registration
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.simulator import Simulator
 
-# What tells one reading of a run from another: the sensor that took it or
-# the plant it is of, what it measures, and when it was taken.
-type Reading = tuple[str | None, str | None, ObservationType, datetime]
+# What tells one reading of a run from another: the sensor that took it, or
+# the plant or the crop's scope it is of, what it measures, and when it was
+# taken.
+type Reading = tuple[str | None, str | None, str | None, ObservationType, datetime]
 
 
 class TrueReading(BaseModel):
     """What a perfect instrument would have read in place of one of a run's
     observations: the point sensor `sensor_id`'s, of the air or the weather
-    where it stands, at one of its sample moments; or the crop walk's, of
-    the plant `plant_id`, on one day, as its crop model measures it."""
+    where it stands, at one of its sample moments; the crop walk's, of the
+    plant `plant_id`, on one day, as its crop model measures it; or a canopy
+    sample's, of the scope `scope_id`, as its model has it."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -62,9 +71,10 @@ class TrueReading(BaseModel):
     value: float
     sensor_id: str | None = None
     plant_id: str | None = None
+    scope_id: str | None = None
 
     def reading(self) -> Reading:
-        return (self.sensor_id, self.plant_id, self.observation_type, self.timestamp)
+        return (self.sensor_id, self.plant_id, self.scope_id, self.observation_type, self.timestamp)
 
 
 class GroundTruth(BaseModel):
@@ -84,6 +94,7 @@ def reading(observation: Observation) -> Reading:
     return (
         observation.sensor_id,
         observation.plant_id,
+        observation.scope_id,
         observation.observation_type,
         observation.timestamp,
     )
@@ -93,8 +104,8 @@ def ground_truth(
     simulator: Simulator, run: RunRequest, until_s: float, *, named: str | None = None
 ) -> GroundTruth:
     """What a run's point sensors truly sampled from its start to `until_s`,
-    and what its walks through the crop truly found on each day walked by
-    then. It is named by `named`, by default the run's identity, as the
+    and what its walks through the crop, or its canopy samples, truly found
+    on each day of theirs by then. It is named by `named`, by default the run's identity, as the
     run's readings are: a playback names those of a run whose plan it
     changed by its own run, its `run_id` (decision 0043)."""
     config = scenario(simulator.catalogue, run.scenario_id)
@@ -113,13 +124,26 @@ def ground_truth(
     ]
     grown = crop.scenario_crop(simulator, run)
     grown_by = registration(config).plants
-    if grown_by is None or not crop.of_plants(grown):
+    walked = [day for day in range(config.duration_days) if day * DAY_S + WALK_S <= until_s]
+    if not crop.of_plants(grown):
         # A crop grown by area has no plants for a walk to measure.
+        readings += [
+            TrueReading(
+                scope_id=scope_id,
+                observation_type=kind,
+                timestamp=walk_moment(start, day),
+                value=value,
+            )
+            for day in walked
+            if samples_on(config, day)
+            for scope_id, quantities in sampled_truly(config, grown, day).items()
+            for kind, value in quantities.items()
+        ]
+    if grown_by is None or not crop.of_plants(grown):
         return GroundTruth(
             run_id=named or sampled.run_id, greenhouse_id=config.greenhouse_id, readings=readings
         )
     measured = grown_by.measured
-    walked = [day for day in range(config.duration_days) if day * DAY_S + WALK_S <= until_s]
     for day in walked:
         at = walk_moment(start, day)
         readings += [
