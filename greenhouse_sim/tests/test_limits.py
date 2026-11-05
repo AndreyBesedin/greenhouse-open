@@ -38,6 +38,7 @@ import workers_support
 SHORT: Final = workers_support.SHORT
 LONG: Final = workers_support.LONG
 WAIT_S: Final = 60.0
+HIGHEST_NICENESS: Final = 19
 # No word of a refusal is a name of the file's.
 FIELD_NAMES: Final = tuple(Limits.model_fields)
 
@@ -302,5 +303,18 @@ def test_a_worker_runs_at_a_lower_priority_than_who_started_it(
         scheduler.start(simulator, SHORT)
         _until(said.exists, "the worker to say its priority")
 
-    assert int(said.read_text()) == min(here + resources.WORKER_NICENESS, 20)
+    assert int(said.read_text()) == min(here + resources.WORKER_NICENESS, HIGHEST_NICENESS)
+    assert os.getpriority(os.PRIO_PROCESS, 0) == here
+
+
+def test_who_runs_a_worker_itself_keeps_its_priority(tmp_path: Path) -> None:
+    objects = FolderStore(tmp_path)
+    here = os.getpriority(os.PRIO_PROCESS, 0)
+    with workers_support.short_simulator() as made:
+        kept = workers_support.with_one_day_committed(made, objects)
+
+    # An epoch that does not wait is left: all that matters is that it was asked.
+    with pytest.raises(SystemExit):
+        scheduler.work(str(tmp_path), kept.run_id, kept.epoch)
+
     assert os.getpriority(os.PRIO_PROCESS, 0) == here

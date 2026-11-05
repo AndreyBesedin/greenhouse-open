@@ -96,8 +96,10 @@ _IN_LINE: Final = (Status.QUEUED, Status.RUNNING)
 def work(root: str, run_id: str, epoch: int) -> None:
     """A worker's process: works out the epoch `epoch` of the run `run_id` in
     the store under `root`, from all that the store holds of it, and exits with
-    0 if the epoch finished."""
-    lower_priority()
+    0 if the epoch finished. Only a process started for it gives way to the machine's
+    other work: a caller that runs this itself is not lowered for good by doing so."""
+    if multiprocessing.parent_process() is not None:
+        lower_priority()
     kept = EpochStore(FolderStore(Path(root)), run_id, epoch)
     kept.counted_by(this_process)
     manifest = kept.manifest()
