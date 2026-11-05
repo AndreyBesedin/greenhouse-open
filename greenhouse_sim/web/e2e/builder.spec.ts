@@ -361,6 +361,117 @@ test("builder: heating pipes and a service zone placed, and changed in the inspe
   await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
 });
 
+test("builder: the reference greenhouse's house edited, put back, through its file and run: the same house", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  const id = `reference_copy_${Date.now()}`;
+  const status = page.getByTestId("builder-status");
+  const runnable = page.getByTestId("builder-runnable");
+  const items = page.locator(".builder-items tbody tr");
+  const palette = page.locator(".builder-palette");
+  const give = page.locator(".builder-give");
+  page.on("dialog", (dialog) => dialog.accept());
+
+  await page.goto("/builder");
+  const copy = page.locator(".builder-copy");
+  await copy.getByLabel("Scenario").selectOption({ label: "Reference greenhouse" });
+  await copy.getByLabel("The copy's identifier").fill(id);
+  await copy.getByRole("button", { name: "Copy its house" }).click();
+  await expect(runnable).toHaveText("It can run.", ARRIVES);
+  await expect(items).toHaveCount(23);
+
+  await test.step("a row of roof vents over two slopes, in one edit, undone in one step", async () => {
+    await palette.getByLabel("What").selectOption("roof_vent");
+    await palette.getByLabel("roof 1 left").check(ARRIVES);
+    await palette.getByLabel("roof 2 left").check();
+    await palette.getByRole("button", { name: "Place" }).click();
+    await expect(status).toHaveText("Placed 4 roof vents on 2 surfaces.", ARRIVES);
+    await expect(items).toHaveCount(31);
+    await expect(runnable).toHaveText("It can run.", ARRIVES);
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect(items).toHaveCount(23);
+  });
+
+  await test.step("the same over a slope with a vent on it: the builder names the two", async () => {
+    await palette.getByLabel("roof 1 left").uncheck();
+    await palette.getByLabel("roof 2 left").uncheck();
+    await palette.getByLabel("roof 1 right").check();
+    await palette.getByRole("button", { name: "Place" }).click();
+    await expect(runnable).toHaveText("One error stops it running.", ARRIVES);
+    await expect(page.locator(".builder-finding-error")).toContainText(
+      "Doors or vents overlap: roof_vent_1 with",
+    );
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect(runnable).toHaveText("It can run.", ARRIVES);
+  });
+
+  await test.step("two rows given another variety cannot run, and run once put back", async () => {
+    await page.getByLabel("Choose row 2").check();
+    await page.getByLabel("Choose row 3").check();
+    await give.getByLabel("Crop model").selectOption("organ");
+    await give.getByLabel("Variety").fill("beefsteak");
+    await page.getByRole("button", { name: "Give the chosen rows this crop" }).click();
+    await expect(runnable).toHaveText("One error stops it running.", ARRIVES);
+    await expect(page.locator(".builder-finding-error")).toContainText("Rows grow different crops");
+    await give.getByLabel("Variety").fill("cherry_tomato");
+    await page.getByRole("button", { name: "Give the chosen rows this crop" }).click();
+    await expect(runnable).toHaveText("It can run.", ARRIVES);
+  });
+
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download house file" }).click();
+  const download = await downloading;
+  const exported = await download.path();
+
+  await test.step("its file, imported into an empty builder, is the house it was", async () => {
+    await page.getByRole("button", { name: "Start again" }).click();
+    await page.locator(".builder-start input[type=file]").setInputFiles({
+      name: download.suggestedFilename(),
+      mimeType: "application/json",
+      buffer: readFileSync(exported),
+    });
+    await expect(status).toContainText("Imported Reference greenhouse (copy)", ARRIVES);
+    await expect(runnable).toHaveText("It can run.", ARRIVES);
+    await expect(items).toHaveCount(23);
+    await expect(page.locator(".builder-findings li")).toHaveCount(0);
+  });
+
+  await test.step("run on a worker, its scene draws the reference greenhouse's house", async () => {
+    const run = page.locator(".builder-run");
+    await run.getByLabel("Starting on").fill("2026-03-01");
+    await run.getByLabel("Days").fill("1");
+    await run.getByLabel("Seed").fill("42");
+    await page.getByRole("button", { name: "Save and start a run" }).click();
+    await expect(page).toHaveURL(new RegExp(`/replay\\?run=${id}_r1.*follow=1`), ARRIVES);
+    await expect(page.getByTestId("replay-status")).toHaveText("Finished", { timeout: 120_000 });
+    const [drawn, reference] = await Promise.all(
+      [`${id}_r1`, "reference_greenhouse"].map((scenario) => houseDrawn(page, scenario)),
+    );
+    expect(drawn?.length).toBeGreaterThan(100);
+    expect(drawn).toEqual(reference);
+  });
+});
+
+/**
+ * What a scenario's scene draws but its plants, without the scenario's name,
+ * which each entity's identifier and label start with: a plant is drawn from
+ * its identifier and seed, so that a house copied under another name grows the
+ * same rows of other plants.
+ */
+async function houseDrawn(page: Page, scenario: string): Promise<unknown[]> {
+  const response = await page.request.get(`/api/scenarios/${scenario}/scene`);
+  expect(response.ok()).toBe(true);
+  const { entities } = JSON.parse(
+    (await response.text())
+      .replaceAll(scenario, "x")
+      .replaceAll(scenario.replaceAll("_", " "), "x"),
+  ) as { entities: { entity_id: string }[] };
+  return entities
+    .filter(({ entity_id }) => !/^x_plant_\d+/.test(entity_id))
+    .sort((a, b) => a.entity_id.localeCompare(b.entity_id));
+}
+
 test("builder: at a phone's width the page fits its window, with the house under the forms", async ({
   page,
 }) => {

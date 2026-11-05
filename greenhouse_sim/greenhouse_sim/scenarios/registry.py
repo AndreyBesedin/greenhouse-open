@@ -8,8 +8,10 @@ tells the runs apart; and a parameter model, which checks the section of a
 manifest that gives its parameters. The registry holds each part's models
 by name, with its default: the model a manifest that says nothing of the
 part runs, today's choice. P14.1 registers the parts a manifest chose
-already: the weather, the air field drawn, the crop and the crop walk's
-measurements. P14.6 registers the others: the sunlight and the sensors,
+already: the weather, the air field drawn, the crop and the crop walk, the
+part that holds the crop's measurement models, the walk among its plants
+and, for a crop grown by area, the sample of its canopy (P14.9, decision
+0062). P14.6 registers the others: the sunlight and the sensors,
 each with the one model it has, which takes no parameters; the house's
 air, as one well-mixed volume or cell by cell beside it; and the
 controller, its loops or none.
@@ -42,8 +44,10 @@ from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.crop_parameters import (
+    CANOPY_SAMPLE,
     RETIRED,
     WALK,
+    CanopySample,
     CropWalk,
     OrganCrop,
     ReducedTomgroCrop,
@@ -141,7 +145,12 @@ MODELS: Final[Mapping[Part, Mapping[str, Model]]] = {
         # Grown by area (decision 0062), from its reproduction (decision 0060).
         Model(Part.CROP, CropModel.REDUCED_TOMGRO.value, ReducedTomgroCrop, "crop"),
     ),
-    Part.CROP_WALK: _models(Model(Part.CROP_WALK, WALK, CropWalk, "crop_walk")),
+    # What measures the crop, as a run's identity covers it: a walk finds
+    # nothing to measure in a crop grown by area, a sample is of nothing else.
+    Part.CROP_WALK: _models(
+        Model(Part.CROP_WALK, WALK, CropWalk, "crop_walk"),
+        Model(Part.CROP_WALK, CANOPY_SAMPLE, CanopySample, "crop_walk"),
+    ),
     # The sun placed and the sky's light after Haurwitz, split into beam and
     # diffuse after Erbs, through the glazing and the shadows of what stands
     # in the house (`greenhouse_sim.solar`).

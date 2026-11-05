@@ -109,6 +109,13 @@ class ObservationType(StrEnum):
     # compartment crop layout
     PLANT_DENSITY_PER_M2 = "plant_density_per_m2"
 
+    # a crop grown by area, sampled on one scope (plant_id None, scope_id
+    # set), per m2 of that scope's floor; dry masses, never fresh yield
+    LEAF_AREA_INDEX = "leaf_area_index"
+    ABOVE_GROUND_DRY_WEIGHT_G_M2 = "above_ground_dry_weight_g_m2"
+    FRUIT_DRY_WEIGHT_G_M2 = "fruit_dry_weight_g_m2"
+    MATURE_FRUIT_DRY_WEIGHT_G_M2 = "mature_fruit_dry_weight_g_m2"
+
     # site weather outside the greenhouse (no compartment)
     OUTSIDE_AIR_TEMPERATURE_C = "outside_air_temperature_c"
     OUTSIDE_RELATIVE_HUMIDITY_PCT = "outside_relative_humidity_pct"

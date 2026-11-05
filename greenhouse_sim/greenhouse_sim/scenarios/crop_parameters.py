@@ -3,8 +3,10 @@ section of its own (P14.3, decision 0054).
 
 A scenario's configuration holds each crop model's parameters under its
 `crop`, told apart by their `kind`, the model's name, as it holds the
-weather's and the air field's; and the walk's measurement noises under its
-`crop_walk`. A manifest gives them in its `models`
+weather's and the air field's; and what measures the crop under its
+`crop_walk`, the part of the registry that holds the crop's measurement
+models (decision 0062): the walk among its plants, or a sample of a canopy
+grown by area. A manifest gives them in its `models`
 (`greenhouse_sim.scenarios.registry`).
 """
 
@@ -13,6 +15,8 @@ from typing import Any, ClassVar, Final, Literal
 from pydantic import (
     BaseModel,
     ConfigDict,
+    Field,
+    NonNegativeFloat,
     NonNegativeInt,
     PositiveFloat,
     PositiveInt,
@@ -21,6 +25,7 @@ from pydantic import (
 
 # The crop walk's one model.
 WALK: Final = "walk"
+CANOPY_SAMPLE: Final = "canopy_sample"
 # The settings of the engine's day the simple crop grew in until it was
 # removed (decision 0059): the bounds its air drifted within, and its
 # sensors' noises. No run read them. A manifest, a checkpoint or a stored
@@ -79,7 +84,7 @@ class SimpleCrop(BaseModel):
 
 class OrganCrop(BaseModel):
     """The organ crop's settings (`greenhouse_sim.biology.tomato.organ`):
-    none a scenario chooses yet, its variety's being its own (P12.4)."""
+    none a scenario chooses yet, its variety's being its own (P20)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -122,6 +127,25 @@ class CropWalk(BaseModel):
     fruit_count_noise_probability: float = 0.1
     ripe_mass_noise_pct: float = 8.0
     height_noise_cm: float = 1.5
+
+
+class CanopySample(BaseModel):
+    """A sample taken of each scope of a crop grown by area, a measurement
+    model (decision 0062): every `every_days` days from the run's first, at
+    the walk's moment, each quantity read with a relative error, in percent,
+    of a normal spread `noise_pct` about the bias `bias_pct`. Its defaults
+    are an exploratory choice, not a source's. Noise and bias at zero make
+    it a perfect instrument, for research, which a manifest has to ask for.
+    It takes nothing from the canopy, as the air takes nothing from it, and
+    its readings are delivered as they are taken."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["canopy_sample"] = CANOPY_SAMPLE
+
+    every_days: PositiveInt = 7
+    noise_pct: NonNegativeFloat = 5.0
+    bias_pct: float = Field(default=0.0, gt=-100.0)
 
 
 # The simple crop's settings when a scenario's crop is of another model: its

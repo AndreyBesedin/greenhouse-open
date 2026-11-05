@@ -1,11 +1,12 @@
 """A reading of the greenhouse: what was measured, of what, when, and where it
 came from.
 
-A reading may say which instrument took it (`sensor_id`), when it reached
-whoever records it, if later than it was taken (`delivered_at`), and what is
-known of its quality (`quality`). Older records, and sources that know none
-of this, leave them unset, and they are written as before. A gap in a
-sensor's readings is an absent record, not a flagged one.
+A reading may say which instrument took it (`sensor_id`), which of a crop's
+scopes it is of (`scope_id`), when it reached whoever records it, if later
+than it was taken (`delivered_at`), and what is known of its quality
+(`quality`). Older records, and sources that know none of this, leave them
+unset, and they are written as before. A gap in a sensor's readings is an
+absent record, not a flagged one.
 """
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
@@ -34,6 +35,9 @@ class Observation(BaseModel):
     source: RecordSource
     # The instrument that took the reading, when it is known.
     sensor_id: str | None = Field(default=None, exclude_if=_unset)
+    # The crop's scope, such as a row, a reading of a crop grown by area is
+    # of: it has no plant to name (decision 0062).
+    scope_id: str | None = Field(default=None, exclude_if=_unset)
     # When the reading was delivered, if after it was taken (`timestamp`).
     delivered_at: Instant | None = Field(default=None, exclude_if=_unset)
     # What is known of the reading's quality; none, for a plain reading.

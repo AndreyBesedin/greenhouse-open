@@ -1,6 +1,9 @@
 # P12: The setup builder
 
-**Status:** in progress: P12.0 to P12.3 are done; the rest is proposed.
+**Status:** in progress: P12.0 to P12.3 are done, and their QA scenario
+[recorded](#recorded-at-88f35bae): all but its first day's check passed.
+What came after them has moved: [P20](p20-crop-parameter-assets.md) takes the crops'
+parameters and [P21](p21-rows-of-different-crops.md) rows of different crops.
 Part of the [simulator roadmap](README.md).
 
 ## Goal
@@ -104,8 +107,8 @@ builder.
    synthetic. More settings stay under "Advanced".
 7. **Simulate:** a draft without errors, resolved to a scenario, runs as
    any scenario does.
-8. **Share:** the file, or a reviewed pull request adding it as a packaged
-   scenario.
+8. **Share:** the file. A packaged scenario is still added by a reviewed pull
+   request, which a person opens with that file.
 
 An "Advanced" panel reaches every field the models have, schema-driven,
 where no dedicated control exists yet; it is a fallback, not a second way
@@ -119,9 +122,9 @@ to describe a house.
 | P12.1 | A manifest holds or names an installation, by a manifest migration; a draft resolved into a scenario and registered at runtime; drafts and revisions kept locally | A packaged scenario's run id unchanged by the migration; a draft without errors runs; drafts saved, reopened and reverted; files exchanged without the store | Done |
 | P12.2 | The builder in the viewer: start, house form, preview, rows chosen together, the scenario step | Create, preview, import, export, save, reopen and run a house in the browser, by keyboard too; its browser QA | Done: the builder page at `/builder` (a start from the form, a draft, a file or a scenario's house; rows chosen together; undo and redo; save, export, and the scenario step and run), with its browser tests. The findings are listed by the rows they concern; shown on the house, and every field reached, with P12.3's property inspector |
 | P12.3 | Equipment and openings: palettes, surface-mounted doors and vents, many items placed, copied and spaced at once, a property inspector | Items placed many at a time with valid geometry and stable ids; collisions explained or refused; every field editable | Done: the simulator's edits of many items at once (`builder.items`): equipment, sensors, zones, fixtures placed one by one, doors and vents, with its findings of items that collide; the API's `POST /api/builder/edit`; the builder's palette and its items chosen many at once; and the inspector: every field of an item and of the house's envelope and rows, items chosen in the view (a pipe run or a rail by any of its parts), and the items an error names outlined on the house; with their browser tests |
-| P12.4 | Crop model parameters as versioned assets, edited by schema-driven forms | A tomato parameter set edited, saved, compared, exported, and a run reproduced from its version | Proposed, building on [P14](p14-models-by-manifest.md), models chosen by the manifest |
-| P12.5 | Rows of different crops run | Different models or varieties per row simulated reproducibly, or refused by name | Proposed |
-| P12.6 | Publication: a reviewed pull request from the builder, files carrying their models' parameter versions, every model field reachable | A re-imported installation is the same, with the same model references | Proposed |
+| P12.4 | Crop model parameters as versioned assets, edited by schema-driven forms | | Moved to [P20](p20-crop-parameter-assets.md), as P20.1 |
+| P12.5 | Rows of different crops run | | Moved to [P21](p21-rows-of-different-crops.md), as P21.1 |
+| P12.6 | Publication | | Split. A pull request made from the builder is dropped: a house file, downloaded and uploaded, already moves a house, and a person can open a pull request with it. Files carrying their parameter versions and every model field reachable moved to [P20](p20-crop-parameter-assets.md), as P20.2 |
 
 ### P12.0: what it does, and what it leaves
 
@@ -135,7 +138,7 @@ the file (`export_installation`, `import_installation`, refusing with a
 `Problem` per field at fault, and `installation.schema.json`).
 
 It keeps no draft, resolves nothing into a scenario, places no equipment,
-and runs no row of another crop; P12.1 to P12.5 do.
+and runs no row of another crop; P12.1 to P12.3 and P21 do.
 
 ### P12.1: the manifest's installation, drafts kept, and drafts run
 
@@ -147,7 +150,7 @@ the crop every row grows. The installation's model,
 imports it. `scenario_house` gives a scenario its house from it, the
 layout's crop rows and their planting positions as the run's rows and
 columns, and refuses an installation a run cannot grow: no crop rows, a
-row without a crop, rows of different crops (P12.5).
+row without a crop, rows of different crops (P21).
 
 A format 3 manifest is migrated: its house fields become its installation,
 named for its scenario, every row growing its crop. The packaged manifests
@@ -183,20 +186,6 @@ The browser tests' server keeps drafts in that default file too: a test
 that saves one gives the server a file of its own, so as never to write
 to the user's.
 
-### P12.4 and the models chosen by the manifest
-
-The audit plans a project for models chosen by the manifest: a model's
-identity and version, its state in a checkpoint, reproducibility, how the
-viewer meets models it was not built with, and the simple model's numbers
-in a section of their own, by a versioned manifest migration. P12.4 starts
-when that project has given a crop model an identity, a version and typed
-parameters: its forms edit those parameters, and its assets are those
-versions. P12.4 adds no registry of its own.
-
-Until then a form cannot author a growth algorithm: new models are Python,
-with their conformance tests, and a form edits the parameters of an
-existing one within their bounds.
-
 ## Tests and review
 
 - The models' own checks for impossible values; findings for what the
@@ -210,7 +199,7 @@ existing one within their bounds.
 - Safety: unknown fields refused, no code imported, a file's size bounded,
   drafts saved atomically, packaged scenarios never changed by an edit.
 
-## QA scenario (proposed)
+## QA scenario
 
 In the browser: start from the reference greenhouse's house, add a row of
 roof vents over two slopes in one edit and undo it, give two rows another
@@ -218,10 +207,55 @@ variety and see the builder say the run cannot grow them, put them back,
 export the file, import it into an empty builder, and run it: the run's
 scene and its first day match the reference greenhouse's.
 
+### Recorded at `88f35bae`
+
+Run on 5 November 2026 on `88f35bae`, 0.6.0 and what merged after it, on the Vite development
+server (StrictMode) in a headed Chromium drawing with the machine's GPU (ANGLE Metal, Apple M2),
+with an API and a state folder of its own. Exporting is now *Download house file*, and a run is
+started by *Save and start a run*, on a worker, in its replay; they were walked in place of the
+scenario's words.
+
+| Step | Result | What was seen |
+| --- | --- | --- |
+| Start from the reference greenhouse's house | Passed | *Copy its house*: a draft not saved, 23 items and 4 rows, nothing found against it, and it can run. |
+| Roof vents over two slopes, in one edit | Passed | Four on each of `roof 1 left` and `roof 2 left`: "Placed 4 roof vents on 2 surfaces.", 31 items, `roof_vent_4` to `roof_vent_11`, drawn on the roof. Over `roof 1 right`, which holds a vent: "Doors or vents overlap: roof_vent_1 with roof_vent_5, roof_vent_1 with roof_vent_6", the items outlined on the house, and it cannot run. |
+| Undo | Passed | One step: 23 items, and it can run. |
+| Two rows given another variety | Passed | "Rows grow different crops; a run grows one model and one variety." *Save and start a run* is disabled, and the run step says why. |
+| Put back | Passed, once the model is chosen too | The rows' form starts at the `simple` model whatever the rows grow, so typing only the variety back leaves rows 2 and 3 on another model, and the same error. Choosing `organ` as well: it can run. |
+| Export | Passed | *Download house file*: `<identifier>.house.json`. |
+| Import into an empty builder | Passed | *Start again*, which asks first, then the file: the same 23 items and 4 rows, nothing found against it. |
+| Run it | Passed | From 1 March 2026, seed 42, 2 days: `ref_qa_10816_r1-climate-806a05ba`, finished on a worker, its replay drawn. |
+| Its scene matches the reference greenhouse's | Passed for the house | The 148 entities that are not plants' are equal, but for the scenario's name each holds; the envelope, layout, crop and site read from the file equal the scenario's. The plants differ, 2,883 entities against 2,958: a plant is drawn from its identifier and seed (`transplant`), and its identifier holds the scenario's name, so a house copied under another name grows other plants at the same seed. |
+| Its first day matches the reference greenhouse's | **Failed as written** | The house's air starts at 18 °C, not 14 °C, and averages 10.1 °C over the day, not 17.0 °C. A house's file holds no more than the house (design point 1): the run has neither the scenario's heating loops (`control`), its daily commands (`daily`), its weather, its crop work, its start of the air (`climate`) nor its `airflow`. The run step offers the presets by name, and not the reference's season. |
+
+What is left: to say what this check should compare. Either the scenario's words change to the
+house and its plants' rows, as design point 1 has it, or copying a scenario's house offers to keep
+that scenario's settings for the run, as `services.drafts` keeps those of a scenario that is not
+packaged (`_kept_from_its_scenario`). Until that is decided the check stands as failed. P12.0 to
+P12.3 keep their status: what each was accepted for passed in the walk.
+
+Also seen: the house form's labels *Origin Position X* and *Origin X* say little of what tells them
+apart. The console was clean but for the renderer library's deprecation warning.
+
+Not run: the house form and palette by keyboard alone, which the browser tests do in part; a
+packaged scenario's own file, whose upload is refused as a packaged scenario's
+(`e2e/scenario-file.spec.ts`); a first day compared at the replay's own readings, the comparison
+above being the API's climate run of each scenario.
+
+A browser test holds what can be held: `builder.spec.ts`, the reference greenhouse's house edited,
+put back, through its file and run, its scene's house equal to the scenario's.
+
 ## Open questions
 
-- Whether a row's crop belongs on an explicit row object rather than beside
-  `CropRows`, which repeats one row; P12.5 migrates rather than keeping
-  both.
-- Whether the first editor ships the schema-driven "Advanced" panel before
-  every dedicated control.
+Answered from the code at the commit above, or carried on:
+
+- **Whether a row's crop belongs on an explicit row object rather than beside
+  `CropRows`, which repeats one row.** Not yet asked of the code: `Installation.row_crops` holds a
+  crop per row number beside `CropRows`, and a run refuses rows that differ
+  (`scenario_house`), so nothing yet needs rows to be objects. Carried into P21, rows of different
+  crops, which migrates rather than keeping both.
+- **Whether the first editor ships the schema-driven "Advanced" panel before every dedicated
+  control.** It did, by another name: no panel is called "Advanced", and the *Envelope and rows*
+  form and the items' inspector are read from the published schema (`builder/schemaForm.ts`), so
+  every field of an item and of the house's envelope and rows is reached now. The fields of a crop
+  model are not, which P20, crop parameters as versioned assets, carries.
