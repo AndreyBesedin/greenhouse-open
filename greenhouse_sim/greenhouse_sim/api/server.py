@@ -295,7 +295,8 @@ def _add_limits(parser: argparse.ArgumentParser) -> None:
         default=None,
         help=(
             "a JSON file of what the simulator's runs may use, any of the limits below "
-            "by the name of its option with `_` for `-`; by default those of one machine"
+            "by the name of its option with `_` for `-`; by default those of one machine. "
+            f"An option of any limit but the workers may say {NO_LIMIT}"
         ),
     )
     for name, field in Limits.model_fields.items():
@@ -304,7 +305,7 @@ def _add_limits(parser: argparse.ArgumentParser) -> None:
             dest=name,
             default=None,
             metavar="N",
-            help=f"{field.description}, or {NO_LIMIT} for no limit",
+            help=field.description,
         )
 
 
