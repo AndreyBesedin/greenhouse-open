@@ -181,6 +181,17 @@ def test_a_device_gone_when_the_clock_continues_is_refused_as_it_is_carried() ->
     assert len(executor.reports()) == 3
 
 
+def test_a_run_that_ends_cancels_what_is_still_to_come() -> None:
+    gateway = _gateway(conformance_authorisation(), START)
+    gateway.submit(_plan(gateway, _vent("vent")), by=OPERATOR)
+
+    gateway.finish()
+
+    (cancelled,) = gateway.outcomes().outcomes
+    assert (cancelled.status, cancelled.reason) == (OutcomeStatus.CANCELLED, "the run finished")
+    assert gateway.actions() == ()
+
+
 def test_a_critical_action_given_late_is_missed_and_its_dependents_cancelled() -> None:
     gateway = _gateway(conformance_authorisation(), START + 2 * HOUR)
     critical = _vent("pick", lateness=Lateness(on_late=OnLate.CRITICAL))
