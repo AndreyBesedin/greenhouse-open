@@ -25,7 +25,8 @@ them (P17.4, decision 0065).
                                           did not start is asked through the store:
                                           the epoch answered says it is `stopping`,
                                           and it reads interrupted once its worker
-                                          has looked
+                                          has looked. One a playback of this server
+                                          plays has that playback stopped
     POST /api/runs/{run}/epochs/{n}/resume?seconds_per_day=10
                                           an interrupted epoch, or one still
                                           running that no one works, carried on

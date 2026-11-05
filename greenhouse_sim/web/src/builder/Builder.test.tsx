@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
+import { keepHouse } from "../landing/uploaded";
 import { button, choose, click, enter, type Rendered, render, said } from "../testing/render";
 import { Builder } from "./Builder";
 
@@ -218,6 +218,40 @@ describe("the setup builder (P12.2)", () => {
     vi.restoreAllMocks();
   });
 
+  it("opens the draft the address names, or says why it cannot", async () => {
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === "/api/drafts/my_greenhouse") {
+        return answer({
+          ...STARTING_HOUSE,
+          draft: { draft_id: "my_greenhouse", revision: 3, saved_at: "2026-10-23T12:00:00Z" },
+        });
+      }
+      if (url.startsWith("/api/builder/assess")) {
+        return answer(STARTING_HOUSE);
+      }
+      if (url === "/api/drafts") {
+        return answer([]);
+      }
+      return answer({ error: "no draft gone" }, 404);
+    });
+    shown = render(<Builder hash="#draft=my_greenhouse" />);
+    await settled();
+
+    expect(said(shown.container, "builder-status")).toBe("Opened My greenhouse, revision 3.");
+    expect(said(shown.container, "builder-draft")).toBe(
+      "My greenhouse (my_greenhouse), revision 3",
+    );
+    shown.unmount();
+
+    shown = render(<Builder hash="#draft=gone" />);
+    await settled();
+
+    expect(said(shown.container, "builder-status")).toBe(
+      "The draft cannot be opened: no draft gone",
+    );
+  });
+
   it("keeps an edit made while a save is on its way, as changed since", async () => {
     const saves = holdingSaves();
     shown = render(<Builder />);
@@ -290,7 +324,7 @@ describe("the setup builder (P12.2)", () => {
       return "blob:exported";
     });
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
-    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const offered = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     shown = render(<Builder />);
     const page = shown.container;
     await settled();
@@ -299,15 +333,18 @@ describe("the setup builder (P12.2)", () => {
 
     placeAHeater(page);
     await settled();
-    expect(button(page, "Export").disabled).toBe(true);
-    click(button(page, "Export"));
+    expect(button(page, "Download house file").disabled).toBe(true);
+    click(button(page, "Download house file"));
     expect(exported).toEqual([]);
 
     edits.release();
     await settled();
-    click(button(page, "Export"));
+    click(button(page, "Download house file"));
     const [file] = exported;
     expect(exported).toHaveLength(1);
+    expect((offered.mock.contexts[0] as HTMLAnchorElement).download).toBe(
+      `${STARTING_HOUSE.installation.installation_id}.house.json`,
+    );
     expect(JSON.parse(await (file as Blob).text()).layout.equipment).toMatchObject([
       { actuator_id: "heater_1" },
     ]);
@@ -625,6 +662,155 @@ describe("the setup builder (P12.2)", () => {
     expect(went).toEqual([]);
     expect(said(shown.container, "builder-status")).toBe("");
   });
+  describe("a file opened (P17.11)", () => {
+    const { installation_id: houseId, name: houseName } = STARTING_HOUSE.installation;
+    const DRAFT_OF_IT = {
+      draft_id: houseId,
+      name: houseName,
+      revision: 2,
+      saved_at: "2026-10-23T12:00:00Z",
+    };
+
+    function simulator(drafts: unknown[], uploaded?: Response): string[] {
+      const asked: string[] = [];
+      vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+        const url = String(input);
+        asked.push(url);
+        if (url === "/api/scenarios/upload" && uploaded !== undefined) {
+          return uploaded;
+        }
+        if (
+          url.startsWith("/api/builder/assess") ||
+          url === "/api/scenarios/shared_box/installation"
+        ) {
+          return answer(STARTING_HOUSE);
+        }
+        if (url === "/api/drafts") {
+          return answer(drafts);
+        }
+        return answer(
+          url === "/api/scenarios" ? [] : { error: "no" },
+          url === "/api/scenarios" ? 200 : 404,
+        );
+      });
+      return asked;
+    }
+
+    async function imported(page: HTMLElement, name: string): Promise<void> {
+      const input = page.querySelector<HTMLInputElement>(".builder-start input[type=file]");
+      Object.defineProperty(input, "files", {
+        value: [new File(["{}"], name, { type: "application/json" })],
+        configurable: true,
+      });
+      await act(async () => {
+        input?.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      await settled();
+    }
+
+    afterEach(() => sessionStorage.clear());
+
+    it("opens the house the start page kept, not saved", async () => {
+      simulator([]);
+      keepHouse(houseId, { fileName: "my_greenhouse.json", text: "{}" });
+
+      shown = render(<Builder hash={`#installation=${houseId}`} />);
+      await settled();
+
+      expect(said(shown.container, "builder-status")).toBe(
+        `Imported ${houseName} from my_greenhouse.json; not saved yet.`,
+      );
+      expect(said(shown.container, "builder-draft")).toContain("not saved");
+    });
+
+    it("says a draft of its identifier is kept, though the page has only just listed them", async () => {
+      simulator([DRAFT_OF_IT]);
+      keepHouse(houseId, { fileName: "my_greenhouse.json", text: "{}" });
+
+      shown = render(<Builder hash={`#installation=${houseId}`} />);
+      await settled();
+
+      expect(said(shown.container, "builder-status")).toContain(
+        `A draft with the identifier ${houseId} is kept already: change this one's identifier to save it.`,
+      );
+      expect(said(shown.container, "builder-draft")).toContain("not saved");
+    });
+
+    it("says so when the address names a file this window does not keep", async () => {
+      simulator([]);
+
+      shown = render(<Builder hash={`#installation=${houseId}`} />);
+      await settled();
+
+      expect(said(shown.container, "builder-status")).toContain("not kept in this window");
+    });
+
+    it("takes a scenario file at its import, with the run settings the file held", async () => {
+      const asked = simulator(
+        [],
+        answer({
+          kind: "scenario",
+          scenario: { id: "shared_box", name: "Shared box" },
+          settings: {
+            start_date: "2026-03-01",
+            duration_days: 12,
+            random_seed: 3,
+            weather: "default",
+          },
+          missing_weather: null,
+        }),
+      );
+      shown = render(<Builder />);
+      await settled();
+
+      await imported(shown.container, "shared.scenario.json");
+
+      expect(asked).toContain("/api/scenarios/shared_box/installation");
+      expect(said(shown.container, "builder-status")).toContain("from a scenario file");
+      const fields = [...shown.container.querySelectorAll<HTMLInputElement>(".builder-run input")];
+      expect(fields.map((each) => each.value)).toEqual(["2026-03-01", "12", "3"]);
+      expect(shown.container.querySelector('[data-testid="builder-uploaded-note"]')).not.toBeNull();
+    });
+
+    it("says at its import what a scenario file's missing weather needs", async () => {
+      simulator(
+        [],
+        answer({
+          kind: "scenario",
+          scenario: null,
+          settings: {
+            start_date: "2026-03-01",
+            duration_days: 12,
+            random_seed: 3,
+            weather: "default",
+          },
+          missing_weather: { file: "spring.csv", digest: "ab".repeat(32) },
+        }),
+      );
+      shown = render(<Builder />);
+      await settled();
+
+      await imported(shown.container, "shared.scenario.json");
+
+      expect(said(shown.container, "builder-status")).toContain(
+        "shared.scenario.json runs under spring.csv",
+      );
+    });
+
+    it("says at its import why a file is refused, and stays where it is", async () => {
+      simulator([], answer({ error: "not a scenario file or a house file: not JSON" }, 400));
+      shown = render(<Builder />);
+      await settled();
+
+      await imported(shown.container, "notes.json");
+
+      expect(said(shown.container, "builder-status")).toBe(
+        "notes.json cannot be opened: not a scenario file or a house file: not JSON",
+      );
+      expect(button(shown.container, "Import a file")).toBeDefined();
+    });
+  });
+
   it("keeps the run settings of the draft opened while an uploaded scenario was on its way (P17.11)", async () => {
     sessionStorage.setItem(
       "greenhouse.uploaded.shared_box",
@@ -647,6 +833,9 @@ describe("the setup builder (P12.2)", () => {
       }
       if (url.startsWith("/api/builder/assess")) {
         return answer(STARTING_HOUSE);
+      }
+      if (url === "/api/scenarios/upload") {
+        return answer({ kind: "installation", assessed: STARTING_HOUSE });
       }
       return answer(
         url.startsWith("/api/drafts") || url === "/api/scenarios" ? [] : { error: "no" },

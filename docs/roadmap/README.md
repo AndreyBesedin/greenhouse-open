@@ -65,7 +65,7 @@ rendering, physics, CFD and numerical acceleration.**
 Cell-level plant models, continuous full Navier-Stokes for a whole
 greenhouse, botanically accurate deformable mechanics, cinematic realism for
 its own sake, every crop or greenhouse technology, differentiable backends
-throughout, or a hectare at full fidelity in real time.
+throughout, a hectare at full fidelity in real time, or a viewer made for phones.
 
 ## Current technical choices
 
@@ -121,8 +121,21 @@ pull request lands, and holds the state of each of its steps.
 | [P15](p15-policy-port.md) | A policy's port, and an experiment that steps a run | Done: final QA passed on 2026-11-01 |
 | [P16](p16-crop-at-its-models-step.md) | A run's crop at its model's step, not the run's day | Done, but for P16.4, deferred until a model takes crop work within its day |
 | [P17](p17-runs-and-playbacks.md) | Runs kept in a store, playbacks as positions, and a place to choose | In progress: P17.1 to P17.9 done, some with parts left; P17.10, its QA, run for what is delivered; P17.11 in progress; [the clean-up](p17-cleanup.md) left |
-| [P18](p18-resources-and-deployment.md) | Resources counted and limited, and a run that can move | In progress: P18.1 and P18.2 done |
+| [P18](p18-resources-and-deployment.md) | Resources counted and limited, and a run that can move | In progress: P18.1, P18.2 and P18.4 done |
 | [P19](p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | In progress: P19.1 to P19.5 done |
+
+## After a QA
+
+A project's QA and a manual walk end the same way, in this order:
+
+1. **List what it found,** with what was seen and what was only said, in a report in this
+   folder.
+2. **Fix what blocks,** and only that.
+3. **Plan the rest,** in the report, the project's clean-up or a project of its own.
+4. **Release.** Work that adds a feature starts again after it.
+
+The last QA is [the walk of 2026-11-04](qa-2026-11-04.md). What it found to fix is fixed, and
+what it planned is in its report.
 
 ## Order of work
 
@@ -142,6 +155,7 @@ pull request lands, and holds the state of each of its steps.
   Camera imperfections, crop work within the day, CO₂ and light targets, intelligence
   components, crop models from plant research, a Modelica comparison, the test suite
   and CI time, a second repository audit, and an assistant in the viewer.
+- **[QA of 2026-11-04](qa-2026-11-04.md):** what a manual walk of the viewer found, and what follows from it.
 - **Clean-ups:** what reviews and walks left, per project:
   [P03](p03-cleanup.md), [P14](p14-cleanup.md), [P17](p17-cleanup.md).
 - **[Frontend maintenance](frontend-maintenance.md):** the frontend audits of

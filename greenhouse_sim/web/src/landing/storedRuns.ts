@@ -115,16 +115,26 @@ export function keptText(runs: readonly StoredRun[]): string | null {
 export const KEPT_SIZE_NOTE =
   "The size of the runs' own objects (their records and checkpoints), not of the disk they are on.";
 
+/** The day of an instant, where it is read; nothing when it is not known. */
+export function dayText(instant: string | null): string {
+  if (instant === null) {
+    return "";
+  }
+  const day = new Date(instant);
+  return Number.isNaN(day.getTime())
+    ? ""
+    : day.toLocaleDateString("en", { month: "short", day: "numeric" });
+}
+
 /** The day a run was started, where it is read; nothing when its start is not
  * known. */
 export function startedText(run: StoredRun): string {
-  if (run.created_at === null) {
-    return "";
-  }
-  const started = new Date(run.created_at);
-  return Number.isNaN(started.getTime())
-    ? ""
-    : started.toLocaleDateString("en", { month: "short", day: "numeric" });
+  return dayText(run.created_at);
+}
+
+/** Which of a scenario's runs it is, in words: its seed and epoch. */
+export function whoIs(run: Pick<StoredRun, "seed" | "epoch">): string {
+  return `${run.seed === null ? "the scenario's seed" : `seed ${run.seed}`}, epoch ${run.epoch}`;
 }
 
 /** What names a stored epoch, among the runs the simulator keeps. */

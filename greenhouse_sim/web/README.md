@@ -276,12 +276,14 @@ the numbers, and CI, which has no graphics card, does not run it
 
 ## The demo
 
-`e2e/demo.spec.ts` walks through P09's final QA on the reference greenhouse
-(`docs/demo.md`), step by step, as a browser test. `uv run record-demo`,
-from the repository's root (`npm run demo:record` here, with `PYTHON` naming
-the simulator's interpreter), plays it on this machine's graphics card with
-a caption on each step, lingering on each (`DEMO_PAUSE_MS`), and records it
-as video under `test-results/demo/`.
+`e2e/readme-demo.spec.ts` walks through the main features, the README's video of
+under a minute (`docs/demo.md`), as a browser test; `e2e/p09-final-qa.spec.ts`
+walks through P09's final QA on the reference greenhouse, step by step.
+`uv run record-demo`, from the repository's root (`npm run demo:record` here,
+with `PYTHON` naming the simulator's interpreter), plays the first on this
+machine's graphics card, on a store of its own, with a caption on each step,
+lingering on each (`DEMO_PAUSE_MS`), after a worker has computed the days it
+replays (`DEMO_DAYS`), and records it as video under `test-results/demo/`.
 
 ## Screenshots
 

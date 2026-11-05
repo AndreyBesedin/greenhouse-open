@@ -382,6 +382,69 @@ def test_a_paused_playback_is_listed_as_paused_while_it_is_held(
         no_playbacks()
 
 
+def test_a_position_says_a_playback_holds_its_epoch_as_the_list_does(
+    simulator: Simulator, no_playbacks: Callable[[], None]
+) -> None:
+    try:
+        started = respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true")
+        assert started.status == HTTPStatus.OK and isinstance(started.body, dict)
+        epoch_path = f"/api/runs/{started.body['run_id']}/epochs/{started.body['epoch']}"
+        opened = respond(simulator, "POST", f"{epoch_path}/positions")
+        assert opened.status == HTTPStatus.OK and isinstance(opened.body, dict)
+        position_path = f"/api/positions/{opened.body['position_id']}"
+
+        def said() -> tuple[Status, bool, bool]:
+            at = PositionState.model_validate(respond(simulator, "GET", position_path).body)
+            listed = StoredRun.model_validate(respond(simulator, "GET", epoch_path).body)
+            assert (at.status, at.paused) == (listed.status, listed.paused)
+            return at.status, at.paused, at.playing
+
+        assert said() == (Status.RUNNING, True, False)
+        # Its own play is no clock of the epoch's, which stands still.
+        played = respond(simulator, "POST", f"{position_path}/play")
+        assert PositionState.model_validate(played.body).paused is True
+        assert said() == (Status.RUNNING, True, True)
+
+        respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/play")
+        assert said() == (Status.RUNNING, False, True)
+
+        respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/pause")
+        assert said() == (Status.RUNNING, True, True)
+
+        stopped = respond(simulator, "POST", f"{epoch_path}/stop")
+        assert stopped.status == HTTPStatus.OK
+        # Whichever the stop's answer found, no playback holds it from then on.
+        assert said()[1] is False
+    finally:
+        no_playbacks()
+
+
+def test_a_position_over_another_run_is_not_paused_by_a_playback_held(
+    simulator: Simulator, no_playbacks: Callable[[], None]
+) -> None:
+    try:
+        respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true")
+        assert simulator.runs is not None
+        EpochStore.create(
+            simulator.runs,
+            EpochManifest(
+                run_id=RUN,
+                epoch=1,
+                scenario_id=SCENARIO,
+                seed=5,
+                layout="default",
+                status=Status.RUNNING,
+                duration_s=DAYS * DAY_S,
+                created_at=run_start(simulator.catalogue, SCENARIO),
+            ),
+        )
+        opened = respond(simulator, "POST", f"/api/runs/{RUN}/epochs/1/positions")
+        at = PositionState.model_validate(opened.body)
+        assert (at.status, at.paused) == (Status.RUNNING, False)
+    finally:
+        no_playbacks()
+
+
 def test_an_epoch_of_another_run_is_not_paused_by_a_playback_held(
     simulator: Simulator, no_playbacks: Callable[[], None]
 ) -> None:

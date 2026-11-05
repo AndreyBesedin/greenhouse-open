@@ -61,6 +61,7 @@ test("a list's rows line up, and a dialog's controls stay on their row, whatever
       [".landing-run-replay", 3],
       [".landing-run-follow", 1],
       [".landing-run-control", 2],
+      [".landing-run-delete", 3],
     ] as const) {
       const column = await columnOf(rows, selector);
       expect(column).toHaveLength(rowsWithIt);
@@ -77,7 +78,6 @@ test("a list's rows line up, and a dialog's controls stay on their row, whatever
   await page.goto(runsAddress(SCENARIO_ID));
   const rows = page.getByRole("dialog").locator(".landing-run");
   await expectColumns(rows);
-  expect(new Set(await columnOf(rows, ".landing-run-delete")).size).toBe(1);
   // Replay and Follow beside Stop and Delete, not above them, down to the width
   // the rows give way at.
   await page.setViewportSize({ width: NARROWEST_WITH_COLUMNS, height: 800 });
@@ -205,10 +205,14 @@ test("a run is started at a seed from a scenario's dialog, listed, and not remov
   const started = replayTarget(new URL(page.url()).search);
   try {
     await page.goto(runsAddress("solar_lab"));
-    const row = dialog.locator(".landing-run").filter({ hasText: "Seed 7" }).first();
+    const row = dialog
+      .locator(".landing-run")
+      .filter({ hasText: /Seed 7(?!\d)/ })
+      .first();
     await expect(row).toBeVisible();
-    await row.getByRole("button", { name: /^Delete the run with seed 7/ }).click();
-    await dialog.getByRole("button", { name: /^Delete the run with seed 7/ }).click();
+    // The seed whole, and the row's own: other specs leave runs at other seeds.
+    await row.getByRole("button", { name: /^Delete the run with seed 7,/ }).click();
+    await row.getByRole("button", { name: /^Delete the run with seed 7,/ }).click();
     await expect(dialog.getByRole("alert")).toContainText("being computed");
     await expect(row).toBeVisible();
 

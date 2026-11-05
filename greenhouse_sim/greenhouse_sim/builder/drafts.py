@@ -290,7 +290,10 @@ def _read(connection: sqlite3.Connection, draft_id: str, revision: int) -> Revis
 
 def _stale(draft_id: str, latest: int | None, on: int | None) -> str:
     if on is None:
-        return f"a draft {draft_id!r} is kept already, at revision {latest}"
+        return (
+            f"a draft with the identifier {draft_id!r} is kept already, at revision {latest}: "
+            "change this one's identifier to save it"
+        )
     if latest is None:
         return f"no draft {draft_id!r} to save revision {on} on"
     return f"draft {draft_id!r} is at revision {latest}, not {on}: another was saved since"

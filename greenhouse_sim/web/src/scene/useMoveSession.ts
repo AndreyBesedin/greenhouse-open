@@ -123,7 +123,10 @@ export function useMoveSession({
       const restarted = await commandPlayback(followed, "restart", fetchFn, to ?? defaultLayout);
       onPlayback(restarted);
       if (restarted.status !== "loaded") {
-        const failure = restarted.status === "unavailable" ? restarted.reason : "no answer";
+        const failure =
+          restarted.status === "unavailable" || restarted.status === "failed"
+            ? restarted.reason
+            : "no answer";
         setSession((was) => was && { ...was, applying: false, failure });
         return;
       }
