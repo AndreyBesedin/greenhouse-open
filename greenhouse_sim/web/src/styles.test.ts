@@ -17,7 +17,22 @@ function withImports(
   );
 }
 
-const STYLES = withImports(fileURLToPath(new URL("./styles.css", import.meta.url)));
+/** The stylesheets `path` is made of, itself first, each as it was written. */
+function importedStylesheets(
+  path: string,
+  read: (path: string) => string = (file) => readFileSync(file, "utf8"),
+): { path: string; text: string }[] {
+  const text = read(path);
+  return [
+    { path, text },
+    ...[...text.matchAll(/^@import\s+"([^"]+)";[^\S\n]*$/gm)].flatMap(([, imported]) =>
+      importedStylesheets(join(dirname(path), imported ?? ""), read),
+    ),
+  ];
+}
+
+const ENTRY = fileURLToPath(new URL("./styles.css", import.meta.url));
+const STYLES = withImports(ENTRY);
 // What a panel's text or background may be: one of the theme's colours, or
 // none of its own. Anything else, a colour named, written in hex or made by
 // any function, stays the same whichever theme is chosen.
@@ -69,7 +84,7 @@ const COLOUR_ROLE =
 
 // And the size tokens, each scale's steps written out, so that a new step is too.
 const SIZE_STEP =
-  /^--(?:font-(?:xs|sm|md|lg|xl|[234]xl)|radius-(?:sm|md|lg|xl|pill)|space-[1-9]|focus-(?:width|offset)|target)$/;
+  /^--(?:font-(?:xs|sm|md|lg|xl|[234]xl)|radius-(?:sm|md|lg|xl|pill)|space-[1-9]|focus-(?:width|offset)|target(?:-compact)?)$/;
 
 function misnamedTokens(names: Iterable<string>): string[] {
   return [...names].filter((name) => !COLOUR_ROLE.test(name) && !SIZE_STEP.test(name));
@@ -117,6 +132,7 @@ describe("the stylesheet", () => {
         "--font-2xl",
         "--radius-pill",
         "--target",
+        "--target-compact",
         "--space-9",
         "--panel-text",
         "--landing-bg",
@@ -442,6 +458,8 @@ const FEATURES = new Set([
   "lab",
   "move",
   "qa",
+  // The design system's components (P19.6), whose rules stand in `src/design/` alone.
+  "ds",
 ]);
 // `visually-hidden` is said to whoever hears the page and not shown.
 const STATES = new Set(["applied", "at-the-end", "folded", "refused", "stale", "visually-hidden"]);
@@ -540,6 +558,11 @@ const BUILT = new Set([
   "landing-status-interrupted",
   "landing-status-queued",
   "landing-status-running",
+  // `buttonClass`: what is drawn as a button, by its tone and size (P19.6).
+  "ds-button",
+  "ds-button-primary",
+  "ds-button-danger",
+  "ds-button-compact",
 ]);
 
 describe("the stylesheet's classes (AUDIT.20)", () => {
@@ -608,13 +631,22 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
 // (below), so that replacing each `var()` is what the browser computes.
 //
 // A pull request that means to change a style writes the digests the test
-// prints here, in its own diff, where review sees them; a token step must not.
-// It goes when selectors start to move (P19.6), and the page baselines hold.
+// prints here, in its own diff, where review sees them; a token step must not. The
+// components' rules stand outside it: the reference page's baselines hold those, and
+// adding them moves nothing a page draws.
+//
+// It goes when selectors start to move (P19.8). Until then it holds what nothing else
+// does: at `c0262394`, 206 of the stylesheet's 370 rules match nothing on the pages the
+// no-tolerance baselines draw, and the guards below read how a value is written, not
+// which it is.
 const RESOLVED_DIGESTS = {
   dark: "ab704d70264c7abbe8ae0b2062d37a1fcb4e36f0505231903e1dba9b531b6d9d",
   light: "491325346cbd151d8cc513d8fdf882ea7ef7c6d1d69453a2ac3a09c15af27482",
 };
 type ThemeName = keyof typeof RESOLVED_DIGESTS;
+const STYLES_OF_THE_PAGES = withImports(ENTRY, (file) =>
+  file.endsWith("/design/components.css") ? "" : readFileSync(file, "utf8"),
+);
 const COMMENT = /\/\*[\s\S]*?\*\//g;
 const ROOT_BLOCK = /:root([^{]*)\{([^}]*)\}/g;
 const LIGHT_ROOT = /\[data-theme="light"\]\s*$/;
@@ -673,7 +705,7 @@ function outsideTheTokens(stylesheet: string): string[] {
 }
 
 describe("a button that cannot be pressed", () => {
-  it.each([".replay-button", ".landing-button"])("looks so, as %s", (selector) => {
+  it.each([".replay-button", ".landing-button", ".ds-button"])("looks so, as %s", (selector) => {
     const rule = new RegExp(`\\${selector}:disabled\\s*\\{([^}]*)\\}`).exec(STYLES)?.[1] ?? "";
     expect(rule).toMatch(/opacity:/);
     expect(rule).toMatch(/cursor:\s*not-allowed/);
@@ -691,9 +723,22 @@ describe("the stylesheet with its tokens resolved (P19.1)", () => {
 
   it("is what it was", () => {
     expect(
-      { dark: digest(resolved(STYLES, "dark")), light: digest(resolved(STYLES, "light")) },
+      {
+        dark: digest(resolved(STYLES_OF_THE_PAGES, "dark")),
+        light: digest(resolved(STYLES_OF_THE_PAGES, "light")),
+      },
       "the stylesheet draws something else: a token step must not; a change of style writes these digests in RESOLVED_DIGESTS",
     ).toEqual(RESOLVED_DIGESTS);
+  });
+
+  it("leaves out the rules of no page, and only those", () => {
+    expect(STYLES_OF_THE_PAGES).not.toContain(".ds-");
+    expect(STYLES_OF_THE_PAGES).toContain(".landing-button");
+  });
+
+  it("uses no token that is not defined, in a component's rules too", () => {
+    expect(() => resolved(STYLES, "dark")).not.toThrow();
+    expect(() => resolved(STYLES, "light")).not.toThrow();
   });
 
   it("can be replaced by a substitution, as custom properties stand on :root alone", () => {
@@ -780,7 +825,10 @@ describe("the stylesheet with its tokens resolved (P19.1)", () => {
 const SIZE_SCALES: readonly { property: RegExp; token: RegExp }[] = [
   { property: /^font(?:-size)?$/, token: /^var\(--font-[\w-]+\)$/ },
   { property: /^border(?:-[a-z]+)*-radius$/, token: /^var\(--radius-[\w-]+\)$/ },
-  { property: /^min-(?:width|height|inline-size|block-size)$/, token: /^var\(--target\)$/ },
+  {
+    property: /^min-(?:width|height|inline-size|block-size)$/,
+    token: /^var\(--target(?:-compact)?\)$/,
+  },
   {
     property: /^(?:(?:grid-)?(?:row-|column-)?gap|padding(?:-[a-z-]+)?|margin(?:-[a-z-]+)?)$/,
     token: /^var\(--space-[1-9]\)$/,
@@ -1020,5 +1068,100 @@ describe("the stylesheet's sizes (P19.4, P19.5)", () => {
         [".a { font-size: 11px }"],
       ),
     ).toEqual({ unlisted: [".a { font-size: 11px }"], gone: [] });
+  });
+});
+
+/** Each rule's selector list in a stylesheet, its comments left out and its quotes kept. */
+function selectorLists(stylesheet: string): string[] {
+  return [...stylesheet.replace(COMMENT, "").matchAll(/([^{};]*)\{/g)].map(([, prelude]) =>
+    (prelude ?? "").trim().replace(/\s+/g, " "),
+  );
+}
+
+/** The selectors in `stylesheets` that name a component outside `src/design/`. */
+function componentsRestyled(stylesheets: readonly { path: string; text: string }[]): string[] {
+  return stylesheets
+    .filter(({ path }) => !path.includes("/src/design/"))
+    .flatMap(({ text }) => selectorLists(text).filter((list) => /(?<![\w-])ds-/.test(list)));
+}
+
+// The focus rings written today. One ring on every control, in `base.css`, is a visual
+// step (P19.12), which takes these with it: this can only shrink.
+const FOCUS_RINGS = [
+  ".ds-button:focus-visible",
+  ".home-button:focus-visible",
+  ".panel-stripe:hover, .panel-stripe:focus-visible",
+  ".replay-handle:focus-visible",
+];
+
+describe("the design system's components (P19.6)", () => {
+  it("are styled in src/design/ alone, so that no page restyles one", () => {
+    const stylesheets = importedStylesheets(ENTRY);
+    expect(stylesheets.map(({ path }) => path).filter((path) => path.includes("/design/"))).toEqual(
+      [
+        expect.stringMatching(/tokens/),
+        expect.stringMatching(/base/),
+        expect.stringMatching(/components/),
+      ],
+    );
+    expect(componentsRestyled(stylesheets)).toEqual([]);
+  });
+
+  it("refuse a page's rule that names one, however it is selected", () => {
+    const written = `
+      /* .ds-button in a comment. */
+      .bands-chart, .cards-ds-row { gap: 0; }
+      .landing .ds-button { color: red; }
+      .ds-icon-button:hover { opacity: 1; }
+      [class*="ds-button"] { opacity: 1; }
+      @media (min-width: 600px) { .a > .ds-page { color: red; } }
+    `;
+    expect(
+      componentsRestyled([
+        { path: "/web/src/landing/landing.css", text: written },
+        { path: "/web/src/design/components.css", text: ".ds-button { gap: 0; }" },
+      ]),
+    ).toEqual([
+      ".landing .ds-button",
+      ".ds-icon-button:hover",
+      '[class*="ds-button"]',
+      ".a > .ds-page",
+    ]);
+  });
+
+  it("are read through the entry's imports, nested ones too", () => {
+    const files: Record<string, string> = {
+      "/s/styles.css": '@import "./design/tokens.css";\n.a { gap: 0; }\n',
+      "/s/design/tokens.css": '@import "./colours.css";\n',
+      "/s/design/colours.css": ":root { --b: 2px; }\n",
+    };
+    expect(
+      importedStylesheets("/s/styles.css", (path) => files[path] ?? "").map(({ path }) => path),
+    ).toEqual(["/s/styles.css", "/s/design/tokens.css", "/s/design/colours.css"]);
+  });
+
+  it("wear one focus ring of the tokens' sizes", () => {
+    const rule = /\.ds-button:focus-visible\s*\{([^}]*)\}/.exec(STYLES)?.[1] ?? "";
+    expect(rule).toMatch(/outline:\s*var\(--focus-width\) solid var\(--action\)/);
+    expect(rule).toMatch(/outline-offset:\s*var\(--focus-offset\)/);
+  });
+});
+
+/** The rules in `stylesheet` that draw a focus ring of their own. */
+function focusRings(stylesheet: string): string[] {
+  return selectorLists(stylesheet).filter((list) => list.includes(":focus-visible"));
+}
+
+describe("the stylesheet's focus rings (P19.6)", () => {
+  it("are the ones named here", () => {
+    expect(againstTheList(focusRings(STYLES), FOCUS_RINGS)).toEqual({ unlisted: [], gone: [] });
+  });
+
+  it("refuse one more, whatever its selector", () => {
+    expect(
+      focusRings(
+        ".a:focus-visible { gap: 0; } .b:focus { gap: 0; } :is(.c, .d:focus-visible) { gap: 0; }",
+      ),
+    ).toEqual([".a:focus-visible", ":is(.c, .d:focus-visible)"]);
   });
 });
