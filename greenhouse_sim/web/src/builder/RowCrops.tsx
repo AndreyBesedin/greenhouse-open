@@ -1,14 +1,18 @@
 import { type FormEvent, useId, useState } from "react";
 
 import { type Crop, rowNumbers } from "./edits";
+import { ASSESSED_SCHEMA } from "./generated/assessedSchema";
 import type { CropModel, Installation } from "./generated/assessedTypes";
 
-const MODELS: readonly CropModel[] = ["simple", "organ"];
+const MODELS = ASSESSED_SCHEMA.$defs.CropModel.enum as readonly CropModel[];
+const FIRST_MODEL: CropModel = "simple";
+const FIRST_VARIETY = "cherry_tomato";
 
 /**
  * The crop each row grows, and one crop given to many rows at once (P12.2):
  * rows are chosen by their boxes, all of them at once by the first, and
- * given the crop below in one edit, undone in one step.
+ * given the crop below in one edit, undone in one step. It starts as the first
+ * row's, so that a new variety keeps the model the house grows.
  */
 export function RowCrops({
   installation,
@@ -21,8 +25,10 @@ export function RowCrops({
   const rows = rowNumbers(installation);
   const crops = new Map(installation.row_crops.map((each) => [each.row, each]));
   const [chosen, setChosen] = useState<ReadonlySet<number>>(new Set());
-  const [model, setModel] = useState<CropModel>("simple");
-  const [variety, setVariety] = useState("cherry_tomato");
+  const [model, setModel] = useState<CropModel>(
+    installation.row_crops[0]?.crop_model ?? FIRST_MODEL,
+  );
+  const [variety, setVariety] = useState(installation.row_crops[0]?.variety ?? FIRST_VARIETY);
   const all = rows.length > 0 && rows.every((row) => chosen.has(row));
 
   function choose(row: number, on: boolean): void {
