@@ -122,7 +122,7 @@ pull request lands, and holds the state of each of its steps.
 | [P16](p16-crop-at-its-models-step.md) | A run's crop at its model's step, not the run's day | Done, but for P16.4, deferred until a model takes crop work within its day |
 | [P17](p17-runs-and-playbacks.md) | Runs kept in a store, playbacks as positions, and a place to choose | In progress: P17.1 to P17.9 done, some with parts left; P17.10, its QA, run for what is delivered; P17.11 in progress; [the clean-up](p17-cleanup.md) left |
 | [P18](p18-resources-and-deployment.md) | Resources counted and limited, and a run that can move | In progress: P18.1 to P18.4 done |
-| [P19](p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | In progress: P19.1 to P19.5 done |
+| [P19](p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | In progress: P19.1 to P19.6 done |
 
 ## After a QA
 
@@ -142,7 +142,7 @@ what it planned is in its report.
 1. **Finish P17:** what its QA scenario (P17.10) and its walks left in
    [the clean-up](p17-cleanup.md).
 2. **P18:** what a run used counted, then limited (P18.2 to P18.6).
-3. **P19:** the design system's remaining steps (P19.6 on).
+3. **P19:** the design system's remaining steps (P19.7 on).
 4. **The [research priorities](research-validation-priorities.md)**
    ([decision 0057](../decisions/0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md),
    proposed): two published tomato models reproduced and made P14 models, a validation
