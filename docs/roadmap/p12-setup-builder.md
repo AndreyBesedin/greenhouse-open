@@ -1,6 +1,7 @@
 # P12: The setup builder
 
-**Status:** in progress: P12.0 to P12.3 are done, and its QA scenario is what is left.
+**Status:** in progress: P12.0 to P12.3 are done, and their QA scenario
+[recorded](#recorded-at-88f35bae): all but its first day's check passed.
 What came after them has moved: [P20](p20-crop-parameter-assets.md) takes the crops'
 parameters and [P21](p21-rows-of-different-crops.md) rows of different crops.
 Part of the [simulator roadmap](README.md).
@@ -198,7 +199,7 @@ to the user's.
 - Safety: unknown fields refused, no code imported, a file's size bounded,
   drafts saved atomically, packaged scenarios never changed by an edit.
 
-## QA scenario (proposed)
+## QA scenario
 
 In the browser: start from the reference greenhouse's house, add a row of
 roof vents over two slopes in one edit and undo it, give two rows another
@@ -206,10 +207,55 @@ variety and see the builder say the run cannot grow them, put them back,
 export the file, import it into an empty builder, and run it: the run's
 scene and its first day match the reference greenhouse's.
 
+### Recorded at `88f35bae`
+
+Run on 5 November 2026 on `88f35bae`, 0.6.0 and what merged after it, on the Vite development
+server (StrictMode) in a headed Chromium drawing with the machine's GPU (ANGLE Metal, Apple M2),
+with an API and a state folder of its own. Exporting is now *Download house file*, and a run is
+started by *Save and start a run*, on a worker, in its replay; they were walked in place of the
+scenario's words.
+
+| Step | Result | What was seen |
+| --- | --- | --- |
+| Start from the reference greenhouse's house | Passed | *Copy its house*: a draft not saved, 23 items and 4 rows, nothing found against it, and it can run. |
+| Roof vents over two slopes, in one edit | Passed | Four on each of `roof 1 left` and `roof 2 left`: "Placed 4 roof vents on 2 surfaces.", 31 items, `roof_vent_4` to `roof_vent_11`, drawn on the roof. Over `roof 1 right`, which holds a vent: "Doors or vents overlap: roof_vent_1 with roof_vent_5, roof_vent_1 with roof_vent_6", the items outlined on the house, and it cannot run. |
+| Undo | Passed | One step: 23 items, and it can run. |
+| Two rows given another variety | Passed | "Rows grow different crops; a run grows one model and one variety." *Save and start a run* is disabled, and the run step says why. |
+| Put back | Passed, once the model is chosen too | The rows' form starts at the `simple` model whatever the rows grow, so typing only the variety back leaves rows 2 and 3 on another model, and the same error. Choosing `organ` as well: it can run. |
+| Export | Passed | *Download house file*: `<identifier>.house.json`. |
+| Import into an empty builder | Passed | *Start again*, which asks first, then the file: the same 23 items and 4 rows, nothing found against it. |
+| Run it | Passed | From 1 March 2026, seed 42, 2 days: `ref_qa_10816_r1-climate-806a05ba`, finished on a worker, its replay drawn. |
+| Its scene matches the reference greenhouse's | Passed for the house | The 148 entities that are not plants' are equal, but for the scenario's name each holds; the envelope, layout, crop and site read from the file equal the scenario's. The plants differ, 2,883 entities against 2,958: a plant is drawn from its identifier and seed (`transplant`), and its identifier holds the scenario's name, so a house copied under another name grows other plants at the same seed. |
+| Its first day matches the reference greenhouse's | **Failed as written** | The house's air starts at 18 °C, not 14 °C, and averages 10.1 °C over the day, not 17.0 °C. A house's file holds no more than the house (design point 1): the run has neither the scenario's heating loops (`control`), its daily commands (`daily`), its weather, its crop work, its start of the air (`climate`) nor its `airflow`. The run step offers the presets by name, and not the reference's season. |
+
+What is left: to say what this check should compare. Either the scenario's words change to the
+house and its plants' rows, as design point 1 has it, or copying a scenario's house offers to keep
+that scenario's settings for the run, as `services.drafts` keeps those of a scenario that is not
+packaged (`_kept_from_its_scenario`). Until that is decided the check stands as failed. P12.0 to
+P12.3 keep their status: what each was accepted for passed in the walk.
+
+Also seen: the house form's labels *Origin Position X* and *Origin X* say little of what tells them
+apart. The console was clean but for the renderer library's deprecation warning.
+
+Not run: the house form and palette by keyboard alone, which the browser tests do in part; a
+packaged scenario's own file, whose upload is refused as a packaged scenario's
+(`e2e/scenario-file.spec.ts`); a first day compared at the replay's own readings, the comparison
+above being the API's climate run of each scenario.
+
+A browser test holds what can be held: `builder.spec.ts`, the reference greenhouse's house edited,
+put back, through its file and run, its scene's house equal to the scenario's.
+
 ## Open questions
 
-- Whether a row's crop belongs on an explicit row object rather than beside
-  `CropRows`, which repeats one row; P21 migrates rather than keeping
-  both.
-- Whether the first editor ships the schema-driven "Advanced" panel before
-  every dedicated control.
+Answered from the code at the commit above, or carried on:
+
+- **Whether a row's crop belongs on an explicit row object rather than beside
+  `CropRows`, which repeats one row.** Not yet asked of the code: `Installation.row_crops` holds a
+  crop per row number beside `CropRows`, and a run refuses rows that differ
+  (`scenario_house`), so nothing yet needs rows to be objects. Carried into P21, rows of different
+  crops, which migrates rather than keeping both.
+- **Whether the first editor ships the schema-driven "Advanced" panel before every dedicated
+  control.** It did, by another name: no panel is called "Advanced", and the *Envelope and rows*
+  form and the items' inspector are read from the published schema (`builder/schemaForm.ts`), so
+  every field of an item and of the house's envelope and rows is reached now. The fields of a crop
+  model are not, which P20, crop parameters as versioned assets, carries.
