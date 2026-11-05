@@ -298,6 +298,9 @@ class _Elsewhere:
     def delete(self, name: str) -> None:
         self._held.pop(name, None)
 
+    def free_bytes(self) -> int | None:
+        return None
+
 
 def test_no_scheduler_is_made_after_the_simulator_is_closed(tmp_path: Path) -> None:
     """A simulator closed before its first run asked for would otherwise make a

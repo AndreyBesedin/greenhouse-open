@@ -20,7 +20,13 @@ one epoch, as when a server starts while one it replaced is still starting a wor
 one takes it and the other leaves.
 
 A process is the worker because P17.1 measured what a thread costs a process
-that is working: 46% of its speed against 5% for another process.
+that is working: 46% of its speed against 5% for another process. It runs at a lower
+priority than the API (decision 0067), so that a viewer stays responsive beside it.
+
+A run asked for may be refused, saying why, for what the simulator's `limits` allow:
+too many waiting, too little disk free, or too much in the store. So may a resume or a
+fork, which ask for a worker in the same way. What waits already keeps waiting if the
+limits have been lowered since.
 
 An epoch whose worker ends without ending it, killed or lost, is told
 `interrupted` with what it had committed, and can be asked for again to be
@@ -50,14 +56,16 @@ from typing import Final
 from greenhouse_sim.services import forks, interrupted, scenario_files
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.interventions import Asked
+from greenhouse_sim.services.limits import store_too_large, too_little_disk, too_many_waiting
 from greenhouse_sim.services.playback import stop_epoch
-from greenhouse_sim.services.resources import this_process
+from greenhouse_sim.services.resources import lower_priority, this_process
 from greenhouse_sim.services.run_store import (
     ENDED,
     EpochStore,
     FolderStore,
     Status,
     StoredRun,
+    held_bytes,
     stored_run,
 )
 from greenhouse_sim.services.run_store import epochs as stored_epochs
@@ -88,7 +96,10 @@ _IN_LINE: Final = (Status.QUEUED, Status.RUNNING)
 def work(root: str, run_id: str, epoch: int) -> None:
     """A worker's process: works out the epoch `epoch` of the run `run_id` in
     the store under `root`, from all that the store holds of it, and exits with
-    0 if the epoch finished."""
+    0 if the epoch finished. Only a process started for it gives way to the machine's
+    other work: a caller that runs this itself is not lowered for good by doing so."""
+    if multiprocessing.parent_process() is not None:
+        lower_priority()
     kept = EpochStore(FolderStore(Path(root)), run_id, epoch)
     kept.counted_by(this_process)
     manifest = kept.manifest()
@@ -183,6 +194,7 @@ class Scheduler:
         with self._lock:
             if self._closed.is_set():
                 raise Conflict("the workers are closed")
+            self._check_room()
             epoch = queued(
                 self._simulator,
                 self._objects,
@@ -216,6 +228,9 @@ class Scheduler:
                 raise Conflict("the workers are closed")
             if key in self._running or any((j.run_id, j.epoch) == key for j in self._waiting):
                 raise Conflict(f"epoch {epoch} of {run_id} is waiting for a worker or has one")
+            # First: all that follows may write, finding the epoch interrupted or
+            # giving it its scenario's file, which no refusal for room is to do.
+            self._check_room()
             interrupted.mark_epoch(self._simulator, run_id, epoch)
             if kept.manifest().status != Status.INTERRUPTED:
                 raise Conflict(
@@ -247,6 +262,7 @@ class Scheduler:
         with self._lock:
             if self._closed.is_set():
                 raise Conflict("the workers are closed")
+            self._check_room()
             made = forks.fork(
                 self._simulator,
                 self._objects,
@@ -261,6 +277,29 @@ class Scheduler:
             self._waiting.append(_Job(made.run_id, made.epoch, resuming=True))
             self._launch()
             return stored_run(self._objects, made.run_id, made.epoch)
+
+    def _check_room(self) -> None:
+        """Under the lock: refuses a run the simulator's limits have no room for,
+        before anything of it is written, saying which limit and the figures. A run
+        that a free worker takes at once does not wait, so is not refused for that. A
+        server's limit may be lower than the workers a server before it left, and those
+        are not runs waiting."""
+        limits = self._simulator.limits
+        free_workers = max(0, self._limit - len(self._running) - len(self._elsewhere))
+        waiting = len(self._waiting)
+        if limits.waiting_runs is not None and waiting - free_workers >= limits.waiting_runs:
+            raise Conflict(too_many_waiting(waiting, limits.waiting_runs))
+        free = self._objects.free_bytes()
+        if (
+            limits.free_disk_bytes is not None
+            and free is not None
+            and free < limits.free_disk_bytes
+        ):
+            raise Conflict(too_little_disk(free, limits.free_disk_bytes))
+        if limits.store_bytes is not None:
+            held = held_bytes(self._objects)
+            if held >= limits.store_bytes:
+                raise Conflict(store_too_large(held, limits.store_bytes))
 
     def workers(self) -> list[Worker]:
         """The epochs being executed now."""
@@ -496,7 +535,9 @@ def of(simulator: Simulator) -> Scheduler:
                 raise NotFound("this simulator keeps no runs: it was made with no run store")
             if not isinstance(simulator.runs, FolderStore):
                 raise Conflict("workers need the run store in a folder")
-            simulator.scheduler = Scheduler(simulator, simulator.runs.root, limit=simulator.workers)
+            simulator.scheduler = Scheduler(
+                simulator, simulator.runs.root, limit=simulator.limits.workers
+            )
         return simulator.scheduler
 
 

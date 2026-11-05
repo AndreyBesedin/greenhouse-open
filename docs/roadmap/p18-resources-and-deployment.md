@@ -138,7 +138,7 @@ a process; `RLIMIT_AS` on macOS, which P18.3 must check before relying on it.
 | --- | --- | --- | --- |
 | P18.1 | An epoch is self-contained: the scenario and its recording written into the store when it is queued; a worker takes a store's address and an epoch; built and uploaded scenarios run and resume in workers with their own weather and site. No run id moves. | `feat(sim): an epoch carries what it needs to run` | Done: an epoch of a scenario that is not packaged names, in its manifest, its portable file under `scenarios/<digest>.json`, with its recording inside and checked to read back as the same configuration; its pace is in the manifest too, so that `work` takes a folder's path, a run and an epoch. A simulator started on the store registers these files as it does the uploaded ones. An epoch from before this, of a packaged scenario, resumes as it did; of another, it is given its file if this simulator knows the scenario as the run it is, and is refused in words if not. A run of a draft named as a registered scenario, as a draft opened from a file is, stays under its site and weather unless it asks for others. Not delivered: a packaged scenario is not written, since every simulator has it; a worker's simulator has the default authorisation and no crew; a file stays when the last epoch naming it is deleted |
 | P18.2 | Counted: the usage object at each commit, outside every digest; a failed epoch's reason; the list reads them, and its cost is measured again against the table above. | `feat(sim): an epoch says what it used and why it failed` | Done: `usage.json` beside the manifest, written after each commit and as the epoch ends, and `reason` in the manifest, both in the answer of `GET /api/runs`; see "What P18.2 counts" below. An epoch kept before this is given its report once, by `python -m greenhouse_sim.usage_reports <folder>`. Not delivered: the viewer shows neither (P18.5); a list does not see a file lost from inside a day's folder, only opening the epoch or asking it to resume does, and each refuses in words; until that command has run, an epoch kept before this costs a list what it always did |
-| P18.3 | Limited: `Limits` from a file and the server's options; refusals for waiting runs and free disk; epochs ended by bytes, memory or time, keeping what they committed; workers at a lower priority. | `feat(sim): a simulator's runs have limits` | Planned |
+| P18.3 | Limited: `Limits` from a file and the server's options; refusals for waiting runs and free disk; epochs ended by bytes, memory or time, keeping what they committed; workers at a lower priority. | `feat(sim): a simulator's runs have limits` | In progress: limits read and runs refused are done, see "What P18.3 limits" below; epochs ended by a limit are next |
 | P18.4 | The store's *create unless it exists*, for a folder; leases and claims use it, which closes the window above; the queue rebuilt from `queued` manifests after a restart, so that a waiting run survives one. | `feat(sim): a claim on an epoch needs no lock`; `feat(sim): a run waiting survives a restart` | Done, in two pull requests. **Claims:** `ObjectStore.create` makes an object unless one exists, and of any callers at once tells exactly one that it did: a promise of the store's interface, which a store of objects gives as a conditional write and a folder as a hard link of a whole file. A worker claims an epoch before it does anything to it, by creating `leases/{number}.json`, the number after a newest claim that is not fresh, so that of all who read one claim one makes the next, and a number already passed is refused to one who comes late. A holder writes only its own number, and letting go creates the next, so that a thread stopped between reading and writing takes nothing from a later holder: that closes the window above. Telling an epoch `interrupted` is a claim too, so that it and a worker taking the epoch up are told apart. A worker that finds its epoch another's, or no longer waiting, exits saying so and nothing is told of the epoch. A crash costs 30 s: its claim expires, and the next number is free. An epoch's `lease.json` from before claims is believed until it expires. Measured, at load 11 to 26 on the machine above: 8 processes racing, each of 2,000 `create` rounds had one winner and each of 200 claimed epochs one holder; a `create` takes 0.47 ms against a `put`'s 0.21 ms, a claim and its letting go 2.9 ms. Not delivered: a holder stalled past 30 s, as on a machine asleep, whose epoch is taken over is not stopped, and its writes still reach the store; a folder must be on a file system with hard links, and any other refuses its epochs with the file system's error (not run on one); the two small objects a working of an epoch leaves stay until it is deleted, and count in its size; epochs are still given their numbers by whoever starts them, one at a time. **The queue:** a scheduler stamps a manifest as it puts an epoch in line (`queued_at`, which no digest holds), and a simulator starting on a folder makes the queue again from those it finds, in that order (`scheduler.restore`), so that a run waiting survives a restart, a server closed included, which leaves what waits waiting; what a worker was computing is told `interrupted` if it is ended, as before. Its pace and its scenario's file are read from the store by its worker, as ever. An epoch whose worker lives, by its claim, whether `queued` or `running`, is left to it and counts against the limit on workers until its claim is no longer believed, when it is told `interrupted` if it had not ended. Of two workers given one epoch, as when a killed server's worker has not yet claimed it, one leaves, and the run is counted the same way. An epoch whose scenario this simulator cannot run, its file gone or its name unknown and no file kept, is told `interrupted`, and a request to carry it on says why. An epoch with no stamp, from before this or one that a process of its own was to take up, is found by `interrupted` as it was. One deleted from the store while it waits is passed over; the route still refuses to delete one that waits. A stop asked of one that waits takes it out of the queue, and one asked of a run counted so writes the request its worker reads; a request left in the store of one found waiting ends its worker at its first look. Measured: finding the queue over 1,000 epochs that ended takes 0.09 s. Not delivered: a worker a killed server had started and that has not yet claimed its epoch is not counted, so that the limit can be passed by it for the seconds until it claims or leaves; each server on one store keeps its own limit; a deleted epoch stays in `Scheduler.waiting` until its turn; the order is that of the machine's clock |
 | P18.5 | The viewer: what a run used and why it failed in the runs dialog; workers busy, runs waiting and free disk on the landing page; a refusal in words. | `feat(viewer): what the runs use, and why one was refused` | Planned |
 | P18.6 | The QA scenario below, run and recorded. | `test: runs within their limits` | Planned |
@@ -202,6 +202,52 @@ every object, and touches no other object, so that no run id, digest or position
   saying it is damaged, whereas with none a list goes on walking that one.
 - It prints how many it wrote and skipped and each failure, and its exit code is 1 if
   any failed. It does not read objects for their digests (`verify`).
+
+### What P18.3 limits
+
+`Limits` is given to a `Simulator` as its authorisation is: the server takes `--limits
+<file>`, JSON with any of the limits below, and an option for each that takes the place
+of what the file says of it, `none` for no limit. A file or an option that is not limits
+stops the server from starting, saying why.
+
+| In the file | Option | Default | Past it |
+| --- | --- | --- | --- |
+| `workers` | `--workers` | 2 | The run waits |
+| `waiting_runs` | `--waiting-runs` | 200 | A run asked for is refused |
+| `free_disk_bytes` | `--free-disk-bytes` | 2 GB | A run asked for is refused |
+| `store_bytes` | `--store-bytes` | None | A run asked for is refused |
+
+**A refusal** is a 409 from every route that asks for a worker (a run, a resume, a fork),
+written by the scheduler before anything of the run is, and it says which limit and the
+figures, as "the disk of the run store has 1.2 GB free, and a run begins only with 2.0 GB
+free: free some space, or lower that limit".
+
+- A run a free worker takes at once does not wait, so that it is not refused for waiting.
+  So with two workers free and room for 200, 202 are let in, and 98 of 300 are refused.
+- What waits as a server starts keeps waiting if the limit has been lowered since; only
+  what is asked for after that is refused. Workers a server before it left, more than its
+  limit, leave no worker free and are not counted as waiting.
+- A resume is asked about room first, before it finds the epoch interrupted or gives one
+  from before P18.1 its scenario's file, so that a refusal writes nothing. One that could not
+  be carried on anyway, asked for while there is no room, is told of the room.
+- `free_bytes` is a store's operation, of which a store with no disk of its own says none,
+  and then no run is refused for it. A folder not made yet says what its nearest parent's
+  disk has free.
+- `store_bytes` adds up the epochs' reports, which may lag a worker by a commit, the walk of
+  an epoch with none, and what no epoch holds, such as the scenarios' files. It is read only
+  when that limit is set.
+
+**A worker runs at niceness 10** above whoever started it, from its first line, so that on
+a machine it fills the API and a viewer are given a core first.
+
+**What a refusal costs**, on the machine above at load 3 to 5, each the median of many: 9 us
+for the checks asked of every run, of which 8 us is the folder's free space. With a limit on
+the store's bytes, one more read of each epoch's report: 6.9 ms over 102 epochs, 64 ms over
+1,002, under the lock runs are asked for under, so 300 runs asked for at once over 1,002
+epochs spend 19 s on it. No commit, list or day of a worker is any different.
+
+Not delivered: a playback in the API's process opens an epoch with none of these checks, and
+its `--play` is not refused; each server on one store keeps its own count of what waits.
 
 ## Acceptance criteria
 

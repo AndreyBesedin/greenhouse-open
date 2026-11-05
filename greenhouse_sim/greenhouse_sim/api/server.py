@@ -48,6 +48,7 @@ from greenhouse_sim.services.gateway import (
     AuthorisationConfig,
     authorisation_file,
 )
+from greenhouse_sim.services.limits import NO_LIMIT, Limits, limits_given
 from greenhouse_sim.services.run_store import FolderStore, ObjectStore
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.wanted import NoLongerWanted, wanted_while
@@ -97,13 +98,14 @@ class SimulatorServer(ThreadingHTTPServer):
         drafts: DraftStore | None = None,
         authorisation: AuthorisationConfig = LOCAL_AUTHORISATION,
         runs: ObjectStore | None = None,
+        limits: Limits | None = None,
     ) -> None:
         # Before binding: a server that fails to bind closes itself, which
         # closes a simulator it made, and then raises the bind's own error.
         # Nothing has started yet.
         self._makes_simulator = simulator is None
         self.simulator = (
-            Simulator(drafts=drafts, authorisation=authorisation, runs=runs)
+            Simulator(drafts=drafts, authorisation=authorisation, runs=runs, limits=limits)
             if simulator is None
             else simulator
         )
@@ -261,12 +263,16 @@ def create_server(
     drafts: DraftStore | None = None,
     authorisation: AuthorisationConfig = LOCAL_AUTHORISATION,
     runs: ObjectStore | None = None,
+    limits: Limits | None = None,
 ) -> SimulatorServer:
     """A server on the loopback interface; port 0 picks a free port. It makes
     its own simulator, keeping drafts in `drafts` if given, its runs acted on
     as `authorisation` lets (decision 0052), reading the runs kept in `runs`,
-    unless it is given a simulator."""
-    return SimulatorServer(port, simulator, drafts=drafts, authorisation=authorisation, runs=runs)
+    within `limits` or the defaults (decision 0067), unless it is given a
+    simulator."""
+    return SimulatorServer(
+        port, simulator, drafts=drafts, authorisation=authorisation, runs=runs, limits=limits
+    )
 
 
 def _authorisation(given: Path | None, parser: argparse.ArgumentParser) -> AuthorisationConfig:
@@ -276,6 +282,39 @@ def _authorisation(given: Path | None, parser: argparse.ArgumentParser) -> Autho
         return LOCAL_AUTHORISATION
     try:
         return authorisation_file(given)
+    except InvalidRequest as error:
+        parser.error(error.message)
+
+
+def _add_limits(parser: argparse.ArgumentParser) -> None:
+    """Options for a limits file, and one for each limit, which takes the place of
+    what the file says of it."""
+    parser.add_argument(
+        "--limits",
+        type=Path,
+        default=None,
+        help=(
+            "a JSON file of what the simulator's runs may use, any of the limits below "
+            "by the name of its option with `_` for `-`; by default those of one machine. "
+            f"An option of any limit but the workers may say {NO_LIMIT}"
+        ),
+    )
+    for name, field in Limits.model_fields.items():
+        parser.add_argument(
+            f"--{name.replace('_', '-')}",
+            dest=name,
+            default=None,
+            metavar="N",
+            help=field.description,
+        )
+
+
+def _limits(args: argparse.Namespace, parser: argparse.ArgumentParser) -> Limits:
+    """The limits the command line gives, the API refusing to start without them."""
+    try:
+        return limits_given(
+            args.limits, {name: getattr(args, name) for name in Limits.model_fields}
+        )
     except InvalidRequest as error:
         parser.error(error.message)
 
@@ -336,9 +375,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             "writes an authorisation; by default the local operator, everything"
         ),
     )
+    _add_limits(parser)
     args = parser.parse_args(argv)
     drafts = _drafts(args.drafts, parser)
     authorisation = _authorisation(args.authorisation, parser)
+    limits = _limits(args, parser)
     # What the simulator's services make, keep, take over and let go, at
     # INFO (AUDIT.14); other libraries' warnings only.
     logging.basicConfig(level=logging.WARNING, format=LOG_FORMAT, stream=sys.stderr)
@@ -348,7 +389,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     faulthandler.register(signal.SIGUSR1, all_threads=True)
 
     server = create_server(
-        args.port, drafts=drafts, authorisation=authorisation, runs=FolderStore()
+        args.port, drafts=drafts, authorisation=authorisation, runs=FolderStore(), limits=limits
     )
     host, port = server.server_address[:2]
     print(f"greenhouse-sim API on http://{host!s}:{port}/api", flush=True)

@@ -3,6 +3,7 @@ worker, a process with one epoch to work out, reports beside that epoch. They
 are a machine's, and no trajectory depends on them.
 """
 
+import os
 import resource
 import sys
 import time
@@ -13,6 +14,9 @@ from typing import Final
 KIBIBYTE: Final = 1024
 _PROCESS_STATUS: Final = Path("/proc/self/status")
 _HIGH_WATER_LINE: Final = "VmHWM:"
+# How far below the API a worker runs (decision 0067): on a machine it fills, the
+# API and a viewer beside it are given a core first, and it the rest.
+WORKER_NICENESS: Final = 10
 
 
 @dataclass(frozen=True)
@@ -53,3 +57,8 @@ def peak_memory_bytes() -> int:
 
 def this_process() -> ProcessUse:
     return ProcessUse(time.process_time(), peak_memory_bytes())
+
+
+def lower_priority() -> None:
+    """Makes this process, a worker, give way to the machine's other work."""
+    os.nice(WORKER_NICENESS)
