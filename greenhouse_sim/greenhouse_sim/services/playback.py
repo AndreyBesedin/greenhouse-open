@@ -141,6 +141,7 @@ from greenhouse_sim.services.interventions import (
     principal_of,
     spelled,
 )
+from greenhouse_sim.services.limits import LimitPassed
 from greenhouse_sim.services.policy_context import run_context
 from greenhouse_sim.services.run_store import (
     ENDED,
@@ -1090,6 +1091,11 @@ class Playback:
                         make_checkpoint(self._simulator, run, (day + 1) * DAY_S).model_dump_json()
                     ),
                 )
+        except LimitPassed as passed:
+            # The commit stands, and the store has said so: nothing failed but the limit.
+            logger.warning("the epoch of %s ended: %s", self.run_id, passed.message)
+            self._end_store(Status.FAILED, store, reason=passed.message)
+            return
         except Exception as error:
             logger.exception("the run store could not keep %s", self.run_id)
             self._end_store(Status.FAILED, store, reason=failure_reason(error))

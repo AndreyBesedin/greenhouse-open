@@ -7,9 +7,18 @@ authorisation is, from a file or the server's options, with defaults for one mac
 | Runs waiting | Refused when asked for | 200 |
 | Free disk before a run begins | Refused when asked for | 2 GB |
 | Bytes of the store | Refused when asked for | None |
+| Bytes of one epoch | Ended at its commit | None |
+| Memory of one worker | Ended | Half the machine's memory, shared between the workers |
+| CPU or wall time of one epoch | Ended | None |
 
 Each simulator has its own, so that a party's are the limits of its instance (rule 3).
 A refusal says which limit it is and the figures, in words a client can show.
+
+What ends an epoch is its `Budget`, the part of the limits its worker needs. It goes
+through the store, as all a worker needs does (rule 1), written when the epoch is put
+in line, so that raising a limit and asking for it again gives it the new one. An epoch
+is ended by its worker, and not by whoever started it, which may be on another machine
+or gone.
 """
 
 import json
@@ -19,7 +28,13 @@ from typing import Any, Final
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from greenhouse_sim.services.errors import InvalidRequest, every_reason, first_reason
+from greenhouse_sim.services.errors import (
+    InvalidRequest,
+    ServiceError,
+    every_reason,
+    first_reason,
+)
+from greenhouse_sim.services.resources import machine_memory_bytes
 
 DEFAULT_WORKERS: Final = 2
 DEFAULT_WAITING_RUNS: Final = 200
@@ -28,6 +43,78 @@ DEFAULT_FREE_DISK_BYTES: Final = 2 * GIGABYTE
 _UNITS: Final = ((GIGABYTE, "GB"), (10**6, "MB"), (10**3, "kB"))
 # How an option says there is to be no limit at all.
 NO_LIMIT: Final = "none"
+# Half a machine's memory goes to its workers, and the rest to all else on it.
+_SHARE_OF_THE_MACHINE: Final = 2
+_CARRY_ON: Final = (
+    "what it committed can be read, and it can be carried on once that limit is raised"
+)
+_WHOLE_SECONDS_FROM: Final = 10.0
+
+
+class LimitPassed(ServiceError):
+    """An epoch has passed a limit of its budget: the message says which, and the figures."""
+
+
+class Budget(BaseModel):
+    """What one epoch's worker may use, as the store says; none is no limit. Bytes,
+    CPU and wall time are the epoch's whole, across its resumes, since a resume starts
+    from what it holds and they do not come back. Memory is of each worker."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    epoch_bytes: int | None = None
+    worker_memory_bytes: int | None = None
+    epoch_cpu_s: float | None = None
+    epoch_wall_s: float | None = None
+
+    @property
+    def needs_a_watch(self) -> bool:
+        """Whether a limit can be passed between two commits."""
+        return not (
+            self.worker_memory_bytes is None
+            and self.epoch_cpu_s is None
+            and self.epoch_wall_s is None
+        )
+
+    def bytes_past(self, kept: int) -> str | None:
+        """Why an epoch that keeps this much is to end, if it is."""
+        limit = self.epoch_bytes
+        if limit is None or kept <= limit:
+            return None
+        return (
+            f"it kept {in_words(kept)}, past the limit of {in_words(limit)} on what one run "
+            f"may keep: {_CARRY_ON}"
+        )
+
+    def memory_past(self, held: int) -> str | None:
+        """Why a worker that has held this much is to end, if it is."""
+        limit = self.worker_memory_bytes
+        if limit is None or held <= limit:
+            return None
+        return (
+            f"its worker held {in_words(held)} of memory, past the limit of {in_words(limit)} "
+            f"on one worker: {_CARRY_ON}"
+        )
+
+    def time_past(self, *, cpu_s: float | None, wall_s: float | None) -> str | None:
+        """Why an epoch that has taken this long is to end, if it is."""
+        if self.epoch_cpu_s is not None and (cpu_s or 0.0) > self.epoch_cpu_s:
+            return (
+                f"it took {_seconds(cpu_s or 0.0)} of a core, past the limit of "
+                f"{_seconds(self.epoch_cpu_s)} on one run: {_CARRY_ON}"
+            )
+        if self.epoch_wall_s is not None and (wall_s or 0.0) > self.epoch_wall_s:
+            return (
+                f"it took {_seconds(wall_s or 0.0)} from its worker's start, past the limit of "
+                f"{_seconds(self.epoch_wall_s)} on one run: {_CARRY_ON}"
+            )
+        return None
+
+
+def _memory_of_a_worker(given: dict[str, Any]) -> int:
+    """Half the machine's memory, shared between the workers the limits say."""
+    workers: int = given.get("workers", DEFAULT_WORKERS)
+    return machine_memory_bytes() // _SHARE_OF_THE_MACHINE // workers
 
 
 class Limits(BaseModel):
@@ -49,6 +136,33 @@ class Limits(BaseModel):
     store_bytes: int | None = Field(
         None, ge=0, description="the bytes the run store may hold for a run to begin"
     )
+    epoch_bytes: int | None = Field(
+        None, ge=0, description="the bytes one run may keep: it ends at the commit past them"
+    )
+    worker_memory_bytes: int | None = Field(
+        default_factory=_memory_of_a_worker,
+        ge=0,
+        description=(
+            "the bytes of memory one worker may hold: its run ends; by default half of "
+            "the machine's, shared between the workers"
+        ),
+    )
+    epoch_cpu_s: float | None = Field(
+        None, ge=0, description="the seconds of a core one run may take: it ends"
+    )
+    epoch_wall_s: float | None = Field(
+        None, ge=0, description="the seconds its workers may take over one run: it ends"
+    )
+
+    @property
+    def budget(self) -> Budget:
+        """The part of them a worker needs."""
+        return Budget(
+            epoch_bytes=self.epoch_bytes,
+            worker_memory_bytes=self.worker_memory_bytes,
+            epoch_cpu_s=self.epoch_cpu_s,
+            epoch_wall_s=self.epoch_wall_s,
+        )
 
 
 def in_words(size: int | float) -> str:
@@ -57,6 +171,10 @@ def in_words(size: int | float) -> str:
         if size >= unit:
             return f"{size / unit:.1f} {name}"
     return f"{size:.0f} B"
+
+
+def _seconds(seconds: float) -> str:
+    return f"{seconds:,.0f} s" if seconds >= _WHOLE_SECONDS_FROM else f"{seconds:.2f} s"
 
 
 def _runs(count: int) -> str:

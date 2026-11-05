@@ -1,6 +1,6 @@
 # P18: Resources counted and limited, and a run that can move
 
-**Status:** accepted, in progress (P18.1, P18.2 and P18.4 are done): the design below, with decision
+**Status:** accepted, in progress (P18.1 to P18.4 are done): the design below, with decision
 [0067](../decisions/0067-a-runs-resources-are-counted-and-limited-and-all-it-needs-is-in-the-store.md).
 Part of the
 [simulator roadmap](README.md).
@@ -129,8 +129,8 @@ so about 1.3 s across the run's 1,357 s of CPU, or 0.1%.
 
 **Not measured:** a full disk (from the code, a worker's write fails, the epoch is
 told `failed`, and if that write fails too its lease expires and it is told
-`interrupted`); a worker past a memory limit; the memory of one more `Simulator` in
-a process; `RLIMIT_AS` on macOS, which P18.3 must check before relying on it.
+`interrupted`); the memory of one more `Simulator` in a process. A worker past a memory
+limit, and `RLIMIT_AS` on macOS, are in "What P18.3 limits" below.
 
 ## Steps
 
@@ -138,7 +138,7 @@ a process; `RLIMIT_AS` on macOS, which P18.3 must check before relying on it.
 | --- | --- | --- | --- |
 | P18.1 | An epoch is self-contained: the scenario and its recording written into the store when it is queued; a worker takes a store's address and an epoch; built and uploaded scenarios run and resume in workers with their own weather and site. No run id moves. | `feat(sim): an epoch carries what it needs to run` | Done: an epoch of a scenario that is not packaged names, in its manifest, its portable file under `scenarios/<digest>.json`, with its recording inside and checked to read back as the same configuration; its pace is in the manifest too, so that `work` takes a folder's path, a run and an epoch. A simulator started on the store registers these files as it does the uploaded ones. An epoch from before this, of a packaged scenario, resumes as it did; of another, it is given its file if this simulator knows the scenario as the run it is, and is refused in words if not. A run of a draft named as a registered scenario, as a draft opened from a file is, stays under its site and weather unless it asks for others. Not delivered: a packaged scenario is not written, since every simulator has it; a worker's simulator has the default authorisation and no crew; a file stays when the last epoch naming it is deleted |
 | P18.2 | Counted: the usage object at each commit, outside every digest; a failed epoch's reason; the list reads them, and its cost is measured again against the table above. | `feat(sim): an epoch says what it used and why it failed` | Done: `usage.json` beside the manifest, written after each commit and as the epoch ends, and `reason` in the manifest, both in the answer of `GET /api/runs`; see "What P18.2 counts" below. An epoch kept before this is given its report once, by `python -m greenhouse_sim.usage_reports <folder>`. Not delivered: the viewer shows neither (P18.5); a list does not see a file lost from inside a day's folder, only opening the epoch or asking it to resume does, and each refuses in words; until that command has run, an epoch kept before this costs a list what it always did |
-| P18.3 | Limited: `Limits` from a file and the server's options; refusals for waiting runs and free disk; epochs ended by bytes, memory or time, keeping what they committed; workers at a lower priority. | `feat(sim): a simulator's runs have limits` | In progress: limits read and runs refused are done, see "What P18.3 limits" below; epochs ended by a limit are next |
+| P18.3 | Limited: `Limits` from a file and the server's options; refusals for waiting runs and free disk; epochs ended by bytes, memory or time, keeping what they committed; workers at a lower priority. | `feat(sim): a simulator's runs have limits` | Done, in two pull requests: see "What P18.3 limits" below. Not delivered: a playback in the API's process has no limits; a worker's look at its memory is a thread, which a long call that holds the interpreter delays; the viewer shows neither a refusal nor a limit (P18.5) |
 | P18.4 | The store's *create unless it exists*, for a folder; leases and claims use it, which closes the window above; the queue rebuilt from `queued` manifests after a restart, so that a waiting run survives one. | `feat(sim): a claim on an epoch needs no lock`; `feat(sim): a run waiting survives a restart` | Done, in two pull requests. **Claims:** `ObjectStore.create` makes an object unless one exists, and of any callers at once tells exactly one that it did: a promise of the store's interface, which a store of objects gives as a conditional write and a folder as a hard link of a whole file. A worker claims an epoch before it does anything to it, by creating `leases/{number}.json`, the number after a newest claim that is not fresh, so that of all who read one claim one makes the next, and a number already passed is refused to one who comes late. A holder writes only its own number, and letting go creates the next, so that a thread stopped between reading and writing takes nothing from a later holder: that closes the window above. Telling an epoch `interrupted` is a claim too, so that it and a worker taking the epoch up are told apart. A worker that finds its epoch another's, or no longer waiting, exits saying so and nothing is told of the epoch. A crash costs 30 s: its claim expires, and the next number is free. An epoch's `lease.json` from before claims is believed until it expires. Measured, at load 11 to 26 on the machine above: 8 processes racing, each of 2,000 `create` rounds had one winner and each of 200 claimed epochs one holder; a `create` takes 0.47 ms against a `put`'s 0.21 ms, a claim and its letting go 2.9 ms. Not delivered: a holder stalled past 30 s, as on a machine asleep, whose epoch is taken over is not stopped, and its writes still reach the store; a folder must be on a file system with hard links, and any other refuses its epochs with the file system's error (not run on one); the two small objects a working of an epoch leaves stay until it is deleted, and count in its size; epochs are still given their numbers by whoever starts them, one at a time. **The queue:** a scheduler stamps a manifest as it puts an epoch in line (`queued_at`, which no digest holds), and a simulator starting on a folder makes the queue again from those it finds, in that order (`scheduler.restore`), so that a run waiting survives a restart, a server closed included, which leaves what waits waiting; what a worker was computing is told `interrupted` if it is ended, as before. Its pace and its scenario's file are read from the store by its worker, as ever. An epoch whose worker lives, by its claim, whether `queued` or `running`, is left to it and counts against the limit on workers until its claim is no longer believed, when it is told `interrupted` if it had not ended. Of two workers given one epoch, as when a killed server's worker has not yet claimed it, one leaves, and the run is counted the same way. An epoch whose scenario this simulator cannot run, its file gone or its name unknown and no file kept, is told `interrupted`, and a request to carry it on says why. An epoch with no stamp, from before this or one that a process of its own was to take up, is found by `interrupted` as it was. One deleted from the store while it waits is passed over; the route still refuses to delete one that waits. A stop asked of one that waits takes it out of the queue, and one asked of a run counted so writes the request its worker reads; a request left in the store of one found waiting ends its worker at its first look. Measured: finding the queue over 1,000 epochs that ended takes 0.09 s. Not delivered: a worker a killed server had started and that has not yet claimed its epoch is not counted, so that the limit can be passed by it for the seconds until it claims or leaves; each server on one store keeps its own limit; a deleted epoch stays in `Scheduler.waiting` until its turn; the order is that of the machine's clock |
 | P18.5 | The viewer: what a run used and why it failed in the runs dialog; workers busy, runs waiting and free disk on the landing page; a refusal in words. | `feat(viewer): what the runs use, and why one was refused` | Planned |
 | P18.6 | The QA scenario below, run and recorded. | `test: runs within their limits` | Planned |
@@ -216,6 +216,10 @@ stops the server from starting, saying why.
 | `waiting_runs` | `--waiting-runs` | 200 | A run asked for is refused |
 | `free_disk_bytes` | `--free-disk-bytes` | 2 GB | A run asked for is refused |
 | `store_bytes` | `--store-bytes` | None | A run asked for is refused |
+| `epoch_bytes` | `--epoch-bytes` | None | The epoch ends at the commit past them |
+| `worker_memory_bytes` | `--worker-memory-bytes` | Half the machine's, shared between the workers | The epoch ends |
+| `epoch_cpu_s` | `--epoch-cpu-s` | None | The epoch ends |
+| `epoch_wall_s` | `--epoch-wall-s` | None | The epoch ends |
 
 **A refusal** is a 409 from every route that asks for a worker (a run, a resume, a fork),
 written by the scheduler before anything of the run is, and it says which limit and the
@@ -236,14 +240,76 @@ free: free some space, or lower that limit".
 **A worker runs at niceness 10** above whoever started it, from its first line, so that on
 a machine it fills the API and a viewer are given a core first.
 
-**What a refusal costs**, on the machine above at load 3 to 5, each the median of many: 9 us
+**What a refusal costs**, on the machine above at load 2 to 5, each the median of many: 9 us
 for the checks asked of every run, of which 8 us is the folder's free space. With a limit on
 the store's bytes, one more read of each epoch's report: 6.9 ms over 102 epochs, 64 ms over
 1,002, under the lock runs are asked for under, so 300 runs asked for at once over 1,002
 epochs spend 19 s on it. No commit, list or day of a worker is any different.
 
-Not delivered: a playback in the API's process opens an epoch with none of these checks, and
-its `--play` is not refused; each server on one store keeps its own count of what waits.
+**An epoch ended by a limit** is `failed`, and its reason names the limit and the figures:
+"it kept 21.0 MB, past the limit of 20.0 MB on what one run may keep: what it committed can
+be read, and it can be carried on once that limit is raised". What it committed stands. It
+can be read, forked, and carried on: alone of failures, as an `interrupted` epoch can, by
+`past_limit` in its manifest. Its digests up to there, and all of them once it has been
+carried on or forked, are those of a run never ended, since no digest holds a limit.
+
+- What a worker keeps to, its `Budget`, is `budget.json` beside the manifest, written as the
+  epoch is put in line, since a worker is given a store's address and an epoch and nothing else.
+  Asked to resume, or found waiting by a server that has started, it is given the limits of
+  now, which is how a limit is raised. An object of its own, so that a new server writes no
+  claim and nothing over what a worker says of the epoch, and it counts in the epoch's bytes.
+- Bytes are looked at in each commit, in the commit's report, and end it there: the commit
+  stands. The commit of its last day ends nothing, since all its days are kept and it has
+  finished.
+- Memory and time are looked at by a thread of the worker's own, as it takes the epoch up and
+  every 0.25 s after, which ends the process where it stands, between commits or in one. A
+  commit is written last, so that this leaves what a crash does. Reading its objects, a resume
+  throws away what a commit does not name.
+- Bytes, CPU and wall time are the epoch's whole across its resumes: a resume is refused with a
+  409 while what it has already used is past the limit, since it would end at once. Memory is
+  each worker's, and a resume is let in: the next may hold less. `wall_s`, in its report beside
+  `cpu_s`, counts from each worker's start, its pace too, and a machine asleep does not count.
+
+**Memory, on each platform.** `RLIMIT_AS` cannot be relied on, and the limit is not built on it.
+On macOS 27 on an M2 `setrlimit(RLIMIT_AS, ...)` is refused with `EINVAL` below what a process
+has mapped: Python alone maps 488 GB, so 300 MB, 2 GB and 4 GB are all refused, and 600 GB is
+taken and limits nothing. `RLIMIT_DATA` is refused the same way, and `RLIMIT_RSS` is the same
+limit as `RLIMIT_AS` there. `ulimit -v`, `-m` and `-d` fail with it. On Linux `RLIMIT_AS` would be
+taken, but it counts what is mapped and not what is held, and this has not been run. So a
+worker looks at its own high-water mark on both, the figure its report gives: `VmHWM` on Linux
+and `ru_maxrss` on macOS. That a peak is read means that nothing held between two looks is
+missed; that a look is after the fact means that a worker can get past the limit before it is
+ended:
+
+| How a worker takes memory, limit 500 MB unless said | Held when it was ended, of two runs |
+| --- | --- |
+| 10 MB, as fast as it can | 603, 702 MB |
+| 1.5 GB in one call | 742, 862 MB |
+| 10 MB every 10 ms, limit 300 MB | 427, 427 MB |
+
+The Linux path runs on CI only, not on this machine. A process ended so leaves any temporary
+folder a commit had open, as a crash does.
+
+**What it costs**, on the machine above at load 2 to 4. A run of 120 days of the one-plant box
+through a real worker, in turn:
+
+| | Wall time | CPU | Peak |
+| --- | --- | --- | --- |
+| No look at memory or time | 12.4, 12.5, 12.5 s | 13.0, 13.1, 13.2 s | 185 to 190 MB |
+| With the look | 12.4, 12.5, 12.7 s | 12.9, 13.2, 13.5 s | 190 MB |
+| At niceness 0, at this load, with cores free | 12.4, 12.6 s | 12.8, 13.3 s | |
+| At niceness 10 | 12.4, 12.5 s | 13.1, 13.2 s | |
+
+So neither is told from the noise between two runs. A look is 2.5 us, 10 us a second. A commit
+is 32 ms with a budget and with none, the median of 100 on one store, since its bytes are in
+the report it writes anyway. A list of 1,002 epochs takes 179 to 180 ms with `past_limit` in
+each manifest and without it, and reads no budget. A worker reads its budget once. What the
+priority buys on a machine it fills has not been measured: P18.6 records it.
+
+Not delivered: a playback in the API's process has no budget and opens an epoch with none of
+these checks, and its `--play` is not refused; each server on one store keeps its own count of
+what waits; a look is a thread, so that a long call holding the interpreter delays it, and
+the leases' thread with it.
 
 ## Acceptance criteria
 

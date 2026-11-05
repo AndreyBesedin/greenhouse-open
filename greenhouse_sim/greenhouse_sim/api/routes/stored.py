@@ -28,11 +28,12 @@ them (P17.4, decision 0065).
                                           has looked. One a playback of this server
                                           plays has that playback stopped
     POST /api/runs/{run}/epochs/{n}/resume?seconds_per_day=10
-                                          an interrupted epoch, or one still
-                                          running that no one works, carried on
-                                          from its last commit by a worker, at
-                                          that pace or else the one it was asked
-                                          for: the same epoch, as the list shows it
+                                          an interrupted epoch, one ended by a
+                                          limit, or one still running that no one
+                                          works, carried on from its last commit by
+                                          a worker, at that pace or else the one it
+                                          was asked for: the same epoch, as the
+                                          list shows it
     POST /api/runs/{run}/epochs/{n}/changes
                                           a change asked of an epoch waiting for
                                           a worker or being executed, as its body
@@ -68,8 +69,9 @@ them (P17.4, decision 0065).
 A position is the viewer's place over an epoch, not the epoch's clock: moving
 it changes nothing a consumer reads.
 
-A run, a resume or a fork the simulator's limits have no room for is refused with
-a 409 that says which limit and the figures, and nothing of it is written.
+A run, a resume or a fork the simulator's limits have no room for, or a resume of
+an epoch past them still, is refused with a 409 that says which limit and the
+figures, and nothing of it is written.
 """
 
 from pydantic import BaseModel

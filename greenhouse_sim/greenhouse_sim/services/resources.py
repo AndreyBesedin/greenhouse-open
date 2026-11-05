@@ -13,6 +13,9 @@ from typing import Final
 
 KIBIBYTE: Final = 1024
 _PROCESS_STATUS: Final = Path("/proc/self/status")
+# What wall time this process counts from: as a worker imports this, which is before it
+# has done anything of its own.
+_BEGAN: Final = time.monotonic()
 _HIGH_WATER_LINE: Final = "VmHWM:"
 # How far below the API a worker runs (decision 0067): on a machine it fills, the
 # API and a viewer beside it are given a core first, and it the rest.
@@ -22,10 +25,12 @@ WORKER_NICENESS: Final = 10
 @dataclass(frozen=True)
 class ProcessUse:
     """What a process has used since it began: seconds of a core, in all its
-    threads, and the most memory it has held at once."""
+    threads, the most memory it has held at once, and seconds of the wall's clock, in
+    which a machine asleep counts for nothing."""
 
     cpu_s: float
     peak_memory_bytes: int
+    wall_s: float = 0.0
 
 
 def maxrss_bytes(maxrss: int, platform: str = sys.platform) -> int:
@@ -56,7 +61,12 @@ def peak_memory_bytes() -> int:
 
 
 def this_process() -> ProcessUse:
-    return ProcessUse(time.process_time(), peak_memory_bytes())
+    return ProcessUse(time.process_time(), peak_memory_bytes(), time.monotonic() - _BEGAN)
+
+
+def machine_memory_bytes() -> int:
+    """How much memory this machine has."""
+    return os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
 
 
 def lower_priority() -> None:
