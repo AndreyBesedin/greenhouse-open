@@ -32,14 +32,23 @@ An epoch is started with what its worker needs (decision 0067): its scenario's
 file, if the scenario is not packaged, and its pace. One written before it kept
 them is given them when it is asked to go on, if this simulator still knows the
 run it is (`scenario_file_of`).
+
+A worker keeps to the budget the store gives its epoch (`keep_within_budget`):
+at the commit that passes its bytes, and by a look from a thread of its own at its
+memory and time, which end it where it stands. A process ended anywhere leaves what it
+last committed, as a crash does, and what it said of the end. The budget, the look and
+the end are in no digest, and what the epoch has decides nothing of its trajectory.
 """
 
 import json
 import logging
+import os
 import threading
+import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Final
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT
@@ -47,6 +56,7 @@ from greenhouse_sim.services import scenario_files
 from greenhouse_sim.services.checkpoints import upload_checkpoint
 from greenhouse_sim.services.errors import Conflict, InvalidRequest
 from greenhouse_sim.services.fields import air_through_a_run
+from greenhouse_sim.services.limits import Budget
 from greenhouse_sim.services.playback import (
     DEFAULT_SECONDS_PER_DAY,
     FIRST_EPOCH,
@@ -71,6 +81,11 @@ from greenhouse_sim.services.scenarios import layout_name, scenario
 from greenhouse_sim.services.simulator import Simulator
 
 logger = logging.getLogger(__name__)
+
+# How often a worker looks at its memory and its time; what it can overrun by.
+LOOK_AT_BUDGET_EVERY_S: Final = 0.25
+# What a worker ended where it stands exits with, as any that has not finished does.
+ENDED_PAST_LIMIT: Final = 1
 
 
 @dataclass(frozen=True)
@@ -138,6 +153,45 @@ def queued(
     )
 
 
+def keep_within_budget(epoch: EpochStore) -> None:
+    """This process, whose only work is the epoch and which holds its claim, keeps to
+    the budget the store gives it: none, if it gives none."""
+    budget = epoch.budget()
+    if budget is None:
+        return
+    epoch.keep_to(budget)
+    if budget.needs_a_watch:
+        threading.Thread(
+            target=_watch_budget, args=(epoch, budget), name="budget", daemon=True
+        ).start()
+
+
+def _watch_budget(epoch: EpochStore, budget: Budget) -> None:
+    """Ends this process when it has passed the budget's memory or time: a thread, so
+    that a day's computing, which can be long, need not get to its end. Peak memory, so
+    that what was held between two looks is seen. If the epoch has ended by then, the
+    process is about to, and has nothing to be told. If the store cannot be told, the
+    process ends all the same, and its epoch is found `interrupted`. It ends holding what
+    the working thread would have to take to say or claim anything more, so that it
+    neither takes the epoch again nor ends the process before all is said."""
+    while True:
+        used = epoch.used_so_far()
+        reason = budget.memory_past(used.peak_memory_bytes) or budget.time_past(
+            cpu_s=used.cpu_s, wall_s=used.wall_s
+        )
+        if reason is None:
+            time.sleep(LOOK_AT_BUDGET_EVERY_S)
+            continue
+        logger.warning("the epoch %s of %s ended: %s", epoch.epoch, epoch.run_id, reason)
+        with epoch.saying:
+            try:
+                if not epoch.end_past_limit(reason):
+                    return
+            except Exception:
+                logger.exception("the epoch %s of %s could not be told", epoch.epoch, epoch.run_id)
+            os._exit(ENDED_PAST_LIMIT)
+
+
 def execute(
     simulator: Simulator,
     epoch: EpochStore,
@@ -175,8 +229,9 @@ def check_resumable(epoch: EpochStore) -> float:
     run its scenario still is. All its commits name must be there: a list counts
     folders and can miss a lost file, and an epoch carried on past one would stay
     one that cannot be read whole, its days worked out for nothing."""
-    status = epoch.manifest().status
-    if status not in (Status.INTERRUPTED, Status.QUEUED):
+    manifest = epoch.manifest()
+    status = manifest.status
+    if not (manifest.carries_on or status == Status.QUEUED):
         raise Conflict(
             f"epoch {epoch.epoch} of {epoch.run_id} is {status}: only an interrupted one resumes"
         )

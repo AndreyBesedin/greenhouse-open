@@ -7,6 +7,9 @@ state folder is its first backend (`FolderStore`). An epoch's objects, under
 `{run_id}/{epoch}/`:
 
 - `manifest.json`: the run, its seed, its status, and why it failed if it did;
+- `budget.json`: what its worker keeps to (`limits`), which whoever puts it in line
+  writes before it, and writes again if it finds it waiting under other limits. Of its
+  own, so that it never writes over what a worker says of the epoch, and in no digest;
 - `usage.json`: what the epoch has used (`EpochUsage`, decision 0067), written
   after each commit and as it ends: a report in no digest, which nothing that
   decides a trajectory reads, and which the list reads so as not to walk;
@@ -53,6 +56,7 @@ import os
 import secrets
 import shutil
 import tempfile
+import threading
 import time
 from collections.abc import Callable, Iterable, Sequence
 from compression import zstd
@@ -74,6 +78,7 @@ from pydantic import BaseModel, ConfigDict, JsonValue, ValidationError
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import leases
 from greenhouse_sim.services.errors import ServiceError
+from greenhouse_sim.services.limits import Budget, LimitPassed
 from greenhouse_sim.services.resources import ProcessUse
 
 logger = logging.getLogger(__name__)
@@ -90,6 +95,7 @@ _PARTIAL: Final = ".partial"
 _INHERITED_OUTCOMES: Final = "inherited/outcomes.jsonl"
 _STOP_ASKED: Final = "stop.json"
 USAGE: Final = "usage.json"
+_BUDGET: Final = "budget.json"
 # How much is drawn to tell apart two requests asked in one nanosecond.
 REQUEST_TOKEN_BYTES: Final = 4
 # The instant instants are counted from in a segment's file.
@@ -350,6 +356,16 @@ class EpochManifest(BaseModel):
     # Why it failed (`failure_reason`), for any client: none unless it did, or
     # if it failed before epochs said why.
     reason: str | None = None
+    # Whether it failed for a limit (`EpochStore.end_past_limit`), which alone of all
+    # failures leaves it as it would be interrupted: it can be carried on.
+    past_limit: bool = False
+
+    @property
+    def carries_on(self) -> bool:
+        """Whether it has ended in a way that a worker can carry it on from."""
+        return self.status == Status.INTERRUPTED or (
+            self.status == Status.FAILED and self.past_limit
+        )
 
 
 class EpochUsage(BaseModel):
@@ -368,9 +384,10 @@ class EpochUsage(BaseModel):
     - `cpu_s` adds up its workers' seconds, each worker's as far as it last
       reported them, those spent on work a crash then lost included: it is what
       the machine gave. A fork starts from none of its parent's;
-    - `peak_memory_bytes` is the highest of any one of its workers.
+    - `peak_memory_bytes` is the highest of any one of its workers;
+    - `wall_s` adds up its workers' time, from when each began, as `cpu_s` does.
 
-    The last two are none if no process of its own ever worked the epoch: a
+    The last three are none if no process of its own ever worked the epoch: a
     playback in the API's process or a caller's `execute` shares that process
     with other work, whose figures are not the epoch's, and a report given to an
     epoch kept before reports were written (`usage_reports`) cannot know them. None
@@ -386,6 +403,7 @@ class EpochUsage(BaseModel):
     bytes_kept: int
     cpu_s: float | None = None
     peak_memory_bytes: int | None = None
+    wall_s: float | None = None
 
 
 class LogEntry(BaseModel):
@@ -667,6 +685,15 @@ class EpochStore:
         # and what the epoch's report said before it (`counted_by`).
         self._meter: Callable[[], ProcessUse] | None = None
         self._earlier: EpochUsage | None = None
+        # What this process keeps to, if it works this epoch and nothing else
+        # (`keep_to`), and whether it has said a limit ended it: from then on it says
+        # nothing else of it, whichever of its threads asks.
+        self._budget: Budget | None = None
+        self._said_past_limit = False
+        # Held to say what the epoch is, or to take it: one thread at a time. A thread
+        # ending this process holds it to the end (`workers`), so that the thread that
+        # works the epoch goes no further than its next such step.
+        self.saying = threading.RLock()
 
     @classmethod
     def create(cls, objects: ObjectStore, manifest: EpochManifest) -> EpochStore:
@@ -712,6 +739,23 @@ class EpochStore:
         """Says what the epoch is, and if it failed, why. One said to run is
         held by this process (`leases`) until it is said to have ended, by
         whoever says it, and what it used is reported then, with all it keeps."""
+        with self.saying:
+            if not self._said_past_limit:
+                self._say(status, reason, past_limit=False)
+
+    def end_past_limit(self, reason: str) -> bool:
+        """Says the epoch failed for a limit, unless it has ended, and whether it did.
+        It keeps what it committed, and can be carried on (`EpochManifest.carries_on`).
+        Asked by a thread beside the one that works the epoch, which may be saying how
+        it ended: one comes first, and nothing is said after this."""
+        with self.saying:
+            if self.manifest().status in ENDED:
+                return False
+            self._say(Status.FAILED, reason, past_limit=True)
+            self._said_past_limit = True
+            return True
+
+    def _say(self, status: Status, reason: str | None, *, past_limit: bool) -> None:
         before = self.manifest()
         # A worker claimed it before anything else, so this refuses only a process
         # that says an epoch runs with no claim while another works it. Before the
@@ -721,13 +765,20 @@ class EpochStore:
         if status == Status.QUEUED and before.status in ENDED:
             self._forget_stop()
         said = (reason or NO_REASON_GIVEN) if status == Status.FAILED else None
-        manifest = before.model_copy(update={"status": status, "reason": said})
+        manifest = before.model_copy(
+            update={"status": status, "reason": said, "past_limit": past_limit}
+        )
         self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
         if status in ENDED:
             leases.release(self.objects, self._home)
             self.report_usage()
 
-    def queue_again(self, *, scenario_file: str | None, seconds_per_day: float | None) -> None:
+    def queue_again(
+        self,
+        *,
+        scenario_file: str | None,
+        seconds_per_day: float | None,
+    ) -> None:
         """Says the epoch waits for a worker again, with what that worker
         needs, in one write."""
         self._forget_stop()
@@ -739,21 +790,39 @@ class EpochStore:
                 "seconds_per_day": seconds_per_day,
                 "queued_at": datetime.now(UTC),
                 "resumed": True,
+                "past_limit": False,
             }
         )
         self.objects.put(f"{self._home}/manifest.json", manifest.model_dump_json().encode())
+
+    def budget(self) -> Budget | None:
+        """What its worker keeps to: none if no scheduler put it in line, or if what
+        one wrote cannot be read, as a later version's might not be, which is no reason
+        for a server not to start: one that takes the epoch up writes it again."""
+        data = self.objects.get(f"{self._home}/{_BUDGET}")
+        try:
+            return None if data is None else Budget.model_validate_json(data)
+        except ValidationError:
+            logger.warning("the budget of %s cannot be read", self._home)
+            return None
+
+    def give_budget(self, budget: Budget) -> None:
+        """Says what its next worker keeps to. One that has read it already keeps to
+        what it read."""
+        self.objects.put(f"{self._home}/{_BUDGET}", budget.model_dump_json().encode())
 
     def claim(self, *, now: float | None = None) -> bool:
         """Takes the epoch for this process, and says whether it has it: refused
         while another's claim is fresh, and to all but one of any who ask at once
         (`leases`). Held until the epoch is told it ended, or `let_go`."""
-        if self.claimed():
+        with self.saying:
+            if self.claimed():
+                return True
+            self._claim = leases.claim(self.objects, self._home, now=now)
+            if self._claim is None:
+                return False
+            leases.keep(self.objects, self._home, self._claim)
             return True
-        self._claim = leases.claim(self.objects, self._home, now=now)
-        if self._claim is None:
-            return False
-        leases.keep(self.objects, self._home, self._claim)
-        return True
 
     def claimed(self) -> bool:
         """Whether this object took the claim that stands."""
@@ -847,20 +916,39 @@ class EpochStore:
         self._earlier = self.usage()
         self._meter = meter
 
-    def report_usage(self, commits: Sequence[Commit] | None = None) -> None:
+    def keep_to(self, budget: Budget) -> None:
+        """Says this process ends the epoch at a commit past the budget's bytes."""
+        self._budget = budget
+
+    def used_so_far(self) -> ProcessUse:
+        """What the epoch has used, as `counted_by` counts it: its workers' seconds,
+        and the memory this one has held."""
+        assert self._meter is not None
+        used = self._meter()
+        earlier = self._earlier
+        return ProcessUse(
+            used.cpu_s + (0.0 if earlier is None else earlier.cpu_s or 0.0),
+            used.peak_memory_bytes,
+            used.wall_s + (0.0 if earlier is None else earlier.wall_s or 0.0),
+        )
+
+    def report_usage(self, commits: Sequence[Commit] | None = None) -> EpochUsage | None:
         """Writes what the epoch has used, through `commits` if they have just
-        been read. A report that cannot be written is logged and ends nothing:
-        the disk that refuses it refuses the next commit too, and that says so."""
+        been read, and says it. A report that cannot be written is logged and ends
+        nothing: the disk that refuses it refuses the next commit too, and that says
+        so."""
         try:
-            self.write_usage(self.commits() if commits is None else commits)
+            return self.write_usage(self.commits() if commits is None else commits)
         except Exception:
             logger.warning("what %s used could not be reported", self._home, exc_info=True)
+            return None
 
-    def write_usage(self, commits: Sequence[Commit]) -> None:
+    def write_usage(self, commits: Sequence[Commit]) -> EpochUsage:
         """Writes what the epoch has used through `commits`, and raises if it
         cannot, for a caller with nothing else to do (`usage_reports`)."""
         usage = self._usage_now(commits)
         self.objects.put(f"{self._home}/{USAGE}", usage.model_dump_json().encode())
+        return usage
 
     def _usage_now(self, commits: Sequence[Commit]) -> EpochUsage:
         fork = self.manifest().fork
@@ -870,10 +958,12 @@ class EpochStore:
         kept = sum(commit.checkpoint is not None for commit in commits)
         before = self.usage() if self._meter is None else self._earlier
         cpu_s = None if before is None else before.cpu_s
+        wall_s = None if before is None else before.wall_s
         peak = None if before is None else before.peak_memory_bytes
         if self._meter is not None:
             used = self._meter()
             cpu_s = (cpu_s or 0.0) + used.cpu_s
+            wall_s = (wall_s or 0.0) + used.wall_s
             peak = max(peak or 0, used.peak_memory_bytes)
         return EpochUsage(
             commits=len(commits),
@@ -883,6 +973,7 @@ class EpochStore:
             bytes_kept=self.size_bytes(),
             cpu_s=cpu_s,
             peak_memory_bytes=peak,
+            wall_s=wall_s,
         )
 
     def holds_as_counted(self, usage: EpochUsage) -> bool:
@@ -1051,8 +1142,23 @@ class EpochStore:
         self.objects.put(
             f"{self._home}/commits/{made.seq:0{SEQ_DIGITS}d}.json", made.model_dump_json().encode()
         )
-        self.report_usage([*commits, made])
+        self._end_if_past_bytes(self.report_usage([*commits, made]), end_s)
         return made
+
+    def _end_if_past_bytes(self, usage: EpochUsage | None, end_s: float) -> None:
+        """Ends the epoch at the commit just made if it keeps more than its budget lets
+        it, unless that was its last: all its days are kept, and it has finished."""
+        reason = (
+            None
+            if self._budget is None or usage is None
+            else self._budget.bytes_past(usage.bytes_kept)
+        )
+        if reason is None:
+            return
+        duration_s = self.manifest().duration_s
+        if duration_s is None or end_s < duration_s:
+            self.end_past_limit(reason)
+            raise LimitPassed(reason)
 
     def _checked(self, commit: Commit, kind: Kind) -> bytes:
         """A segment's file, after its commit's digest has been checked."""
@@ -1168,6 +1274,7 @@ class EpochStore:
             f"{self._home}/manifest.json",
             f"{self._home}/interventions.jsonl",
             f"{self._home}/{USAGE}",
+            f"{self._home}/{_BUDGET}",
         }
         kept.add(f"{self._home}/{_INHERITED_OUTCOMES}")
         fork = self.manifest().fork

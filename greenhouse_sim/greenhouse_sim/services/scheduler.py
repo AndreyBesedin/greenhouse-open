@@ -26,7 +26,11 @@ priority than the API (decision 0067), so that a viewer stays responsive beside 
 A run asked for may be refused, saying why, for what the simulator's `limits` allow:
 too many waiting, too little disk free, or too much in the store. So may a resume or a
 fork, which ask for a worker in the same way. What waits already keeps waiting if the
-limits have been lowered since.
+limits have been lowered since, under them as they are now.
+
+A worker keeps to the budget of its epoch, which the limits give as it is put in line
+(`workers.keep_within_budget`). Past one, it says the epoch failed and why and ends, and
+the epoch can be carried on as one interrupted can, if the limit was raised meanwhile.
 
 An epoch whose worker ends without ending it, killed or lost, is told
 `interrupted` with what it had committed, and can be asked for again to be
@@ -56,7 +60,12 @@ from typing import Final
 from greenhouse_sim.services import forks, interrupted, scenario_files
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.interventions import Asked
-from greenhouse_sim.services.limits import store_too_large, too_little_disk, too_many_waiting
+from greenhouse_sim.services.limits import (
+    Budget,
+    store_too_large,
+    too_little_disk,
+    too_many_waiting,
+)
 from greenhouse_sim.services.playback import stop_epoch
 from greenhouse_sim.services.resources import lower_priority, this_process
 from greenhouse_sim.services.run_store import (
@@ -75,6 +84,7 @@ from greenhouse_sim.services.workers import (
     Free,
     Paced,
     check_resumable,
+    keep_within_budget,
     queued,
     scenario_file_of,
 )
@@ -106,6 +116,7 @@ def work(root: str, run_id: str, epoch: int) -> None:
     pace = manifest.seconds_per_day
     if not _taken_up(kept):
         raise SystemExit(LEFT_TO_ANOTHER)
+    keep_within_budget(kept)
     with Simulator() as simulator:
         if manifest.scenario_file is not None:
             scenario_files.take_up(simulator, kept.objects, manifest.scenario_file)
@@ -204,6 +215,7 @@ class Scheduler:
                 seconds_per_day=pace,
                 queued_at=datetime.now(UTC),
             )
+            epoch.give_budget(self._simulator.limits.budget)
             self._waiting.append(_Job(epoch.run_id, epoch.epoch))
             self._launch()
             return stored_run(self._objects, epoch.run_id, epoch.epoch)
@@ -232,14 +244,18 @@ class Scheduler:
             # giving it its scenario's file, which no refusal for room is to do.
             self._check_room()
             interrupted.mark_epoch(self._simulator, run_id, epoch)
-            if kept.manifest().status != Status.INTERRUPTED:
+            if not kept.manifest().carries_on:
                 raise Conflict(
                     f"epoch {epoch} of {run_id} is {kept.manifest().status}: "
                     "only an interrupted one resumes"
                 )
             check_resumable(kept)
+            budget = self._simulator.limits.budget
+            _check_within(kept, budget)
+            # Last, since it may give an epoch from before P18.1 its scenario's file.
             scenario_file = scenario_file_of(self._simulator, kept)
             pace = kept.manifest().seconds_per_day if driver is None else asked_pace
+            kept.give_budget(budget)
             kept.queue_again(scenario_file=scenario_file, seconds_per_day=pace)
             self._waiting.append(_Job(run_id, epoch, resuming=True))
             self._launch()
@@ -274,6 +290,7 @@ class Scheduler:
                 seconds_per_day=pace,
                 queued_at=datetime.now(UTC),
             )
+            made.give_budget(self._simulator.limits.budget)
             self._waiting.append(_Job(made.run_id, made.epoch, resuming=True))
             self._launch()
             return stored_run(self._objects, made.run_id, made.epoch)
@@ -335,6 +352,8 @@ class Scheduler:
             kept.end_unless_worked(Status.INTERRUPTED)
             return
         manifest = kept.manifest()
+        if kept.budget() != self._simulator.limits.budget:
+            kept.give_budget(self._simulator.limits.budget)
         resuming = manifest.resumed or manifest.fork is not None or bool(kept.commits())
         self._waiting.append(_Job(kept.run_id, kept.epoch, resuming=resuming))
 
@@ -495,6 +514,20 @@ class Scheduler:
         if process.is_alive():
             process.kill()
             process.join()
+
+
+def _check_within(kept: EpochStore, budget: Budget) -> None:
+    """Refuses to carry on an epoch that would end again at once, for what it has
+    already: its bytes and its time, which do not come back. A worker's memory is its
+    own, and the next may hold less."""
+    usage = kept.usage()
+    if usage is None:
+        return
+    reason = budget.bytes_past(usage.bytes_kept) or budget.time_past(
+        cpu_s=usage.cpu_s, wall_s=usage.wall_s
+    )
+    if reason is not None:
+        raise Conflict(f"epoch {kept.epoch} of {kept.run_id}: {reason}")
 
 
 def _place_in_line(kept: EpochStore) -> tuple[datetime, str, int]:

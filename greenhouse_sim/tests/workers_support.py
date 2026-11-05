@@ -13,9 +13,10 @@ import short_runs
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import scenario_files
+from greenhouse_sim.services.resources import this_process
 from greenhouse_sim.services.run_store import EpochStore, FolderStore, ObjectStore, Status
 from greenhouse_sim.services.simulator import Simulator
-from greenhouse_sim.services.workers import Stepped, execute, queued
+from greenhouse_sim.services.workers import Stepped, execute, keep_within_budget, queued
 
 SHORT: Final = "climate_box_short"
 LONG: Final = "climate_box_long"
@@ -68,6 +69,38 @@ def works_and_says_its_priority(root: str, run_id: str, epoch: int) -> None:
         EpochStore(FolderStore(Path(root)), run_id, epoch).objects.put(
             PRIORITY_SAID, priority.encode()
         )
+
+
+def _one_day_kept_and_watched(root: str, run_id: str, epoch: int) -> None:
+    """A worker with a day committed, keeping to its epoch's budget as any does."""
+    kept = EpochStore(FolderStore(Path(root)), run_id, epoch)
+    kept.counted_by(this_process)
+    kept.set_status(Status.RUNNING)
+    kept.commit(0.0, DAY_S)
+    keep_within_budget(kept)
+
+
+def takes_memory(root: str, run_id: str, epoch: int) -> None:
+    """Between two commits, holds more and more until it is ended."""
+    _one_day_kept_and_watched(root, run_id, epoch)
+    held = []
+    while True:
+        held.append(bytearray(b"1" * (10 * 1024**2)))
+        time.sleep(0.01)
+
+
+def holds_a_day(root: str, run_id: str, epoch: int) -> None:
+    """Between two commits, takes the wall's time and no core, until it is ended."""
+    _one_day_kept_and_watched(root, run_id, epoch)
+    while True:
+        time.sleep(1.0)
+
+
+def spins_a_day(root: str, run_id: str, epoch: int) -> None:
+    """Between two commits, takes a core, until it is ended."""
+    _one_day_kept_and_watched(root, run_id, epoch)
+    while True:
+        sum(range(1000))
 
 
 def ends_at_once(root: str, run_id: str, epoch: int) -> None:
