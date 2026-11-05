@@ -393,7 +393,7 @@ Separate from the above, each seen in review, none required by it:
 | The four button families' differences: padding 12 or 18, a page's ground or none | Landing, replay |
 | `Button` drawn from tokens on the builder and panels, not by the browser | All panels: the largest change here |
 | Alerts in `--warn`: the 17 bare ones | Panels, when each shows |
-| Contrast: `--chart-soft`'s text, chart lines under 3:1 | Charts |
+| Contrast: what `CONTRAST_FAILURES` lists, and the builder's note on a view with no ground of its own (`--text-muted` on the browser's white, 2.16 in the dark theme), which no pair of tokens can show | Charts, control outlines, the builder |
 | A first visit follows `prefers-color-scheme`, not always dark | First visit only |
 | `color-scheme` set once on `:root`, not in five rules | Scrollbars and controls outside those rules |
 

@@ -17,7 +17,22 @@ function withImports(
   );
 }
 
-const STYLES = withImports(fileURLToPath(new URL("./styles.css", import.meta.url)));
+/** The stylesheets `path` is made of, itself first, each as it was written. */
+function importedStylesheets(
+  path: string,
+  read: (path: string) => string = (file) => readFileSync(file, "utf8"),
+): { path: string; text: string }[] {
+  const text = read(path);
+  return [
+    { path, text },
+    ...[...text.matchAll(/^@import\s+"([^"]+)";[^\S\n]*$/gm)].flatMap(([, imported]) =>
+      importedStylesheets(join(dirname(path), imported ?? ""), read),
+    ),
+  ];
+}
+
+const ENTRY = fileURLToPath(new URL("./styles.css", import.meta.url));
+const STYLES = withImports(ENTRY);
 // What a panel's text or background may be: one of the theme's colours, or
 // none of its own. Anything else, a colour named, written in hex or made by
 // any function, stays the same whichever theme is chosen.
@@ -69,7 +84,7 @@ const COLOUR_ROLE =
 
 // And the size tokens, each scale's steps written out, so that a new step is too.
 const SIZE_STEP =
-  /^--(?:font-(?:xs|sm|md|lg|xl|[234]xl)|radius-(?:sm|md|lg|xl|pill)|space-[1-9]|focus-(?:width|offset)|target)$/;
+  /^--(?:font-(?:xs|sm|md|lg|xl|[234]xl)|radius-(?:sm|md|lg|xl|pill)|space-[1-9]|focus-(?:width|offset)|target(?:-compact)?)$/;
 
 function misnamedTokens(names: Iterable<string>): string[] {
   return [...names].filter((name) => !COLOUR_ROLE.test(name) && !SIZE_STEP.test(name));
@@ -117,6 +132,7 @@ describe("the stylesheet", () => {
         "--font-2xl",
         "--radius-pill",
         "--target",
+        "--target-compact",
         "--space-9",
         "--panel-text",
         "--landing-bg",
@@ -169,6 +185,210 @@ describe("the stylesheet", () => {
       'background: var(--panel-bg) url("x.png");',
       "background: repeating-linear-gradient(135deg, #ccc 0 3px, transparent 3px 6px);",
     ]);
+  });
+});
+
+// The least contrast each kind of thing needs (WCAG 2.2's 1.4.3 and 1.4.11).
+const TEXT_NEEDS = 4.5;
+const MARK_NEEDS = 3;
+// What sits on what, as the stylesheet has it: a new colour for text, a line or an
+// outline is added here, where review sees it (decision 0068).
+const SITS_ON: readonly { needs: number; what: readonly string[]; on: readonly string[] }[] = [
+  {
+    needs: TEXT_NEEDS,
+    what: ["--text", "--text-soft", "--text-muted", "--action", "--warn"],
+    on: ["--surface-page", "--surface-panel"],
+  },
+  // The words of a label over the scene; a pressed button's; a chart key's; a compass's N.
+  { needs: TEXT_NEEDS, what: ["--text"], on: ["--surface-label"] },
+  { needs: TEXT_NEEDS, what: ["--surface-page"], on: ["--action"] },
+  { needs: TEXT_NEEDS, what: ["--chart-soft", "--chart-blue-text"], on: ["--surface-panel"] },
+  { needs: TEXT_NEEDS, what: ["--text-muted"], on: ["--chart-face"] },
+  // A control's outline: a field's, a plain button's, a primary's, a danger's.
+  {
+    needs: MARK_NEEDS,
+    what: ["--border", "--text-muted", "--action", "--warn"],
+    on: ["--surface-page", "--surface-panel"],
+  },
+  // A chart's lines, in its panel; a compass's on its face.
+  {
+    needs: MARK_NEEDS,
+    what: [
+      "--data-amber",
+      "--data-blue",
+      "--data-green",
+      "--data-navy",
+      "--data-orange",
+      "--data-red",
+      "--data-sky",
+      "--chart-ring",
+      "--chart-neutral",
+      "--chart-strong",
+      "--chart-soft",
+      "--chart-off",
+      "--chart-faint",
+    ],
+    on: ["--surface-panel"],
+  },
+  { needs: MARK_NEEDS, what: ["--chart-ring", "--data-blue"], on: ["--chart-face"] },
+];
+
+// What falls short today, computed: each is taken out by the visual step that fixes
+// it (P19.12), and the test fails if one is left here once fixed, or if one more falls.
+const CONTRAST_FAILURES: Readonly<Record<string, number>> = {
+  // Words: a chart key's.
+  "dark: --chart-soft on --surface-panel, needs 4.5": 4.36,
+  "light: --chart-soft on --surface-panel, needs 4.5": 2.7,
+  "light: --chart-blue-text on --surface-panel, needs 4.5": 3.94,
+  // A control's only outline: the words of a button identify it, a field's do not.
+  "dark: --border on --surface-page, needs 3": 2.09,
+  "dark: --border on --surface-panel, needs 3": 1.49,
+  "light: --border on --surface-page, needs 3": 1.48,
+  "light: --border on --surface-panel, needs 3": 1.22,
+  // A chart's lines, the same in both themes, which show on one of them.
+  "dark: --data-blue on --surface-panel, needs 3": 2.96,
+  "dark: --data-navy on --surface-panel, needs 3": 2.58,
+  "dark: --data-red on --surface-panel, needs 3": 2.46,
+  "light: --data-amber on --surface-panel, needs 3": 1.6,
+  "light: --data-orange on --surface-panel, needs 3": 1.77,
+  // A chart's neutral lines, and a compass's ring.
+  "dark: --chart-faint on --surface-panel, needs 3": 2.47,
+  "light: --chart-faint on --surface-panel, needs 3": 1.46,
+  "light: --chart-off on --surface-panel, needs 3": 2.64,
+  "light: --chart-soft on --surface-panel, needs 3": 2.7,
+  "light: --chart-ring on --surface-panel, needs 3": 2.17,
+  "light: --chart-ring on --chart-face, needs 3": 2.85,
+};
+
+interface Colour {
+  red: number;
+  green: number;
+  blue: number;
+  alpha: number;
+}
+
+/** A token's colour, as `tokens.css` writes them: `#rrggbb`, or `rgb(r g b / a%)`. */
+function colourOf(written: string): Colour {
+  const hex = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(written);
+  if (hex !== null) {
+    const [red, green, blue] = hex.slice(1).map((part) => Number.parseInt(part, 16));
+    return { red: red ?? 0, green: green ?? 0, blue: blue ?? 0, alpha: 1 };
+  }
+  const rgb = /^rgb\((\d+) (\d+) (\d+) \/ (\d+)%\)$/.exec(written);
+  if (rgb !== null) {
+    const [red, green, blue, percent] = rgb.slice(1).map(Number);
+    return { red: red ?? 0, green: green ?? 0, blue: blue ?? 0, alpha: (percent ?? 0) / 100 };
+  }
+  throw new Error(`no colour in ${written}`);
+}
+
+function over(top: Colour, ground: Colour): Colour {
+  const mixed = (part: "red" | "green" | "blue"): number =>
+    top.alpha * top[part] + (1 - top.alpha) * ground[part];
+  return { red: mixed("red"), green: mixed("green"), blue: mixed("blue"), alpha: 1 };
+}
+
+function luminance({ red, green, blue }: Colour): number {
+  const linear = (level: number): number => {
+    const share = level / 255;
+    return share <= 0.04045 ? share / 12.92 : ((share + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue);
+}
+
+function ratio(one: Colour, other: Colour): number {
+  const [low, high] = [luminance(one), luminance(other)].sort((a, b) => a - b);
+  return ((high ?? 0) + 0.05) / ((low ?? 0) + 0.05);
+}
+
+const WHITE: Colour = { red: 255, green: 255, blue: 255, alpha: 1 };
+const BLACK: Colour = { red: 0, green: 0, blue: 0, alpha: 1 };
+
+/** `ink`'s contrast on `surface` at its worst: what lies behind a translucent surface
+ * can be anything, between white and black, and a translucent ink lets the surface
+ * through in turn. */
+function worstContrast(ink: Colour, surface: Colour): number {
+  return Math.min(
+    ...[WHITE, BLACK].map((backdrop) => {
+      const ground = over(surface, backdrop);
+      return ratio(over(ink, ground), ground);
+    }),
+  );
+}
+
+/** Each pair of `pairs` under what it needs, in `stylesheet`'s themes, by name, with
+ * the contrast it has to two places. */
+function contrastFailures(stylesheet: string, pairs = SITS_ON): Record<string, number> {
+  const failures: Record<string, number> = {};
+  for (const theme of ["dark", "light"] as const) {
+    const tokens = tokenValues(stylesheet.replace(COMMENT, ""), theme);
+    const colour = (name: string): Colour => {
+      const written = tokens.get(name);
+      if (written === undefined) {
+        throw new Error(`${name} is declared here and never defined`);
+      }
+      return colourOf(written.trim());
+    };
+    for (const { needs, what, on } of pairs) {
+      for (const ink of what) {
+        for (const surface of on) {
+          const contrast = worstContrast(colour(ink), colour(surface));
+          if (contrast < needs) {
+            const key = `${theme}: ${ink} on ${surface}, needs ${needs}`;
+            failures[key] = Number(contrast.toFixed(2));
+          }
+        }
+      }
+    }
+  }
+  return failures;
+}
+
+describe("the tokens' contrast (P19.6)", () => {
+  it("falls short only where it is listed, in both themes", () => {
+    expect(contrastFailures(STYLES)).toEqual(CONTRAST_FAILURES);
+  });
+
+  it("is WCAG's ratio, at the worst backdrop", () => {
+    expect(ratio(BLACK, WHITE)).toBeCloseTo(21, 5);
+    expect(ratio(colourOf("#777777"), WHITE)).toBeCloseTo(4.48, 2);
+    // A panel 90% dark over white is at its lightest, and light text at its worst.
+    const panel = colourOf("rgb(17 24 39 / 90%)");
+    expect(worstContrast(colourOf("#e5e9f0"), panel)).toBeCloseTo(11, 1);
+    expect(worstContrast(colourOf("#000000"), colourOf("rgb(255 255 255 / 88%)"))).toBeCloseTo(
+      15.97,
+      1,
+    );
+    expect(worstContrast(WHITE, BLACK)).toBeCloseTo(21, 5);
+  });
+
+  it("draws translucent words or lines over what they sit on, not as if opaque", () => {
+    const panel = colourOf("rgb(17 24 39 / 90%)");
+    expect(worstContrast(colourOf("rgb(229 233 240 / 1%)"), panel)).toBeLessThan(1.1);
+    expect(worstContrast(colourOf("rgb(255 255 255 / 50%)"), BLACK)).toBeCloseTo(5.28, 1);
+
+    const faded = STYLES.replace("--text: #e5e9f0", "--text: rgb(229 233 240 / 1%)");
+    expect(contrastFailures(faded)).toHaveProperty(["dark: --text on --surface-panel, needs 4.5"]);
+  });
+
+  it("is computed per theme, and reads a change of a token in one of them", () => {
+    const written = `
+      :root { --ink: #777777; --ground: #ffffff; }
+      :root[data-theme="light"] { --ink: #000000; }
+    `;
+    const pairs = [{ needs: 4.5, what: ["--ink"], on: ["--ground"] }];
+    expect(contrastFailures(written, pairs)).toEqual({
+      "dark: --ink on --ground, needs 4.5": 4.48,
+    });
+    expect(contrastFailures(written.replace("--ink: #777777", "--ink: #767676"), pairs)).toEqual(
+      {},
+    );
+  });
+
+  it("refuses a pair whose token is gone, and a colour it cannot read", () => {
+    const pairs = [{ needs: 3, what: ["--gone"], on: ["--ground"] }];
+    expect(() => contrastFailures(":root { --ground: #ffffff; }", pairs)).toThrow("--gone");
+    expect(() => colourOf("red")).toThrow("red");
   });
 });
 
@@ -238,6 +458,8 @@ const FEATURES = new Set([
   "lab",
   "move",
   "qa",
+  // The design system's components (P19.6), whose rules stand in `src/design/` alone.
+  "ds",
 ]);
 // `visually-hidden` is said to whoever hears the page and not shown.
 const STATES = new Set(["applied", "at-the-end", "folded", "refused", "stale", "visually-hidden"]);
@@ -336,6 +558,11 @@ const BUILT = new Set([
   "landing-status-interrupted",
   "landing-status-queued",
   "landing-status-running",
+  // `buttonClass`: what is drawn as a button, by its tone and size (P19.6).
+  "ds-button",
+  "ds-button-primary",
+  "ds-button-danger",
+  "ds-button-compact",
 ]);
 
 describe("the stylesheet's classes (AUDIT.20)", () => {
@@ -404,13 +631,22 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
 // (below), so that replacing each `var()` is what the browser computes.
 //
 // A pull request that means to change a style writes the digests the test
-// prints here, in its own diff, where review sees them; a token step must not.
-// It goes when selectors start to move (P19.6), and the page baselines hold.
+// prints here, in its own diff, where review sees them; a token step must not. The
+// components' rules stand outside it: the reference page's baselines hold those, and
+// adding them moves nothing a page draws.
+//
+// It goes when selectors start to move (P19.8). Until then it holds what nothing else
+// does: at `c0262394`, 206 of the stylesheet's 370 rules match nothing on the pages the
+// no-tolerance baselines draw, and the guards below read how a value is written, not
+// which it is.
 const RESOLVED_DIGESTS = {
   dark: "ab704d70264c7abbe8ae0b2062d37a1fcb4e36f0505231903e1dba9b531b6d9d",
   light: "491325346cbd151d8cc513d8fdf882ea7ef7c6d1d69453a2ac3a09c15af27482",
 };
 type ThemeName = keyof typeof RESOLVED_DIGESTS;
+const STYLES_OF_THE_PAGES = withImports(ENTRY, (file) =>
+  file.endsWith("/design/components.css") ? "" : readFileSync(file, "utf8"),
+);
 const COMMENT = /\/\*[\s\S]*?\*\//g;
 const ROOT_BLOCK = /:root([^{]*)\{([^}]*)\}/g;
 const LIGHT_ROOT = /\[data-theme="light"\]\s*$/;
@@ -469,7 +705,7 @@ function outsideTheTokens(stylesheet: string): string[] {
 }
 
 describe("a button that cannot be pressed", () => {
-  it.each([".replay-button", ".landing-button"])("looks so, as %s", (selector) => {
+  it.each([".replay-button", ".landing-button", ".ds-button"])("looks so, as %s", (selector) => {
     const rule = new RegExp(`\\${selector}:disabled\\s*\\{([^}]*)\\}`).exec(STYLES)?.[1] ?? "";
     expect(rule).toMatch(/opacity:/);
     expect(rule).toMatch(/cursor:\s*not-allowed/);
@@ -487,9 +723,22 @@ describe("the stylesheet with its tokens resolved (P19.1)", () => {
 
   it("is what it was", () => {
     expect(
-      { dark: digest(resolved(STYLES, "dark")), light: digest(resolved(STYLES, "light")) },
+      {
+        dark: digest(resolved(STYLES_OF_THE_PAGES, "dark")),
+        light: digest(resolved(STYLES_OF_THE_PAGES, "light")),
+      },
       "the stylesheet draws something else: a token step must not; a change of style writes these digests in RESOLVED_DIGESTS",
     ).toEqual(RESOLVED_DIGESTS);
+  });
+
+  it("leaves out the rules of no page, and only those", () => {
+    expect(STYLES_OF_THE_PAGES).not.toContain(".ds-");
+    expect(STYLES_OF_THE_PAGES).toContain(".landing-button");
+  });
+
+  it("uses no token that is not defined, in a component's rules too", () => {
+    expect(() => resolved(STYLES, "dark")).not.toThrow();
+    expect(() => resolved(STYLES, "light")).not.toThrow();
   });
 
   it("can be replaced by a substitution, as custom properties stand on :root alone", () => {
@@ -576,7 +825,10 @@ describe("the stylesheet with its tokens resolved (P19.1)", () => {
 const SIZE_SCALES: readonly { property: RegExp; token: RegExp }[] = [
   { property: /^font(?:-size)?$/, token: /^var\(--font-[\w-]+\)$/ },
   { property: /^border(?:-[a-z]+)*-radius$/, token: /^var\(--radius-[\w-]+\)$/ },
-  { property: /^min-(?:width|height|inline-size|block-size)$/, token: /^var\(--target\)$/ },
+  {
+    property: /^min-(?:width|height|inline-size|block-size)$/,
+    token: /^var\(--target(?:-compact)?\)$/,
+  },
   {
     property: /^(?:(?:grid-)?(?:row-|column-)?gap|padding(?:-[a-z-]+)?|margin(?:-[a-z-]+)?)$/,
     token: /^var\(--space-[1-9]\)$/,
@@ -816,5 +1068,100 @@ describe("the stylesheet's sizes (P19.4, P19.5)", () => {
         [".a { font-size: 11px }"],
       ),
     ).toEqual({ unlisted: [".a { font-size: 11px }"], gone: [] });
+  });
+});
+
+/** Each rule's selector list in a stylesheet, its comments left out and its quotes kept. */
+function selectorLists(stylesheet: string): string[] {
+  return [...stylesheet.replace(COMMENT, "").matchAll(/([^{};]*)\{/g)].map(([, prelude]) =>
+    (prelude ?? "").trim().replace(/\s+/g, " "),
+  );
+}
+
+/** The selectors in `stylesheets` that name a component outside `src/design/`. */
+function componentsRestyled(stylesheets: readonly { path: string; text: string }[]): string[] {
+  return stylesheets
+    .filter(({ path }) => !path.includes("/src/design/"))
+    .flatMap(({ text }) => selectorLists(text).filter((list) => /(?<![\w-])ds-/.test(list)));
+}
+
+// The focus rings written today. One ring on every control, in `base.css`, is a visual
+// step (P19.12), which takes these with it: this can only shrink.
+const FOCUS_RINGS = [
+  ".ds-button:focus-visible",
+  ".home-button:focus-visible",
+  ".panel-stripe:hover, .panel-stripe:focus-visible",
+  ".replay-handle:focus-visible",
+];
+
+describe("the design system's components (P19.6)", () => {
+  it("are styled in src/design/ alone, so that no page restyles one", () => {
+    const stylesheets = importedStylesheets(ENTRY);
+    expect(stylesheets.map(({ path }) => path).filter((path) => path.includes("/design/"))).toEqual(
+      [
+        expect.stringMatching(/tokens/),
+        expect.stringMatching(/base/),
+        expect.stringMatching(/components/),
+      ],
+    );
+    expect(componentsRestyled(stylesheets)).toEqual([]);
+  });
+
+  it("refuse a page's rule that names one, however it is selected", () => {
+    const written = `
+      /* .ds-button in a comment. */
+      .bands-chart, .cards-ds-row { gap: 0; }
+      .landing .ds-button { color: red; }
+      .ds-icon-button:hover { opacity: 1; }
+      [class*="ds-button"] { opacity: 1; }
+      @media (min-width: 600px) { .a > .ds-page { color: red; } }
+    `;
+    expect(
+      componentsRestyled([
+        { path: "/web/src/landing/landing.css", text: written },
+        { path: "/web/src/design/components.css", text: ".ds-button { gap: 0; }" },
+      ]),
+    ).toEqual([
+      ".landing .ds-button",
+      ".ds-icon-button:hover",
+      '[class*="ds-button"]',
+      ".a > .ds-page",
+    ]);
+  });
+
+  it("are read through the entry's imports, nested ones too", () => {
+    const files: Record<string, string> = {
+      "/s/styles.css": '@import "./design/tokens.css";\n.a { gap: 0; }\n',
+      "/s/design/tokens.css": '@import "./colours.css";\n',
+      "/s/design/colours.css": ":root { --b: 2px; }\n",
+    };
+    expect(
+      importedStylesheets("/s/styles.css", (path) => files[path] ?? "").map(({ path }) => path),
+    ).toEqual(["/s/styles.css", "/s/design/tokens.css", "/s/design/colours.css"]);
+  });
+
+  it("wear one focus ring of the tokens' sizes", () => {
+    const rule = /\.ds-button:focus-visible\s*\{([^}]*)\}/.exec(STYLES)?.[1] ?? "";
+    expect(rule).toMatch(/outline:\s*var\(--focus-width\) solid var\(--action\)/);
+    expect(rule).toMatch(/outline-offset:\s*var\(--focus-offset\)/);
+  });
+});
+
+/** The rules in `stylesheet` that draw a focus ring of their own. */
+function focusRings(stylesheet: string): string[] {
+  return selectorLists(stylesheet).filter((list) => list.includes(":focus-visible"));
+}
+
+describe("the stylesheet's focus rings (P19.6)", () => {
+  it("are the ones named here", () => {
+    expect(againstTheList(focusRings(STYLES), FOCUS_RINGS)).toEqual({ unlisted: [], gone: [] });
+  });
+
+  it("refuse one more, whatever its selector", () => {
+    expect(
+      focusRings(
+        ".a:focus-visible { gap: 0; } .b:focus { gap: 0; } :is(.c, .d:focus-visible) { gap: 0; }",
+      ),
+    ).toEqual([".a:focus-visible", ":is(.c, .d:focus-visible)"]);
   });
 });
