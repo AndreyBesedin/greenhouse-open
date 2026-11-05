@@ -13,7 +13,7 @@ Unreleased section holds the entries written here before that.
 
 ## Unreleased
 
-## 0.6.0 - 2026-11-04
+## 0.6.0 - 2026-11-05
 
 A run is now kept (P17, decisions 0065 and 0066): a run store holds each run's days as
 Parquet segments, checkpoints and commits, and a playback is a position over what it

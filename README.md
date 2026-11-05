@@ -12,9 +12,9 @@ research datasets into that format.
 
 ## Demo
 
-Greenhouse Open v0.5.0 — Greenhouse Simulation
+Greenhouse Open v0.6.0 — Greenhouse Simulation
 
-https://github.com/user-attachments/assets/a09386c8-7823-4321-992f-0261f37bf91d
+https://github.com/user-attachments/assets/d66b69a2-741c-4f08-a4e8-156ed700489c
 
 The whole walk-through at its own pace, each step held under its caption,
 recorded from 0.5.0:
