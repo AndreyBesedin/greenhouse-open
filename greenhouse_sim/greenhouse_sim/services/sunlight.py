@@ -7,11 +7,13 @@ Its plants stand as its crop does before its first day, each at its
 planting position: as the simple model starts them, or as its transplants
 stand where it grows its crop organ by organ. A scenario's sunlight is
 kept for each of its layouts and weathers, so that the cells and the
-plants it has worked out the light of are found again. How each plant's
-light is asked for at a moment of a run is the crop's
+plants it has worked out the light of are found again, and so is the light
+above each scope of a crop grown by area, which no run's air changes. How
+each plant's light is asked for at a moment of a run is the crop's
 (`greenhouse_sim.services.crop`).
 """
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 from greenhouse_sim.core.crop import crowns
@@ -22,7 +24,9 @@ from greenhouse_sim.services.scenarios import SceneChanges, changed, plant_ids, 
 from greenhouse_sim.services.stores import Store
 from greenhouse_sim.solar.inside import Sunlight
 from greenhouse_sim.solar.plants import Crown, PlantLight
+from greenhouse_sim.solar.scopes import ScopeLight
 from greenhouse_sim.solar.shadows import Shadows
+from greenhouse_sim.world.scopes import row_scopes
 
 if TYPE_CHECKING:
     # Typed only: the simulator imports the services that take it.
@@ -32,7 +36,17 @@ if TYPE_CHECKING:
 KEPT_SUNLIGHT: Final = 8
 
 
-def new_store() -> Store[tuple[str, str, str], PlantLight]:
+@dataclass(frozen=True)
+class HouseLight:
+    """The sunlight kept of a scenario under a layout and a weather: the
+    light on its plants, and above each scope of its crop, if an area grows
+    it, for every run of that house to share."""
+
+    plants: PlantLight
+    scopes: ScopeLight | None
+
+
+def new_store() -> Store[tuple[str, str, str], HouseLight]:
     """A simulator's sunlight: the latest `KEPT_SUNLIGHT` (decision 0048)."""
     return Store("sunlight", KEPT_SUNLIGHT, label="/".join)
 
@@ -53,8 +67,23 @@ def first_crowns(config: ScenarioConfig) -> list[Crown]:
 def plant_light(simulator: Simulator, scenario_id: str, layout: str, weather: str) -> PlantLight:
     """A scenario's sunlight with one of its layouts, under a weather, and the
     light on each of its plants: one of those kept, or a new one."""
+    return _house_light(simulator, scenario_id, layout, weather).plants
 
-    def make(_: object) -> PlantLight:
+
+def scope_light(
+    simulator: Simulator, scenario_id: str, layout: str, weather: str
+) -> ScopeLight | None:
+    """The light above each scope of a scenario's crop grown by area, with
+    one of its layouts, under a weather: the same for every run of that
+    house, whatever its air; none for a crop of plants."""
+    return _house_light(simulator, scenario_id, layout, weather).scopes
+
+
+def _house_light(simulator: Simulator, scenario_id: str, layout: str, weather: str) -> HouseLight:
+    """A scenario's sunlight with one of its layouts, under a weather: one of
+    those kept, or a new one."""
+
+    def make(_: object) -> HouseLight:
         config = changed(
             simulator.catalogue,
             scenario(simulator.catalogue, scenario_id),
@@ -68,6 +97,16 @@ def plant_light(simulator: Simulator, scenario_id: str, layout: str, weather: st
             config.envelope,
             Shadows.of(config.envelope, config.layout, [crown.solid() for crown in plant_crowns]),
         )
-        return PlantLight(sunlight, plant_crowns)
+        area = registration(config).area
+        scopes = (
+            None
+            if area is None
+            else ScopeLight(
+                sunlight,
+                row_scopes(config.layout, config.envelope),
+                area.rung(config).canopy_height_m,
+            )
+        )
+        return HouseLight(PlantLight(sunlight, plant_crowns), scopes)
 
     return simulator.sunlight.made_once((scenario_id, layout, weather), make)
