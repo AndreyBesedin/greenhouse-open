@@ -92,6 +92,35 @@ describe("the builder's parts (P12.2)", () => {
     expect([1, 2, 3].map((n) => row(n)?.checked)).toEqual([false, false, false]);
   });
 
+  it("start the crop given from what the rows grow, so that a new variety keeps their model", () => {
+    const onGive = vi.fn();
+    const organ = {
+      ...HOUSE,
+      row_crops: [{ row: 1, crop_model: "organ", variety: "beefsteak" }],
+    } as unknown as Installation;
+    shown = render(<RowCrops installation={organ} onGive={onGive} />);
+    const model = shown.container.querySelector<HTMLSelectElement>(".builder-give select");
+    const variety = shown.container.querySelector<HTMLInputElement>(".builder-give input");
+    expect([model?.value, variety?.value]).toEqual(["organ", "beefsteak"]);
+
+    click(
+      shown.container.querySelector<HTMLInputElement>('[aria-label="Choose row 2"]') as HTMLElement,
+    );
+    enter(variety as HTMLInputElement, "cherry_tomato");
+    click(button(shown.container, "Give the chosen rows this crop"));
+
+    expect(onGive).toHaveBeenCalledWith([2], { crop_model: "organ", variety: "cherry_tomato" });
+  });
+
+  it("offer every crop model the simulator grows", () => {
+    shown = render(<RowCrops installation={HOUSE} onGive={vi.fn()} />);
+    const options = shown.container.querySelectorAll<HTMLOptionElement>(
+      ".builder-give select option",
+    );
+
+    expect([...options].map((each) => each.value)).toEqual(["simple", "organ", "reduced_tomgro"]);
+  });
+
   it("say whether a draft runs, its errors first", () => {
     shown = render(
       <Findings
