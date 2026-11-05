@@ -267,6 +267,18 @@ export const OBSERVATIONS_SCHEMA = {
           "default": null,
           "title": "Sensor Id"
         },
+        "scope_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scope Id"
+        },
         "delivered_at": {
           "anyOf": [
             {
@@ -363,6 +375,10 @@ export const OBSERVATIONS_SCHEMA = {
         "sampled_fruit_count_per_plant",
         "sampled_fruit_fresh_weight_g_per_plant",
         "plant_density_per_m2",
+        "leaf_area_index",
+        "above_ground_dry_weight_g_m2",
+        "fruit_dry_weight_g_m2",
+        "mature_fruit_dry_weight_g_m2",
         "outside_air_temperature_c",
         "outside_relative_humidity_pct",
         "outside_humidity_deficit_g_m3",

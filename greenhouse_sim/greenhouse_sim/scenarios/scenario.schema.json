@@ -36,6 +36,32 @@
       "title": "BuoyancyAirflow",
       "type": "object"
     },
+    "CanopySample": {
+      "additionalProperties": false,
+      "description": "A sample taken of each scope of a crop grown by area, a measurement\nmodel (decision 0062): every `every_days` days from the run's first, at\nthe walk's moment, each quantity read with a relative error, in percent,\nof a normal spread `noise_pct` about the bias `bias_pct`. Its defaults\nare an exploratory choice, not a source's. Noise and bias at zero make\nit a perfect instrument, for research, which a manifest has to ask for.\nIt takes nothing from the canopy, as the air takes nothing from it, and\nits readings are delivered as they are taken.",
+      "properties": {
+        "every_days": {
+          "default": 7,
+          "exclusiveMinimum": 0,
+          "title": "Every Days",
+          "type": "integer"
+        },
+        "noise_pct": {
+          "default": 5.0,
+          "minimum": 0,
+          "title": "Noise Pct",
+          "type": "number"
+        },
+        "bias_pct": {
+          "default": 0.0,
+          "exclusiveMinimum": -100.0,
+          "title": "Bias Pct",
+          "type": "number"
+        }
+      },
+      "title": "CanopySample",
+      "type": "object"
+    },
     "CfdSetup": {
       "additionalProperties": false,
       "description": "What drives a scenario's air in a CFD solve, and for how long.",
@@ -1667,6 +1693,21 @@
                 },
                 "parameters": {
                   "$ref": "#/$defs/CropWalk"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "canopy_sample"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/CanopySample"
                 }
               }
             }

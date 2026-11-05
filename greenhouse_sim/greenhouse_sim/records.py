@@ -23,8 +23,9 @@ def _stamp(timestamp: datetime) -> str:
 
 
 def observation_id(scope: str, timestamp: datetime, kind: str) -> str:
-    """`scope` is the plant the reading describes, or the greenhouse when
-    the reading is of the greenhouse as a whole."""
+    """`scope` is the plant the reading describes, the crop's scope within
+    its greenhouse, or the greenhouse when the reading is of the greenhouse
+    as a whole."""
     return f"{PREFIX}_{scope}_{_stamp(timestamp)}_{kind}"
 
 

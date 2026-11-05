@@ -123,6 +123,7 @@ READABLE_FIELDS: Final[Mapping[type[BaseModel], frozenset[str]]] = MappingProxyT
                 "value",
                 "source",
                 "sensor_id",
+                "scope_id",
                 "delivered_at",
                 "quality",
             }

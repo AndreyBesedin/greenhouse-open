@@ -17,6 +17,7 @@ from greenhouse_sim.scenarios.crop_parameters import (
     DEFAULT_SIMPLE_CROP,
     HELD_AT_THE_TOP,
     WALK,
+    CanopySample,
     CropWalk,
     OrganCrop,
     ReducedTomgroCrop,
@@ -79,7 +80,7 @@ class ScenarioConfig(BaseModel):
     )
     crop_work: CropWork = CropWork()
     # The daily walk through its crop's measurement errors.
-    crop_walk: CropWalk = CropWalk()
+    crop_walk: Annotated[CropWalk | CanopySample, Field(discriminator="kind")] = CropWalk()
     # The commands its runs give its equipment, doors and vents at a time of
     # day, every day, unless a run is given daily commands of its own (P09.4).
     daily: list[DailyCommand] = []
@@ -154,6 +155,15 @@ class ScenarioConfig(BaseModel):
             raise ValueError(
                 f"its crop's parameters are the {self.crop.kind} crop's, but it grows the "
                 f"{self.crop_model} crop"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _a_canopy_sample_is_of_a_crop_grown_by_area(self) -> Self:
+        if isinstance(self.crop_walk, CanopySample) and not self.crop.BY_AREA:
+            raise ValueError(
+                f"its {self.crop_walk.kind} measures a crop grown by area, "
+                f"and it grows the {self.crop.kind} crop plant by plant"
             )
         return self
 

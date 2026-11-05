@@ -94,7 +94,8 @@ def test_a_policy_may_act_on_what_the_run_acts_on_and_as_it_does(
         crop.crop_actions == (frozenset() if taken is None else taken.kinds)
         for crop in context.crops
     )
-    assert all(crop.grown_by == CropBasis.PLANT for crop in context.crops)
+    grown_by = CropBasis.AREA if registration(played).area else CropBasis.PLANT
+    assert all(crop.grown_by == grown_by for crop in context.crops)
 
 
 def test_the_reference_greenhouses_context_lists_its_installation(plain: Simulator) -> None:

@@ -32,6 +32,17 @@ def test_observation_constructs_with_plant_level_fields() -> None:
     assert observation.value == 38.0
 
 
+def test_a_reading_of_a_crop_scope_names_it_and_one_of_none_is_written_as_before() -> None:
+    scoped = _make_observation(
+        plant_id=None, scope_id="row_1", observation_type=ObservationType.LEAF_AREA_INDEX
+    )
+    plain = _make_observation()
+
+    assert json.loads(scoped.model_dump_json())["scope_id"] == "row_1"
+    assert "scope_id" not in json.loads(plain.model_dump_json())
+    assert Observation.model_validate_json(scoped.model_dump_json()) == scoped
+
+
 def test_observation_plant_id_is_optional_for_greenhouse_level_readings() -> None:
     observation = _make_observation(
         plant_id=None, observation_type=ObservationType.AIR_TEMPERATURE_C, value=31.2

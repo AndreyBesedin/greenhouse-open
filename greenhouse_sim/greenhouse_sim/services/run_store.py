@@ -527,13 +527,24 @@ class _Codec[RecordT]:
         """The records of a segment's file, in the order they were written."""
         # An instant is read as whole microseconds from the epoch, which is
         # what it is stored as, so that no time zone library is in between.
-        names = ", ".join(
-            f"epoch_us({name})" if sql == "TIMESTAMPTZ" else name for name, sql in self.columns
-        )
         with tempfile.TemporaryDirectory() as folder, duckdb.connect() as con:
             con.execute("SET TimeZone='UTC'")
             path = Path(folder) / "segment.parquet"
             path.write_bytes(data)
+            # A segment written before a column was added to its log has none
+            # of it: read as unset.
+            written = {
+                row[0]
+                for row in con.execute(f"DESCRIBE SELECT * FROM read_parquet('{path}')").fetchall()
+            }
+            names = ", ".join(
+                "NULL"
+                if name not in written
+                else f"epoch_us({name})"
+                if sql == "TIMESTAMPTZ"
+                else name
+                for name, sql in self.columns
+            )
             rows = con.execute(
                 f"SELECT {names} FROM read_parquet('{path}', file_row_number=true) "
                 "ORDER BY file_row_number"
@@ -555,6 +566,7 @@ def _observation_row(o: Observation) -> tuple[object, ...]:
         o.sensor_id,
         o.delivered_at,
         sorted(q.value for q in o.quality),
+        o.scope_id,
     )
 
 
@@ -567,7 +579,7 @@ def _utc(microseconds: object) -> datetime | None:
 
 def _observation(row: tuple[object, ...]) -> Observation:
     identity, greenhouse, compartment, plant, at, kind, value, source, source_id = row[:9]
-    sensor, delivered, quality = row[9:]
+    sensor, delivered, quality, scope = row[9:]
     assert isinstance(quality, list)
     return Observation.model_validate(
         dict(
@@ -580,6 +592,7 @@ def _observation(row: tuple[object, ...]) -> Observation:
             value=value,
             source=RecordSource.model_validate(dict(type=source, source_id=source_id)),
             sensor_id=sensor,
+            scope_id=scope,
             delivered_at=_utc(delivered),
             quality=frozenset(ObservationQuality(str(q)) for q in quality),
         )
@@ -600,6 +613,7 @@ OBSERVATIONS: Final = _Codec[Observation](
         ("sensor_id", "VARCHAR"),
         ("delivered_at", "TIMESTAMPTZ"),
         ("quality", "VARCHAR[]"),
+        ("scope_id", "VARCHAR"),
     ),
     _observation_row,
     _observation,
