@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { useFolds } from "../folds";
 import { formatValue } from "../readouts";
+import { useForkQuestion } from "../replay/useForkQuestion";
 import type { ThermostatAt } from "../scene/equipment";
 import { describeTime } from "./ClimateTime";
 
@@ -44,6 +45,7 @@ export function TargetsPanel({
   followed,
   forking = false,
   noFork = null,
+  forkFrom = null,
   onSet,
 }: {
   /** The thermostat at the moment drawn, with its setpoints then; null
@@ -57,6 +59,8 @@ export function TargetsPanel({
   forking?: boolean;
   /** Why no fork can be made at the moment drawn, if none can. */
   noFork?: string | null;
+  /** The moment the fork takes, if the transport reads another. */
+  forkFrom?: string | null;
   /** Sets the targets changed, by name, in °C. */
   onSet: (targets: Record<string, number>) => void;
 }) {
@@ -76,6 +80,7 @@ export function TargetsPanel({
           followed={followed}
           forking={forking}
           noFork={noFork}
+          forkFrom={forkFrom}
           onSet={onSet}
         />
       )}
@@ -89,6 +94,7 @@ function TargetsForm({
   followed,
   forking,
   noFork,
+  forkFrom,
   onSet,
 }: {
   thermostat: ThermostatAt;
@@ -96,6 +102,7 @@ function TargetsForm({
   followed: boolean;
   forking: boolean;
   noFork: string | null;
+  forkFrom: string | null;
   onSet: (targets: Record<string, number>) => void;
 }) {
   const [day, setDay] = useState(String(thermostat.dayC));
@@ -114,8 +121,9 @@ function TargetsForm({
     const value = Number(given);
     return given !== "" && value >= LOWEST_C && value <= HIGHEST_C;
   });
+  const { trigger, ask, question } = useForkQuestion({ about: JSON.stringify(changed) });
   const from = forking
-    ? "in a fork of this run, from its next minute"
+    ? `in a fork of this run, from ${forkFrom ?? "its next minute"}`
     : followed
       ? "from the run's next minute"
       : `from ${describeTime(settingMoment(time))}`;
@@ -124,7 +132,11 @@ function TargetsForm({
       className="targets-form"
       onSubmit={(event) => {
         event.preventDefault();
-        onSet(changed);
+        if (forking) {
+          ask(() => onSet(changed));
+        } else {
+          onSet(changed);
+        }
       }}
     >
       <label>
@@ -150,12 +162,14 @@ function TargetsForm({
         />
       </label>{" "}
       <button
+        ref={trigger}
         type="submit"
         disabled={!valid || Object.keys(changed).length === 0 || noFork !== null}
       >
         Set {from}
       </button>
       {noFork !== null && <p className="targets-note">{noFork}</p>}
+      {question}
     </form>
   );
 }

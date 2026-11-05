@@ -94,6 +94,15 @@ function Standing({
           The run played back cannot be followed: {load.reason}.
         </p>
       );
+    case "failed":
+      return (
+        <p data-testid="playback-status" role="alert">
+          The run played back failed: {load.reason}.{" "}
+          <button type="button" onClick={onStart}>
+            Play it again
+          </button>
+        </p>
+      );
     case "loaded": {
       const { state } = load;
       const pace = state.playing ? `playing a day in ${state.secondsPerDay} s` : "paused";

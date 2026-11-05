@@ -88,10 +88,12 @@ def fork(
     layout: str | None = None,
     changes: Sequence[Asked] = (),
     seconds_per_day: float | None = None,
+    queued_at: datetime | None = None,
 ) -> EpochStore:
     """A new epoch, `queued`, forked from `epoch` of `run_id` at `at_s`, in its
-    `layout` from then on if given, with `changes` given at that moment, and
-    what a worker needs to run it (`scenario_files.carry`).
+    `layout` from then on if given, with `changes` given at that moment, what a
+    worker needs to run it (`scenario_files.carry`), and `queued_at` if a scheduler
+    puts it in line.
     Refused if the parent does not hold that moment, or the run ends there.
     Whoever starts epochs of one store does it one at a time, so that two are
     never given a number."""
@@ -144,6 +146,7 @@ def fork(
             layout=chosen,
             duration_s=manifest.duration_s,
             created_at=datetime.now(UTC),
+            queued_at=queued_at,
             fork=ForkOf(
                 run_id=run_id,
                 epoch=epoch,

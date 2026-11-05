@@ -37,7 +37,10 @@ export interface RunSettings {
  * which names the draft and the revision. */
 export type DraftAnswer = Assessed & { draft: DraftRevision };
 
-const readAssessed = contractReader<Assessed>(ASSESSED_SCHEMA, "not an assessed installation");
+export const readAssessed = contractReader<Assessed>(
+  ASSESSED_SCHEMA,
+  "not an assessed installation",
+);
 const readKept = contractReader<Assessed>(ASSESSED_SCHEMA, "not a draft");
 const readDrafts = contractReader<DraftsListed>(DRAFTS_SCHEMA, "not a list of drafts");
 const readScene = contractReader<SceneSnapshot>(SNAPSHOT_SCHEMA, "not a scene");

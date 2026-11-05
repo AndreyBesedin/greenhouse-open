@@ -54,7 +54,7 @@ class InstallationFileError(ValueError):
         first = problems[0]
         where = f"{first.field}: " if first.field else ""
         more = f" (and {len(problems) - 1} more)" if len(problems) > 1 else ""
-        super().__init__(f"not a greenhouse installation file: {where}{first.message}{more}")
+        super().__init__(f"not a house file: {where}{first.message}{more}")
 
 
 def export_installation(draft: Installation) -> str:

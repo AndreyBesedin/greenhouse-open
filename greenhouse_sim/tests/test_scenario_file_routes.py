@@ -10,8 +10,11 @@ from typing import Any, Final
 import pytest
 
 from greenhouse_sim.api.routes import respond
+from greenhouse_sim.builder.drafts import DraftStore
+from greenhouse_sim.builder.portable import export_installation
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.installation import scenario_installation
 from greenhouse_sim.scenarios.scenario_files import RECORDED_WEATHER
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.run_store import FolderStore
@@ -78,6 +81,7 @@ def test_a_downloaded_scenario_uploaded_to_a_clean_simulator_runs_as_the_origina
         status, body = _upload(receiver, text)
 
         assert status == HTTPStatus.OK
+        assert body["kind"] == "scenario"
         assert MINE in _listed(receiver)
         assert body["scenario"]["id"] == MINE and body["kept"]
         # It opens in the builder: the house, and the run's settings.
@@ -223,6 +227,103 @@ def test_a_file_that_is_not_a_scenario_is_refused_naming_the_field(change: Any, 
         assert status == HTTPStatus.BAD_REQUEST
         assert body["error"].startswith("not a scenario file")
         assert [problem["field"] for problem in body["problems"]] == [field]
+        assert MINE not in _listed(receiver)
+
+
+def _house_file() -> str:
+    """An installation's file, as the builder's export writes one."""
+    return export_installation(scenario_installation(_mine()))
+
+
+def test_an_installation_file_uploaded_answers_its_house_and_registers_nothing(
+    tmp_path: Path,
+) -> None:
+    store = FolderStore(tmp_path / "runs")
+    drafts = DraftStore(tmp_path / "drafts.sqlite3")
+    with Simulator(runs=store, drafts=drafts) as receiver:
+        status, body = _upload(receiver, _house_file())
+
+        assert status == HTTPStatus.OK
+        assert body["kind"] == "installation"
+        assert body["assessed"]["installation"]["installation_id"] == MINE
+        assert isinstance(body["assessed"]["findings"], list)
+        # It has no run settings to be a scenario by: it waits for the builder's.
+        assert MINE not in _listed(receiver)
+        assert store.names(KEPT_FOLDER) == []
+        assert drafts.drafts() == []
+
+
+def test_an_installation_file_uploaded_leaves_a_draft_of_its_identifier_as_it_is(
+    tmp_path: Path,
+) -> None:
+    with Simulator(drafts=DraftStore(tmp_path / "drafts.sqlite3")) as receiver:
+        text = _house_file()
+        saved = respond(receiver, "POST", f"/api/drafts/{MINE}/save", text.encode())
+        assert saved.status == HTTPStatus.OK
+        changed = json.loads(text) | {"name": "Another house"}
+
+        status, _ = _upload(receiver, json.dumps(changed))
+        _, kept = _get(receiver, f"/api/drafts/{MINE}")
+        # A save as a new draft, as the builder's of a file opened, is refused.
+        again = respond(receiver, "POST", f"/api/drafts/{MINE}/save", json.dumps(changed).encode())
+
+        assert status == HTTPStatus.OK
+        assert (kept["draft"]["revision"], kept["installation"]["name"]) == (
+            1,
+            json.loads(text)["name"],
+        )
+        assert again.status == HTTPStatus.CONFLICT
+        assert "change this one's identifier" in str(again.body)
+
+
+def test_a_malformed_installation_file_gets_the_builders_refusal_naming_the_field() -> None:
+    document = json.loads(_house_file())
+    del document["envelope"]
+    with Simulator() as receiver:
+        status, body = _upload(receiver, json.dumps(document))
+
+    assert status == HTTPStatus.BAD_REQUEST
+    assert body["error"].startswith("not a house file: envelope:")
+    assert [problem["field"] for problem in body["problems"]] == ["envelope"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    ['{"schema_version": 7, "name": "A note"}', '{"greenhouse_id": null, "installation_id": null}'],
+    ids=["neither", "both empty"],
+)
+def test_a_json_file_of_neither_kind_is_refused_in_plain_words(text: str) -> None:
+    with Simulator() as receiver:
+        status, body = _upload(receiver, text)
+
+    assert status == HTTPStatus.BAD_REQUEST
+    assert body["error"] == (
+        "not a scenario file or a house file, which the builder's Download buttons make"
+    )
+
+
+@pytest.mark.parametrize(
+    ("text", "said"),
+    [("[]", "not a JSON object"), ("my house", "not JSON")],
+    ids=["a list", "not json"],
+)
+def test_a_file_that_cannot_be_read_says_why(text: str, said: str) -> None:
+    with Simulator() as receiver:
+        status, body = _upload(receiver, text)
+
+    assert status == HTTPStatus.BAD_REQUEST
+    assert body["error"] == f"not a scenario file or a house file: {said}"
+
+
+def test_a_file_naming_both_is_read_as_a_scenario_and_refused_for_the_other_name() -> None:
+    with Simulator() as sender, Simulator() as receiver:
+        sender.catalogue.register(_mine())
+        document = json.loads(_file(sender)) | {"installation_id": MINE}
+
+        status, body = _upload(receiver, json.dumps(document))
+
+        assert status == HTTPStatus.BAD_REQUEST
+        assert body["error"].startswith("not a scenario file: ")
         assert MINE not in _listed(receiver)
 
 

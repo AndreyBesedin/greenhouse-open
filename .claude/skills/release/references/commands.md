@@ -51,13 +51,14 @@ gh pr create --base main --title "build: release <version>" --body-file <body.md
 
 ```bash
 uv run record-demo                                       # prints the recording, the cut, its first frame
+ffprobe -v error -show_entries format=duration -of csv=p=0 "<the cut's path>"   # under 60, which it refuses over
 ```
 
 A few frames through the cut, to check that each caption is on its view:
 
 ```bash
 video=<the cut's path>
-for at in 10 30 50 70; do
+for at in 5 15 25 35 45 55; do
   ffmpeg -v error -y -ss "$at" -i "$video" -frames:v 1 -vf scale=640:-1 "<scratch>/frame-$at.png"
 done
 ```

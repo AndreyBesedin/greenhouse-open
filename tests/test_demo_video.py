@@ -59,12 +59,6 @@ def brightness(image: Path) -> int:
     return subprocess.run([*grey, "-f", "rawvideo", "-"], check=True, capture_output=True).stdout[0]
 
 
-def seconds(video: Path) -> float:
-    probe = shutil.which("ffprobe") or "ffprobe"
-    shown = ["-show_entries", "format=duration", "-of", "csv=p=0", str(video)]
-    return float(subprocess.run([probe, "-v", "error", *shown], capture_output=True).stdout)
-
-
 @needs_ffmpeg
 def test_the_videos_first_frame_is_the_opening_shot(tmp_path: Path) -> None:
     recording = recorded(tmp_path)
@@ -77,7 +71,7 @@ def test_the_videos_first_frame_is_the_opening_shot(tmp_path: Path) -> None:
     assert video == tmp_path / "greenhouse-open-9.9.9.mp4"
     assert brightness(first_frame) > 200
     left_s = BLANK_S + SHOWN_S - (BLANK_S + demo_video.OPENING_MARGIN_S / 2)
-    assert seconds(video) == pytest.approx(left_s / demo_video.SPEED, abs=0.1)
+    assert demo_video.duration_s(FFMPEG, video) == pytest.approx(left_s / demo_video.SPEED, abs=0.1)
 
 
 @needs_ffmpeg
@@ -102,3 +96,27 @@ def test_a_video_too_large_to_upload_is_refused(
 
     with pytest.raises(demo_video.Uncut, match="more than GitHub takes"):
         demo_video.cut(FFMPEG, recording, "9.9.9")
+
+
+@needs_ffmpeg
+def test_a_video_longer_than_a_minute_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    recording = recorded(tmp_path)
+    mark(recording, 0.0)
+    # The cut lasts 1.5 s: half of what is left after the margin.
+    monkeypatch.setattr(demo_video, "LONGEST_S", 1.0)
+
+    with pytest.raises(demo_video.Uncut, match=r"lasts 1\.\d s, longer than a README's video"):
+        demo_video.cut(FFMPEG, recording, "9.9.9")
+
+
+@needs_ffmpeg
+def test_a_video_within_the_minute_is_kept(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    recording = recorded(tmp_path)
+    mark(recording, 0.0)
+    monkeypatch.setattr(demo_video, "LONGEST_S", 2.0)
+
+    video, _ = demo_video.cut(FFMPEG, recording, "9.9.9")
+
+    assert video.is_file()

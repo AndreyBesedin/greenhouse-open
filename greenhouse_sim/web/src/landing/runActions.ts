@@ -1,11 +1,14 @@
 import { type Answered, refusal } from "../builder/api";
-import { parseStoredRun, type StoredRun } from "./storedRuns";
+import { isComputing, parseStoredRun, type StoredRun } from "./storedRuns";
 
 const UNREACHED = "The simulator could not be reached.";
 
 /** How the simulator answers about a run it no longer has. */
 const NOT_THERE = 404;
 const GONE = "This run is no longer kept.";
+
+/** How the simulator refuses to delete a run being computed. */
+const STILL_COMPUTED = 409;
 
 type Epoch = Pick<StoredRun, "run_id" | "epoch">;
 
@@ -59,4 +62,39 @@ export function resumeRun(run: Epoch, fetchFn: typeof fetch = fetch): Promise<An
     async (response) => aboutThisRun(await refusal(response), run),
     fetchFn,
   );
+}
+
+/** Deletes a run the simulator keeps. Its refusal of one being computed has no
+ * words for a person: those are read off the run's row, by `notDeleted`. */
+export async function deleteRun(
+  { run_id, epoch }: Epoch,
+  fetchFn: typeof fetch = fetch,
+): Promise<Answered<null> | "being computed"> {
+  const url = `/api/runs/${encodeURIComponent(run_id)}/epochs/${epoch}/delete`;
+  const response = await fetchFn(url, { method: "POST" }).catch(() => null);
+  if (response === null) {
+    return { ok: false, problem: UNREACHED };
+  }
+  if (response.status === STILL_COMPUTED) {
+    return "being computed";
+  }
+  return response.ok ? { ok: true, value: null } : { ok: false, problem: await refusal(response) };
+}
+
+/** Why a run is not deleted yet, as its row reads: `name` is what the row calls
+ * it. One over by its status is being written still, by a playback replaced. */
+export function notDeleted(run: StoredRun, name: string): string {
+  const named = `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+  if (!isComputing(run)) {
+    return `${named} is still being written: try again.`;
+  }
+  if (run.stopping) {
+    return `${named} is stopping: delete it once it reads Interrupted.`;
+  }
+  if (run.paused) {
+    return `${named} is paused, not over: stop it, then delete it.`;
+  }
+  return run.status === "queued"
+    ? `${named} is waiting for a worker: stop it, then delete it.`
+    : `${named} is still being computed: stop it, then delete it.`;
 }

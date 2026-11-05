@@ -1,20 +1,17 @@
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 
-import { refusal } from "../builder/api";
 import { forkedText } from "../replay/timeline";
 import type { ScenarioSummary } from "../scenarios";
 import { replayAddress, viewerAddress } from "./paths";
 import { RunControls } from "./RunControls";
+import { RunDelete, useRunDeletion } from "./RunDelete";
 import { FollowLink, ReplayLink, RunProgress, StatusChip } from "./RunParts";
 import { DEFAULT_PACE_S, startRun } from "./startRun";
-import { type StoredRun, sizeText, startedText } from "./storedRuns";
+import { type StoredRun, sizeText, startedText, whoIs } from "./storedRuns";
 
-/** How the simulator refuses to delete a run being computed. */
-const STILL_COMPUTED = 409;
-
-/** Who a run is, as a list of one scenario's says it. */
-function whoIs(run: StoredRun): string {
-  return `${run.seed === null ? "the scenario's seed" : `seed ${run.seed}`}, epoch ${run.epoch}`;
+/** A run, as a list of one scenario's calls it. */
+function nameOf(run: StoredRun): string {
+  return `the run with ${whoIs(run)}`;
 }
 
 /** The runs of a scenario the simulator has kept, with a way to start another,
@@ -41,12 +38,12 @@ export function RunsDialog({
   onChanged: () => void;
 }) {
   const heading = useId();
+  const seedSays = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const [formOpen, setFormOpen] = useState(newRun);
   const [seed, setSeed] = useState("");
   const [pace, setPace] = useState(DEFAULT_PACE_S);
-  const [problem, setProblem] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState<string | null>(null);
+  const deletion = useRunDeletion(runs, nameOf, onChanged);
   // A second press of Start while the first is answered would be a second run.
   const [starting, setStarting] = useState(false);
 
@@ -80,42 +77,16 @@ export function RunsDialog({
     const answer = await startRun(scenario.id, { seed, secondsPerDay: pace });
     setStarting(false);
     if (!answer.ok) {
-      setProblem(answer.problem);
+      deletion.setProblem(answer.problem);
       return;
     }
-    setProblem(null);
+    deletion.setProblem(null);
     // The form goes as the page does: no second press on the way, and none
     // left open on the page a person comes back to.
     setFormOpen(false);
     setSeed("");
     onChanged();
     navigate(replayAddress(answer.value.run_id, answer.value.epoch, true));
-  }
-
-  async function remove(run: StoredRun): Promise<void> {
-    const response = await fetch(
-      `/api/runs/${encodeURIComponent(run.run_id)}/epochs/${run.epoch}/delete`,
-      {
-        method: "POST",
-      },
-    ).catch(() => null);
-    setConfirming(null);
-    if (response?.status === STILL_COMPUTED) {
-      setProblem(
-        run.stopping
-          ? `The run with ${whoIs(run)} is stopping: delete it once it reads Interrupted.`
-          : `The run with ${whoIs(run)} is still being computed: stop it, then delete it.`,
-      );
-      return;
-    }
-    if (response === null || !response.ok) {
-      setProblem(
-        response === null ? "The simulator could not be reached." : await refusal(response),
-      );
-      return;
-    }
-    setProblem(null);
-    onChanged();
   }
 
   return (
@@ -142,17 +113,24 @@ export function RunsDialog({
 
       {formOpen && (
         <form className="landing-form" onSubmit={(event) => void submit(event)}>
-          <label className="landing-field">
-            <span>Seed</span>
-            <input
-              className="landing-input"
-              type="text"
-              inputMode="numeric"
-              placeholder="The scenario's own"
-              value={seed}
-              onChange={(event) => setSeed(event.target.value.replace(/\D/g, ""))}
-            />
-          </label>
+          <div className="landing-seed">
+            <label className="landing-field">
+              <span>Seed</span>
+              <input
+                className="landing-input"
+                type="text"
+                inputMode="numeric"
+                placeholder="The scenario's own"
+                aria-describedby={seedSays}
+                value={seed}
+                onChange={(event) => setSeed(event.target.value.replace(/\D/g, ""))}
+              />
+            </label>
+            <p id={seedSays} className="landing-note">
+              The default. With no seed, the run uses the scenario's own, so the same scenario gives
+              the same run.
+            </p>
+          </div>
           <label className="landing-field">
             <span>Seconds per simulated day</span>
             <input
@@ -179,7 +157,8 @@ export function RunsDialog({
         </form>
       )}
 
-      {problem !== null && <p role="alert">{problem}</p>}
+      {deletion.problem !== null && <p role="alert">{deletion.problem}</p>}
+      {deletion.notOver !== null && <p role="alert">{deletion.notOver}</p>}
       {runs.length === 0 ? (
         <p className="landing-empty">No runs of this scenario yet. Start one with New run.</p>
       ) : (
@@ -207,38 +186,11 @@ export function RunsDialog({
                   run={run}
                   name={`the run with ${who}`}
                   onChanged={() => {
-                    // What a refused deletion said was of the run as it stood.
-                    setProblem(null);
+                    deletion.forget();
                     onChanged();
                   }}
                 />
-                {confirming === key ? (
-                  <span className="landing-confirm">
-                    <button
-                      type="button"
-                      className="landing-button landing-button-danger"
-                      onClick={() => void remove(run)}
-                    >
-                      Delete the run with {who}
-                    </button>
-                    <button
-                      type="button"
-                      className="landing-button"
-                      onClick={() => setConfirming(null)}
-                    >
-                      Keep it
-                    </button>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    className="landing-button landing-run-action landing-run-delete"
-                    aria-label={`Delete the run with ${who}`}
-                    onClick={() => setConfirming(key)}
-                  >
-                    Delete
-                  </button>
-                )}
+                <RunDelete name={nameOf(run)} onDelete={() => deletion.remove(run)} />
               </li>
             );
           })}

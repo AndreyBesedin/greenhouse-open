@@ -25,9 +25,10 @@ export interface BundleWeight {
  * token is longer than the value it names, 29.11 kB with type, radii and the
  * target, and 31.87 kB once spacing and the focus ring's sizes follow them. Raised
  * again in that step (P19.5): with the columns of a list of runs as well, 32.72 kB, with
- * room for the components' `.ds-` rules (P19.6).
+ * room for the components' `.ds-` rules (P19.6). Its scripts again by an
+ * installation's file opened from the start page (P17.11), 1,761 kB.
  */
-export const BUNDLE_BUDGET_KB: BundleWeight = { js: 1760, css: 34 };
+export const BUNDLE_BUDGET_KB: BundleWeight = { js: 1765, css: 34 };
 
 const BYTES_PER_KB = 1000;
 

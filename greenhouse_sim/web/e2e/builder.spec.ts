@@ -78,9 +78,9 @@ test("builder: a house drafted, edited, saved, exported, run, reopened and impor
 
   // Exported, as a file an import reads.
   const downloading = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export" }).click();
+  await page.getByRole("button", { name: "Download house file" }).click();
   const download = await downloading;
-  expect(download.suggestedFilename()).toBe(`${id}.json`);
+  expect(download.suggestedFilename()).toBe(`${id}.house.json`);
   const exported = await download.path();
   const file = JSON.parse(readFileSync(exported, "utf8"));
   expect([file.installation_id, file.name, file.row_crops.length]).toEqual([
@@ -133,7 +133,7 @@ test("builder: a house drafted, edited, saved, exported, run, reopened and impor
   // A draft of that identifier is kept: renamed, it is saved as another.
   await expect(status).toHaveText(
     `Imported The test house from ${download.suggestedFilename()}; not saved yet. ` +
-      `A draft ${id} is kept already: rename this one to save it.`,
+      `A draft with the identifier ${id} is kept already: change this one's identifier to save it.`,
     ARRIVES,
   );
   await expect(page.getByTestId("builder-draft")).toHaveText(`The test house (${id}), not saved`);
