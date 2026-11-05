@@ -162,5 +162,16 @@ describe("IconButton", () => {
       </IconButton>,
     );
     expect(element.getAttribute("aria-label")).toBe("Home");
+    shown?.unmount();
+    // A reference to another element would win over the label, in a browser.
+    shown = render(
+      <>
+        <span id="other">Something else</span>
+        <IconButton label="Home" aria-labelledby="other">
+          <HomeIcon />
+        </IconButton>
+      </>,
+    );
+    expect(button(shown.container, "Home").hasAttribute("aria-labelledby")).toBe(false);
   });
 });

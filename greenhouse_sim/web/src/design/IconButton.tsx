@@ -9,13 +9,18 @@ export type IconButtonProps = Omit<ButtonProps, "aria-label" | "aria-labelledby"
   children: ReactElement;
 };
 
-/** A button with an icon and no words: its `label` names it. */
+/**
+ * A button with an icon and no words: its `label` names it. The types cannot refuse
+ * the hyphenated attributes that would name it otherwise, so they are set here, last:
+ * `aria-labelledby` would win over `aria-label`.
+ */
 export function IconButton({ label, className, ...rest }: IconButtonProps) {
   return (
     <Button
       {...rest}
       className={className === undefined ? "ds-icon-button" : `ds-icon-button ${className}`}
       aria-label={label}
+      aria-labelledby={undefined}
     />
   );
 }
