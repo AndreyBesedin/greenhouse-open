@@ -5,7 +5,6 @@ export const TRUTH_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "ObservationType": {
-      "description": "What an Observation measures. The value doubles as the unit-bearing\nfield name on the reconstructed state models (EnvironmentState,\nGreenhouseEnvironmentState), so a new greenhouse-level type is one enum\nmember plus one optional field, no mapping table.\n\nPlant-level readings come from a sensor or vision pass on one plant;\ngreenhouse-level readings (plant_id None) describe the compartment's\nclimate, its control state, or a manual sample across plants. Recorded\nsetpoints are observations of what the controller was asked to do, not\nevents: they are continuous 5-minute state, not discrete interventions.",
       "enum": [
         "soil_moisture_pct",
         "visible_fruit_count",
@@ -88,7 +87,6 @@ export const TRUTH_SCHEMA = {
       "type": "string"
     },
     "SensorTruth": {
-      "description": "What a perfect sensor would have read at each of a sensor's sample\nmoments, in seconds from the run's start: None where the air carries no\nsuch quantity.",
       "properties": {
         "sensor_id": {
           "title": "Sensor Id",
@@ -134,7 +132,6 @@ export const TRUTH_SCHEMA = {
       "type": "object"
     }
   },
-  "description": "What each of a scenario's point sensors truly sampled up to a moment\nof a run: for evaluation and QA only.",
   "properties": {
     "run_id": {
       "title": "Run Id",

@@ -61,7 +61,6 @@ export const OUTCOME_BATCH_SCHEMA = {
     },
     "ActionOutcome": {
       "additionalProperties": false,
-      "description": "One planned action's end. Its fields agree with its status: an action\nthat ran has its times and its executor; one that never started has\nneither, and says why; only a cancelled or superseded one names who did\nit, only a missed one its fallback, only one that ran its effect, which\nis its action's kind's. `resolved_at`, when the outcome was decided, is\nalways set and orders the log; `due` is None only for an\nas-soon-as-possible action dropped before it could start.",
       "properties": {
         "outcome_id": {
           "$ref": "#/$defs/Identifier"
@@ -238,7 +237,6 @@ export const OUTCOME_BATCH_SCHEMA = {
     },
     "ActionRef": {
       "additionalProperties": false,
-      "description": "Which action a record is about: a planned action, one occurrence of a\nrecurring one, or the fallback carried out in its place. `str()` spells\nit for people, `harvest@3` or `vent/fallback`; records keep the parts.",
       "properties": {
         "action_id": {
           "$ref": "#/$defs/ActionId"
@@ -270,7 +268,6 @@ export const OUTCOME_BATCH_SCHEMA = {
     },
     "Asap": {
       "additionalProperties": false,
-      "description": "As soon as what it waits for is done, before its deadline if it has\none.",
       "properties": {
         "kind": {
           "const": "asap",
@@ -295,7 +292,6 @@ export const OUTCOME_BATCH_SCHEMA = {
     },
     "At": {
       "additionalProperties": false,
-      "description": "Due at an instant.",
       "properties": {
         "kind": {
           "const": "at",
@@ -325,7 +321,6 @@ export const OUTCOME_BATCH_SCHEMA = {
     },
     "ExecutorRef": {
       "additionalProperties": false,
-      "description": "Who carries an action out: a kind of executor, and which one, or any\nof the kind when `id` is None.",
       "properties": {
         "kind": {
           "$ref": "#/$defs/ExecutorKind"
@@ -548,7 +543,6 @@ export const OUTCOME_BATCH_SCHEMA = {
     },
     "Lower": {
       "additionalProperties": false,
-      "description": "Lower a plant's stem: by so many centimetres, by so many internodes,\nor until its top has so much head room under its wire. Exactly one.",
       "oneOf": [
         {
           "properties": {
@@ -678,7 +672,6 @@ export const OUTCOME_BATCH_SCHEMA = {
     },
     "Principal": {
       "additionalProperties": false,
-      "description": "Who asks for an action, by identity: a person, a control policy, a\nschedule, a scenario's own plan, a platform.",
       "properties": {
         "kind": {
           "$ref": "#/$defs/PrincipalKind"
@@ -730,7 +723,6 @@ export const OUTCOME_BATCH_SCHEMA = {
     },
     "SetLevel": {
       "additionalProperties": false,
-      "description": "A device's level, from 0 (off) to 1 (full), or `auto` to hand the\ndevice back to whatever control loop runs it. A door or vent is a\ndevice, its level how far it is open.",
       "properties": {
         "kind": {
           "const": "set_level",
@@ -765,7 +757,6 @@ export const OUTCOME_BATCH_SCHEMA = {
     },
     "SetTarget": {
       "additionalProperties": false,
-      "description": "A climate controller's heating setpoint, by day or by night, in °C.\nEach kind of target has its own unit and range: the venting and humidity\ntargets, when a controller has them, are members of their own beside\nthis one.",
       "properties": {
         "kind": {
           "const": "set_target",
@@ -881,7 +872,6 @@ export const OUTCOME_BATCH_SCHEMA = {
     },
     "Window": {
       "additionalProperties": false,
-      "description": "Due between two instants: it starts at the earliest one in them an\nexecutor can honour and is free to take.",
       "properties": {
         "kind": {
           "const": "window",
@@ -904,7 +894,6 @@ export const OUTCOME_BATCH_SCHEMA = {
       "type": "object"
     }
   },
-  "description": "The outcomes delivered after a cursor, in delivery order.",
   "properties": {
     "run_id": {
       "minLength": 1,

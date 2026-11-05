@@ -6,7 +6,6 @@ export const CLIMATE_PROBES_SCHEMA = {
   "$defs": {
     "ProbeSeries": {
       "additionalProperties": false,
-      "description": "A probe's point, and what it reads through the run and through the\nsame run with everything off.",
       "properties": {
         "point": {
           "$ref": "#/$defs/Vector3"
@@ -28,7 +27,6 @@ export const CLIMATE_PROBES_SCHEMA = {
     },
     "Readings": {
       "additionalProperties": false,
-      "description": "A probe's readings at each moment: temperature (°C), relative humidity\n(%) and air speed (m/s).",
       "properties": {
         "temperature_c": {
           "items": {
@@ -85,7 +83,6 @@ export const CLIMATE_PROBES_SCHEMA = {
     }
   },
   "additionalProperties": false,
-  "description": "Probes through a climate run, at each of its moments, in seconds.",
   "properties": {
     "times_s": {
       "items": {

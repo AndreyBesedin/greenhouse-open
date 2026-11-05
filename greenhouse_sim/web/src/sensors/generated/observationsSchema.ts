@@ -5,7 +5,6 @@ export const OBSERVATIONS_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "CameraFrame": {
-      "description": "A frame a camera took: when, from where, turned how, with what\nintrinsics, and what images it holds.",
       "properties": {
         "frame_id": {
           "title": "Frame Id",
@@ -88,7 +87,6 @@ export const OBSERVATIONS_SCHEMA = {
       "type": "object"
     },
     "CameraIntrinsics": {
-      "description": "Pinhole intrinsics of one image stream, in pixels, with the\ncalibration's distortion coefficients exactly as given.",
       "properties": {
         "width": {
           "exclusiveMinimum": 0,
@@ -140,7 +138,6 @@ export const OBSERVATIONS_SCHEMA = {
       "type": "object"
     },
     "CameraPose": {
-      "description": "Where a camera stood, and how it was turned, in its greenhouse's\nframe: x along the house, y across it and z up, in metres, from a corner\nof its floor. The rotation, a unit quaternion (w, x, y, z), turns the\ncamera's own frame into the greenhouse's. In the camera's frame x runs\nalong the way it looks, y to its left and z up, so its picture's u runs\nagainst y and its v against z. The optical convention, z along the way\nit looks, x right and y down, is a fixed turn away.",
       "properties": {
         "x_m": {
           "title": "X M",
@@ -184,7 +181,6 @@ export const OBSERVATIONS_SCHEMA = {
       "type": "object"
     },
     "CaptureModality": {
-      "description": "What a MediaCapture recorded. The WUR canopy cameras (Oak-D S2 POE)\nwrite an RGB image, a depth image aligned to it, and the left and right\ninfrared images the depth was computed from.",
       "enum": [
         "RGB",
         "DEPTH",
@@ -195,7 +191,6 @@ export const OBSERVATIONS_SCHEMA = {
       "type": "string"
     },
     "Freshness": {
-      "description": "Where a point sensor stands, at a moment, with its readings.",
       "enum": [
         "waiting",
         "fresh",
@@ -300,7 +295,6 @@ export const OBSERVATIONS_SCHEMA = {
       "type": "object"
     },
     "ObservationType": {
-      "description": "What an Observation measures. The value doubles as the unit-bearing\nfield name on the reconstructed state models (EnvironmentState,\nGreenhouseEnvironmentState), so a new greenhouse-level type is one enum\nmember plus one optional field, no mapping table.\n\nPlant-level readings come from a sensor or vision pass on one plant;\ngreenhouse-level readings (plant_id None) describe the compartment's\nclimate, its control state, or a manual sample across plants. Recorded\nsetpoints are observations of what the controller was asked to do, not\nevents: they are continuous 5-minute state, not discrete interventions.",
       "enum": [
         "soil_moisture_pct",
         "visible_fruit_count",
@@ -383,7 +377,6 @@ export const OBSERVATIONS_SCHEMA = {
       "type": "string"
     },
     "RecordSource": {
-      "description": "Where a piece of domain data came from - the system/run that\nproduced it (SIMULATION, REAL_SENSORS, ...) plus, where meaningful, the\nid of that specific run/sensor/import (source_id) so the record stays\ntraceable without requiring the record itself to carry a simulation-\nspecific identity.",
       "properties": {
         "type": {
           "$ref": "#/$defs/SourceType"
@@ -409,7 +402,6 @@ export const OBSERVATIONS_SCHEMA = {
       "type": "object"
     },
     "SensorFreshness": {
-      "description": "Whether a point sensor's latest reading due by a moment has come.",
       "properties": {
         "sensor_id": {
           "title": "Sensor Id",
@@ -463,7 +455,6 @@ export const OBSERVATIONS_SCHEMA = {
       "type": "string"
     }
   },
-  "description": "A run's observation log up to a moment: what its point sensors\nobserved, in the order delivered, whether each is fresh, and the frames\nits cameras took; the run that produced them, and when it started.",
   "properties": {
     "run_id": {
       "title": "Run Id",

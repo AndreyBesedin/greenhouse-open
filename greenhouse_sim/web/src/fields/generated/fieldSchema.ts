@@ -5,7 +5,6 @@ export const FIELD_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "AirQuantity": {
-      "description": "One thing a field says about the air at a point.",
       "enum": [
         "velocity",
         "temperature",
@@ -20,7 +19,6 @@ export const FIELD_SCHEMA = {
     },
     "CellCounts": {
       "additionalProperties": false,
-      "description": "How many cells a grid has along x, y and z.",
       "properties": {
         "x": {
           "exclusiveMinimum": 0,
@@ -48,7 +46,6 @@ export const FIELD_SCHEMA = {
     },
     "ChannelDocument": {
       "additionalProperties": false,
-      "description": "One channel of a published field.",
       "properties": {
         "quantity": {
           "$ref": "#/$defs/AirQuantity"
@@ -97,7 +94,6 @@ export const FIELD_SCHEMA = {
     },
     "FieldGrid": {
       "additionalProperties": false,
-      "description": "A box divided into a regular grid of cells.",
       "properties": {
         "origin": {
           "$ref": "#/$defs/Vector3"
@@ -142,7 +138,6 @@ export const FIELD_SCHEMA = {
     }
   },
   "additionalProperties": false,
-  "description": "An environment field as it is published to a viewer: its grid, and\neach channel's values over it (see the module's description).",
   "properties": {
     "schema_version": {
       "const": 1,

@@ -5,7 +5,6 @@ export const DRAFTS_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "DraftListed": {
-      "description": "A draft as a list of them shows it: its latest revision.",
       "properties": {
         "draft_id": {
           "title": "Draft Id",

@@ -6,7 +6,6 @@ export const SCENARIO_SUMMARY_SCHEMA = {
   "$defs": {
     "DailyCommand": {
       "additionalProperties": false,
-      "description": "Set one piece of equipment to a level at a time of day, every day of\na run.",
       "properties": {
         "time_of_day_s": {
           "exclusiveMaximum": 86400,

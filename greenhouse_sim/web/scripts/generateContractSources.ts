@@ -282,8 +282,32 @@ export async function generatedSources(
     bannerComment: banner,
     additionalProperties: false,
   });
-  const schemaModule = `${banner}\n\nexport const ${contract.schemaConstant} = ${JSON.stringify(schema, null, 2)};\n`;
+  const schemaModule = `${banner}\n\nexport const ${contract.schemaConstant} = ${JSON.stringify(asTheViewerChecksIt(schema), null, 2)};\n`;
   return { types, schema: schemaModule };
+}
+
+// The schema as the viewer checks answers against it: its descriptions, for
+// people, stay in the published file and the types' comments, and would only
+// weigh the built viewer down. A property called `description` is kept.
+export function asTheViewerChecksIt(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(asTheViewerChecksIt);
+  }
+  if (typeof value !== "object" || value === null) {
+    return value;
+  }
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, item]) => {
+      if (key === "description") {
+        return [];
+      }
+      if ((key === "properties" || key === "$defs") && typeof item === "object" && item !== null) {
+        const named = Object.entries(item).map(([name, each]) => [name, asTheViewerChecksIt(each)]);
+        return [[key, Object.fromEntries(named)]];
+      }
+      return [[key, asTheViewerChecksIt(item)]];
+    }),
+  );
 }
 
 // The schema as the types' compiler reads it. Pydantic titles every

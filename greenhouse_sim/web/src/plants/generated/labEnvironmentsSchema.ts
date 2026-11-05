@@ -6,7 +6,6 @@ export const LAB_ENVIRONMENTS_SCHEMA = {
   "$defs": {
     "LocalEnvironment": {
       "additionalProperties": false,
-      "description": "What one plant experiences over one day, where it stands.",
       "properties": {
         "mean_temperature_c": {
           "title": "Mean Temperature C",

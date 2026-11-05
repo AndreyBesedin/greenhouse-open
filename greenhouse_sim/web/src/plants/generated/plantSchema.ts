@@ -144,7 +144,6 @@ export const PLANT_SCHEMA = {
       "type": "object"
     },
     "FruitStage": {
-      "description": "Where a fruit is in its life, from set to picked.",
       "enum": [
         "attached",
         "aborted",
@@ -155,7 +154,6 @@ export const PLANT_SCHEMA = {
     },
     "HarvestFruit": {
       "additionalProperties": false,
-      "description": "Pick one fruit.",
       "properties": {
         "kind": {
           "const": "harvest_fruit",
@@ -177,7 +175,6 @@ export const PLANT_SCHEMA = {
     },
     "HarvestTruss": {
       "additionalProperties": false,
-      "description": "Cut a truss: pick its fruits, and drop the flowers it still bears.",
       "properties": {
         "kind": {
           "const": "harvest_truss",
@@ -279,7 +276,6 @@ export const PLANT_SCHEMA = {
       "type": "object"
     },
     "LeafStage": {
-      "description": "Where a leaf is in its life.",
       "enum": [
         "expanding",
         "mature",
@@ -290,7 +286,6 @@ export const PLANT_SCHEMA = {
     },
     "LowerStem": {
       "additionalProperties": false,
-      "description": "Lower the stem, laying its lowest standing internodes down along the\nrow; they must be bare, their leaves removed and their trusses cut.",
       "properties": {
         "kind": {
           "const": "lower_stem",
@@ -360,7 +355,6 @@ export const PLANT_SCHEMA = {
     },
     "PlantEvent": {
       "additionalProperties": false,
-      "description": "An operation done to a plant, or asked of it and refused.",
       "properties": {
         "thermal_time": {
           "minimum": 0,
@@ -422,7 +416,6 @@ export const PLANT_SCHEMA = {
     },
     "PlantTraits": {
       "additionalProperties": false,
-      "description": "How one plant differs from its crop's typical plant: a factor on each\nof the crop's values (1 for a typical plant), its turn about its stem,\nand the latent vigour its factors share.",
       "properties": {
         "vigour": {
           "default": 0,
@@ -488,7 +481,6 @@ export const PLANT_SCHEMA = {
     },
     "RemoveLeaf": {
       "additionalProperties": false,
-      "description": "Prune a leaf off the plant.",
       "properties": {
         "kind": {
           "const": "remove_leaf",
@@ -551,7 +543,6 @@ export const PLANT_SCHEMA = {
     }
   },
   "additionalProperties": false,
-  "description": "One plant, organ by organ, and the thermal time it has accumulated.",
   "properties": {
     "born_tt": {
       "minimum": 0,

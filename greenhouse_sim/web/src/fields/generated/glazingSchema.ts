@@ -6,7 +6,6 @@ export const GLAZING_SCHEMA = {
   "$defs": {
     "SurfaceTemperature": {
       "additionalProperties": false,
-      "description": "A glazed surface at a moment: the mean temperature of the air against\nit, its own temperature, and the heat it passes out of the house, in\nwatts (negative in).",
       "properties": {
         "surface_id": {
           "title": "Surface Id",
@@ -36,7 +35,6 @@ export const GLAZING_SCHEMA = {
     }
   },
   "additionalProperties": false,
-  "description": "The glazing at a moment of a run: the outside's temperature, the\nglass's U in the wind, and each glazed surface.",
   "properties": {
     "time_s": {
       "title": "Time S",

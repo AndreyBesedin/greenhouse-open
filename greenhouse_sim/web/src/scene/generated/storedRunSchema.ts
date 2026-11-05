@@ -6,7 +6,6 @@ export const STORED_RUN_SCHEMA = {
   "$defs": {
     "ForkOf": {
       "additionalProperties": false,
-      "description": "Where a fork comes from (decision 0065): its parent, the exact instant\nit branches at, the state it inherits (a checkpoint at `start_s`, kept as a\ncopy of its own, and the parent's trajectory digest through it; none for\none from its run's start), how many entries of its log are its parent's,\nand the layout it changes to, if it does.",
       "properties": {
         "run_id": {
           "title": "Run Id",
@@ -92,7 +91,6 @@ export const STORED_RUN_SCHEMA = {
     }
   },
   "additionalProperties": false,
-  "description": "An epoch as a person's list shows it: which run, whose seed, in what\nstate, and how far it is committed.",
   "properties": {
     "run_id": {
       "title": "Run Id",

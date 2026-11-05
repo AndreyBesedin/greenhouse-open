@@ -5,7 +5,6 @@ export const BASIC_SETUP_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "CropModel": {
-      "description": "How a scenario's run grows its crop: plant by plant, by the simple\ndaily model (`greenhouse_sim.core.simple_crop`) or organ by organ\n(`greenhouse_sim.core.crop`); or by area, by Reduced-State TOMGRO\n(`greenhouse_sim.core.tomgro_crop`, decision 0060).",
       "enum": [
         "simple",
         "organ",
@@ -16,7 +15,6 @@ export const BASIC_SETUP_SCHEMA = {
     }
   },
   "additionalProperties": false,
-  "description": "The values of the builder's first form, in metres. Each field's title\nis the form's label for it, and the schema's example the house the form\nstarts from. Each is checked as the envelope and the rows check what it\nbecomes, before either is made, so that a value refused is refused by\nthe form's own field: their bounds, and their rules between two values,\nheld by the second.",
   "examples": [
     {
       "bays": 3,
@@ -38,7 +36,6 @@ export const BASIC_SETUP_SCHEMA = {
   ],
   "properties": {
     "installation_id": {
-      "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
       "pattern": "^[A-Za-z0-9_.-]+$",
       "title": "Identifier",
       "type": "string"

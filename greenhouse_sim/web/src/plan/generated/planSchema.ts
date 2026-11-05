@@ -36,7 +36,6 @@ export const PLAN_SCHEMA = {
     },
     "Asap": {
       "additionalProperties": false,
-      "description": "As soon as what it waits for is done, before its deadline if it has\none.",
       "properties": {
         "kind": {
           "const": "asap",
@@ -61,7 +60,6 @@ export const PLAN_SCHEMA = {
     },
     "At": {
       "additionalProperties": false,
-      "description": "Due at an instant.",
       "properties": {
         "kind": {
           "const": "at",
@@ -91,7 +89,6 @@ export const PLAN_SCHEMA = {
     },
     "ExecutorRef": {
       "additionalProperties": false,
-      "description": "Who carries an action out: a kind of executor, and which one, or any\nof the kind when `id` is None.",
       "properties": {
         "kind": {
           "$ref": "#/$defs/ExecutorKind"
@@ -286,7 +283,6 @@ export const PLAN_SCHEMA = {
     },
     "Lower": {
       "additionalProperties": false,
-      "description": "Lower a plant's stem: by so many centimetres, by so many internodes,\nor until its top has so much head room under its wire. Exactly one.",
       "oneOf": [
         {
           "properties": {
@@ -380,7 +376,6 @@ export const PLAN_SCHEMA = {
       "type": "string"
     },
     "OnLate": {
-      "description": "What a gateway does with an action that cannot start by its due\ninstant and tolerance.",
       "enum": [
         "run_late",
         "skip",
@@ -477,7 +472,6 @@ export const PLAN_SCHEMA = {
     },
     "Principal": {
       "additionalProperties": false,
-      "description": "Who asks for an action, by identity: a person, a control policy, a\nschedule, a scenario's own plan, a platform.",
       "properties": {
         "kind": {
           "$ref": "#/$defs/PrincipalKind"
@@ -506,7 +500,6 @@ export const PLAN_SCHEMA = {
     },
     "Recurrence": {
       "additionalProperties": false,
-      "description": "Every `period`, `count` times or until an instant: occurrence `n`,\nfrom 0, is the planned action's timing moved by `n` periods. The timing\nis its one anchor.",
       "oneOf": [
         {
           "properties": {
@@ -591,7 +584,6 @@ export const PLAN_SCHEMA = {
     },
     "SetLevel": {
       "additionalProperties": false,
-      "description": "A device's level, from 0 (off) to 1 (full), or `auto` to hand the\ndevice back to whatever control loop runs it. A door or vent is a\ndevice, its level how far it is open.",
       "properties": {
         "kind": {
           "const": "set_level",
@@ -626,7 +618,6 @@ export const PLAN_SCHEMA = {
     },
     "SetTarget": {
       "additionalProperties": false,
-      "description": "A climate controller's heating setpoint, by day or by night, in °C.\nEach kind of target has its own unit and range: the venting and humidity\ntargets, when a controller has them, are members of their own beside\nthis one.",
       "properties": {
         "kind": {
           "const": "set_target",
@@ -697,7 +688,6 @@ export const PLAN_SCHEMA = {
     },
     "Window": {
       "additionalProperties": false,
-      "description": "Due between two instants: it starts at the earliest one in them an\nexecutor can honour and is free to take.",
       "properties": {
         "kind": {
           "const": "window",
@@ -721,7 +711,6 @@ export const PLAN_SCHEMA = {
     }
   },
   "additionalProperties": false,
-  "description": "The actions a run is to carry out, given in one of its epochs as one\nrevision of a plan. A revision replaces, from an instant on, the actions\nof the one before that have not started (the gateway's rule).\n\nChecked as made: action ids unique, every prerequisite in the plan, no\ncycle. Edges between recurring actions pair their occurrences, so two\nrecurring actions may wait for one another only if they recur alike,\noccurrence `n` for occurrence `n`; a recurring action may wait for a\none-off one, each occurrence for it; a one-off action may not wait for a\nrecurring one, since which occurrence is meant is not said. With those\nedges the plan, expanded occurrence by occurrence, has a cycle only if it\nhas one as given, so it is checked as given.",
   "properties": {
     "plan_id": {
       "$ref": "#/$defs/Identifier"

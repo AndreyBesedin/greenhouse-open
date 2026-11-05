@@ -6,7 +6,6 @@ export const CFD_GEOMETRY_SCHEMA = {
   "$defs": {
     "Boundary": {
       "additionalProperties": false,
-      "description": "One boundary of the domain as it is meshed: what it is, and the faces\nof the mesh it is made of.",
       "properties": {
         "name": {
           "title": "Name",
@@ -67,7 +66,6 @@ export const CFD_GEOMETRY_SCHEMA = {
       "type": "object"
     },
     "BoundaryCategory": {
-      "description": "What a boundary of the CFD domain is.",
       "enum": [
         "floor",
         "wall",
@@ -80,7 +78,6 @@ export const CFD_GEOMETRY_SCHEMA = {
     },
     "Box": {
       "additionalProperties": false,
-      "description": "An axis-aligned box, by its lowest and highest corners.",
       "properties": {
         "minimum": {
           "$ref": "#/$defs/Vector3"
@@ -98,7 +95,6 @@ export const CFD_GEOMETRY_SCHEMA = {
     },
     "CellCounts": {
       "additionalProperties": false,
-      "description": "How many cells a grid has along x, y and z.",
       "properties": {
         "x": {
           "exclusiveMinimum": 0,
@@ -125,7 +121,6 @@ export const CFD_GEOMETRY_SCHEMA = {
       "type": "object"
     },
     "Face": {
-      "description": "One of the domain's six faces, by where it lies.",
       "enum": [
         "floor",
         "ceiling",
@@ -139,7 +134,6 @@ export const CFD_GEOMETRY_SCHEMA = {
     },
     "FieldGrid": {
       "additionalProperties": false,
-      "description": "A box divided into a regular grid of cells.",
       "properties": {
         "origin": {
           "$ref": "#/$defs/Vector3"
@@ -193,7 +187,6 @@ export const CFD_GEOMETRY_SCHEMA = {
     }
   },
   "additionalProperties": false,
-  "description": "What a solver is given for a scenario: the domain, on its grid, and\nevery boundary, as they will be meshed.",
   "properties": {
     "schema_version": {
       "const": 1,

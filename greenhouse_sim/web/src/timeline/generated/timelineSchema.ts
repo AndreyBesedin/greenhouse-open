@@ -3,7 +3,6 @@
 
 export const TIMELINE_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "A run's events from `from_s` to `until_s`, in the order they happen,\ncolumn by column.",
   "properties": {
     "from_s": {
       "title": "From S",

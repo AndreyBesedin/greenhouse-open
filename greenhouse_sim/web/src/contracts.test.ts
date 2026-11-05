@@ -2,7 +2,12 @@ import { readdirSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { CONTRACTS, generatedSources, PROTOCOL } from "../scripts/generateContractSources";
+import {
+  asTheViewerChecksIt,
+  CONTRACTS,
+  generatedSources,
+  PROTOCOL,
+} from "../scripts/generateContractSources";
 
 // The simulator's package, where each schema it publishes lies beside its
 // model.
@@ -25,6 +30,25 @@ describe("the viewer's side of the simulator's contracts", () => {
       expect(readFileSync(contract.schemaModuleFile, "utf8")).toBe(sources.schema);
     },
   );
+
+  it("checks answers without the descriptions meant for people, and keeps a field called one", () => {
+    const published = {
+      description: "For people.",
+      properties: {
+        description: { description: "Also for people.", type: "string" },
+        items: { items: [{ description: "So is this.", type: "number" }] },
+      },
+      $defs: { description: { description: "And this.", const: 1 } },
+    };
+
+    expect(asTheViewerChecksIt(published)).toEqual({
+      properties: {
+        description: { type: "string" },
+        items: { items: [{ type: "number" }] },
+      },
+      $defs: { description: { const: 1 } },
+    });
+  });
 
   it("is generated from every schema the simulator publishes for it", () => {
     const published = readdirSync(PACKAGE, { recursive: true, encoding: "utf8" })

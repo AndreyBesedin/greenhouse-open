@@ -4,7 +4,6 @@
 export const LAB_CHECKS_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Whatever is wrong with each of the lab's plants on a run's day.",
   "properties": {
     "day": {
       "title": "Day",

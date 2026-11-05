@@ -5,7 +5,6 @@ export const RUN_STATE_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "CameraAt": {
-      "description": "Where a camera stands with its frames at a moment of a run: how many\nit has taken since the run's start, and its latest, if any.",
       "properties": {
         "sensor_id": {
           "title": "Sensor Id",
@@ -35,7 +34,6 @@ export const RUN_STATE_SCHEMA = {
       "type": "object"
     },
     "CameraFrame": {
-      "description": "A frame a camera took: when, from where, turned how, with what\nintrinsics, and what images it holds.",
       "properties": {
         "frame_id": {
           "title": "Frame Id",
@@ -118,7 +116,6 @@ export const RUN_STATE_SCHEMA = {
       "type": "object"
     },
     "CameraIntrinsics": {
-      "description": "Pinhole intrinsics of one image stream, in pixels, with the\ncalibration's distortion coefficients exactly as given.",
       "properties": {
         "width": {
           "exclusiveMinimum": 0,
@@ -170,7 +167,6 @@ export const RUN_STATE_SCHEMA = {
       "type": "object"
     },
     "CameraPose": {
-      "description": "Where a camera stood, and how it was turned, in its greenhouse's\nframe: x along the house, y across it and z up, in metres, from a corner\nof its floor. The rotation, a unit quaternion (w, x, y, z), turns the\ncamera's own frame into the greenhouse's. In the camera's frame x runs\nalong the way it looks, y to its left and z up, so its picture's u runs\nagainst y and its v against z. The optical convention, z along the way\nit looks, x right and y down, is a fixed turn away.",
       "properties": {
         "x_m": {
           "title": "X M",
@@ -214,7 +210,6 @@ export const RUN_STATE_SCHEMA = {
       "type": "object"
     },
     "CaptureModality": {
-      "description": "What a MediaCapture recorded. The WUR canopy cameras (Oak-D S2 POE)\nwrite an RGB image, a depth image aligned to it, and the left and right\ninfrared images the depth was computed from.",
       "enum": [
         "RGB",
         "DEPTH",
@@ -226,7 +221,6 @@ export const RUN_STATE_SCHEMA = {
     },
     "Command": {
       "additionalProperties": false,
-      "description": "Set one piece of equipment to a level, at a moment.",
       "properties": {
         "time_s": {
           "minimum": 0,
@@ -250,7 +244,6 @@ export const RUN_STATE_SCHEMA = {
       "type": "object"
     },
     "Freshness": {
-      "description": "Where a point sensor stands, at a moment, with its readings.",
       "enum": [
         "waiting",
         "fresh",
@@ -261,7 +254,6 @@ export const RUN_STATE_SCHEMA = {
       "type": "string"
     },
     "HouseAirNow": {
-      "description": "The house's air as one well-mixed volume at a moment.",
       "properties": {
         "temperature_c": {
           "title": "Temperature C",
@@ -294,7 +286,6 @@ export const RUN_STATE_SCHEMA = {
       "type": "number"
     },
     "RecordSource": {
-      "description": "Where a piece of domain data came from - the system/run that\nproduced it (SIMULATION, REAL_SENSORS, ...) plus, where meaningful, the\nid of that specific run/sensor/import (source_id) so the record stays\ntraceable without requiring the record itself to carry a simulation-\nspecific identity.",
       "properties": {
         "type": {
           "$ref": "#/$defs/SourceType"
@@ -320,7 +311,6 @@ export const RUN_STATE_SCHEMA = {
       "type": "object"
     },
     "SensorFreshness": {
-      "description": "Whether a point sensor's latest reading due by a moment has come.",
       "properties": {
         "sensor_id": {
           "title": "Sensor Id",
@@ -374,7 +364,6 @@ export const RUN_STATE_SCHEMA = {
       "type": "string"
     }
   },
-  "description": "What each process of a run holds at a moment.",
   "properties": {
     "run_id": {
       "title": "Run Id",

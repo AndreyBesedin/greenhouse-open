@@ -16,7 +16,6 @@ export const WEATHER_DAY_SCHEMA = {
     },
     "SunPosition": {
       "additionalProperties": false,
-      "description": "Where the sun stands at a moment, seen from a site: its elevation\nabove the horizon (refraction included) and its azimuth, clockwise from\nnorth, both in degrees; with its declination and the equation of time,\nin minutes, for those who check them.",
       "properties": {
         "elevation_deg": {
           "title": "Elevation Deg",
@@ -69,7 +68,6 @@ export const WEATHER_DAY_SCHEMA = {
     },
     "WeatherState": {
       "additionalProperties": false,
-      "description": "The weather at a moment: the outside air's temperature, relative\nhumidity and CO2, the wind's speed and the direction it blows from, the\nbarometric pressure, the global radiation and the cloud cover.",
       "properties": {
         "air_temperature_c": {
           "default": 10,
@@ -133,7 +131,6 @@ export const WEATHER_DAY_SCHEMA = {
       "type": "object"
     }
   },
-  "description": "A scenario's weather through its runs' first day: when the day\nstarts, and the weather every `every_s`, at those seconds from its\nstart, with where the sun stands and the direction towards it (P08.2),\nfor its path across the sky.",
   "properties": {
     "start": {
       "format": "date-time",
