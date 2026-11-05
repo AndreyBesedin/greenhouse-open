@@ -7,10 +7,12 @@ import { showTheme, storedTheme } from "./design/theme";
 import { Landing } from "./landing/Landing";
 import { pageAt } from "./landing/paths";
 import { QA_AIRFLOW_PATH } from "./qa/airflowViews";
+import { designTheme, QA_DESIGN_PATH } from "./qa/designPage";
 import { QA_GREENHOUSE_PATH } from "./qa/greenhouseViews";
 import { QA_LAYOUT_PATH } from "./qa/layoutViews";
 import { QA_PLANTS_PATH } from "./qa/plantViews";
 import { QaAirflow } from "./qa/QaAirflow";
+import { QaDesign } from "./qa/QaDesign";
 import { QaGreenhouse } from "./qa/QaGreenhouse";
 import { QaLayout } from "./qa/QaLayout";
 import { QaPlants } from "./qa/QaPlants";
@@ -46,6 +48,8 @@ const page =
     <QaSolar search={location.search} />
   ) : path === QA_REFERENCE_PATH ? (
     <QaReference search={location.search} />
+  ) : path === QA_DESIGN_PATH ? (
+    <QaDesign />
   ) : path === BUILDER_PATH ? (
     <Builder />
   ) : pageAt(location.pathname, location.search) === "landing" ? (
@@ -58,12 +62,14 @@ const page =
 
 // The golden views compare the scene drawn: their captions keep the light
 // panels they were drawn with (#208); the viewer and the builder show the
-// theme chosen. Set before the first render, so that the panels never show
-// the other first.
+// theme chosen, and the design system's page the one its address says. Set before
+// the first render, so that the panels never show the other first.
 showTheme(
-  page.type === App || page.type === Builder || page.type === Landing || page.type === Replay
-    ? storedTheme()
-    : "light",
+  page.type === QaDesign
+    ? designTheme(location.search)
+    : page.type === App || page.type === Builder || page.type === Landing || page.type === Replay
+      ? storedTheme()
+      : "light",
 );
 
 createRoot(root).render(<StrictMode>{page}</StrictMode>);
