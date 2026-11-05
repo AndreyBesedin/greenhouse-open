@@ -32,6 +32,7 @@ from greenhouse_sim.services.runs import RunRequest, crop_model_refusal
 from greenhouse_sim.services.scenarios import initial_scene, plant_ids
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.solar.scopes import ScopeLight
 from greenhouse_sim.world.scopes import converted, row_scopes
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -50,6 +51,8 @@ CONFIG: Final = cut(
     crop={"kind": "reduced_tomgro"},
 )
 RUN: Final = RunRequest("tomgro_box")
+# Its heater, to give a run other air than another.
+HEATER: Final = "heater"
 ROWS: Final = [scope.scope_id for scope in row_scopes(CONFIG.layout, CONFIG.envelope)]
 
 
@@ -87,6 +90,37 @@ def test_its_run_grows_its_crop_by_area_on_each_row(grown: Simulator) -> None:
     # Each hour of a row's day is the house's air through it.
     _, run_id = air_through_a_run(grown, RUN)
     assert len(crop.course("row_1", 0).hours) == 24 and run_id
+
+
+def test_the_light_above_its_rows_is_worked_out_once_for_every_run_of_its_house(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Runs whose air differs from the start share no day of their crops, yet
+    the light above each row depends on none of their air."""
+    moments: list[float] = []
+    read = ScopeLight.par_at
+
+    def counted(light: ScopeLight, time_s: float) -> dict[str, float]:
+        moments.append(time_s)
+        return read(light, time_s)
+
+    monkeypatch.setattr(ScopeLight, "par_at", counted)
+    with _simulator() as simulator:
+        idle = scenario_crop(simulator, RUN)
+        heated = scenario_crop(simulator, RunRequest("tomgro_box", levels={HEATER: 1.0}))
+        assert heated is not idle and not of_plants(idle) and not of_plants(heated)
+        at_one_level = idle.instances_on(1)
+        at_another = heated.instances_on(1)
+        noon = 12
+        assert (
+            idle.course("row_1", 0).hours[noon].par_above_umol_m2_s
+            == heated.course("row_1", 0).hours[noon].par_above_umol_m2_s
+        )
+
+    # A moment read twice would be a house's light worked out again.
+    assert len(moments) == len(set(moments)) > 0
+    # And their different air still tells the runs' crops apart, under one light.
+    assert at_one_level != at_another
 
 
 def test_its_scene_draws_each_rows_canopy_and_no_plant_it_does_not_have(

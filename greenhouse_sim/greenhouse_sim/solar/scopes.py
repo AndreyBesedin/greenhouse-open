@@ -15,8 +15,13 @@ run gives it is that light, incident and not absorbed:
   every `DAY_EVERY_S` by the trapezoid rule, as a plant's daily light
   integral is (`greenhouse_sim.solar.plants`): an hour's mean is its
   integral over the hour, and a day's hours add up to the day's integral.
+
+The runs of one house share it (`greenhouse_sim.services.sunlight`), so a
+day's hours are worked out once, one day at a time, whichever run asks
+first.
 """
 
+import threading
 from collections.abc import Sequence
 from typing import Final
 
@@ -52,6 +57,9 @@ class ScopeLight:
         self._points = np.array(points).reshape(-1, len(_XYZ))
         self._counts = [len(scope.positions) for scope in self.scopes]
         self._hours: dict[int, dict[str, tuple[float, ...]]] = {}
+        # Held while a day's hours are worked out. Nothing under it takes a
+        # crop's or a run's lock, so no run waits here on one that waits for it.
+        self._working = threading.Lock()
 
     def par_at(self, time_s: float) -> dict[str, float]:
         """Each scope's PAR above its canopy `time_s` into the run, in
@@ -68,13 +76,17 @@ class ScopeLight:
     def hours_par(self, day: int) -> dict[str, tuple[float, ...]]:
         """Each scope's mean PAR above its canopy through each hour of the
         run's `day`th day, from 0, in µmol/m²/s."""
-        kept = self._hours.get(day)
-        if kept is not None:
+        with self._working:
+            kept = self._hours.get(day)
+            if kept is None:
+                kept = self._hours[day] = self._worked_out(day)
             return kept
+
+    def _worked_out(self, day: int) -> dict[str, tuple[float, ...]]:
         start = day * DAY_S
         moments = [start + step * DAY_EVERY_S for step in range(HOURS_A_DAY * STEPS_AN_HOUR + 1)]
         read = [self.par_at(moment) for moment in moments]
-        hours = {
+        return {
             scope.scope_id: tuple(
                 sum(
                     (END_WEIGHT if step in (0, STEPS_AN_HOUR) else 1.0)
@@ -86,8 +98,6 @@ class ScopeLight:
             )
             for scope in self.scopes
         }
-        self._hours[day] = hours
-        return hours
 
     def daily_light_integral(self, day: int) -> dict[str, float]:
         """Each scope's light integral above its canopy on the run's `day`th

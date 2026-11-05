@@ -2,6 +2,8 @@
 decision 0062): the PAR on a level surface at the canopy's height over its
 planting positions, their mean, and its hours adding up to its day."""
 
+import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Final
 
 import pytest
@@ -23,6 +25,8 @@ SCOPES: Final = row_scopes(CONFIG.layout, CONFIG.envelope)
 assert len(SCOPES) == 4
 CANOPY_M: Final = 1.2
 NOON_S: Final = 12 * HOUR_S
+# Long enough that a second thread reaches a day being worked out.
+SLOW_READ_S: Final = 0.002
 
 
 def _light() -> ScopeLight:
@@ -71,3 +75,25 @@ def test_its_hours_add_up_to_its_days_light_integral() -> None:
     # Dark at midnight, lit at noon.
     first = hours[SCOPES[0].scope_id]
     assert first[0] == 0.0 and first[11] > 0.0
+
+
+def test_runs_asking_for_one_day_at_once_have_it_worked_out_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The runs of a house share its scopes' light, each from a thread of its
+    own."""
+    light = _light()
+    moments: list[float] = []
+    read = ScopeLight.par_at
+
+    def slowly(self: ScopeLight, time_s: float) -> dict[str, float]:
+        moments.append(time_s)
+        time.sleep(SLOW_READ_S)
+        return read(self, time_s)
+
+    monkeypatch.setattr(ScopeLight, "par_at", slowly)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first, second = pool.submit(light.hours_par, 0), pool.submit(light.hours_par, 0)
+        assert first.result() is second.result()
+
+    assert len(moments) == len(set(moments))
