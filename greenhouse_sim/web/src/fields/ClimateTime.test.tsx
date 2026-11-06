@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DAY_S } from "../clock";
+import { dayLabel } from "../replay/timeline";
 import { searchFor, sourceFromSearch } from "../scene/source";
 import { button, render, said, select } from "../testing/render";
 import {
@@ -29,9 +30,17 @@ describe("a climate run's moment", () => {
   });
 
   it("is written with its day after the first, a day ending at its midnight", () => {
-    expect(describeTime(DAY_S + 600)).toBe("day 1, 10 min");
-    expect(describeTime(3 * DAY_S + 5 * 3600 + 300)).toBe("day 3, 5 h 05 min");
-    expect(describeTime(2 * DAY_S)).toBe("day 1, 24 h 00 min");
+    expect(describeTime(DAY_S + 600)).toBe("day 2, 10 min");
+    expect(describeTime(3 * DAY_S + 5 * 3600 + 300)).toBe("day 4, 5 h 05 min");
+    expect(describeTime(2 * DAY_S)).toBe("day 2, 24 h 00 min");
+  });
+
+  it("is on the day a replay's timeline says, beside it on one page", () => {
+    // A replay's "Day 4, 12:00" beside a panel's moment (the QA of 2026-11-04).
+    const noon = 3 * DAY_S + 12 * 3600;
+
+    expect(dayLabel(noon)).toBe("Day 4, 12:00");
+    expect(describeTime(noon)).toBe("day 4, 12 h 00 min");
   });
 
   it("plays a minute at a time through the first hour, and five after it", () => {
@@ -93,7 +102,7 @@ describe("a climate run's moment", () => {
     expect(html).toContain(
       'type="range" aria-label="Day of the run" min="0" max="13" step="1" value="3"',
     );
-    expect(html).toContain('data-testid="climate-time">day 3, 10 min<');
+    expect(html).toContain('data-testid="climate-time">day 4, 10 min<');
     expect(html).toContain('aria-label="Previous day">');
     expect(html).toContain('aria-label="Next day">');
     expect(html).toContain('<select aria-label="Pace">');
@@ -189,12 +198,12 @@ describe("a climate run's moment on its way", () => {
     const view = render(clock({ time: DAY_S + 600, shown: 600 }));
 
     expect(said(view.container, "climate-time")).toBe("10 min");
-    expect(said(view.container, "climate-pending")).toBe("Loading day 1, 10 min… 0 s");
+    expect(said(view.container, "climate-pending")).toBe("Loading day 2, 10 min… 0 s");
     act(() => {
       vi.advanceTimersByTime(3_000);
     });
 
-    expect(said(view.container, "climate-pending")).toBe("Loading day 1, 10 min… 3 s");
+    expect(said(view.container, "climate-pending")).toBe("Loading day 2, 10 min… 3 s");
     view.unmount();
   });
 
@@ -206,7 +215,7 @@ describe("a climate run's moment on its way", () => {
 
     view.rerender(clock({ time: 2 * DAY_S + 600, shown: DAY_S + 600, playing: true }));
 
-    expect(said(view.container, "climate-pending")).toBe("Playing: waiting for day 2, 10 min… 0 s");
+    expect(said(view.container, "climate-pending")).toBe("Playing: waiting for day 3, 10 min… 0 s");
     view.unmount();
   });
 
@@ -261,7 +270,7 @@ describe("a climate run's moment on its way", () => {
     expect(onPlaying).toHaveBeenCalledExactlyOnceWith(false);
     expect(said(view.container, "climate-pending")).toBeNull();
     expect(said(view.container, "climate-failed")).toBe(
-      "Day 1, 10 min cannot be drawn; 10 min is shown.",
+      "Day 2, 10 min cannot be drawn; 10 min is shown.",
     );
     view.unmount();
   });
@@ -269,19 +278,19 @@ describe("a climate run's moment on its way", () => {
 
 describe("a climate run's moment, its section folded (#273)", () => {
   it("says the moment drawn once it has arrived", () => {
-    expect(describeClimateRun(DAY_S + 600, DAY_S + 600, false)).toBe("Climate run: day 1, 10 min");
+    expect(describeClimateRun(DAY_S + 600, DAY_S + 600, false)).toBe("Climate run: day 2, 10 min");
   });
 
   it("says the moment drawn and the one on its way, never the one on its way alone", () => {
     expect(describeClimateRun(DAY_S + 600, 600, false)).toBe(
-      "Climate run: 10 min; loading day 1, 10 min…",
+      "Climate run: 10 min; loading day 2, 10 min…",
     );
     expect(describeClimateRun(600, null, false)).toBe("Climate run: loading 10 min…");
   });
 
   it("says the moment asked for cannot be drawn, beside the one drawn", () => {
     expect(describeClimateRun(DAY_S + 600, 600, true)).toBe(
-      "Climate run: 10 min; day 1, 10 min cannot be drawn",
+      "Climate run: 10 min; day 2, 10 min cannot be drawn",
     );
     expect(describeClimateRun(600, null, true)).toBe("Climate run: 10 min cannot be drawn");
   });
@@ -334,7 +343,7 @@ describe("a climate run's moment, in a view that follows the run played back", (
     const view = render(followed({ time: 3 * DAY_S + 600, shown: 3 * DAY_S + 600 }));
 
     expect(view.container.querySelectorAll("button, input, select")).toHaveLength(0);
-    expect(said(view.container, "climate-time")).toBe("day 3, 10 min");
+    expect(said(view.container, "climate-time")).toBe("day 4, 10 min");
     expect(said(view.container, "climate-followed")).toBe(
       "The run played back moves this moment on with its clock: play and pause it there. " +
         "Stop following to choose the moment here, or play it.",
@@ -362,12 +371,12 @@ describe("a climate run's moment, in a view that follows the run played back", (
     const view = render(followed({ time: DAY_S + 600, shown: 600 }));
 
     expect(said(view.container, "climate-time")).toBe("10 min");
-    expect(said(view.container, "climate-pending")).toBe("Loading day 1, 10 min… 0 s");
+    expect(said(view.container, "climate-pending")).toBe("Loading day 2, 10 min… 0 s");
     expect(said(view.container, "climate-followed")).not.toBeNull();
     view.rerender(followed({ time: DAY_S + 600, shown: 600, failed: true }));
 
     expect(said(view.container, "climate-failed")).toBe(
-      "Day 1, 10 min cannot be drawn; 10 min is shown.",
+      "Day 2, 10 min cannot be drawn; 10 min is shown.",
     );
     view.unmount();
   });

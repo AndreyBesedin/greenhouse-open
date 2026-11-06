@@ -59,7 +59,7 @@ test("close-up: zoomed in as far as it goes, the camera backs out after a change
       .getByRole("group", { name: "Climate run" })
       .getByRole("button", { name: "Next day" })
       .click();
-    await expect(moment).toHaveText("day 1, 10 min", ARRIVES);
+    await expect(moment).toHaveText("day 2, 10 min", ARRIVES);
     // Each notch out takes it a twentieth further away: 40 of them, nearly
     // eight times as far.
     await turnWheel(page, 40);

@@ -85,8 +85,8 @@ describe("QA mode's panel", () => {
       />,
     );
 
-    click(button(shown.container, "temperature_back: stale, latest day 1, 11 h 58 min"));
-    click(button(shown.container, "path_camera: 1441 frames, latest day 1, 12 h 00 min"));
+    click(button(shown.container, "temperature_back: stale, latest day 2, 11 h 58 min"));
+    click(button(shown.container, "path_camera: 1441 frames, latest day 2, 12 h 00 min"));
     expect(onSelect.mock.calls).toEqual([["temperature_back"], ["path_camera"]]);
   });
 
@@ -173,7 +173,7 @@ describe("QA mode's panel", () => {
     );
 
     expect(html).toContain(
-      'data-testid="developer-clock">day 1, 12 h 00 min (2026-03-02 11:00 UTC), run reference_greenhouse-climate-c562c827<',
+      'data-testid="developer-clock">day 2, 12 h 00 min (2026-03-02 11:00 UTC), run reference_greenhouse-climate-c562c827<',
     );
     expect(html).toContain('data-testid="developer-house-air">20.35 °C, 32.34%, 420 ppm<');
     expect(html).toContain(
@@ -181,11 +181,11 @@ describe("QA mode's panel", () => {
     );
     expect(html).toContain('data-testid="developer-levels">heater 0%, roof_vent_1 50%<');
     expect(html).toContain("2 given, the latest:");
-    expect(html).toContain("<li>day 1, 9 h 00 min: roof_vent_1 50%</li>");
+    expect(html).toContain("<li>day 2, 9 h 00 min: roof_vent_1 50%</li>");
     expect(html).toContain(
-      '<li class="stale">temperature_back: stale, latest day 1, 11 h 58 min</li>',
+      '<li class="stale">temperature_back: stale, latest day 2, 11 h 58 min</li>',
     );
-    expect(html).toContain("<li>path_camera: 1441 frames, latest day 1, 12 h 00 min</li>");
+    expect(html).toContain("<li>path_camera: 1441 frames, latest day 2, 12 h 00 min</li>");
     // Without a way to select them, a sensor and a camera are said alone.
     expect(html).not.toContain("select-link");
     // The developer's list comes before the run's manifest.

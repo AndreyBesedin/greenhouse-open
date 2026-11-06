@@ -164,7 +164,7 @@ describe("a selected sensor", () => {
       />,
     );
 
-    expect(html).toContain('data-testid="sensor-reading">14.96 °C at day 2, 10 min<');
+    expect(html).toContain('data-testid="sensor-reading">14.96 °C at day 3, 10 min<');
     // The day's first reading at the chart's left, its latest at its right.
     expect(html).toContain('cx="0" cy=');
     expect(html).toContain('cx="240" cy=');

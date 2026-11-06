@@ -24,7 +24,7 @@ const ARRIVES = { timeout: 180_000 };
 const ON_THE_HOUSE = "-5.5:-12.5:9.5,5:4.8:1.5";
 // Noon of the day its kept checkpoint opens on, its first with a red fruit.
 const OPENING_S = (86 + 0.5) * 86_400;
-const OPENING_MOMENT = "day 86, 12 h 00 min";
+const OPENING_MOMENT = "day 87, 12 h 00 min";
 // How far the wheel brings the view to the house, which a replay frames whole
 // with room around it.
 const CLOSER_PX = -650;

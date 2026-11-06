@@ -51,7 +51,7 @@ function compare(latest: Benchmark, baseline: Benchmark | null): string {
 test("the reference greenhouse at its fullest crop, while orbiting", async ({ page, browser }) => {
   test.setTimeout(LOADING_TIMEOUT_MS + 60_000);
   await page.goto(SEASON_END);
-  await expect(page.getByTestId("climate-time")).toHaveText(`day ${SEASON_DAYS - 1}, 24 h 00 min`);
+  await expect(page.getByTestId("climate-time")).toHaveText(`day ${SEASON_DAYS}, 24 h 00 min`);
   // Its crop as it stands at the season's end, its field over it.
   await expect(page.getByTestId("scene-status")).toContainText(`day ${SEASON_DAYS},`, {
     timeout: LOADING_TIMEOUT_MS,

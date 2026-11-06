@@ -1,4 +1,5 @@
 import { CHART_WIDTH, polylinePoints } from "../charts/chart";
+import { dayBegun } from "../clock";
 import { useLoad } from "../useLoad";
 import { type ComparisonRequest, comparisonKey, loadComparison, type TwoSeries } from "./branches";
 import type { CheckpointSummary } from "./checkpoints";
@@ -78,7 +79,7 @@ export function BranchComparison({
   return (
     <section className="branches" aria-label="Branches">
       <p data-testid="branches-heading">
-        A: day {checkpoint.day}'s checkpoint, carried on as it was; B: the run drawn.
+        A: day {dayBegun(checkpoint.day)}'s checkpoint, carried on as it was; B: the run drawn.
       </p>
       {before && <p>The moment drawn lies before the checkpoint.</p>}
       {state.status === "loading" && <p>Running both branches…</p>}

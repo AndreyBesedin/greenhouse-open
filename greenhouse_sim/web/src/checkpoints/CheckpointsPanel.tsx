@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 
-import { daysEnded } from "../clock";
+import { dayBegun, daysEnded } from "../clock";
 import type { RunParts } from "../scene/run";
 import { useLoad } from "../useLoad";
 import {
@@ -15,7 +15,8 @@ import {
   uploadCheckpoint,
 } from "./checkpoints";
 
-/** A checkpoint in words: its day, and the commands its run gave. */
+/** A checkpoint in words: the day it is the start of, counted from 1 as every
+ * moment is (`dayBegun`), and the commands its run gave. */
 export function describeCheckpoint(checkpoint: CheckpointSummary): string {
   const commands = checkpoint.commands.length;
   const daily =
@@ -23,7 +24,7 @@ export function describeCheckpoint(checkpoint: CheckpointSummary): string {
       ? "its scenario's daily commands"
       : `${checkpoint.daily.length} daily commands`;
   const weather = checkpoint.weather === "default" ? "" : `, under ${checkpoint.weather}`;
-  return `day ${checkpoint.day}: ${commands} commands before it, ${daily}${weather}`;
+  return `day ${dayBegun(checkpoint.day)}: ${commands} commands before it, ${daily}${weather}`;
 }
 
 /**
@@ -65,7 +66,7 @@ export function CheckpointsPanel({
     ({ url }, given) => loadCheckpoints(url, given),
     { key: ({ url, made: count }) => `${url}#${count}`, fetch: fetchFn },
   );
-  const day = daysEnded(time);
+  const day = dayBegun(daysEnded(time));
 
   async function make(doing: string, making: Promise<CheckpointMade>): Promise<void> {
     setWorking(doing);
@@ -139,7 +140,7 @@ export function CheckpointsPanel({
               <span data-testid="checkpoint-description">{describeCheckpoint(checkpoint)}</span>{" "}
               <button
                 type="button"
-                aria-label={`Restore day ${checkpoint.day}, ${checkpoint.checkpointId}`}
+                aria-label={`Restore day ${dayBegun(checkpoint.day)}, ${checkpoint.checkpointId}`}
                 onClick={() => onRestore(checkpoint)}
               >
                 Restore
@@ -148,7 +149,7 @@ export function CheckpointsPanel({
                 <button
                   type="button"
                   aria-pressed={compared === checkpoint.checkpointId}
-                  aria-label={`Compare with day ${checkpoint.day}, ${checkpoint.checkpointId}`}
+                  aria-label={`Compare with day ${dayBegun(checkpoint.day)}, ${checkpoint.checkpointId}`}
                   onClick={() =>
                     onCompare(compared === checkpoint.checkpointId ? null : checkpoint)
                   }
