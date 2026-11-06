@@ -51,6 +51,7 @@ changes course is a new record that supersedes the old one.
 | [0037](0037-the-simulators-subpackages-tangle-no-further.md) | The simulator's subpackages tangle no further | Accepted |
 | [0038](0038-hooks-merge-like-dev-dependencies-review-waits-for-a-second-maintainer.md) | Hook updates merge like development dependencies; review changes with a second maintainer | Accepted |
 | [0039](0039-develop-with-uv-one-workspace-a-command-for-each-task.md) | Develop with uv: one workspace, a command for each task | Accepted; Node 24 as a prerequisite superseded by 0069 |
+| [0040](0040-a-consumer-reads-a-producer-through-the-protocol.md) | A consumer reads a running producer through the protocol's own interface | Accepted |
 | [0041](0041-one-run-for-the-viewer-and-a-consumer-played-back-against-one-clock.md) | One run for the viewer and a consumer, played back against one clock | Accepted; the simple live mode it kept superseded by 0059; its one playback a scenario, shared clock and unkept runs superseded by 0065 |
 | [0042](0042-a-season-a-thermostat-and-the-heat-it-gives-as-a-modelled-record.md) | A season, a thermostat, and the heat it gives as a modelled record | Accepted |
 | [0043](0043-a-target-changed-while-a-run-plays-steers-it-from-then-on.md) | A target changed while a run plays steers it from then on | Accepted |

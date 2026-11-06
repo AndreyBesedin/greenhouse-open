@@ -58,7 +58,7 @@ describe("the HUD", () => {
     hud = render(<Hud sample={{ ...SAMPLE, drawing: false }} pointer={null} onPreset={ignore} />);
 
     expect(said(hud.container, "frame-rate")).toBe("idle");
-    expect(said(hud.container, "frame-time")).toBe("16.8 ms, worst 33.4 ms");
+    expect(said(hud.container, "frame-time")).toBe("16.8 ms, worst 33.4 ms (last drawn)");
   });
 
   it("waits for frames drawn in a row before giving a rate", () => {

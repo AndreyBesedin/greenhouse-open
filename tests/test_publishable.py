@@ -12,6 +12,7 @@ import pathlib
 import re
 import subprocess
 from itertools import pairwise
+from urllib.parse import unquote
 
 import pytest
 
@@ -128,6 +129,75 @@ def test_the_document_citation_check_can_fail() -> None:
     assert [c for c in cited if not (ROOT / c).exists()] == [
         "docs/design/not-in-this-repository.md"
     ]
+
+
+# A Markdown link's or image's target, as written: `[text](target)`.
+MARKDOWN_LINK_TARGET = re.compile(r"\]\(([^)\s]+)")
+MARKDOWN_CODE_SPAN = re.compile(r"`[^`]*`")
+# A URL with a scheme (https:, mailto:), or one from a site's root.
+NOT_A_FILE = re.compile(r"[a-z][a-z0-9+.-]*:|/")
+
+
+def _relative_links(document: str) -> list[str]:
+    """The files a Markdown document links to, from its own folder: neither
+    a URL nor a part of the same page, and not in code, where a template's
+    placeholder such as `[NNNN](NNNN-title.md)` is written."""
+    targets: list[str] = []
+    fenced = False
+    for line in document.splitlines():
+        if line.lstrip().startswith(GUIDE_FENCE):
+            fenced = not fenced
+            continue
+        if not fenced:
+            targets += MARKDOWN_LINK_TARGET.findall(MARKDOWN_CODE_SPAN.sub("", line))
+    files = (re.split(r"[#?]", target, maxsplit=1)[0] for target in targets)
+    return [unquote(file) for file in files if file and not NOT_A_FILE.match(file)]
+
+
+def _resolves(document: pathlib.Path, link: str) -> bool:
+    target = (document.parent / link).resolve()
+    return target.is_relative_to(ROOT) and target.exists()
+
+
+def test_every_relative_link_in_a_document_resolves() -> None:
+    """Moving or renaming a document breaks the links to it from the others;
+    this finds them, wherever they are and however many `../` they climb."""
+    documents = [path for path in _text_files() if path.suffix == ".md"]
+    broken = [
+        f"  {document.relative_to(ROOT)}: {link}"
+        for document in documents
+        for link in _relative_links(document.read_text())
+        if not _resolves(document, link)
+    ]
+
+    assert len(documents) > 50
+    assert not broken, "links to files that are not there:\n" + "\n".join(broken)
+
+
+def test_the_relative_link_check_can_fail() -> None:
+    document = (
+        "See [the roadmap](../roadmap/README.md#steps), ![a plot](plot.png?raw=1),"
+        " [a site](https://example.org/a.md), [mail](mailto:a@example.org),"
+        " [a part](#part), [the root](/README.md) and `[code](not-a-link.md)`.\n\n"
+        "```markdown\n[NNNN](NNNN-title.md)\n```\n"
+    )
+    decisions = ROOT / "docs" / "decisions" / "README.md"
+
+    links = _relative_links(document)
+
+    assert links == ["../roadmap/README.md", "plot.png"]
+    assert [link for link in links if not _resolves(decisions, link)] == ["plot.png"]
+    assert not _resolves(decisions, "../../../outside-the-repository")
+
+
+def test_the_decisions_index_lists_every_record() -> None:
+    decisions = ROOT / "docs" / "decisions"
+    listed = set(_relative_links((decisions / "README.md").read_text()))
+
+    records = {record.name for record in decisions.glob("[0-9][0-9][0-9][0-9]-*.md")}
+
+    assert len(records) > 60
+    assert sorted(records - listed) == []
 
 
 # What the guide for contributors names as a path, from the repository's
