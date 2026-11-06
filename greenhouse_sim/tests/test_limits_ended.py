@@ -141,6 +141,8 @@ def test_an_epoch_past_its_bytes_ends_at_that_commit_which_stands(
         answered = respond(simulator, "GET", f"/api/runs/{ended.run_id}/epochs/{ended.epoch}")
     assert answered.status == HTTPStatus.OK
     assert isinstance(answered.body, dict) and answered.body["reason"] == manifest.reason
+    # Which a client reads to offer to carry it on, as one interrupted is.
+    assert answered.body["past_limit"] is True
 
 
 def test_an_epoch_at_a_pace_past_its_bytes_ends_at_that_commit_too(tmp_path: Path) -> None:

@@ -673,7 +673,7 @@ def test_a_last_commit_lost_is_an_epoch_at_the_commit_before_as_a_crash_leaves_o
 
 def test_a_list_answers_with_what_was_used_over_the_api(tmp_path: Path) -> None:
     store = _epoch(tmp_path)
-    store.counted_by(_meter(10.0, 300))
+    store.counted_by(lambda: ProcessUse(10.0, 300, wall_s=12.5))
     store.commit(0.0, DAY_S)
     store.set_status(Status.FAILED, reason="it had a reason")
 
@@ -685,7 +685,10 @@ def test_a_list_answers_with_what_was_used_over_the_api(tmp_path: Path) -> None:
     (shown,) = answered.body
     assert isinstance(shown, dict)
     assert shown["cpu_s"] == 10.0 and shown["peak_memory_bytes"] == 300
+    assert shown["wall_s"] == 12.5
     assert shown["days_computed"] == 1.0 and shown["reason"] == "it had a reason"
+    # Not a limit: it cannot be carried on.
+    assert shown["past_limit"] is False
     assert one.body == shown
 
 

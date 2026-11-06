@@ -7,6 +7,7 @@ import type { ScenarioSummary } from "../scenarios";
 import { type Rendered, render } from "../testing/render";
 import { Landing } from "./Landing";
 import { REPOSITORY_URL, replayAddress } from "./paths";
+import type { Room } from "./room";
 import { RUNS_ASKED_EVERY_MS, type StoredRun } from "./storedRuns";
 
 // What the simulator sends of a scenario besides its name: how it grows its
@@ -40,6 +41,16 @@ const SCENARIOS: ScenarioSummary[] = [
   },
 ];
 
+const ROOM: Room = {
+  workers_busy: 1,
+  workers_limit: 2,
+  runs_waiting: 0,
+  runs_waiting_limit: 200,
+  disk_free_bytes: 45_200_000_000,
+  disk_free_limit_bytes: 2_000_000_000,
+  refusal: null,
+};
+
 function run(more: Partial<StoredRun>): StoredRun {
   return {
     run_id: "reference_greenhouse-climate-abc",
@@ -61,6 +72,8 @@ function run(more: Partial<StoredRun>): StoredRun {
     days_computed: 0,
     cpu_s: null,
     peak_memory_bytes: null,
+    wall_s: null,
+    past_limit: false,
     reason: null,
     ...more,
   };
@@ -177,7 +190,7 @@ describe("the page where a person decides what to do", () => {
   });
 
   it("says how many runs are kept and what their objects hold, above the list, once", async () => {
-    const MB = 1024 * 1024;
+    const MB = 1000 * 1000;
     const { container } = await shown(
       {
         "/api/scenarios": SCENARIOS,
@@ -190,6 +203,89 @@ describe("the page where a person decides what to do", () => {
     expect(kept?.textContent).toContain("2 runs kept, 12.0 MB");
     expect(kept?.getAttribute("title")).toContain("not of the disk");
     expect(kept?.textContent).toContain("not of the disk");
+  });
+
+  it("says the room for runs above the list, each figure beside its limit, with none kept yet", async () => {
+    const { container } = await shown(
+      { "/api/scenarios": SCENARIOS, "/api/runs": [], "/api/room": ROOM },
+      "Workers",
+    );
+
+    const room = container.querySelector('[data-testid="landing-room"]');
+    expect([...(room?.querySelectorAll("dt") ?? [])].map((each) => each.textContent)).toEqual([
+      "Workers",
+      "Waiting",
+      "Free disk",
+    ]);
+    expect(room?.textContent).toContain("1 of 2 busy");
+    expect(room?.textContent).toContain("none, of 200 runs that may wait");
+    expect(room?.textContent).toContain("45.2 GB, and a run begins only with 2.0 GB");
+    expect(container.querySelector(".landing-room-refusal")).toBeNull();
+    expect(container.textContent).toContain("No run has been kept yet");
+  });
+
+  it("says, in the simulator's words, the refusal a run asked for now would be given", async () => {
+    const refusal =
+      "the disk of the run store has 1.2 GB free, and a run begins only with 2.0 GB free: free some space, or lower that limit";
+    const { container } = await shown(
+      {
+        "/api/scenarios": SCENARIOS,
+        "/api/runs": [],
+        "/api/room": { ...ROOM, disk_free_bytes: 1_200_000_000, refusal },
+      },
+      "Workers",
+    );
+
+    expect(container.querySelector(".landing-room-refusal")?.textContent).toBe(
+      `A run asked for now is refused: ${refusal}.`,
+    );
+  });
+
+  it("says why the room for runs cannot be read, and lists the runs all the same", async () => {
+    const { container } = await shown(
+      { "/api/scenarios": SCENARIOS, "/api/runs": [run({})] },
+      "The room for runs cannot be read",
+    );
+
+    expect(container.querySelector(".landing-room")?.textContent).toBe(
+      "The room for runs cannot be read: the simulator API answered 404.",
+    );
+    expect(container.querySelectorAll(".landing-run")).toHaveLength(1);
+  });
+
+  it("says on each row what the run used, and why one failed", async () => {
+    const { container } = await shown(
+      {
+        "/api/scenarios": SCENARIOS,
+        "/api/runs": [
+          run({
+            status: "failed",
+            past_limit: true,
+            size_bytes: 21_000_000,
+            days_computed: 41,
+            cpu_s: 1357,
+            peak_memory_bytes: 328_000_000,
+            wall_s: 2640,
+            reason: "it kept 21.0 MB, past the limit of 20.0 MB on what one run may keep",
+          }),
+          run({ epoch: 1 }),
+        ],
+        "/api/room": ROOM,
+      },
+      "Peak memory",
+    );
+
+    const [failed, finished] = [...container.querySelectorAll(".landing-run")];
+    expect(failed?.querySelector(".landing-run-usage")?.textContent).toBe(
+      "Kept21.0 MBComputed41 daysCPU22 min 37 sPeak memory328.0 MBWall time44 min",
+    );
+    expect(failed?.querySelector(".landing-run-reason")?.textContent).toBe(
+      "This run failed: it kept 21.0 MB, past the limit of 20.0 MB on what one run may keep.",
+    );
+    // Ended by a limit, it can be carried on once the limit is raised.
+    expect(failed?.querySelector('[aria-label^="Resume"]')).not.toBeNull();
+    expect(finished?.querySelector(".landing-run-reason")).toBeNull();
+    expect(finished?.querySelector(".landing-run-usage")?.textContent).toContain("CPUnot measured");
   });
 
   it("says nothing of volume when no run is kept, only that none is", async () => {
@@ -423,7 +519,9 @@ describe("the page where a person decides what to do", () => {
               ? SCENARIOS
               : url === "/api/drafts"
                 ? []
-                : (answers.shift() ?? [run({})]);
+                : url === "/api/room"
+                  ? ROOM
+                  : (answers.shift() ?? [run({})]);
           return new Response(JSON.stringify(body));
         }),
       );

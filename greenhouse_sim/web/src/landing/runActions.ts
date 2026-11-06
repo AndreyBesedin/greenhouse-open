@@ -13,9 +13,24 @@ const STILL_COMPUTED = 409;
 type Epoch = Pick<StoredRun, "run_id" | "epoch">;
 
 /** A run in the words the simulator's refusals name it by, as a person reads it:
- * its identifier says nothing that the row it is on does not. */
+ * its identifier says nothing that the row it is on does not. A refusal that only
+ * names it before saying why, as one for a limit it is past does, says why. */
 function aboutThisRun(problem: string, { run_id, epoch }: Epoch): string {
-  return problem.replaceAll(`epoch ${epoch} of ${run_id}`, "this run");
+  const named = `epoch ${epoch} of ${run_id}`;
+  const said = problem.startsWith(`${named}: `) ? problem.slice(named.length + 2) : problem;
+  return said.replaceAll(named, "this run");
+}
+
+// A word that begins with a capital and goes on in small letters, as a sentence's
+// first does, and not a name such as CPU.
+const SENTENCE_START = /^[A-Z](?=[a-z])/;
+
+/** What was asked and not done, and why, in a sentence: "Not started: 2 runs
+ * waiting for a worker, …", in the simulator's own words, which name a limit
+ * and its figures. */
+export function notDoneText(asked: "started" | "resumed", problem: string): string {
+  const why = problem.replace(/\.$/, "").replace(SENTENCE_START, (first) => first.toLowerCase());
+  return `Not ${asked}: ${why}.`;
 }
 
 async function ask(

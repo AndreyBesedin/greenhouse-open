@@ -95,6 +95,8 @@ test("two runs of one scenario are computed at once, from the dialog, each follo
     const firstDays = await daysIn(first);
     await expect.poll(() => daysIn(first), WORKS).toBeGreaterThan(firstDays);
     await expect(second).toContainText("Running");
+    // Both workers a simulator runs by default are busy, as the page says.
+    await expect(page.getByTestId("landing-room")).toContainText("Workers2 of 2 busy");
 
     // A fragment alone would not load the page again.
     await page.goto("about:blank");
@@ -148,6 +150,12 @@ test("a run is stopped with what it computed, resumed as the same epoch, and del
     await expect(stop).toHaveCount(0);
     const kept = await daysIn(row);
     expect(kept).toBeGreaterThan(0);
+    // What its worker used, as far as its last commit: measured, not "not measured".
+    const used = row.locator(".landing-run-usage");
+    await expect(used).toContainText(/CPU\d/);
+    await expect(used).toContainText(/Peak memory[\d.]+ MB/);
+    await expect(used).toContainText(/Wall time\d/);
+    await expect(used).toContainText(/Computed\d+ days?/);
 
     // The same epoch, from what it had: not from its first day.
     await resume.click();

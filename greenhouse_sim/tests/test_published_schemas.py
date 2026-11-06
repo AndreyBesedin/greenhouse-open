@@ -52,6 +52,7 @@ from greenhouse_sim.services.run_state import RunState
 from greenhouse_sim.services.run_store import StoredRun
 from greenhouse_sim.services.scenario_files import ScenarioDownload
 from greenhouse_sim.services.scenarios import RunManifest, ScenarioSummary
+from greenhouse_sim.services.scheduler import Room
 from greenhouse_sim.services.sensors import SensorObservations, SensorTruths
 from greenhouse_sim.services.stored_playback import PositionState
 from greenhouse_sim.services.system import Version
@@ -84,6 +85,8 @@ ANSWERS: Final[dict[Path, type[object]]] = {
     # (P17.4).
     SERVICES / "stored_run.schema.json": StoredRun,
     SERVICES / "position.schema.json": PositionState,
+    # What a run asked for has room for, as the start page shows it (P18.5).
+    SERVICES / "room.schema.json": Room,
     # A scenario's file as a download (P17.11).
     SERVICES / "scenario_download.schema.json": ScenarioDownload,
     SERVICES / "plants_light.schema.json": PlantsLight,

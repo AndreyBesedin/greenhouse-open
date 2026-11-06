@@ -111,7 +111,7 @@ test("the bare address is the page where a person decides what to do", async ({ 
   // The runs kept are told, with what their objects hold, or that none is
   // kept (the specs share a simulator, so which of the two is not asked).
   await expect(
-    page.getByText(/No run has been kept yet|\d+ runs? kept, [\d.]+ (B|kB|MB)/),
+    page.getByText(/No run has been kept yet|\d+ runs? kept, [\d.]+ (B|kB|MB|GB)/),
   ).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -240,4 +240,101 @@ test("a run is started at a seed from a scenario's dialog, listed, and not remov
       `/api/runs/${encodeURIComponent(started?.runId ?? "")}/epochs/${started?.epoch}/stop`,
     );
   }
+});
+
+test("the start page says the room for runs, as the simulator has it, each figure beside its limit", async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+  await page.goto(LANDING_PATH);
+
+  const room = page.getByTestId("landing-room");
+  // The specs share a simulator, so how many are busy or waiting is not asked; its
+  // limits are its defaults (decision 0067).
+  await expect(room).toContainText(/Workers\d of 2 busy/);
+  await expect(room).toContainText(/Waiting(none|\d+ runs?), of 200 runs that may wait/);
+  await expect(room).toContainText(
+    /Free disk[\d.]+ (B|kB|MB|GB), and a run begins only with 2\.0 GB/,
+  );
+  // Above the list of runs, under its heading.
+  const heading = await page.getByRole("heading", { name: "Recent runs" }).boundingBox();
+  const figures = await room.boundingBox();
+  expect(figures?.y ?? 0).toBeGreaterThan(heading?.y ?? Number.POSITIVE_INFINITY);
+  expect(errors).toEqual([]);
+});
+
+test("what a run used, and why one failed, are said under its row, in the dialog and on the start page", async ({
+  page,
+}) => {
+  const unanswered = await answerAsTheSimulator(page);
+  const failed = (rows: Locator) => rows.filter({ hasText: "epoch 1" });
+  const finished = (rows: Locator) => rows.filter({ hasText: "epoch 0" });
+
+  for (const [address, rows] of [
+    [runsAddress(SCENARIO_ID), page.getByRole("dialog").locator(".landing-run")],
+    [LANDING_PATH, page.locator(".landing-run")],
+  ] as const) {
+    await page.goto("about:blank");
+    await page.goto(address);
+    const limited = failed(rows);
+    await expect(limited.locator(".landing-run-usage")).toHaveText(
+      "Kept8.4 MBComputed6 daysCPU13 min 32 sPeak memory331.0 MBWall time15 min 5 s",
+    );
+    await expect(limited.locator(".landing-run-reason")).toHaveText(
+      /^This run failed: it took 812 s of a core, past the limit of 800 s on one run: .* once that limit is raised\.$/,
+    );
+    // Ended by a limit, it is offered to be carried on, as one interrupted is.
+    await expect(limited.getByRole("button", { name: /^Resume / })).toBeVisible();
+    // A figure no worker measured is said so, not as zero.
+    const unmeasured = finished(rows).locator(".landing-run-usage");
+    await expect(unmeasured).toContainText("CPUnot measured");
+    await expect(unmeasured).toContainText("Peak memorynot measured");
+    await expect(unmeasured).toContainText("Wall timenot measured");
+    await expect(finished(rows).locator(".landing-run-reason")).toHaveCount(0);
+    // On lines of their own, under the row's status.
+    const status = await limited.locator(".landing-status").boundingBox();
+    const usage = await limited.locator(".landing-run-usage").boundingBox();
+    const reason = await limited.locator(".landing-run-reason").boundingBox();
+    expect(usage?.y ?? 0).toBeGreaterThan(status?.y ?? Number.POSITIVE_INFINITY);
+    expect(reason?.y ?? 0).toBeGreaterThan(usage?.y ?? Number.POSITIVE_INFINITY);
+  }
+  expect(unanswered).toEqual([]);
+});
+
+test("a run refused for a limit says so in the simulator's words where it was asked", async ({
+  page,
+}) => {
+  const unanswered = await answerAsTheSimulator(page);
+  // What the simulator answers past its limits (`limits.too_many_waiting`, and a
+  // resume of an epoch past one still): a 409 that names the limit and its figures.
+  const waiting =
+    "200 runs waiting for a worker, and this simulator lets 200 runs wait: ask again once some have begun, or raise that limit";
+  const past =
+    "it took 812 s of a core, past the limit of 800 s on one run: what it committed can be read, and it can be carried on once that limit is raised";
+  await page.route(new RegExp(`/api/scenarios/${SCENARIO_ID}/runs\\?`), (route) =>
+    route.fulfill({ status: 409, json: { error: waiting } }),
+  );
+  await page.route(new RegExp(`/api/runs/${RUN.run_id}/epochs/1/resume$`), (route) =>
+    route.fulfill({ status: 409, json: { error: `epoch 1 of ${RUN.run_id}: ${past}` } }),
+  );
+
+  await page.goto(runsAddress(SCENARIO_ID));
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "New run" }).click();
+  await dialog.getByRole("button", { name: "Start run" }).click();
+  const refused = dialog.getByRole("alert");
+  await expect(refused).toHaveText(`Not started: ${waiting}.`);
+  // Under the form it was asked from, which stays for it to be asked again.
+  const form = await dialog.locator("form").boundingBox();
+  expect((await refused.boundingBox())?.y ?? 0).toBeGreaterThan(
+    form?.y ?? Number.POSITIVE_INFINITY,
+  );
+  await expect(dialog.getByRole("button", { name: "Start run" })).toBeEnabled();
+
+  const limited = dialog.locator(".landing-run").filter({ hasText: "epoch 1" });
+  await limited.getByRole("button", { name: /^Resume / }).click();
+  await expect(limited.getByRole("alert")).toHaveText(`Not resumed: ${past}.`);
+  await expect(dialog).not.toContainText("409");
+  await expect(dialog).not.toContainText(RUN.run_id);
+  expect(unanswered).toEqual([]);
 });

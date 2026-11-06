@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "What a simulator has room for as a run is asked for (decision 0067): its\nworkers busy and the runs waiting for one, each beside its limit, and what is\nfree on the run store's disk beside the floor a run begins above. A limit of\nnone is no limit, and a store that cannot say what is free says none.\n`refusal` is what a run, a resume or a fork asked for now would be refused\nwith, in the words of that refusal, or none if it would be let in.",
+  "properties": {
+    "workers_busy": {
+      "title": "Workers Busy",
+      "type": "integer"
+    },
+    "workers_limit": {
+      "title": "Workers Limit",
+      "type": "integer"
+    },
+    "runs_waiting": {
+      "title": "Runs Waiting",
+      "type": "integer"
+    },
+    "runs_waiting_limit": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Runs Waiting Limit"
+    },
+    "disk_free_bytes": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Disk Free Bytes"
+    },
+    "disk_free_limit_bytes": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Disk Free Limit Bytes"
+    },
+    "refusal": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Refusal"
+    }
+  },
+  "required": [
+    "workers_busy",
+    "workers_limit",
+    "runs_waiting",
+    "runs_waiting_limit",
+    "disk_free_bytes",
+    "disk_free_limit_bytes",
+    "refusal"
+  ],
+  "title": "Room",
+  "type": "object"
+}

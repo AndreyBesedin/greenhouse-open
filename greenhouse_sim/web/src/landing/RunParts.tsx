@@ -1,3 +1,4 @@
+import { failedText, NO_REASON_KEPT } from "../replay/failure";
 import { replayAddress } from "./paths";
 import {
   isComputing,
@@ -7,6 +8,7 @@ import {
   STATUS_LABEL,
   type StoredRun,
 } from "./storedRuns";
+import { NOT_MEASURED_NOTE, usageFigures } from "./usage";
 
 /** What is said of a run with files missing, beside the status it has. */
 export const DAMAGED_NOTE = "Files of this run are missing, so it cannot be read whole.";
@@ -80,6 +82,32 @@ export function FollowLink({ run }: { run: StoredRun }) {
       >
         Follow
       </a>
+    )
+  );
+}
+
+/** What a run has used, figure by figure (decision 0067), on a line of its own
+ * under its row: a figure no worker measured says so, and not zero. */
+export function RunUsage({ run }: { run: StoredRun }) {
+  return (
+    <dl className="landing-run-usage">
+      {usageFigures(run).map(({ label, value, measured }) => (
+        <div key={label} title={measured ? undefined : NOT_MEASURED_NOTE}>
+          <dt>{label}</dt>
+          <dd>{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** Why a run failed, in the simulator's words, under its row; nothing for one
+ * that did not. One ended by a limit says which, and that it can be resumed once
+ * that limit is raised. */
+export function RunFailure({ run }: { run: StoredRun }) {
+  return (
+    run.status === "failed" && (
+      <p className="landing-run-reason">{failedText(run.reason ?? NO_REASON_KEPT)}</p>
     )
   );
 }
