@@ -127,7 +127,7 @@ up the first reproduction.
 **Later, as the roadmap records them:** cucumber, strawberry and sweet
 pepper, after the tomato's reproduction has tested the registry's crop
 interface; [P21](p21-rows-of-different-crops.md)'s rows of different crops; crop
-work within the day; the CO₂ and light targets; the second CI pass; the
+work within the day; the CO₂ and light targets; the checks' time; the
 second audit; and the assistant in the viewer, after it.
 
 ## A reproducible result
