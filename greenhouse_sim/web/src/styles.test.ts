@@ -95,6 +95,11 @@ describe("the stylesheet", () => {
     expect(unthemed(STYLES)).toEqual([]);
   });
 
+  it("sets the info panel's line height, so that its height does not hang on the system's font (#273)", () => {
+    const rule = /(?:^|\})\s*\.info-panel\s*\{([^}]*)\}/.exec(STYLES)?.[1] ?? "";
+    expect(rule.replace(/\/\*[\s\S]*?\*\//g, "")).toMatch(/line-height:\s*[\d.]+;/);
+  });
+
   it("writes a colour nowhere but in the tokens (P19.2)", () => {
     expect(rawColours(STYLES)).toEqual([]);
   });
@@ -640,8 +645,8 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
 // no-tolerance baselines draw, and the guards below read how a value is written, not
 // which it is.
 const RESOLVED_DIGESTS = {
-  dark: "67827acab9e59174c95aa2229d347068b7903a031b827b53d1e7049d53c2f1a4",
-  light: "febcbf243fb113ec504af2e9c1069a2eaaa51f60c93e21fc57f526a061fce271",
+  dark: "06b900c2965004d70dd671b096db54a96ab99d559958f251ceeada12e400fdf1",
+  light: "8d883226c6f9b560e4add3e04b18b105ebbf6c8a8d93f7ce790ebf3d4a4f236c",
 };
 type ThemeName = keyof typeof RESOLVED_DIGESTS;
 const STYLES_OF_THE_PAGES = withImports(ENTRY, (file) =>
