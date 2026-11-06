@@ -7,8 +7,10 @@ write one is described in
 [docs/engineering.md](../engineering.md#roadmap-and-decision-records).
 
 A record is written in the pull request that implements the decision. Once
-accepted it is not edited, apart from its status line. A decision that
-changes course is a new record that supersedes the old one.
+accepted it is not edited, apart from its status line and, when a document
+it links to moves, that link's path
+([0070](0070-a-finished-project-moves-to-the-roadmaps-archive.md)). A
+decision that changes course is a new record that supersedes the old one.
 
 | Record | Decision | Status |
 | --- | --- | --- |
@@ -79,6 +81,7 @@ changes course is a new record that supersedes the old one.
 | [0066](0066-run-records-are-parquet-segments-read-and-written-with-duckdb.md) | Run records are Parquet segments, read and written with DuckDB | Accepted |
 | [0067](0067-a-runs-resources-are-counted-and-limited-and-all-it-needs-is-in-the-store.md) | A run's resources are counted and limited, and all it needs is in the store | Accepted |
 | [0068](0068-the-viewers-design-system-is-its-own-tokens-and-components.md) | The viewer's design system is its own tokens and components | Accepted |
+| [0070](0070-a-finished-project-moves-to-the-roadmaps-archive.md) | A finished project moves to the roadmap's archive | Accepted |
 | [0069](0069-setup-installs-node-when-the-machines-is-missing-or-too-old.md) | `uv run setup` installs Node when the machine's is missing or too old | Accepted |
 
 ## Template

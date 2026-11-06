@@ -130,12 +130,19 @@ planning tool or document.
   may cite them, because the roadmap document defines them. The pull request
   that delivers a step updates its status in that document, and the
   [roadmap](roadmap/README.md)'s table when the project's state changes.
+- **A finished project moves to `docs/roadmap/archive/`**
+  when it closes, with its clean-up and QA reports once their plans are done
+  or carried elsewhere; its row in the roadmap's table points there. Every
+  relative link to a moved document follows it, in accepted decisions and
+  audits too, whose words do not change
+  ([decision 0070](decisions/0070-a-finished-project-moves-to-the-roadmaps-archive.md)).
 - **Decisions** live in [`docs/decisions/`](decisions/README.md) as short,
   numbered records. A change that sets or reverses a lasting technical
   direction records a decision in the same pull request: architecture
   boundaries, shared contracts, runtime dependencies, supported platforms or
-  the development workflow. A decision is not edited after it is accepted. A
-  later record supersedes it.
+  the development workflow. A decision is not edited after it is accepted,
+  but for its status line and a link that follows a moved document. A later
+  record supersedes it.
 - **When implementation departs from the roadmap**, the pull request updates
   the roadmap document, so it stays an accurate account rather than an
   aspiration.
