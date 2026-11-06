@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 import { BUILDER_PATH } from "../builder/Builder";
 import { GithubMark } from "../icons";
 import { forkedText } from "../replay/timeline";
@@ -26,7 +26,7 @@ import {
 } from "./storedRuns";
 import { UploadScenario } from "./UploadScenario";
 
-/** How many of the latest runs the page lists. */
+/** How many of the latest runs the page lists, besides any being computed. */
 const RECENT_RUNS = 5;
 
 /** Goes to an address, a page of its own. */
@@ -77,6 +77,7 @@ export function Landing({
       ? scenarios.scenarios.find((each) => each.id === opened)
       : undefined;
   const counts = runs.status === "loaded" ? runCounts(runs.runs) : null;
+  const recent = useRef<HTMLHeadingElement>(null);
   const names = new Map(
     scenarios.status === "loaded" ? scenarios.scenarios.map((s) => [s.id, s.name]) : [],
   );
@@ -125,10 +126,13 @@ export function Landing({
           </section>
         </div>
         <section aria-labelledby="landing-recent">
-          <h3 id="landing-recent">Recent runs</h3>
+          <h3 id="landing-recent" ref={recent} tabIndex={-1}>
+            Recent runs
+          </h3>
           <RecentRuns
             runs={runs}
             names={names}
+            heading={recent}
             onChanged={() => setAsked((previous) => previous + 1)}
           />
         </section>
@@ -189,13 +193,23 @@ function ScenarioChoice({
   }
 }
 
+/** The runs a person most likely comes back to: the latest few, and every one
+ * still being computed, however many have been started since. `runs` are the
+ * newest first, as the simulator lists them. */
+function recentRuns(runs: readonly StoredRun[]): StoredRun[] {
+  return runs.filter((run, newest) => newest < RECENT_RUNS || isComputing(run));
+}
+
 function RecentRuns({
   runs,
   names,
+  heading,
   onChanged,
 }: {
   runs: StoredRunsState | { status: "none" };
   names: ReadonlyMap<string, string>;
+  /** Where the keyboard goes once a run deleted has left the list. */
+  heading: RefObject<HTMLHeadingElement | null>;
   onChanged: () => void;
 }) {
   if (runs.status === "unavailable") {
@@ -214,11 +228,12 @@ function RecentRuns({
         <span className="visually-hidden"> {KEPT_SIZE_NOTE}</span>
       </p>
       <ul className="landing-runs">
-        {runs.runs.slice(0, RECENT_RUNS).map((run) => (
+        {recentRuns(runs.runs).map((run) => (
           <RunRow
             key={runKey(run)}
             run={run}
             name={names.get(run.scenario_id)}
+            heading={heading}
             onChanged={onChanged}
           />
         ))}
@@ -230,10 +245,12 @@ function RecentRuns({
 function RunRow({
   run,
   name,
+  heading,
   onChanged,
 }: {
   run: StoredRun;
   name: string | undefined;
+  heading: RefObject<HTMLHeadingElement | null>;
   onChanged: () => void;
 }) {
   const started = startedText(run);
@@ -264,7 +281,7 @@ function RunRow({
           onChanged();
         }}
       />
-      <RunDelete name={named} onDelete={() => deletion.remove(run)} />
+      <RunDelete name={named} onDelete={() => deletion.remove(run)} whenGone={heading} />
       {refusal !== null && (
         <p role="alert" className="landing-note">
           {refusal}

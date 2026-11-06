@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 
 import { deleteRun, notDeleted } from "./runActions";
 import { isComputing, runKey, type StoredRun } from "./storedRuns";
@@ -24,7 +24,8 @@ export function useRunDeletion(
     }
   }, [refused, running]);
 
-  async function remove(run: StoredRun): Promise<void> {
+  /** Asks for `run` to be deleted, and says whether it was. */
+  async function remove(run: StoredRun): Promise<boolean> {
     const answer = await deleteRun(run);
     if (answer === "being computed") {
       // The row may have moved on since it was read: it is what is said of it.
@@ -32,13 +33,14 @@ export function useRunDeletion(
       setProblem(over ? notDeleted(run, nameOf(run)) : null);
       setRefused(over ? null : runKey(run));
       onChanged();
-      return;
+      return false;
     }
     setRefused(null);
     setProblem(answer.ok ? null : answer.problem);
     if (answer.ok) {
       onChanged();
     }
+    return answer.ok;
   }
 
   return {
@@ -56,8 +58,18 @@ export function useRunDeletion(
 
 /** A run's Delete, in two steps, on every list of runs: pressed, it asks on a line
  * of its own, with the keyboard on the answer that loses nothing. `name` says which
- * run, for whoever hears the button. */
-export function RunDelete({ name, onDelete }: { name: string; onDelete: () => Promise<void> }) {
+ * run, for whoever hears the button. `onDelete` says whether the run went: if it
+ * did, its row goes with it, and the keyboard to `whenGone`, the list's heading,
+ * rather than to the page's body. */
+export function RunDelete({
+  name,
+  onDelete,
+  whenGone,
+}: {
+  name: string;
+  onDelete: () => Promise<boolean>;
+  whenGone: RefObject<HTMLElement | null>;
+}) {
   const [confirming, setConfirming] = useState(false);
   // What had the keyboard is off the page while it asks, and back once it has.
   const pressed = useRef<HTMLButtonElement>(null);
@@ -73,7 +85,11 @@ export function RunDelete({ name, onDelete }: { name: string; onDelete: () => Pr
   }, [confirming]);
 
   async function confirmed(): Promise<void> {
-    await onDelete();
+    if (await onDelete()) {
+      // Not back on a button about to go.
+      asked.current = false;
+      whenGone.current?.focus();
+    }
     setConfirming(false);
   }
 

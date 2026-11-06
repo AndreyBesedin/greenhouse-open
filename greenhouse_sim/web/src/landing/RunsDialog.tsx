@@ -40,6 +40,7 @@ export function RunsDialog({
   const heading = useId();
   const seedSays = useId();
   const dialog = useRef<HTMLDialogElement>(null);
+  const title = useRef<HTMLHeadingElement>(null);
   const [formOpen, setFormOpen] = useState(newRun);
   const [seed, setSeed] = useState("");
   const [pace, setPace] = useState(DEFAULT_PACE_S);
@@ -93,7 +94,9 @@ export function RunsDialog({
     <dialog ref={dialog} className="landing-dialog" aria-labelledby={heading} onClose={onClose}>
       <header className="landing-dialog-head">
         <div>
-          <h2 id={heading}>{scenario.name}</h2>
+          <h2 id={heading} ref={title} tabIndex={-1}>
+            {scenario.name}
+          </h2>
           <p>
             {scenario.id} · {scenario.description}
           </p>
@@ -190,7 +193,11 @@ export function RunsDialog({
                     onChanged();
                   }}
                 />
-                <RunDelete name={nameOf(run)} onDelete={() => deletion.remove(run)} />
+                <RunDelete
+                  name={nameOf(run)}
+                  onDelete={() => deletion.remove(run)}
+                  whenGone={title}
+                />
               </li>
             );
           })}

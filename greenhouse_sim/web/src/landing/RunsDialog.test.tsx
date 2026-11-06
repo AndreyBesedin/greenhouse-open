@@ -271,6 +271,8 @@ describe("the runs of a scenario, in a dialog", () => {
 
     await vi.waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
     expect(asked).toEqual([{ url: `/api/runs/${RUN_ID}/epochs/3/delete`, method: "POST" }]);
+    // Its row is going: the keyboard is on the dialog's heading, not the page's body.
+    await vi.waitFor(() => expect(document.activeElement).toBe(container.querySelector("h2")));
   });
 
   it("says why when a run is not removed", async () => {
