@@ -19,27 +19,11 @@ take every frame on time, and draw perfect images. Planned then:
 
 ## Climate setpoints
 
-Recorded 2026-10-20, after P10; proposed as
-[P11](archive/p11-climate-setpoints.md). A target, set by
-a person, for the air's temperature and humidity, which runs the house's
-equipment as a climate computer would. Today the reference greenhouse heats
-to a setpoint (decision 0042) and runs the rest of its equipment by the
-clock. Planned then:
-
-- **air temperature:** the heater's thermostat with its setpoints set from
-  the viewer, and vents and fans opened above a venting setpoint, in place
-  of their daily commands, which waste heat on a cold day and let a bright
-  June morning pass 30 °C;
-- **humidity:** the dehumidifier, and the vents opened, above a target.
-
-Each target is a run's input: changed, it makes another run, as a command
-does. Targets set from outside the simulator, by a consumer, wait for an
-actuation interface, which P10 leaves out.
-
-[P11](archive/p11-climate-setpoints.md) delivered part of it, and closed on 2026-11-06: the
-controller as data, every loop (heating, venting, circulation, dehumidifying) decided by
-the house at its edge (decision 0058), and the heating targets as a run's input. Left,
-from P11, each designed in its document:
+Recorded 2026-10-20, after P10. A target, set by a person, for the air's temperature and
+humidity, which runs the house's equipment as a climate computer would.
+[P11](archive/p11-climate-setpoints.md), closed on 2026-11-06, made every loop (heating,
+venting, circulation, dehumidifying) the house's, decided at its edge (decision 0058), and
+the heating targets a run's input. Left, from P11, each designed in its document:
 
 - **P11.3's rest:** the venting and humidity targets as a run's input, with their units,
   ranges and dead band checked both ways, in P13's `set_target` union; and the equipment
@@ -58,24 +42,19 @@ from P11, each designed in its document:
 
 ## Crop work within the day
 
-Recorded 2026-10-22, future work, after
-[P13](archive/p13-actions.md). The organ crop steps a day at a time, so the
-simulated run carries out harvesting, lowering and leaf removal at a day's
-start only, and refuses them at any other instant (decision 0046).
-Automation plans and stacks crop work through the day: a harvest at 10:00
-and another at 15:00, each changing the crop when it is done. Planned
-then:
+Recorded 2026-10-22, after [P13](archive/p13-actions.md). Automation plans and stacks
+crop work through the day: a harvest at 10:00 and another at 15:00, each changing the
+crop when it is done. [P16](archive/p16-crop-at-its-models-step.md) (decision 0064) did
+the run's half: a crop steps at its model's step, a day or a whole divisor of one, and
+its crop work is carried out at that step's boundaries. The organ crop steps a day at a
+time, so its crop work is still carried out at a day's start only (decision 0046). Left:
 
-- the organ crop stepping within a day, its organs growing between two
-  actions, so that one action's effect is there for the next;
-- the simulated run honouring crop actions at any instant; the action
-  format, which already takes any instant, unchanged.
-
-[P16](archive/p16-crop-at-its-models-step.md) (decision 0064) does the run's half of
-it: a crop steps at its model's step, a day or a whole divisor of one, and
-its crop work is carried out at that step's boundaries. What remains is the
-organ crop's own: a plant's contract stepping within its day, which
-decision 0024's day sets, and so a decision of its own.
+- the organ crop stepping within a day, its organs growing between two actions, so that
+  one action's effect is there for the next: a plant's contract stepping within its
+  day, which decision 0024's day sets, and so a decision of its own;
+- then [P16.4](archive/p16-crop-at-its-models-step.md#steps), deferred until a model
+  takes crop work within its day: the plan's check and the gateway's answers by that
+  model's step; the action format, which already takes any instant, unchanged.
 
 ## Actions and plans, after P13
 
@@ -88,21 +67,17 @@ final QA left open:
 - **A JSON plan in a run's request** ([P13.7](archive/p13-actions.md#settled-in-p137)): a
   plan that is part of a run's identity is still given in the address's spellings.
 - **The schedule's remove and repeat**, in the viewer
-  ([P13.8](archive/p13-actions.md#settled-in-p138)), edit the run drawn, not the plan, and so
-  make another run while one is followed.
+  ([P13.8](archive/p13-actions.md#settled-in-p138)), which edit a followed run's own and
+  so make another run, go with the viewer's own play in
+  [P22.3](p22-watching-and-starting-a-run.md#steps).
 - **Who cancelled, in the plan lane** (the
   [final QA](archive/p13-actions.md#recorded-at-88f35bae), step 9): the lane reads
   "cancelled: cancelled", though the outcome names who cancelled it.
-- **An epoch resumed after its authorisation changed**
-  ([P13](archive/p13-actions.md#acceptance-criteria)'s criterion 8): carried on from its
-  checkpoint, it stops with a conflict, since its log keeps no change of authorisation;
-  an entry of the
-  [P17 clean-up](archive/p17-cleanup.md#from-p13s-acceptance-an-epoch-resumed-after-its-authorisation-changed).
 
 ## CO₂ and light targets
 
-Recorded 2026-10-20, future work, after the
-climate setpoints. Each needs equipment the simulator does not have yet:
+Recorded 2026-10-20, after the climate setpoints. Each needs equipment the
+simulator does not have yet:
 
 - **CO₂:** a CO₂ doser, adding CO₂ to the air below a target while the
   vents are shut;
@@ -114,69 +89,41 @@ climate setpoints. Each needs equipment the simulator does not have yet:
 
 ## Intelligence components
 
-Recorded 2026-10-24, future work, after the
-projects in progress, P11 to P14. The components that decide and predict
-from what a greenhouse observes: a climate strategy that sets its targets,
-crop work planned from the crop's state, a yield forecast, the crop seen in
-its cameras' images. The simulator has the protocol's actions and plans
-(P13), a consumer's interface (P10), and observations kept apart from the
-truth; beyond the climate controller's loops (P11), nothing in it reads
-observations and chooses what to do. What belongs in the repository, and
-what is expected from outside it, is designed first, in a decision:
+Recorded 2026-10-24, after the projects then in progress, P11 to P14. The components
+that decide and predict from what a greenhouse observes: a climate strategy that sets
+its targets, crop work planned from the crop's state, a yield forecast, the crop seen in
+its cameras' images. Decision
+[0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md)
+gives them one foundation, control policies first, and settles where an outside one runs,
+how its identity enters an experiment's, and how policies are compared;
+[P15](archive/p15-policy-port.md), its stage A, built the policy's port, and the benchmark
+of control policies is item 7 of the [research priorities](research-validation-priorities.md).
+Left here:
 
-- **One foundation** for every such component, in the repository or
-  outside it: what it reads (observations available when it decides, the
-  run's clock and a capability and goal context, never the ground truth),
-  its identity and version, and when it acts, at its own rate. On it,
-  specialisations: control policies first, giving plans in the protocol's
-  format through an authenticated policy-facing interface; forecasts and
-  perception later, giving typed, timestamped records (decision
-  [0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md);
-  its stage A is [P15](archive/p15-policy-port.md)).
+- **Forecasts and perception,** on the same foundation, giving typed, timestamped
+  records evaluated by measures of their own (decision 0061). P15's port serves
+  forecasts from named providers, persistence the first.
 - **Base components in the simulator,** behind that interface: simple,
   documented with their limits, as its base models are, so that a run, a
   policy's evaluation and the viewer work with nothing from outside. A
-  rule-based climate strategy, a harvest planner and a forecast from a
-  crop model are the first candidates.
+  harvest planner and a forecast from a crop model are the first candidates;
+  a rule-based climate strategy is the research priorities' conventional baseline.
 - **The most complex components from outside,** proprietary or public,
   through the same interface: the repository holds their contract and its
   conformance tests, and evaluates them against its ground truth, not the
   components themselves.
-- **To decide with it:** whether an outside component runs in the
-  simulator's process or apart from it, through the consumer's interface;
-  how its identity and version enter a run's, as P14's models do; and how
-  an evaluation scores one component against another.
 
 ## Crop models from plant research
 
-Recorded 2026-10-24, future work,
-after P14, whose registry lets a manifest choose a crop model; ordered by
-decision 0057 on 2026-10-27. The simulator grows one crop, the tomato, by
-its own organ model (P03) and by a simple daily model, both its own, and
-neither held to a published result. Planned then:
+Recorded 2026-10-24, after P14, whose registry lets a manifest choose a crop model;
+ordered by decision 0057 on 2026-10-27. The tomato's survey is
+[the tomato model memo](../research/tomato-model-feasibility.md); its two models,
+Reduced-State TOMGRO and Vanthoor's as Katzin simplified it (decision
+[0060](../decisions/0060-two-published-tomato-models-become-crop-models-of-the-run.md)),
+are reproduced, made crop models of the run and held to measured data as items 4 and 5
+of the [research priorities](research-validation-priorities.md) have it, the organ and
+simple models kept beside them as baselines. Left here:
 
-- **A survey of tomato models first:** the tractable published models of
-  its growth, development, fruit set and yield, Reduced-State TOMGRO and a
-  richer one among them; their equations, parameters and their sources,
-  inputs, time steps and the processes they leave out; the greenhouses and
-  data they were validated against; and their licences, and whether their
-  code or outputs are published. Done in
-  [the tomato model memo](../research/tomato-model-feasibility.md): two
-  chosen, Reduced-State TOMGRO and Vanthoor's model as Katzin simplified
-  it, and what counts as reproducing each, in decision
-  [0060](../decisions/0060-two-published-tomato-models-become-crop-models-of-the-run.md).
-- **Both reproduced, then both P14 crop models:** each reproduced on its
-  own and compared with a pinned reference implementation run on the same
-  inputs, the authors' code where it is published and a named later
-  implementation where it is not, its differences and their causes
-  recorded; then registered with its parameters, each with its source, and
-  its version (decisions 0054 and 0055), and integrated as decision
-  [0062](../decisions/0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md)
-  has it, by what it declares, its outputs predictions until validated. Then held to measured data, as the
-  [research priorities](research-validation-priorities.md) say.
-- **The organ and simple models kept,** as baselines beside them, the
-  organ model the one of single plants and organs, not replaced process by
-  process.
 - **Then cucumber, strawberry and sweet pepper,** once the tomato's
   reproductions have tested the registry's crop interface: a survey of each
   first, then each a crop model of the registry, with its parameters for
@@ -206,12 +153,8 @@ none of them P14.7's own. Planned then:
 
 ## Runs and playbacks, after P17
 
-[P17](archive/p17-runs-and-playbacks.md) closed on 2026-11-06. It keeps each run in a store, plays a
-position over what it holds, computes runs on workers that a restart leaves running or finds
-interrupted and resumes, forks them, and gives the viewer a start page, a replay and the
-scenario file (decisions 0065 and 0066). Steering a running epoch from the viewer, which
-P17.8 left to the route, is [P22.1](p22-watching-and-starting-a-run.md). Left, from P17,
-each designed in its document:
+Recorded 2026-11-06, as [P17](archive/p17-runs-and-playbacks.md) closed (decisions 0065
+and 0066). Left, from P17, each designed in its document:
 
 - **A `present` store** (P17.6, its QA's step 6): an epoch that keeps only a window `W`
   behind its frontier, the newest checkpoint at or before `F - W` and what follows it,
@@ -220,7 +163,8 @@ each designed in its document:
   record. Every epoch is kept whole today, and the viewer's header says so.
 - **The consumer interface and the policy port reading a stored epoch** (P17.4, P17.7):
   they read the live playbacks, so a consumer follows a run its server plays, not an
-  epoch a worker computes or one kept from before a restart.
+  epoch a worker computes or one kept from before a restart. Whether the playbacks stay
+  for them is [P22.3](p22-watching-and-starting-a-run.md#steps)'s decision.
 - **A crop action still under way at a kept state** (P17.8, P17.9): a fork or a resume
   from a state kept while a crew was still at an action is refused, since nothing kept
   says what the action did. A crew's work in progress kept with the checkpoint would let
@@ -230,11 +174,10 @@ each designed in its document:
 
 ## Greenhouse R&D workflows and Modelica comparison
 
-Recorded
-2026-10-24, exploratory work after P14, alongside the crop-model research
-above; not a blocker for P11–P14. Modelica and its tools, including
-OpenModelica and Dymola, already support substantial greenhouse climate,
-energy and crop models. The question is not whether the simulator can replace
+Recorded 2026-10-24, exploratory work after P14, alongside the crop-model
+research above; its first comparison is item 6 of the research priorities.
+Modelica and its tools, including OpenModelica and Dymola, already support
+substantial greenhouse climate, energy and crop models. The question is not whether the simulator can replace
 their equation-based modelling. It is whether it adds a useful *experimental
 workflow* for academic and applied R&D teams, alongside existing models:
 setting up a greenhouse, choosing fidelity, replaying a season, connecting
@@ -302,73 +245,21 @@ to buy Dymola.
 
 ## Test suite and CI time
 
-Recorded 2026-10-08, scheduled after P09. A
-pull request's checks then took 7 to 9 minutes:
+Recorded 2026-10-08, after P09, with passes on 2026-10-24 and 2026-11-03. Done since: the
+simulator's tests in a process per core (pytest-xdist, #185); the browser tests in lanes
+(decision 0032), cut again by their measured times (decision 0071, #618); a pull request
+leaving out the tests marked `slow`, which main runs
+([engineering](../engineering.md#local-checks), #512), and the long tests of logic moved
+to short runs (#514, #515). The nine successful CI runs of pull requests with 0071's lanes
+that ran the long jobs, all on 2026-11-06, took 5.6 to 6.9 minutes. Left:
 
-- **The viewer's browser tests** take 5.6 minutes on CI's two workers.
-  Locally, on one worker, they take 275 s, of which the plant lab's
-  journeys are 75 s and the renderer's end-to-end check 24 s.
-- **The simulator's tests** take 2.7 minutes, about twice their local time.
-  The rest of the repository checks take under a minute, mypy without a
-  cache 34 s of it.
-
-The options to weigh then:
-
-- a pull request subset of browser tests, one quick check per area, with
-  the full suite run nightly on a schedule and on demand;
-- the simulator's tests run in parallel (pytest-xdist);
-- mypy's cache, and the browser install, kept between runs.
-
-By P09's end the browser tests took about 14 minutes, and the `viewer
-checks` job 9 to 21 minutes. About 9 of the 14 went to stages that run
-alone, on one worker of two. Since 2026-10-13 they run in four lanes at
-once on CI, each on a machine of its own with a simulator of its own
-(decision 0032). They took 6.0 minutes on the first run, the longest
-lane, against 15.2 before.
-
-The repository checks are now a pull request's longest: 10.8 to 21.7
-minutes, 18.5 at the median, over the 37 successful runs up to
-2026-10-14. They went from 10.2 to 20.6 minutes at P09.8's benchmark,
-which was first put on the benchmark forgetting every run and checkpoint
-kept; but the same commit has since run in 10.2 and 20.7 minutes, every
-step about twice as long, so the spread is the runners'. The suite does
-depend on its order, for reasons the
-[repository audit](../audits/2026-10-13-repository-audit.md) measures
-(`AUDIT.12`, `AUDIT.29`), and its work plan takes up the options above.
-
-### A second pass
-
-Recorded 2026-10-24. A pull request's checks have grown slow
-again since the first pass (the test suite and CI time, above, and the
-first audit's `W7` and `W8`). Measured as successful CI runs of pull
-requests, start to finish, leaving out those under three minutes, which
-skip the long jobs: from 17 to 20 October, 99 runs took 11.5 minutes at the
-median; from 21 to 24 October, 151 runs took 16.8 at the median, 21.7 at
-the 90th percentile and up to 29.1. The browser tests are the longest
-again. Over the twelve latest of those runs, the `crop` lane took 13.7
-minutes on average and the `chromium` lane 10.8, against 6.0 for the
-longest lane when the lanes began; the simulator's repository checks took
-8.2. Planned then:
-
-- **Measured first:** each lane's tests by their time, and what has grown
-  since the lanes began, recorded with the commit measured.
-- **The options to weigh then:** the lanes balanced by their measured
-  time, or more of them; a pull request's browser tests chosen by what
-  its change can reach, with the whole suite on `main` and on a schedule;
-  the slowest tests made shorter where what they check allows.
-- **The aim:** a pull request's checks under 10 minutes, measured as here,
-  and kept there; after the first pass they took 11.5 at the median.
-
-### A third pass
-
-Recorded 2026-11-03. The simulator's repository checks had become the longest
-again, at 23 to 27 minutes. One full local run with per-test timings had 4,851 tests
-and 111.5 minutes of test time: 57 tests of 30 s or more took 66% of it, and the
-4,520 tests under 1 s took 3%. A pull request now leaves out the tests marked `slow`
-and main runs them all ([engineering](../engineering.md#local-checks)); the
-simulator's part then took 6.9 minutes on the first pull request to run it. What
-follows is making the long tests of logic short, so that they run on every pull
-request and only claims about a model's full length stay `slow`.
+- **The aim:** a pull request's checks under 10 minutes, measured as successful CI runs of
+  pull requests, start to finish, leaving out those under three minutes, which skip the
+  long jobs; and kept there.
+- **The options not taken yet:** a pull request's browser tests chosen by what its change
+  can reach, or one quick check per area, with the whole suite on `main` and on a
+  schedule; mypy's cache, and the browser install, kept between runs; the slowest tests
+  made shorter where what they check allows.
 
 ### Documents checked against the published schemas
 
@@ -378,29 +269,29 @@ against a schema: that waits for a JSON Schema validator as a development depend
 
 ## A second repository audit
 
-Recorded 2026-10-24, future work, after the
-items above, the intelligence components and the crop models from plant
-research included. The [repository audit](../audits/2026-10-13-repository-audit.md)
-of 13 October looked at the repository after P09. By then the consumer's
-interface (P10), the climate targets (P11), the setup builder (P12), the
-actions and plans (P13), the models' registry (P14), the intelligence
-components' interface and three more crops will have come since. The
-second audit takes the first's form: the commit it looked at, what it
-measured, findings with identifiers, and an order of work. It asks:
+Recorded 2026-10-24, after the items above, the intelligence components and the
+crop models from plant research included. The
+[repository audit](../audits/2026-10-13-repository-audit.md) of 13 October looked at
+the repository after P09. Since then the consumer's interface (P10), the climate
+targets (P11), the setup builder (P12), the actions and plans (P13), the models'
+registry (P14), the policy's port (P15) and the runs' store (P17) have come; by the
+second audit, three more crops will have too. The second audit takes the first's
+form: the commit it looked at, what it measured, findings with identifiers, and an
+order of work. It asks:
 
 - whether the first audit's findings stay closed;
 - what the projects since have added that repeats, crosses a boundary, or
   is missing its tests, documents or recipes;
 - whether the setup builder's and the registry's interfaces are complete
   and checked enough for the assistant below to drive them;
-- the checks' time, after the second pass above.
+- the checks' time, against the aim above.
 
 Its work plan is the maintenance done before the assistant, scheduled by
 the roadmap as the first audit's was.
 
 ## An assistant in the viewer
 
-Recorded 2026-10-24, future work, after the
+Recorded 2026-10-24, after the
 second audit's work plan. A chat that guides a person through the
 simulator and helps with what it can do: setting up a new greenhouse in
 the setup builder (P12), choosing the devices and sensors suited to it,
