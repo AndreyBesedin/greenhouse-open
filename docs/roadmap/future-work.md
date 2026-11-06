@@ -36,8 +36,25 @@ Each target is a run's input: changed, it makes another run, as a command
 does. Targets set from outside the simulator, by a consumer, wait for an
 actuation interface, which P10 leaves out.
 
-P11 is now the project for this: [its document](p11-climate-setpoints.md) holds what
-is done and what is left.
+[P11](p11-climate-setpoints.md) delivered part of it, and closed on 2026-11-06: the
+controller as data, every loop (heating, venting, circulation, dehumidifying) decided by
+the house at its edge (decision 0058), and the heating targets as a run's input. Left,
+from P11, each designed in its document:
+
+- **P11.3's rest:** the venting and humidity targets as a run's input, with their units,
+  ranges and dead band checked both ways, in P13's `set_target` union; and the equipment
+  route naming the loop that runs each device, its state and its target.
+- **P11.4, the viewer:** the Targets panel for venting and humidity (it has the heating
+  targets), the loop's name in the Equipment panel, and the loops' switches in the
+  timeline's air lane.
+- **P11.5, the reference greenhouse by its targets:** its daily vent and fan commands give
+  way to venting and humidity targets, so its run, replay, reference views and screenshots
+  are written again, announced to consumers first. P13's daily commands of the reference
+  run become a standing plan then.
+- **P11.6, its QA scenario,** as P11's document has it, with the March and June
+  measurements of its acceptance.
+- **A test of two loops on one device:** a venting stage above the humidity crack, one
+  loop clearing and the other's request left standing. The code does it; no test holds it.
 
 ## Crop work within the day
 
