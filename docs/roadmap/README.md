@@ -114,10 +114,10 @@ pull request lands, and holds the state of each of its steps.
 | [P08](p08-sun-and-radiation.md) | Sun position, glazing and radiation propagation | Done |
 | [P09](p09-integrated-scenario.md) | Integrated greenhouse scenario, replay and release QA | Done |
 | [P10](p10-consumer-interface.md) | A consumer's interface to a running simulation | Done |
-| [P11](p11-climate-setpoints.md) | Climate setpoints: targets that run the house's equipment | In progress: P11.1, P11.2 and P11.3 for the heating loop's targets done |
-| [P12](p12-setup-builder.md) | The setup builder: greenhouse installations authored, assessed and exchanged | In progress: P12.0 to P12.3 done; their QA recorded, but for its first day's check; the rest moved to P20 and P21 |
-| [P13](p13-actions.md) | One action format, and a plan a run's gateway carries out | In progress: P13.1 to P13.9 done; P13.10's QA recorded, one clause left |
-| [P14](p14-models-by-manifest.md) | Models chosen by the manifest, from a registry | In progress: P14.1 to P14.8 done, P14.7 but for its QA; P14.9 done; P14.10 under way |
+| [P11](p11-climate-setpoints.md) | Climate setpoints: targets that run the house's equipment | Done for what it delivered: P11.1, P11.2 and P11.3 for the heating loop's targets; the rest moved to [future work](future-work.md#climate-setpoints) |
+| [P12](p12-setup-builder.md) | The setup builder: greenhouse installations authored, assessed and exchanged | Done: P12.0 to P12.3 and their QA; the rest moved to P20 and P21 |
+| [P13](p13-actions.md) | One action format, and a plan a run's gateway carries out | Done: P13.1 to P13.10, its final QA recorded |
+| [P14](p14-models-by-manifest.md) | Models chosen by the manifest, from a registry | Done: P14.1 to P14.9 and P14.10 for Reduced-State TOMGRO; Vanthoor's registration moved to the research priorities |
 | [P15](p15-policy-port.md) | A policy's port, and an experiment that steps a run | Done: final QA passed on 2026-11-01 |
 | [P16](p16-crop-at-its-models-step.md) | A run's crop at its model's step, not the run's day | Done, but for P16.4, deferred until a model takes crop work within its day |
 | [P17](p17-runs-and-playbacks.md) | Runs kept in a store, playbacks as positions, and a place to choose | In progress: P17.1 to P17.9 done, some with parts left; P17.10, its QA, run for what is delivered; P17.11 in progress; [the clean-up](p17-cleanup.md) left |
@@ -125,6 +125,7 @@ pull request lands, and holds the state of each of its steps.
 | [P19](p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | In progress: P19.1 to P19.6 done |
 | [P20](p20-crop-parameter-assets.md) | Crop parameters as versioned assets, edited by forms and reproduced from their versions | Proposed |
 | [P21](p21-rows-of-different-crops.md) | Rows of different crops in one house | Proposed |
+| [P22](p22-watching-and-starting-a-run.md) | Watching and starting a run: one *Play*, steering from the replay, a new run's form | Proposed |
 
 ## After a QA
 
@@ -144,7 +145,9 @@ what it planned is in its report.
 1. **Finish P17:** what its QA scenario (P17.10) and its walks left in
    [the clean-up](p17-cleanup.md).
 2. **P18:** what a run used counted, then limited (P18.2 to P18.6).
-3. **P19:** the design system's remaining steps (P19.7 on).
+3. **P19:** the design system's remaining steps (P19.7 on), and beside it
+   [P22](p22-watching-and-starting-a-run.md), what the QA of 2026-11-04 planned, whose
+   start page and panels line up with P19.8, P19.10 and P19.11.
 4. **The [research priorities](research-validation-priorities.md)**
    ([decision 0057](../decisions/0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md),
    proposed): two published tomato models reproduced and made P14 models, a validation
@@ -157,7 +160,8 @@ what it planned is in its report.
 ## Elsewhere
 
 - **[Future work](future-work.md):** the plans with no project of their own yet.
-  Camera imperfections, crop work within the day, CO₂ and light targets, intelligence
+  Camera imperfections, climate setpoints beyond heating (P11's rest), crop work within
+  the day, actions and plans after P13, CO₂ and light targets, intelligence
   components, crop models from plant research, a Modelica comparison, the test suite
   and CI time, a second repository audit, and an assistant in the viewer.
 - **[QA of 2026-11-04](qa-2026-11-04.md):** what a manual walk of the viewer found, and what follows from it.
