@@ -13,18 +13,28 @@ and the epoch's worker takes it between its moments, logs it and acts on it: the
 store is the only channel between a worker and the API, and the worker the only
 writer of its log. So a change asked for is not yet a change given, and `changes`
 says which it has become.
+
+The epoch keeps its authorisation (decision 0072): the rights it begins under,
+unless they are the local operator's, are its log's first entry, and each change
+of them made while it runs is an entry at its moment (`AuthorisationChanged`). A
+log with no such first entry began under the local operator's rights, so that an
+epoch begun under them, as every one kept before was, has the log and the digest
+it had. A change of the simulator's authorisation reaches an epoch no playback of
+it plays as a request in the store, as any change does (`authorise_kept`), which
+only the simulator asks: the API takes none.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Annotated, Final, Literal
 
 from greenhouse_protocol.actions import SetLevel, SetTarget
+from greenhouse_protocol.authorisation import AuthorisationConfig
 from greenhouse_protocol.plan import ActionKey, At, Plan, PlannedAction, Principal, PrincipalKind
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound, read_as
-from greenhouse_sim.services.gateway import LOCAL_OPERATOR
+from greenhouse_sim.services.gateway import LOCAL_AUTHORISATION, LOCAL_OPERATOR
 from greenhouse_sim.services.run_store import Answer, EpochStore, LogEntry, ObjectStore, Status
 from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.runs import Commanded
@@ -84,16 +94,40 @@ class LevelsAsked(_Change):
     levels: dict[str, float]
 
 
+class AuthorisationChanged(_Change):
+    """Who may do what on the epoch from the moment it is given, whole: the
+    simulator's authorisation (decision 0052), which its gateway enforces from
+    then on. Given by the simulator, never asked through the API."""
+
+    kind: Literal["authorisation"] = "authorisation"
+    authorisation: AuthorisationConfig
+
+
 Logged = Annotated[
-    TargetsChanged | PlanGiven | ActionsCancelled | PlanCancelled, Field(discriminator="kind")
+    TargetsChanged | PlanGiven | ActionsCancelled | PlanCancelled | AuthorisationChanged,
+    Field(discriminator="kind"),
 ]
 Asked = Annotated[
     TargetsAsked | LevelsAsked | PlanGiven | ActionsCancelled | PlanCancelled,
     Field(discriminator="kind"),
 ]
+# What a request in the store may hold: a change asked, or one of the
+# simulator's authorisation, which it alone writes.
+Requested = Annotated[
+    TargetsAsked
+    | LevelsAsked
+    | PlanGiven
+    | ActionsCancelled
+    | PlanCancelled
+    | AuthorisationChanged,
+    Field(discriminator="kind"),
+]
 
 LOGGED: Final = TypeAdapter[Logged](Logged)
 ASKED: Final = TypeAdapter[Asked](Asked)
+REQUESTED: Final = TypeAdapter[Requested](Requested)
+# The statuses of an epoch a worker works, or will: those a change is asked of.
+_WORKED: Final = (Status.QUEUED, Status.RUNNING)
 
 _BY_MARK: Final = ":"
 
@@ -128,6 +162,55 @@ def levels_plan(
             ),
         ),
     )
+
+
+def started_under(authorisation: AuthorisationConfig) -> AuthorisationChanged | None:
+    """The entry that begins the log of an epoch begun under `authorisation`:
+    none for the local operator's, which a log with none means."""
+    if authorisation == LOCAL_AUTHORISATION:
+        return None
+    return AuthorisationChanged(authorisation=authorisation)
+
+
+def begun_under(log: Sequence[LogEntry]) -> tuple[AuthorisationConfig, int]:
+    """The authorisation an epoch's log says it began under, and how many of
+    its entries say so: its first, if that is an authorisation given at the run's
+    start, and else none, the local operator's."""
+    if log and log[0].given_s == 0:
+        match LOGGED.validate_python(log[0].what):
+            case AuthorisationChanged(authorisation=authorisation):
+                return authorisation, 1
+            case _:
+                pass
+    return LOCAL_AUTHORISATION, 0
+
+
+def in_force_after(log: Sequence[LogEntry]) -> AuthorisationConfig:
+    """The authorisation in force once the entries of `log` are given: the
+    last change of it among them, or, with none, the local operator's."""
+    for entry in reversed(log):
+        match LOGGED.validate_python(entry.what):
+            case AuthorisationChanged(authorisation=authorisation):
+                return authorisation
+            case _:
+                pass
+    return LOCAL_AUTHORISATION
+
+
+def log_start(epoch: EpochStore, authorisation: AuthorisationConfig) -> None:
+    """Begins the log of an epoch not yet started with the authorisation it
+    begins under, if it needs saying (`started_under`)."""
+    began = started_under(authorisation)
+    if began is not None:
+        epoch.append_log(
+            LogEntry(
+                seq=0,
+                at_s=0.0,
+                given_s=0.0,
+                by=spelled(LOCAL_OPERATOR),
+                what=began.model_dump(mode="json"),
+            )
+        )
 
 
 def spelled(principal: Principal) -> str:
@@ -173,14 +256,14 @@ def _epoch(simulator: Simulator, run_id: str, epoch: int) -> EpochStore:
 
 def ask(simulator: Simulator, run_id: str, epoch: int, body: bytes) -> ChangeAsked:
     """Asks an epoch for a change the body writes (`Asked`), as the local
-    operator, who is whoever reaches the local API (decision 0052). Its worker
-    has its own simulator, so what the server's authorisation forbids is
-    refused here. An epoch no one is to work takes no change: a moment past is
-    changed by a fork, and an interrupted epoch once it is resumed."""
+    operator, who is whoever reaches the local API (decision 0052). What the
+    server's authorisation forbids is refused here, saying so, before a worker
+    refuses it under the epoch's. An epoch no one is to work takes no change: a
+    moment past is changed by a fork, and an interrupted epoch once it is resumed."""
     asked = read_as("a change", lambda: ASKED.validate_json(body))
     kept = _epoch(simulator, run_id, epoch)
     status = kept.manifest().status
-    if status not in (Status.QUEUED, Status.RUNNING):
+    if status not in _WORKED:
         raise Conflict(
             f"epoch {epoch} of {run_id} is {status}: it takes no more changes; a fork acts "
             "from a moment of it"
@@ -190,8 +273,8 @@ def ask(simulator: Simulator, run_id: str, epoch: int, body: bytes) -> ChangeAsk
 
 
 def check_allowed(simulator: Simulator, asked: Asked) -> None:
-    """Refuses what the server's authorisation forbids the local operator: a
-    worker has its own simulator, with no such file to read."""
+    """Refuses what the server's authorisation forbids the local operator, as
+    it is asked: the epoch's worker decides it again under the epoch's own."""
     allowed = simulator.authorisation.allows
     match asked:
         case TargetsAsked(targets=targets):
@@ -235,3 +318,25 @@ def changes(simulator: Simulator, run_id: str, epoch: int) -> EpochChanges:
         refused=refused,
         waiting=[each for each in kept.requests() if each not in logged | answered],
     )
+
+
+def authorise_kept(simulator: Simulator, authorisation: AuthorisationConfig) -> None:
+    """Asks every epoch of the simulator's store that a worker works, will work
+    or may carry on, and that no playback of it plays, to take `authorisation`
+    from its next moment: a request, taken in the order of the requests, and
+    logged where it is taken. Those its playbacks play are told by them, at
+    their clocks' moments. Under the simulator's lock of its authorisation, so
+    that the changes are asked in the order they were made."""
+    objects: ObjectStore | None = simulator.runs
+    if objects is None:
+        return
+    played = simulator.playbacks.kept()
+    asked = AuthorisationChanged(authorisation=authorisation).model_dump(mode="json")
+    for run_id in objects.children():
+        for number in stored_epochs(objects, run_id):
+            if (run_id, number) in played:
+                continue
+            kept = EpochStore(objects, run_id, number)
+            manifest = kept.manifest()
+            if manifest.status in _WORKED or manifest.carries_on:
+                kept.ask(asked)

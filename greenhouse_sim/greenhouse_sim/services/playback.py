@@ -51,7 +51,11 @@ A change given to a run kept in the store is the epoch's own (P17.8, decision
 0065): it is written to the epoch's log, at the moment of the clock it is given
 at, before it is acted on, so that applying the log again gives the same epoch.
 One asked of an epoch a worker in another process works reaches it through the
-store (`take_changes`), the only channel there is between them.
+store (`take_changes`), the only channel there is between them. Who may do what
+is the epoch's too (decision 0072): the authorisation it begins under, unless it
+is the local operator's, and each change of it, are entries of its log, so that
+the epoch carried on, or forked, decides every action under the rights in force
+when it was decided.
 
 An epoch it keeps is stopped as any other is (`stop_epoch`), whoever is watching
 and whether or not its clock moves: the playback goes, as if it had never been
@@ -128,18 +132,21 @@ from greenhouse_sim.services.gateway import (
 )
 from greenhouse_sim.services.heat_log import heat_records
 from greenhouse_sim.services.interventions import (
-    ASKED,
     LOGGED,
+    REQUESTED,
     ActionsCancelled,
+    AuthorisationChanged,
     LevelsAsked,
     Logged,
     PlanCancelled,
     PlanGiven,
     TargetsAsked,
     TargetsChanged,
+    begun_under,
     levels_plan,
     principal_of,
     spelled,
+    started_under,
 )
 from greenhouse_sim.services.limits import LimitPassed
 from greenhouse_sim.services.policy_context import run_context
@@ -513,12 +520,16 @@ class Playback:
             unhonoured=run_unhonoured(played),
             crew=simulator.crew,
         )
-        # Who may do what on its run, as its gateway enforces it; and who
-        # owns each plan given it, by the epoch it was given in.
-        self._authorisation = simulator.authorisation
+        # Who may do what on its run, as its gateway enforces it: the
+        # simulator's, or for an epoch a worker was given, what its log says it
+        # began under (decision 0072); and who owns each plan given it, by the
+        # epoch it was given in.
+        self._authorisation = (
+            simulator.authorisation if epoch is None else begun_under(epoch.logged())[0]
+        )
         self._owners: dict[tuple[int, str], Principal] = {}
         self._gateway = InMemoryGateway(
-            simulator.authorisation,
+            self._authorisation,
             self.start,
             executor=self._executor,
             executor_ref=ExecutorRef(kind=ExecutorKind.SIMULATED_RUN, id=self.run_id),
@@ -530,6 +541,8 @@ class Playback:
             run_id=self.run_id,
         )
         self._gateway.epoch = self._epoch
+        if epochs is not None:
+            self._log_start()
         if targets:
             self._log(min(t[0] for t in targets), TargetsChanged(changes=tuple(targets)))
             self._plan_targets(targets)
@@ -604,6 +617,8 @@ class Playback:
             self._logged = len(logged)
             fork = self._store.manifest().fork
             inherited = 0 if fork is None else fork.inherited
+            # The authorisation it began under, its gateway's already.
+            began = begun_under(logged)[1]
             # A fork's outcomes begin where it does: those its inherited
             # changes gave by then are its parent's, and its own changes' are
             # its own, at whatever moment they are given.
@@ -611,10 +626,10 @@ class Playback:
             self._replaying = True
             try:
                 if fork is not None:
-                    self._due = deque(logged[:inherited])
+                    self._due = deque(logged[began:inherited])
                     self._gateway_to(fork.start_s)
                     first = len(self._outcomes_until(fork.start_s, 0))
-                self._due.extend(logged[inherited:])
+                self._due.extend(logged[max(began, inherited) :])
                 self._time_s = self._gateway_to(time_s)
                 self._carry_kept(time_s)
                 self._gateway.advance(self._executor.instant(time_s))
@@ -701,7 +716,9 @@ class Playback:
     def _take(self, store: EpochStore, request: str) -> None:
         refused: Receipt | None = None
         try:
-            match ASKED.validate_json(store.request(request) or b""):
+            match REQUESTED.validate_json(store.request(request) or b""):
+                case AuthorisationChanged(authorisation=authorisation):
+                    self.authorise(authorisation, request=request)
                 case TargetsAsked(targets=targets):
                     self.set_targets(targets, request=request)
                 case LevelsAsked(levels=levels):
@@ -757,6 +774,13 @@ class Playback:
         )
         self._logged += 1
 
+    def _log_start(self) -> None:
+        """Begins its epoch's log with the authorisation it begins under, if
+        that needs saying (`started_under`): at the run's start, before all."""
+        began = started_under(self._authorisation)
+        if began is not None:
+            self._log(0.0, began)
+
     def _apply(self, entry: LogEntry) -> None:
         """Acts on an entry of its log again, as it was acted on when it was
         given. What was refused then is refused now, and changes nothing."""
@@ -765,6 +789,9 @@ class Playback:
             match LOGGED.validate_python(entry.what):
                 case TargetsChanged(changes=changes):
                     self._plan_targets(changes)
+                case AuthorisationChanged(authorisation=authorisation):
+                    self._authorisation = authorisation
+                    self._gateway.authorise(authorisation)
                 case PlanGiven(plan=plan):
                     self._given(plan, by=by)
                 case ActionsCancelled(keys=keys):
@@ -864,8 +891,10 @@ class Playback:
             epoch=self._epoch,
             at_s=0.0,
             start_s=0.0,
-            # The target changes it takes, an entry of its log.
-            inherited=1 if self._executor.plan().targeted() else 0,
+            # The authorisation it begins under, if its log says it, and the
+            # target changes it takes: the entries its log begins with.
+            inherited=int(started_under(self._simulator.authorisation) is not None)
+            + int(bool(self._executor.plan().targeted())),
             layout=layout_name(layout),
         )
 
@@ -1366,6 +1395,8 @@ class Playback:
                             self._logged = 0
                             self._taken = None
                         self._time_s = 0.0
+                        if self._epochs is not None:
+                            self._log_start()
                         self._playing = True
                         # The scenario's own run again: what was pending is
                         # cancelled, as the first outcomes of the new epoch,
@@ -1537,18 +1568,30 @@ class Playback:
         except ActionNotExecutable as finished:
             raise Conflict(finished.reason) from None
 
-    def authorise(self, authorisation: AuthorisationConfig) -> None:
+    def authorise(self, authorisation: AuthorisationConfig, *, request: str | None = None) -> None:
         """Who may do what on its run from its clock's moment on (decision
         0052): its gateway checks each action falling due by it from then,
-        and records the change. Once replaced, the one in its place does."""
+        and records the change, which its epoch's log keeps at that moment
+        (decision 0072). Once replaced, the one in its place does."""
         with self._lock:
             successor = self._successor
             if successor is None:
                 self._advance()
+                if not self._gateway.finished:
+                    self._log(
+                        self._time_s,
+                        AuthorisationChanged(authorisation=authorisation),
+                        request=request,
+                    )
                 self._authorisation = authorisation
                 self._gateway.authorise(authorisation)
                 return
-        successor.authorise(authorisation)
+        successor.authorise(authorisation, request=request)
+
+    def epoch_kept(self) -> tuple[str, int] | None:
+        """The epoch it keeps in the store, by its run and number, if it keeps one."""
+        with self._lock:
+            return None if self._store is None else (self.run_id, self._epoch)
 
     def plan(self, plan_id: str, revision: int | None = None) -> PlanState:
         """A plan of its run's, as its gateway holds it: its revision in
@@ -1694,6 +1737,14 @@ class Playbacks:
     def all(self) -> list[Playback]:
         """Every playback started, in the order they were."""
         return [found for _, found in self._store.values()]
+
+    def kept(self) -> set[tuple[str, int]]:
+        """The epochs they keep, by run and number, those replaced still working
+        included: each is told of a change of the simulator's authorisation by
+        its playback, and not through the store."""
+        with self.rearranging:
+            playing = [*self.all(), *self._replaced]
+        return {key for found in playing if (key := found.epoch_kept()) is not None}
 
     def held(self) -> set[tuple[str, int]]:
         """The epochs whose clocks they hold, by a pause, each by its run and its
