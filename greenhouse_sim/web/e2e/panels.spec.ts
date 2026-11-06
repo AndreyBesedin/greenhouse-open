@@ -275,6 +275,29 @@ test("the panels are dark, or light if chosen, and the golden views keep theirs 
   expect(await background(".qa-caption")).toBe("rgba(255, 255, 255, 0.88)");
 });
 
+test("a page opens in its theme before its scripts run, never white in the dark one", async ({
+  page,
+}) => {
+  // The page as the build serves it, before any of its scripts has run: they
+  // are refused, and only the page, its inline script and its stylesheet load.
+  await page.route(/\.(js|tsx?)(\?.*)?$/, (route) => route.abort());
+  const opened = () =>
+    page.evaluate(() => ({
+      theme: document.documentElement.dataset.theme,
+      // The browser draws the page's ground in this scheme until a page draws its own.
+      scheme: getComputedStyle(document.documentElement).colorScheme,
+      drawn: document.getElementById("root")?.childElementCount,
+    }));
+
+  await page.goto("/");
+  expect(await opened()).toEqual({ theme: "dark", scheme: "dark", drawn: 0 });
+
+  await page.evaluate(() => localStorage.setItem("greenhouse-sim.panels", "light"));
+  await page.reload();
+  expect(await opened()).toEqual({ theme: "light", scheme: "light", drawn: 0 });
+  await page.evaluate(() => localStorage.removeItem("greenhouse-sim.panels"));
+});
+
 test("each side's panels fold to a stripe at the view's edge, and open as they were (#304)", async ({
   page,
 }) => {
