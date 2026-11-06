@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { ScenarioList, scenarioMatches } from "./ScenarioList";
+import { ScenarioList, scenariosMatching } from "./ScenarioList";
 import { loadScenarios, openingMoment, parseScenarios, type ScenarioSummary } from "./scenarios";
 
 // What the simulator sends of a scenario besides: how it grows its crop,
@@ -37,6 +37,21 @@ const SIMULATION: ScenarioSummary = {
 function answering(status: number, body: unknown): typeof fetch {
   return async () => new Response(JSON.stringify(body), { status });
 }
+
+describe("searching the scenarios", () => {
+  const described = { ...DEMO, id: "reference", name: "Reference", description: "a tomato crop" };
+  const named = { ...SIMULATION, id: "tomgro", name: "TOMGRO house", description: "by area" };
+  const byId = { ...SIMULATION, id: "tomato_compartment", name: "Compartment" };
+
+  it("puts the scenarios a search names before those only their description holds it in", () => {
+    expect(scenariosMatching([described, named, byId], "tom")).toEqual([named, byId, described]);
+  });
+
+  it("keeps the list's order among scenarios matched alike", () => {
+    expect(scenariosMatching([byId, named], "TOM")).toEqual([byId, named]);
+    expect(scenariosMatching([described, { ...described, id: "other" }], "crop")).toHaveLength(2);
+  });
+});
 
 describe("reading the simulator's scenario list", () => {
   it("accepts a list of scenario summaries", () => {
@@ -118,10 +133,11 @@ describe("the scenario list", () => {
   });
 
   it("lists the scenarios a filter matches, by name, identifier or description", () => {
-    expect(scenarioMatches(DEMO, " walkthrough ")).toBe(true);
-    expect(scenarioMatches(DEMO, "CLIMATE_")).toBe(true);
-    expect(scenarioMatches(DEMO, "agentic demo")).toBe(true);
-    expect(scenarioMatches(DEMO, "benches")).toBe(false);
+    expect(scenariosMatching([DEMO], " walkthrough ")).toEqual([DEMO]);
+    expect(scenariosMatching([DEMO], "CLIMATE_")).toEqual([DEMO]);
+    expect(scenariosMatching([DEMO], "agentic demo")).toEqual([DEMO]);
+    expect(scenariosMatching([DEMO], "benches")).toEqual([]);
+    expect(scenariosMatching([DEMO, SIMULATION], "")).toEqual([DEMO, SIMULATION]);
     const html = renderToStaticMarkup(
       <ScenarioList state={{ status: "loaded", scenarios: [DEMO, SIMULATION] }} filter="forty" />,
     );
