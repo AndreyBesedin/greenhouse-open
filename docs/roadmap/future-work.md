@@ -185,6 +185,24 @@ neither held to a published result. Planned then:
 - **Each model held to its sources:** the data it was validated against
   kept as a reference test, where its licence allows.
 
+## Models and devices, after P14
+
+Recorded 2026-11-06, from [P14.7's QA](p14-models-by-manifest.md#recorded-at-67a8cebc),
+none of them P14.7's own. Planned then:
+
+- **A registered kind in a stored run.** A kind of equipment registered by a module the API
+  imports is not known to the workers the API spawns, so a stored run of a house that has one
+  fails before its first day ("no kind of equipment 'radiant_panel'"), though the viewer's
+  climate runs use it. The workers register what the API does, or entry points come (decision
+  0054's open question 3).
+- **The builder and a kind it was not built with:** it opens no such house, since its forms are
+  read from the published schema, which names the kinds the simulator was written with; the
+  viewer draws, lists and runs it.
+- **A checkpoint uploaded into another scenario's panel** is kept for the scenario it names,
+  without a word: the panel says whose it is, or refuses one that is not its scenario's.
+- **The builder's run step for an uploaded copy** offers its own start and seed (1 April, 0)
+  rather than the file's (1 March, 42).
+
 ## Greenhouse R&D workflows and Modelica comparison
 
 Recorded
