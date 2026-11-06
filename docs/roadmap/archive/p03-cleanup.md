@@ -22,7 +22,7 @@ says why it was dropped.
     `greenhouse_sim/domain/` package.
   - **How:** split the package by concept, so it doesn't become one module
     that everything imports and nobody owns.
-  - **Done** ([decision 0025](../decisions/0025-shared-vocabulary-in-a-domain-package-and-a-generic-plant.md)):
+  - **Done** ([decision 0025](../../decisions/0025-shared-vocabulary-in-a-domain-package-and-a-generic-plant.md)):
     - **The package:** `greenhouse_sim.domain`, with `envelope`, `layout`,
       `crop` and `organs`. It holds the organ kinds, stages and allowed
       changes, and also the envelope's, layout's and simple crop model's

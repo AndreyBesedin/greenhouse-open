@@ -1,7 +1,7 @@
 # P21: Rows of different crops
 
 **Status:** proposed, not started. It was P12.5 in
-[the setup builder](p12-setup-builder.md), which closes without it. Part of the
+[the setup builder](archive/p12-setup-builder.md), which closes without it. Part of the
 [simulator roadmap](README.md).
 
 ## Goal

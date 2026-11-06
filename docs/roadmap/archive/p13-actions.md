@@ -3,9 +3,9 @@
 **Status:** done: P13.1 to P13.10, the final QA [recorded](#recorded-at-88f35bae)
 on 2026-11-05 and its last clause held on 2026-11-06 (#594). The design is
 decision 0046's, its questions [decided](#decided); what the steps left open is
-[future work](future-work.md#actions-and-plans-after-p13) or a note in
-[P18](p18-resources-and-deployment.md#steps). Part of the
-[simulator roadmap](README.md).
+[future work](../future-work.md#actions-and-plans-after-p13) or a note in
+[P18](../p18-resources-and-deployment.md#steps). Part of the
+[simulator roadmap](../README.md).
 
 ## Goal
 
@@ -573,7 +573,7 @@ The simulated run carries out crop work at a day's start only, because its
 organ crop steps a day at a time; it refuses a crop action due at any
 other instant when the plan is given. Automation plans and stacks crop
 work through the day, so the crop is to step within a day. That is a
-project of its own, recorded on the [roadmap](future-work.md#crop-work-within-the-day) as crop work
+project of its own, recorded on the [roadmap](../future-work.md#crop-work-within-the-day) as crop work
 within the day; the action format needs no change for it.
 
 ### What becomes of today's paths
@@ -693,7 +693,7 @@ without it: a manager's revision checking only what it adds or changes, and a
 replay from a checkpoint refusing an action whose rights were withdrawn, which
 a checkpoint does by keeping the run's plan, from which what was revoked or
 refused is left out (`RunExecutor.plan`). Tests for the two are
-[future work](future-work.md#actions-and-plans-after-p13).
+[future work](../future-work.md#actions-and-plans-after-p13).
 
 ## Final QA scenario
 
@@ -775,8 +775,8 @@ on the same state had it, and it did not happen in the later crossings of a day'
 cause is unknown; not reproduced, it has no follow-up. A plan given to a paused run by another
 client shows in the lane once the clock moves (P13.8). Under load the view's moment was up to 9
 hours behind a paused clock, "Loading day 30, 8 h 55 min... 61 s", after a plan had the day worked
-again: a note in [P18](p18-resources-and-deployment.md#steps). The lane's "cancelled: cancelled"
-in step 9, which does not say who, is [future work](future-work.md#actions-and-plans-after-p13).
+again: a note in [P18](../p18-resources-and-deployment.md#steps). The lane's "cancelled: cancelled"
+in step 9, which does not say who, is [future work](../future-work.md#actions-and-plans-after-p13).
 
 A followed run at its end reads "paused", with *Play* offered. A replay has no plan lane, and a run
 a worker computes no gateway: a plan to one answers 404, "no run". So a run started from the start
@@ -832,7 +832,7 @@ What the design left to its first step, as P13.1 settles it:
   records and the conformance checks hold. Checking documents against the
   schemas with a JSON Schema validator in the tests waits for that
   validator as a development dependency:
-  [future work](future-work.md#documents-checked-against-the-published-schemas).
+  [future work](../future-work.md#documents-checked-against-the-published-schemas).
 - **Numbers are finite** in every record of acting on a greenhouse: JSON
   has no infinity and no NaN.
 - **The reference implementation** is in the package, beside the store's
@@ -1039,7 +1039,7 @@ which changes no run, then the run carrying out a plan's crop actions.
   changes alone: a viewer following it draws the crop without the crop
   actions given to it, which its records include. The routes and the
   viewer came, in P13.7 and P13.8; crop work within the day is
-  [future work](future-work.md#crop-work-within-the-day).
+  [future work](../future-work.md#crop-work-within-the-day).
 
 ## Settled in P13.6
 
@@ -1086,7 +1086,7 @@ which changes no run, then the run carrying out a plan's crop actions.
 - **Not yet:** the server takes no crew of its own, so its runs have none.
   A hand that the crop refuses an action for is not handed back to the
   actions already assigned after it, which keep their instants. Both are
-  [future work](future-work.md#actions-and-plans-after-p13).
+  [future work](../future-work.md#actions-and-plans-after-p13).
 
 ## Settled in P13.7
 
@@ -1109,7 +1109,7 @@ which changes no run, then the run carrying out a plan's crop actions.
   run keeps its identity. A plan that is part of a run's request, and of
   its identity, is still the address's spellings (P13.2). Taking one as a
   JSON plan is not yet done:
-  [future work](future-work.md#actions-and-plans-after-p13).
+  [future work](../future-work.md#actions-and-plans-after-p13).
 - **The targets route is an alias,** deprecated. Each call gives the plan
   `targets` its next revision: the changes so far and the new ones. A
   revision given over the routes is the one it revises next, so the two
@@ -1126,7 +1126,7 @@ which changes no run, then the run carrying out a plan's crop actions.
   (`climate_runs.checked_actions`); that check had cost 6 ms an action.
 - **Not yet:** the number of plans is not bounded, only each plan. No
   route serves a gateway's limits. Both are a note in
-  [P18](p18-resources-and-deployment.md#steps). The viewer's development
+  [P18](../p18-resources-and-deployment.md#steps). The viewer's development
   server did not pass `/actuation` on to the API: P13.8 does.
 
 ## Settled in P13.8
@@ -1192,7 +1192,7 @@ plan, the timeline's plan lane, and crop actions given from the viewer.
   a run's are before it runs.
 - **Not yet:** the schedule's remove and repeat edit the run drawn, not the
   plan, and so make another run while one is followed:
-  [future work](future-work.md#actions-and-plans-after-p13).
+  [future work](../future-work.md#actions-and-plans-after-p13).
 
 ## Settled in P13.9
 

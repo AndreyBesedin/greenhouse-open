@@ -10,6 +10,8 @@ Read only the policies relevant to the change:
 - [Accepted decisions](docs/decisions/README.md) for established technical
   boundaries; follow a superseding decision where one exists.
 - [Roadmap](docs/roadmap/README.md) when a PR implements or changes a project step.
+  Skip [its archive](docs/roadmap/archive/README.md) of finished projects unless
+  a task cites their steps or asks for their history (decision 0070).
 - [Contributing](CONTRIBUTING.md) for the DCO, package boundaries and PR process.
 - [Copilot instructions](.github/copilot-instructions.md) for compatible
   repository invariants. Codex should complement, not duplicate, Copilot.

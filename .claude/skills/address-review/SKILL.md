@@ -143,7 +143,7 @@ still running is "still running", not "passing".
 ## Where deferred findings go
 
 Findings on a project's stacked PRs that are left for later go into that project's
-clean-up doc under `docs/roadmap/`, as `docs/roadmap/p03-cleanup.md` did for P03, under
+clean-up doc under `docs/roadmap/`, as `docs/roadmap/archive/p03-cleanup.md` did for P03, under
 a heading for the PR, on the reviewed branch, and merge up the stack. The clean-up runs as one PR once the
 project's steps are merged. A finding about the repository as a whole goes to a
 follow-up issue or the roadmap, not into an audit document: an audit records one

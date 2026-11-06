@@ -1,6 +1,6 @@
 # P07: External weather and greenhouse boundary coupling
 
-**Status:** done. Part of the [simulator roadmap](README.md).
+**Status:** done. Part of the [simulator roadmap](../README.md).
 
 ## Goal
 
@@ -262,7 +262,7 @@ north; constant weather reproduces every existing run exactly.
 
 #### As implemented
 
-- **The site** (`world.site`, [decision 0028](../decisions/0028-the-world-has-a-site-and-its-x-axis-a-compass-bearing.md)):
+- **The site** (`world.site`, [decision 0028](../../decisions/0028-the-world-has-a-site-and-its-x-axis-a-compass-bearing.md)):
   latitude, longitude, elevation, an IANA time zone, and the bearing of
   the world's x axis, by default east (x east, y north, z up). Every
   scenario has the default site, near Bleiswijk, at sea level.

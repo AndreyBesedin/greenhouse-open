@@ -1,6 +1,6 @@
 # P02: Static greenhouse fixtures and layout
 
-**Status:** done. Part of the [simulator roadmap](README.md).
+**Status:** done. Part of the [simulator roadmap](../README.md).
 
 ## Goal
 
@@ -17,7 +17,7 @@ project (P05). The fixtures here are static geometric and semantic objects.
 ## Direction
 
 - The layout is a description, like the envelope (decision
-  [0016](../decisions/0016-the-greenhouse-has-its-own-frame.md)): given in the
+  [0016](../../decisions/0016-the-greenhouse-has-its-own-frame.md)): given in the
   greenhouse's frame, and generating its fixtures. A scenario provides it
   today; a layout file or an editor can provide it later, and the geometry
   follows.
@@ -54,7 +54,7 @@ flags for what they obstruct (movement, airflow), and configurable
 materials. Visible result: a gallery of fixtures in the browser. Tests: each
 primitive is drawn at exactly its configured dimensions.
 
-As implemented (see [decision 0019](../decisions/0019-fixtures-say-what-they-are-made-of-and-what-they-obstruct.md)):
+As implemented (see [decision 0019](../../decisions/0019-fixtures-say-what-they-are-made-of-and-what-they-obstruct.md)):
 
 - A scenario's `layout` (`greenhouse_sim.world.layout.Layout`) describes what
   stands inside its greenhouse, in the greenhouse's frame. For now it holds
@@ -303,7 +303,7 @@ A declarative layout file per scenario, with stable identifiers, and an
 inspector that shows each fixture's semantic type and dimensions. Visible
 result: switching between two different layouts without changing any code.
 
-As implemented (see [decision 0020](../decisions/0020-scenario-layouts-are-declarative-json-files.md)):
+As implemented (see [decision 0020](../../decisions/0020-scenario-layouts-are-declarative-json-files.md)):
 
 - Each scenario's layouts are JSON files,
   `greenhouse_sim/scenarios/layouts/<scenario>/<name>.json`, each a `Layout`
@@ -408,10 +408,10 @@ As implemented ([#44](https://github.com/AndreyBesedin/greenhouse-open/pull/44))
 - [x] The layout is entirely data-driven: every scenario reads its layout
   from a JSON file, checked against the model and a published schema, and a
   second layout is a second file (decision
-  [0020](../decisions/0020-scenario-layouts-are-declarative-json-files.md)).
+  [0020](../../decisions/0020-scenario-layouts-are-declarative-json-files.md)).
 - [x] Fixed objects can later be exported as airflow, radiation or robot
   obstacles: each fixture says what it obstructs (decision
-  [0019](../decisions/0019-fixtures-say-what-they-are-made-of-and-what-they-obstruct.md)),
+  [0019](../../decisions/0019-fixtures-say-what-they-are-made-of-and-what-they-obstruct.md)),
   and `Layout.obstructing` collects the obstacles for each.
 - [x] Planting positions are stable semantic entities: each is named by its
   row and place along it, keeps its name when an aisle or zone takes its

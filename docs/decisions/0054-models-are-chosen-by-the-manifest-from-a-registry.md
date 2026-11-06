@@ -1,7 +1,7 @@
 # 0054: Models are chosen by the manifest, from a registry
 
 **Status:** Accepted, with P14.1
-([P14](../roadmap/p14-models-by-manifest.md)).
+([P14](../roadmap/archive/p14-models-by-manifest.md)).
 **Date:** 2026-10-23
 
 ## Context

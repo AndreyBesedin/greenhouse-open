@@ -3,10 +3,10 @@
 **Status:** done, closed on 2026-11-06: P12.0 to P12.3, and their QA scenario
 [recorded](#recorded-at-88f35bae), its first day's check
 [compared as design point 1 has it](#the-first-days-check): the house and its rows.
-What came after them has moved: [P20](p20-crop-parameter-assets.md) takes the crops'
-parameters and [P21](p21-rows-of-different-crops.md) rows of different crops; what the
-QA saw of the builder's form goes with [P19.9](p19-design-system.md#steps).
-Part of the [simulator roadmap](README.md).
+What came after them has moved: [P20](../p20-crop-parameter-assets.md) takes the crops'
+parameters and [P21](../p21-rows-of-different-crops.md) rows of different crops; what the
+QA saw of the builder's form goes with [P19.9](../p19-design-system.md#steps).
+Part of the [simulator roadmap](../README.md).
 
 ## Goal
 
@@ -124,9 +124,9 @@ to describe a house.
 | P12.1 | A manifest holds or names an installation, by a manifest migration; a draft resolved into a scenario and registered at runtime; drafts and revisions kept locally | A packaged scenario's run id unchanged by the migration; a draft without errors runs; drafts saved, reopened and reverted; files exchanged without the store | Done |
 | P12.2 | The builder in the viewer: start, house form, preview, rows chosen together, the scenario step | Create, preview, import, export, save, reopen and run a house in the browser, by keyboard too; its browser QA | Done: the builder page at `/builder` (a start from the form, a draft, a file or a scenario's house; rows chosen together; undo and redo; save, export, and the scenario step and run), with its browser tests. The findings are listed by the rows they concern; shown on the house, and every field reached, with P12.3's property inspector |
 | P12.3 | Equipment and openings: palettes, surface-mounted doors and vents, many items placed, copied and spaced at once, a property inspector | Items placed many at a time with valid geometry and stable ids; collisions explained or refused; every field editable | Done: the simulator's edits of many items at once (`builder.items`): equipment, sensors, zones, fixtures placed one by one, doors and vents, with its findings of items that collide; the API's `POST /api/builder/edit`; the builder's palette and its items chosen many at once; and the inspector: every field of an item and of the house's envelope and rows, items chosen in the view (a pipe run or a rail by any of its parts), and the items an error names outlined on the house; with their browser tests |
-| P12.4 | Crop model parameters as versioned assets, edited by schema-driven forms | | Moved to [P20](p20-crop-parameter-assets.md), as P20.1 |
-| P12.5 | Rows of different crops run | | Moved to [P21](p21-rows-of-different-crops.md), as P21.1 |
-| P12.6 | Publication | | Split. A pull request made from the builder is dropped: a house file, downloaded and uploaded, already moves a house, and a person can open a pull request with it. Files carrying their parameter versions and every model field reachable moved to [P20](p20-crop-parameter-assets.md), as P20.2 |
+| P12.4 | Crop model parameters as versioned assets, edited by schema-driven forms | | Moved to [P20](../p20-crop-parameter-assets.md), as P20.1 |
+| P12.5 | Rows of different crops run | | Moved to [P21](../p21-rows-of-different-crops.md), as P21.1 |
+| P12.6 | Publication | | Split. A pull request made from the builder is dropped: a house file, downloaded and uploaded, already moves a house, and a person can open a pull request with it. Files carrying their parameter versions and every model field reachable moved to [P20](../p20-crop-parameter-assets.md), as P20.2 |
 
 ### P12.0: what it does, and what it leaves
 
@@ -247,7 +247,7 @@ would make the file a scenario's, which the design keeps apart.
 
 Also seen: the house form's labels *Origin Position X* and *Origin X* say little of what tells them
 apart. The console was clean but for the renderer library's deprecation warning. The labels go with
-the builder's controls in [P19.9](p19-design-system.md#steps).
+the builder's controls in [P19.9](../p19-design-system.md#steps).
 
 Not run: the house form and palette by keyboard alone, which the browser tests do in part, and
 which goes with P19.9 too; a packaged scenario's own file, whose upload is refused as a packaged

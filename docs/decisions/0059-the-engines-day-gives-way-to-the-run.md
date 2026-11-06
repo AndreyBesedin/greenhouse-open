@@ -1,7 +1,7 @@
 # 0059: The engine's day gives way to the run
 
 **Status:** Accepted, for P14.6's last step
-([P14](../roadmap/p14-models-by-manifest.md)).
+([P14](../roadmap/archive/p14-models-by-manifest.md)).
 **Date:** 2026-10-28
 
 ## Context

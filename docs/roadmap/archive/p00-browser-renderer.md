@@ -1,6 +1,6 @@
 # P00: Browser renderer and visual QA foundation
 
-**Status:** done. Part of the [simulator roadmap](README.md).
+**Status:** done. Part of the [simulator roadmap](../README.md).
 
 ## Goal
 
@@ -16,7 +16,7 @@ simulator feature can be inspected there without one-off plotting code.
   simulation's truth stays in the Python process.
 - Scenes are deterministic, selected by scenario and seed.
 - SI units and the world axes of
-  [decision 0007](../decisions/0007-world-coordinates-metres-right-handed-z-up.md).
+  [decision 0007](../../decisions/0007-world-coordinates-metres-right-handed-z-up.md).
   The viewer converts to Three.js's axes once, at the root of its scene.
 - Debug overlays are first-class features.
 - Visual regression tests are in place before scene complexity grows.
@@ -120,14 +120,14 @@ As implemented:
 
 A streaming channel from the local API (WebSocket or equivalent). This is
 the point where, per
-[decision 0009](../decisions/0009-a-standard-library-local-api-until-streaming-is-needed.md),
+[decision 0009](../../decisions/0009-a-standard-library-local-api-until-streaming-is-needed.md),
 a web framework replaces the standard-library server, as an optional
 dependency of the API. The viewer shows the simulation timestamp, and one test
 entity moves because Python advances it. Tests: stopping the API shows a
 disconnected state, restarting it reconnects, and the known timestamp appears
 in the HUD.
 
-As implemented (see [decision 0012](../decisions/0012-stream-to-the-viewer-with-server-sent-events.md),
+As implemented (see [decision 0012](../../decisions/0012-stream-to-the-viewer-with-server-sent-events.md),
 which replaces the framework plan above):
 
 - `GET /api/scenarios/{id}/live` streams Server-Sent Events from the existing
@@ -159,7 +159,7 @@ step advances exactly one tick.
 As implemented, the controls act on a scenario's live run from P00.4, and a
 tick is one simulated day:
 
-- As [decision 0012](../decisions/0012-stream-to-the-viewer-with-server-sent-events.md)
+- As [decision 0012](../../decisions/0012-stream-to-the-viewer-with-server-sent-events.md)
   planned, commands are POST requests:
   `/api/scenarios/{id}/live/{play,pause,step,reset}` and
   `/api/scenarios/{id}/live/speed?multiplier=2`. Speeds run from a quarter
@@ -191,7 +191,7 @@ Visible result: selecting an entity shows its identifier and transform, and
 arrows, boxes and labels can be toggled around it. Tests: selection is
 stable, and toggling overlays never changes world state.
 
-As implemented (see [decision 0013](../decisions/0013-describe-debug-overlays-as-data-in-world-coordinates.md)):
+As implemented (see [decision 0013](../../decisions/0013-describe-debug-overlays-as-data-in-world-coordinates.md)):
 
 - A click selects the nearest entity under the pointer. A drag orbits the
   camera and selects nothing, and clicking the sky clears the selection.
@@ -225,7 +225,7 @@ with a fixed viewport and camera, golden screenshots and a documented
 tolerance. Tests: an intentional scene change produces a difference, and the
 restored scene passes.
 
-As implemented (see [decision 0014](../decisions/0014-compare-screenshots-in-a-pinned-container-in-ci.md)):
+As implemented (see [decision 0014](../../decisions/0014-compare-screenshots-in-a-pinned-container-in-ci.md)):
 
 - `/qa/renderer?seed=42` shows a QA scene the viewer builds from the seed:
   the ground, the axes and fifteen leaning plants of seeded heights. It is
@@ -252,7 +252,7 @@ objects, and frame-time, draw-call and memory diagnostics where available.
 Visible result: a dense, greenhouse-like grid stays navigable. Tests: a
 baseline performance measurement, kept as a non-blocking benchmark.
 
-As implemented (see [decision 0015](../decisions/0015-batch-repeated-shapes-and-benchmark-on-a-graphics-card.md)):
+As implemented (see [decision 0015](../../decisions/0015-batch-repeated-shapes-and-benchmark-on-a-graphics-card.md)):
 
 - Every cylinder is drawn as one instance of a single mesh, placed by a
   matrix from its transform, radius and height, and coloured per instance.
@@ -316,21 +316,21 @@ Frame rates on a graphics card are recorded by the benchmark (P00.8).
 
 - [x] The renderer runs entirely in the browser: React, Three.js and React
   Three Fiber in `greenhouse_sim/web` (P00.1, decision
-  [0008](../decisions/0008-build-the-viewer-with-npm-node-24-and-vite.md)).
+  [0008](../../decisions/0008-build-the-viewer-with-npm-node-24-and-vite.md)).
 - [x] Python drives scene state without any rendering responsibility: the
   simulator sends scene snapshots, which are data with no renderer in them,
   and streams them live (P00.3, P00.4, decision
-  [0012](../decisions/0012-stream-to-the-viewer-with-server-sent-events.md)).
+  [0012](../../decisions/0012-stream-to-the-viewer-with-server-sent-events.md)).
 - [x] A deterministic scene is visually regression-tested: the seeded QA
   page, in CI's pinned container (P00.7, decision
-  [0014](../decisions/0014-compare-screenshots-in-a-pinned-container-in-ci.md)).
+  [0014](../../decisions/0014-compare-screenshots-in-a-pinned-container-in-ci.md)).
 - [x] Debug overlays are reusable by airflow, radiation, sensors and plants:
   they are data in world coordinates, which any project can produce (P00.6,
   decision
-  [0013](../decisions/0013-describe-debug-overlays-as-data-in-world-coordinates.md)).
+  [0013](../../decisions/0013-describe-debug-overlays-as-data-in-world-coordinates.md)).
 - [x] Later projects do not need another visualization stack: a new kind of
   entity is a schema change and a renderer entry, repeated shapes are
   batched (decision
-  [0015](../decisions/0015-batch-repeated-shapes-and-benchmark-on-a-graphics-card.md)),
+  [0015](../../decisions/0015-batch-repeated-shapes-and-benchmark-on-a-graphics-card.md)),
   and overlays, selection, time controls and screenshots come with the
   viewer. P01 onwards build on it.

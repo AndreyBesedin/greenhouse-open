@@ -1,7 +1,7 @@
 # P08: Sun position, glazing and radiation propagation
 
 **Status:** done. Part of the
-[simulator roadmap](README.md).
+[simulator roadmap](../README.md).
 
 ## Goal
 

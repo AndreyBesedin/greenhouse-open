@@ -1,6 +1,6 @@
 # P05: Climate actuators: fans, heaters, dehumidification and vents
 
-**Status:** done: P05.0 to P05.7 and the final QA. Part of the [simulator roadmap](README.md).
+**Status:** done: P05.0 to P05.7 and the final QA. Part of the [simulator roadmap](../README.md).
 
 ## Goal
 
@@ -775,7 +775,7 @@ What P05 simplifies on purpose, kept here until a later step removes it:
 The final report's open questions, as decided:
 
 - **The CI's time** is left for after P09 (see the
-  [roadmap](future-work.md#test-suite-and-ci-time)).
+  [roadmap](../future-work.md#test-suite-and-ci-time)).
 - **A climate run's colours** keep the range its moments have reached as it
   plays, rather than rescaling at every moment.
 - **The approximations** above (no buoyancy, no transpiration, condensation's

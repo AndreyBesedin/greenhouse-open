@@ -11,7 +11,7 @@ opened on 2026-10-11, after P08 and before P09: the
 [order of work](#order-of-work) are below. Its seven steps address every
 finding, FE-AUDIT.3 to .11, and P09 follows them.
 
-Part of the [simulator roadmap](README.md). These maintenance identifiers
+Part of the [simulator roadmap](../README.md). These maintenance identifiers
 track audit findings separately from the simulator's project steps.
 
 ## Audit provenance

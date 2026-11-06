@@ -7,7 +7,7 @@ the whole of it, at its own pace, on YouTube by its thumbnail, as section
 9 plans. The walk-through also runs in CI as a browser test
 (`e2e/p09-final-qa.spec.ts`), checking one visible result a step rather than
 every check the final QA lists. Part of the
-[simulator roadmap](README.md).
+[simulator roadmap](../README.md).
 
 ## Goal
 

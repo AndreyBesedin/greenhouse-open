@@ -1,7 +1,7 @@
 # P20: Crop parameters as versioned assets
 
 **Status:** proposed, not started. It was P12.4 and part of P12.6 in
-[the setup builder](p12-setup-builder.md), which closes without it. Part of the
+[the setup builder](archive/p12-setup-builder.md), which closes without it. Part of the
 [simulator roadmap](README.md).
 
 ## Goal
@@ -16,7 +16,7 @@ versions of the parameters its models use.
 Item 8 of the [research priorities](research-validation-priorities.md): once the
 registry and the first published model carry versioned parameters. Until then there
 is little worth versioning: the sets a person would edit are the published models',
-and those are still being reproduced ([P14](p14-models-by-manifest.md)).
+and those are still being reproduced ([P14](archive/p14-models-by-manifest.md)).
 
 ## What stays stable
 
