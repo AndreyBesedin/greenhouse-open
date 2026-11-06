@@ -97,7 +97,7 @@ describe("a scenario file uploaded from the start page (P17.11)", () => {
 
     expect(went).toEqual([]);
     expect(shown.container.querySelector('[role="alert"]')?.textContent).toContain(
-      "my_greenhouse.json cannot be passed to the builder",
+      "my_greenhouse.json is a house file, and cannot be passed to the builder",
     );
   });
 

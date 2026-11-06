@@ -34,7 +34,7 @@ data.
    [P14](p14-models-by-manifest.md), each model registered with its
    identity, version, parameters, checkpoint state and conformance tests,
    and chosen by the manifest. Of [P13](p13-actions.md), P13.9's policy loop
-   on the run, the first user of item 7; P13.10's QA scenario is recorded.
+   on the run, the first user of item 7; P13 is done, its QA recorded.
    Of [P11](p11-climate-setpoints.md), P11.2, venting and humidity
    on the controller, for a rule-based climate baseline and a matched
    Modelica comparison; the rest waits. The gateway's speed, which bounds a
@@ -74,6 +74,14 @@ data.
    the same season. At GreenLight's default solver settings, the run
    reproduces neither GreenLight's answer nor GreenLight's own answer to
    the declared tolerances.
+   Of milestone B, Reduced-State TOMGRO is a crop model of the run, grown
+   in the TOMGRO house's documented season ([P14.10](p14-models-by-manifest.md#steps)).
+   Left here when P14 closed, on 2026-11-06: Vanthoor's model registered,
+   chosen by a manifest and shown in a documented scenario, its rung
+   (`core.vanthoor_crop.VanthoorRung`) already held to its reproduction on
+   every state and hour; and, for both models, each driver profile's effect
+   measured against the reproduction's forcing, with the canopy's
+   temperature, as decision 0062 asks.
 5. **Validate on measured data, as a workflow others can repeat.** Begin
    with the WUR AGC4 dataset, through its adapter, where what it measures
    and its licence allow: inventory what it records (weather, climate,

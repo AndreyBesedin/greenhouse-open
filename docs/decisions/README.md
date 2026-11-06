@@ -7,8 +7,10 @@ write one is described in
 [docs/engineering.md](../engineering.md#roadmap-and-decision-records).
 
 A record is written in the pull request that implements the decision. Once
-accepted it is not edited, apart from its status line. A decision that
-changes course is a new record that supersedes the old one.
+accepted it is not edited, apart from its status line and, when a document
+it links to moves, that link's path
+([0070](0070-a-finished-project-moves-to-the-roadmaps-archive.md)). A
+decision that changes course is a new record that supersedes the old one.
 
 | Record | Decision | Status |
 | --- | --- | --- |
@@ -51,6 +53,7 @@ changes course is a new record that supersedes the old one.
 | [0037](0037-the-simulators-subpackages-tangle-no-further.md) | The simulator's subpackages tangle no further | Accepted |
 | [0038](0038-hooks-merge-like-dev-dependencies-review-waits-for-a-second-maintainer.md) | Hook updates merge like development dependencies; review changes with a second maintainer | Accepted |
 | [0039](0039-develop-with-uv-one-workspace-a-command-for-each-task.md) | Develop with uv: one workspace, a command for each task | Accepted; Node 24 as a prerequisite superseded by 0069 |
+| [0040](0040-a-consumer-reads-a-producer-through-the-protocol.md) | A consumer reads a running producer through the protocol's own interface | Accepted |
 | [0041](0041-one-run-for-the-viewer-and-a-consumer-played-back-against-one-clock.md) | One run for the viewer and a consumer, played back against one clock | Accepted; the simple live mode it kept superseded by 0059; its one playback a scenario, shared clock and unkept runs superseded by 0065 |
 | [0042](0042-a-season-a-thermostat-and-the-heat-it-gives-as-a-modelled-record.md) | A season, a thermostat, and the heat it gives as a modelled record | Accepted |
 | [0043](0043-a-target-changed-while-a-run-plays-steers-it-from-then-on.md) | A target changed while a run plays steers it from then on | Accepted |
@@ -79,6 +82,7 @@ changes course is a new record that supersedes the old one.
 | [0066](0066-run-records-are-parquet-segments-read-and-written-with-duckdb.md) | Run records are Parquet segments, read and written with DuckDB | Accepted |
 | [0067](0067-a-runs-resources-are-counted-and-limited-and-all-it-needs-is-in-the-store.md) | A run's resources are counted and limited, and all it needs is in the store | Accepted |
 | [0068](0068-the-viewers-design-system-is-its-own-tokens-and-components.md) | The viewer's design system is its own tokens and components | Accepted |
+| [0070](0070-a-finished-project-moves-to-the-roadmaps-archive.md) | A finished project moves to the roadmap's archive | Accepted |
 | [0069](0069-setup-installs-node-when-the-machines-is-missing-or-too-old.md) | `uv run setup` installs Node when the machine's is missing or too old | Accepted |
 
 ## Template

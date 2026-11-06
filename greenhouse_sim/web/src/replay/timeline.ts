@@ -1,4 +1,4 @@
-import { DAY_S, runDay } from "../clock";
+import { DAY_S, dayNumber, runDay } from "../clock";
 import { baseLayout, MOVES_MARK } from "../scene/moves";
 
 /**
@@ -23,14 +23,20 @@ const FULL = 1;
 const MOST_TICKS = 6;
 // A tick nearer the timeline's end than this share of a step gives way to it.
 const NEAR_SHARE = 4;
+const TWO_DAYS = 2;
+const FIVE_DAYS = 5;
 const DAYS_PER_WEEK = 7;
 const DAYS_PER_MONTH = 30;
 const DAYS_PER_QUARTER = 90;
 const DAYS_PER_YEAR = 365;
-// The steps between ticks that read well, in days, from the finest: a day, a
-// week, a fortnight, a month, two, a quarter and a year.
+// The steps between ticks that read well, in days, from the finest: a day,
+// two, five, a week, a fortnight, a month, two, a quarter and a year. Two and
+// five tick a run of a week or two evenly, which a week's step alone cuts
+// short, as "start, 7, 10".
 const TICK_STEPS_DAYS = [
   1,
+  TWO_DAYS,
+  FIVE_DAYS,
   DAYS_PER_WEEK,
   2 * DAYS_PER_WEEK,
   DAYS_PER_MONTH,
@@ -80,7 +86,7 @@ export function dayLabel(timeS: number): string {
   const within = Math.round(timeS - day * DAY_S);
   const hours = Math.floor(within / SECONDS_PER_HOUR);
   const minutes = Math.floor((within - hours * SECONDS_PER_HOUR) / SECONDS_PER_MINUTE);
-  return `Day ${day + 1}, ${String(hours).padStart(TWO_DIGITS, "0")}:${String(minutes).padStart(TWO_DIGITS, "0")}`;
+  return `Day ${dayNumber(timeS)}, ${String(hours).padStart(TWO_DIGITS, "0")}:${String(minutes).padStart(TWO_DIGITS, "0")}`;
 }
 
 /** What a fork came from, in words, and the layout it goes on in if another: that

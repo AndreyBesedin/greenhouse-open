@@ -160,7 +160,7 @@ test("a house built, downloaded and uploaded from the start page opens in the bu
   await expect(page).toHaveURL(new RegExp(`${BUILDER_PATH}#installation=${id}$`), ARRIVES);
   // The draft it came from is kept, and is not touched: this one is not saved.
   await expect(status).toHaveText(
-    `Imported Round trip from ${file.name}; not saved yet. ` +
+    `Imported Round trip from ${file.name}, a house file: it holds no run settings; not saved yet. ` +
       `A draft with the identifier ${id} is kept already: change this one's identifier to save it.`,
     ARRIVES,
   );
@@ -192,6 +192,12 @@ test("a house built, downloaded and uploaded from the start page opens in the bu
   // No scenario was made of it on the way.
   const listed = (await (await page.request.get("/api/scenarios")).json()) as { id: string }[];
   expect(listed.map((each) => each.id)).not.toContain(id);
+
+  // The address is the saved draft's: a reload opens it, saved, not the file.
+  await expect(page).toHaveURL(new RegExp(`${BUILDER_PATH}#draft=${id}_b$`));
+  await page.reload();
+  await expect(status).toHaveText("Opened Round trip, revision 1.", ARRIVES);
+  await expect(page.getByTestId("builder-draft")).toHaveText(`Round trip (${id}_b), revision 1`);
 });
 
 test("a house no draft holds, uploaded from the start page, is opened with nothing to rename", async ({
@@ -207,7 +213,7 @@ test("a house no draft holds, uploaded from the start page, is opened with nothi
   await other.locator(".landing-upload input[type=file]").setInputFiles(file);
 
   await expect(other.getByTestId("builder-status")).toHaveText(
-    `Imported Round trip from ${file.name}; not saved yet.`,
+    `Imported Round trip from ${file.name}, a house file: it holds no run settings; not saved yet.`,
     ARRIVES,
   );
   await expect(other.locator(".builder-rows tbody tr")).toHaveCount(2);

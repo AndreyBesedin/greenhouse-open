@@ -1,6 +1,6 @@
 # P14: Models chosen by the manifest
 
-**Status:** in progress: P14.1 to P14.8 are done, P14.7 but for its QA scenario; P14.9 is done, and P14.10 is in progress; the rest is proposed. What its reviews leave for later is in [the P14 clean-up](p14-cleanup.md). Its decision
+**Status:** done, closed on 2026-11-06: P14.1 to P14.9, P14.7's QA scenario recorded (#604), and P14.10 for Reduced-State TOMGRO. Vanthoor's model's registration and documented scenario, and each driver profile's effect measured against its reproduction's forcing, moved to [the research priorities](research-validation-priorities.md), item 4's milestone B, where both models are planned. [The P14 clean-up](p14-cleanup.md) has nothing open. Its decision
 ([0054](../decisions/0054-models-are-chosen-by-the-manifest-from-a-registry.md))
 is Accepted, its open questions settled (below). This is the project that the
 [repository audit](../audits/2026-10-13-repository-audit.md) calls "P10",
@@ -231,10 +231,10 @@ the audit asks: **the simple crop as a rung of the run.**
 | P14.4 | **What the pilot showed:** the registry's needs, recorded in a decision. Models from another package through entry points, if the open question says so. | Done: recorded in [0055](../decisions/0055-a-model-is-registered-with-all-that-tells-it-apart.md), Accepted, and delivered by P14.5 to P14.8: a crop model registered with all that tells it apart (`services.crop_models`: its state's model and check, and what the services ask of it), held by `test_crop_models.py`, which also holds that no service names a model's rung; a checkpoint's state read by its registration; one environment for every per-plant model, each saying what of it it reads, a model grown by area taking its course instead (decision 0062); the engine's settings gone with the engine (`RETIRED`, dropped where an older file gives them); the crop part keeping one model, its rows'; a kind of equipment registered by itself (`register_equipment`). No entry point: no model from outside the repository has asked for one |
 | P14.5 | **Devices by capability:** the climate's source terms, the scene and the viewer work by capability and shape. `add-a-device.md` becomes one module and a registration. After P13.3. | Done: the simulator acts on a device's capabilities, never its kind; the scene draws every device as one kind (`EQUIPMENT`) by its shape and what it does, and the viewer draws, names and lists it so; a kind of equipment is a class and its registration (`register_equipment`), a layout reading each piece by its kind; see "Settled in P14.5" |
 | P14.6 | **The other parts registered:** first the crop's registration taking over the services' branches on its model (decision 0055); then the house's air (the whole house and the grid as rungs), sun and glazing, the sensors' sampler and the controller's loops. The engine's remaining models are re-homed or removed (decision 0035). | Done: the crop's registration for the services (`services.crop_models`), which the crop's scene, the plants' light, checkpoints, the crop log and the replay ask in place of branching on its model; decision 0055 Accepted; the sunlight and the sensors, a model each (checkpoint format 6); the house's air, `grid` or `whole_house` (manifest format 6, checkpoint format 7); the controller, its `loops` or `none` (manifest format 7, checkpoint format 8). The engine's day gave way to the run as [0059](../decisions/0059-the-engines-day-gives-way-to-the-run.md) decided, in four steps, all in 0.5.0: the viewer's live mode gave way to a scenario's run; examples 01 and 02 play and store a scenario's run; `greenhouse_sim.ground_truth` gives what a run's sensors and its crop walk truly measured, reading by reading, which the accuracy report and example 04 score a run's observations against; and the engine, its world, its model contracts, its simple models and its checkpoints were removed, with the four settings of its own the simple crop held |
-| P14.7 | **The recipes and the QA:** the guides (`add-a-plant-model`, `add-an-air-model`, `add-a-device`, `add-a-sensor-kind`) rewritten for the registry; the QA scenario below. | Done for the recipes: a plant model registered as the registry and its registration's declarations have it (`PlantAdapter`, `CropActions`), with a pointer to the area-based contract of P14.9; a model of the house's air beside `grid` and `whole_house`, its parameters, its days and its choice; a device as a kind registered by itself, acted on by its capabilities; a sensor kind as an instrument of the sensors' one model, with its truth; and the recipes' index naming each part's models. The QA scenario stays proposed: its fogger needs a capability that adds water to the air, which no device has yet |
+| P14.7 | **The recipes and the QA:** the guides (`add-a-plant-model`, `add-an-air-model`, `add-a-device`, `add-a-sensor-kind`) rewritten for the registry; the QA scenario below. | Done for the recipes: a plant model registered as the registry and its registration's declarations have it (`PlantAdapter`, `CropActions`), with a pointer to the area-based contract of P14.9; a model of the house's air beside `grid` and `whole_house`, its parameters, its days and its choice; a device as a kind registered by itself, acted on by its capabilities; a sensor kind as an instrument of the sensors' one model, with its truth; and the recipes' index naming each part's models. The QA scenario run at `67a8cebc`, [recorded below](#recorded-at-67a8cebc), a radiant panel, which heats, in place of its fogger, which needs a capability that adds water to the air: every step passed, the checkpoint's once it names the organ crop's scenario; the builder cannot open a house with the panel in it, and a worker cannot run it |
 | P14.8 | **The crop part generalised ([0062](../decisions/0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md), milestone B's first phase):** a pure refactor, with the simple and organ models alone. First, the registration as declarations: what a model that grows single plants is asked of them, a typed adapter, and the run's own crop actions it takes, by kind, routed by them; no service asks which model it holds. Then the run's crop over instances, each a model on a spatial scope, its plants keeping their ids. Every pinned run id, the reference greenhouse's opening day and its replay's day digests unchanged, and `test_crop_rungs.py` as it stands. | Done: the registration's declarations (`services.crop_models`: `PlantAdapter`, `CropActions`), the gateway and the run routing crop actions by the kinds a model declares, and a test that no service names a model's rung or the simple crop's plants; and what every run's crop keeps of its days, whatever grows it (`core.crop_days.CropDays` and its `Growth`, `core.crop_steps.CropSteps` since P16.1), the per-plant crop one growth on it (`core.crop.PlantGrowth`, `RunCrop`). No pin moved. The instances come with their scopes in P14.9: a per-plant crop's instance is its row, read from its layout, so its checkpoint state stays its plants and needs no new format; an area-based crop's state, per instance, is a member of the crop's state of its own |
 | P14.9 | **A crop grown by area:** the area-based contract beside the per-plant one; a scope's geometry and areas, with every conversion to a model's reference area explicit and conserved across layouts; the first driver profile (the whole house's air hour by hour, the PAR above a scope); a measurement part of the registry; each in its own pull request, before any area-based model. | Done: the area-based contract (`biology.area_contract`: `AreaRung`, `DayCourse`, `HourDrivers`) and the run's crop of it (`core.area_crop.AreaCrop`, #415); a scope per row, its cultivated area and floor kept apart, with the explicit conversions between them (`world.scopes`, #412); the PAR above a scope's canopy (`solar.scopes.ScopeLight`, #414); and the first driver profile, `house_hours` version 1, the whole house's air hour by hour (`core.drivers`, #415). The measurement part of the registry is the crop walk's, as decision 0062 has it, which a run's identity and its checkpoints already cover: beside the walk among plants, a model that measures a crop grown by area, `canopy_sample` (`scenarios.crop_parameters.CanopySample`): every so many days, each scope's quantities as its model declares them (`AreaAdapter.sampled`), per m² of its floor, with its noise and its bias, each reading naming its scope (`Observation.scope_id`). It is what a manifest asks for, so no packaged run moved: the TOMGRO house, on the part's default, measures nothing of its crop until its manifest names it. Its readings are delivered as they are taken, and take nothing from the canopy. |
-| P14.10 | **The two published models as crop models of the run** ([0060](../decisions/0060-two-published-tomato-models-become-crop-models-of-the-run.md), milestone B): Reduced-State TOMGRO, then Vanthoor's model as Katzin simplified it, each from its reproduction (milestone A), on a scope per row, registered with its version and named parameter set, held to the area-based contract test, and shown in a documented scenario, its outputs labelled predictions. | In progress: Reduced-State TOMGRO as an area-based model, held to its reproduction's reference output on every state and day (`biology.tomato.tomgro`, `core.tomgro_crop.TomgroRung`, #416); registered, its rows a scenario's choice (#432); drawn as each row's canopy, a proxy (#433); and grown in the TOMGRO house, whose season is documented below. Vanthoor's model as an area-based model, at an hour's step, held to its reproduction's reference output on every state and hour, and what hour means change from that forcing held to what was measured (`biology.tomato.vanthoor`, `core.vanthoor_crop.VanthoorRung`). Still to come: Vanthoor's model registered and in a documented scenario, and each driver profile's effect measured against the reproduction's forcing. |
+| P14.10 | **The two published models as crop models of the run** ([0060](../decisions/0060-two-published-tomato-models-become-crop-models-of-the-run.md), milestone B): Reduced-State TOMGRO, then Vanthoor's model as Katzin simplified it, each from its reproduction (milestone A), on a scope per row, registered with its version and named parameter set, held to the area-based contract test, and shown in a documented scenario, its outputs labelled predictions. | Done for Reduced-State TOMGRO: an area-based model, held to its reproduction's reference output on every state and day (`biology.tomato.tomgro`, `core.tomgro_crop.TomgroRung`, #416); registered, its rows a scenario's choice (#432); drawn as each row's canopy, a proxy (#433); and grown in the TOMGRO house, whose season is documented below. Vanthoor's model as an area-based model, at an hour's step, held to its reproduction's reference output on every state and hour, and what hour means change from that forcing held to what was measured (`biology.tomato.vanthoor`, `core.vanthoor_crop.VanthoorRung`). Moved to [the research priorities](research-validation-priorities.md), item 4's milestone B, when P14 closed: Vanthoor's model registered and in a documented scenario, and each driver profile's effect measured against the reproduction's forcing, for both models. |
 
 ## Settled in P14.5
 
@@ -348,7 +348,7 @@ still to be measured, as milestone B asks.
   registration, can be placed by a layout. It heats or moves air in a run,
   and a viewer built without it draws and lists it.
 
-## QA scenario (proposed)
+## QA scenario
 
 1. Open the reference greenhouse. Its manifest lists each part's model and
    version.
@@ -360,6 +360,59 @@ still to be measured, as milestone B asks.
    1. Place two of them in a layout and run it.
    2. The viewer draws and lists them, and the house's humidity rises while
       they run.
+
+### Recorded at `67a8cebc`
+
+Run on 6 November 2026 on `67a8cebc`, 0.6.0 and what merged after it, on the Vite development
+server (StrictMode) in Playwright's headless Chromium, with an API and a state folder of its own.
+The API was served as `radiant_panel.py` serves it run as a program: the panel registered first.
+
+**The device:** a radiant panel stood in for the fogger. A fogger adds water to the air, and no
+capability does: a device moves air, heats, dries or gives off heat (`world.capabilities`). A
+capability that adds water belongs with the humidity targets of the
+[climate setpoints](future-work.md#climate-setpoints), not with this QA. The panel is a kind the
+simulator was not written with, which heats, as the acceptance criteria's device "heats or moves
+air": `RadiantPanel`, in a module of its own (`greenhouse_sim/tests/radiant_panel.py`), registered
+before the API starts, as decision 0054 has a package do while there are no entry points. Step
+3.2's humidity rising becomes the house's air warming.
+
+| Step | Result | What was seen |
+| --- | --- | --- |
+| 1 | Passed | QA mode's run manifest: `reference_greenhouse, version c78654655846ad44, format 7`, and "weather: seasonal v1, air field: uniform v1, crop: organ v1, crop walk: walk v1, sunlight: haurwitz_erbs v1, sensors: sampled v1, house air: grid v1, controller: loops v1". |
+| 2 | Passed | The reference greenhouse's file, as the simulator serves it, under `reference_simple_qa`, its `models.crop` and its four rows' `crop_model` `simple`, uploaded from the start page: opened in the builder, "It can run.", and in the viewer, its manifest's crop "simple v2". |
+| 2.1 | Passed, a plant at a time | On day 30 at noon, 47 s from a simulator that had worked none of it: its 32 plants drawn, "32 plants, the simple daily model; last plant day 29". Its first plant's inspector: 30 days old, 5 trusses, 19 fruits, `cumulative_harvest_g` 1.92. The crop work picks its first fruit on day 28, the fourth harvest round. No total for the house is shown: a plant's harvest is, in its inspector. |
+| 2.2 | **Passed once it names the reference greenhouse** | Day 1's start saved on the copy and downloaded, `reference_simple_qa-day-1-0257781fa97c9347.json`, its crop the simple model, version 2. Uploaded as it is into the reference greenhouse's checkpoints panel, it was taken without a word and not listed there: a checkpoint names its scenario and its manifest's version, and is kept for that scenario wherever it is uploaded, so it was kept as the copy's. Its scenario and manifest's version changed to the reference greenhouse's: refused, "a checkpoint made with the simple model of the crop, version 2: its run's is the organ model, version 1". |
+| 3 | Passed, with the radiant panel | Its module imported, and the kind registered, before the API served. |
+| 3.1 | Passed in the viewer; the builder cannot open it | The climate box's file under `radiant_box_qa`, with two panels of 5 kW on its floor at x 3 m and 8 m, uploaded from the start page: the simulator registered it, and the builder said "The uploaded scenario cannot be opened: not an assessed installation", since it reads an installation against the schema it was built with, which has no radiant panel. Opened in the viewer at `/?scenario=radiant_box_qa&field=climate`, its climate run worked out by the API. |
+| 3.2 | Passed | Its scene draws `panel 1` and `panel 2` as equipment, `device_kind` `radiant_panel`, doing `heats`, `heats_w` 5000; the Equipment panel lists them, off, beside the fan, the heater and the dehumidifier; each is drawn as a box on the floor, grey while off and in heating's colour while it runs. Both on at 1 h, at 2 h: "Air 20.8 °C, all off 8.0 °C", and the humidity 42.6 % against 97.4 %, which falls as the air warms, where the fogger's would have risen. |
+
+What is left: none of P14.7's own. Found on the way, and not P14.7's:
+
+- A checkpoint uploaded into another scenario's panel is taken into its own scenario's
+  checkpoints without a word: the panel could say whose it is, or refuse one that is not its
+  scenario's.
+- A kind registered by a module the API imports is not known to the workers the API spawns: a
+  stored run of `radiant_box_qa`, started as the start page starts one
+  (`POST /api/scenarios/radiant_box_qa/runs`), failed before its first day, "no kind of
+  equipment 'radiant_panel': the kinds are fan, heater, dehumidifier". So a registered kind runs
+  in the viewer's climate runs and not in a stored run, until the workers register what the API
+  does, or entry points come (decision 0054's open question 3).
+- The builder opens no house with a kind it was not built with (3.1). The viewer draws, lists and
+  runs one; the builder's forms are read from the published schema, which names the kinds the
+  simulator was written with.
+
+Also seen: the builder's run step, for the copy, offered 1 April 2026 and seed 0, where the
+file's are 1 March and 42. The console held the renderer library's deprecation warning, the GPU
+driver's notes, and the refused checkpoint's answer, 400.
+
+Not run: a stored run of the copy, on a worker, its replay drawn; the panel's level set from a
+plan on a followed run; the copy's harvest over its whole season.
+
+A browser test holds what can be held: `e2e/models-qa.spec.ts`, on a production build, the
+three steps as above on a copy under `reference_simple_copy`, harvested by day 28, its
+checkpoint refused once it names the reference greenhouse, and the two panels on a simulator of
+the test's own, started from `radiant_panel.py`, which the viewer is routed to.
+`test_registered_equipment.py` holds the panel in a run and its scene.
 
 ## Open questions
 

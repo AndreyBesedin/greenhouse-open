@@ -110,7 +110,7 @@ scenario: "Climate run" moves through a day a minute at a time, and through
 the run a day at a time, or plays it, a minute at a time through its first
 hour and five minutes at a time after it, or at the pace chosen, an hour or
 a day a step (`&t=600`, ten minutes in; `&t=18000`, five hours;
-`&t=87000`, the second day, ten minutes in, `day 1, 10 min`). A day ends at
+`&t=87000`, the second day, ten minutes in, `day 2, 10 min`). A day ends at
 its midnight, `24 h 00 min`, and the next begins a minute after it. "House
 air" charts the house's air as one volume through the moment's day
 (`GET /api/scenarios/{id}/climate/house`), as the weather's and a sensor's
@@ -256,7 +256,7 @@ to answer the latest request, as its API says in a `Server-Timing` header.
 The view draws only when something changes: the camera moves, the scene or
 a field changes, the day plays (decision 0053). Standing still, it draws
 nothing and leaves the page free; its frame rate then reads "idle", and its
-frame time is that of the last frames it drew in a row. Held in a drag, it
+frame time, that of the last frames it drew in a row, says "(last drawn)". Held in a drag, it
 draws every frame, so that its frame rate is the renderer's. A component
 that changes what is drawn other than through its props asks for a frame
 (`invalidate()`), and one that gives the scene a handler or an object keeps

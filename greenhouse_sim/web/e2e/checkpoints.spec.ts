@@ -19,20 +19,20 @@ test("checkpoints: a run saved at a day's start is restored, downloaded and uplo
   const kept = panel.getByTestId("checkpoint");
 
   await page.goto(`/?scenario=climate_box&field=climate&t=${DAY_S + 3600}&schedule=${SCHEDULE}`);
-  await expect(moment).toHaveText("day 1, 1 h 00 min", ARRIVES);
+  await expect(moment).toHaveText("day 2, 1 h 00 min", ARRIVES);
   await panel.locator("summary").click();
   // None kept; or, retried against the same simulator, the one this test
-  // saved before, the same run's day 1, which saving again keeps once.
+  // saved before, the same run's day 2, which saving again keeps once.
   await expect(panel).toContainText(
-    /None kept for this scenario\.|day 1: 1 commands before it/,
+    /None kept for this scenario\.|day 2: 1 commands before it/,
     ARRIVES,
   );
 
   await test.step("saved at its second day's start", async () => {
-    await panel.getByRole("button", { name: "Save day 1's start" }).click();
+    await panel.getByRole("button", { name: "Save day 2's start" }).click();
     await expect(kept).toHaveCount(1, ARRIVES);
     await expect(kept.getByTestId("checkpoint-description")).toHaveText(
-      "day 1: 1 commands before it, its scenario's daily commands",
+      "day 2: 1 commands before it, its scenario's daily commands",
     );
   });
 
@@ -41,8 +41,8 @@ test("checkpoints: a run saved at a day's start is restored, downloaded and uplo
       .getByRole("group", { name: "Climate run" })
       .getByRole("button", { name: "Next day" })
       .click();
-    await expect(moment).toHaveText("day 2, 1 h 00 min", ARRIVES);
-    await kept.getByRole("button", { name: /^Restore day 1, / }).click();
+    await expect(moment).toHaveText("day 3, 1 h 00 min", ARRIVES);
+    await kept.getByRole("button", { name: /^Restore day 2, / }).click();
     await expect(page).toHaveURL(new RegExp(`&t=${DAY_S}(&|$)`));
     await expect(page).toHaveURL(/&schedule=600:heater:1(&|$)/);
     await expect(moment).toHaveText("24 h 00 min", ARRIVES);
@@ -53,7 +53,7 @@ test("checkpoints: a run saved at a day's start is restored, downloaded and uplo
     // Restored at 86 400 s, the first day's end: on to the second's.
     await run.getByRole("button", { name: "Next day" }).click();
     await run.getByRole("slider", { name: "Time of day" }).fill("7200");
-    await expect(moment).toHaveText("day 1, 2 h 00 min", ARRIVES);
+    await expect(moment).toHaveText("day 2, 2 h 00 min", ARRIVES);
     await unfold(page, "Equipment");
     await page
       .getByRole("group", { name: "Equipment" })
@@ -61,11 +61,11 @@ test("checkpoints: a run saved at a day's start is restored, downloaded and uplo
       .uncheck();
     await expect(page).toHaveURL(new RegExp(`&schedule=600:heater:1,${DAY_S + 7200}:heater:0`));
     await run.getByRole("slider", { name: "Time of day" }).fill("14400");
-    await expect(moment).toHaveText("day 1, 4 h 00 min", ARRIVES);
-    await kept.getByRole("button", { name: /^Compare with day 1, / }).click();
+    await expect(moment).toHaveText("day 2, 4 h 00 min", ARRIVES);
+    await kept.getByRole("button", { name: /^Compare with day 2, / }).click();
     const branches = page.getByRole("region", { name: "Branches" });
     await expect(branches.getByTestId("branches-heading")).toHaveText(
-      "A: day 1's checkpoint, carried on as it was; B: the run drawn.",
+      "A: day 2's checkpoint, carried on as it was; B: the run drawn.",
     );
     // Its heater still on, branch A's house is the warmer, two hours after
     // B's went off.

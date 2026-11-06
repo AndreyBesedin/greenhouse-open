@@ -6,7 +6,9 @@ import { replayTarget, runsAddress } from "../landing/paths";
 import { loadScenarios, SCENARIOS_URL } from "../scenarios";
 import { replayedMoment } from "../scene/useReplayMoment";
 import { useLoad } from "../useLoad";
+import { loadFailure } from "./failure";
 import { whyNoFork } from "./fork";
+import { epochUrl } from "./position";
 import { ReplayHeader } from "./ReplayHeader";
 import { ReplayTransport } from "./ReplayTransport";
 import { planKey, replaySource } from "./replaySource";
@@ -46,6 +48,11 @@ function ReplayOf({
   const { load, refused, heading, command, seek, pace } = useReplay(runId, epoch, fetch, following);
   const scenarios = useLoad(SCENARIOS_URL, (_url, fetchFn) => loadScenarios(fetchFn));
   const position = load.status === "loaded" ? load.position : null;
+  // A position says that its epoch failed, and the epoch, as the runs list it, why.
+  const failure = useLoad(
+    position?.status === "failed" ? epochUrl(runId, epoch) : null,
+    loadFailure,
+  );
   // The scene is the epoch's own run, which no moment of the position changes.
   const scenarioId = position?.scenario_id;
   const layout = position?.layout;
@@ -93,6 +100,7 @@ function ReplayOf({
         otherRunsHref={runsAddress(position.scenario_id)}
         forking={forking}
         forkRefused={forkRefused}
+        failure={failure.status === "loaded" ? failure.reason : null}
         onFork={() => void fork({ timeS: position.time_s })}
       />
       <div className="replay-scene">

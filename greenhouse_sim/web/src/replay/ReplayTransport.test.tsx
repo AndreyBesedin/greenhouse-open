@@ -186,6 +186,53 @@ describe("what moves a position over a stored run", () => {
     });
   });
 
+  describe("a fork not yet computed to the moment it was made from", () => {
+    const fork: PositionState["fork"] = {
+      run_id: "parent run",
+      epoch: 1,
+      at_s: 3 * DAY_S + 12 * 3600,
+      start_s: 3 * DAY_S,
+      digest: null,
+      checkpoint_sha256: null,
+      inherited: 0,
+      layout: null,
+    };
+    // Bound for the fork's moment, it stands at the frontier until it gets there.
+    const heldBack = (more: Partial<PositionState> = {}) =>
+      position({
+        fork,
+        start_s: 3 * DAY_S,
+        time_s: 3 * DAY_S + 3600,
+        frontier_s: 3 * DAY_S + 3600,
+        ...more,
+      });
+
+    it("says the moment shown is the newest computed, and that it moves on by itself", () => {
+      const { container } = shown(heldBack());
+
+      expect(said(container, "replay-moment")).toBe("Day 4, 01:00");
+      expect(said(container, "replay-fork-wait")).toBe(
+        "This fork was made at Day 4, 12:00: until it is computed that far, the newest moment computed is shown, and the replay moves on to Day 4, 12:00 by itself.",
+      );
+    });
+
+    it.each([
+      ["computed that far", { time_s: fork.at_s, frontier_s: fork.at_s }],
+      ["moved back from its frontier", { frontier_s: 3 * DAY_S + 2 * 3600 }],
+      ["no longer computed", { status: "failed" as const }],
+    ])("says nothing of one %s", (_, more) => {
+      const { container } = shown(heldBack(more));
+
+      expect(container.querySelector('[data-testid="replay-fork-wait"]')).toBeNull();
+    });
+
+    it("says nothing of a run that is no fork", () => {
+      const { container } = shown(position({ time_s: 41 * DAY_S }));
+
+      expect(container.querySelector('[data-testid="replay-fork-wait"]')).toBeNull();
+    });
+  });
+
   describe.each(["interrupted", "failed"] as const)("a run %s", (status) => {
     const AT_ITS_FRONTIER = { status, time_s: 41 * DAY_S };
 

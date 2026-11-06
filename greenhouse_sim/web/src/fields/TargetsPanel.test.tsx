@@ -127,7 +127,7 @@ describe("the heating targets (#274)", () => {
       "Heating targets: 18 °C by day, 16 °C by night",
     );
     // Nothing changed, nothing to set.
-    const set = button(view.container, "Set from day 1, 31 min");
+    const set = button(view.container, "Set from day 2, 31 min");
     expect(set.disabled).toBe(true);
     enter(day, "24");
     expect(set.disabled).toBe(false);

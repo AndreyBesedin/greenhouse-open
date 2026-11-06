@@ -1,17 +1,25 @@
 import { DEFAULT_LAYOUT, type ScenarioSummary, type ScenariosState } from "./scenarios";
 
-/** Whether a scenario's name, identifier or description holds `filter`,
- * whatever their case; every one does an empty filter. */
-export function scenarioMatches(scenario: ScenarioSummary, filter: string): boolean {
+/** The scenarios whose name, identifier or description holds `filter`,
+ * whatever their case; every one does an empty filter. Those it names come
+ * first, then those only their description holds it in, each in the list's
+ * order: what is typed is more likely a name than a word of a description. */
+export function scenariosMatching(
+  scenarios: readonly ScenarioSummary[],
+  filter: string,
+): ScenarioSummary[] {
   const wanted = filter.trim().toLowerCase();
-  return [scenario.name, scenario.id, scenario.description].some((text) =>
-    text.toLowerCase().includes(wanted),
+  const holds = (text: string) => text.toLowerCase().includes(wanted);
+  const named = scenarios.filter((scenario) => holds(scenario.name) || holds(scenario.id));
+  const described = scenarios.filter(
+    (scenario) => !named.includes(scenario) && holds(scenario.description),
   );
+  return [...named, ...described];
 }
 
 /** The simulator's scenarios, each to be opened, with any of its layouts,
  * or followed as it is played back; those `filter` matches
- * (`scenarioMatches`). */
+ * (`scenariosMatching`). */
 export function ScenarioList({
   state,
   shownLayout = null,
@@ -39,7 +47,7 @@ export function ScenarioList({
       );
     case "loaded": {
       const choosing = onShow && state.scenarios.some((scenario) => scenario.layouts.length > 1);
-      const listed = state.scenarios.filter((scenario) => scenarioMatches(scenario, filter));
+      const listed = scenariosMatching(state.scenarios, filter);
       if (listed.length === 0) {
         return <p>No scenario matches “{filter.trim()}”.</p>;
       }

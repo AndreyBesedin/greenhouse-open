@@ -35,14 +35,14 @@ test("daily schedule: a command repeated every day runs every day, until overrid
     await expect(page).not.toHaveURL(/&schedule=/);
     await expect(schedule.getByTestId("daily-command")).toHaveText(/every day 18 h 00 min/);
     await expect(summary).toHaveText(
-      "Schedule: 1 command. Next at day 1, 18 h 00 min: heater 100%.",
+      "Schedule: 1 command. Next at day 2, 18 h 00 min: heater 100%.",
     );
     await expect(heater).toHaveText("100%, 10 kW", ARRIVES);
   });
 
   await test.step("the next evening, the heater runs again", async () => {
     await nextDay.click();
-    await expect(moment).toHaveText("day 1, 20 h 00 min", ARRIVES);
+    await expect(moment).toHaveText("day 2, 20 h 00 min", ARRIVES);
     await expect(heater).toHaveText("100%, 10 kW", ARRIVES);
   });
 
@@ -55,7 +55,7 @@ test("daily schedule: a command repeated every day runs every day, until overrid
     await expect(page).toHaveURL(new RegExp(`&schedule=${DAY_S + SHOWN_S}:heater:0(&|$)`));
     await expect(heater).toHaveText("off", ARRIVES);
     await nextDay.click();
-    await expect(moment).toHaveText("day 2, 20 h 00 min", ARRIVES);
+    await expect(moment).toHaveText("day 3, 20 h 00 min", ARRIVES);
     await expect(heater).toHaveText("100%, 10 kW", ARRIVES);
   });
 

@@ -36,8 +36,25 @@ Each target is a run's input: changed, it makes another run, as a command
 does. Targets set from outside the simulator, by a consumer, wait for an
 actuation interface, which P10 leaves out.
 
-P11 is now the project for this: [its document](p11-climate-setpoints.md) holds what
-is done and what is left.
+[P11](p11-climate-setpoints.md) delivered part of it, and closed on 2026-11-06: the
+controller as data, every loop (heating, venting, circulation, dehumidifying) decided by
+the house at its edge (decision 0058), and the heating targets as a run's input. Left,
+from P11, each designed in its document:
+
+- **P11.3's rest:** the venting and humidity targets as a run's input, with their units,
+  ranges and dead band checked both ways, in P13's `set_target` union; and the equipment
+  route naming the loop that runs each device, its state and its target.
+- **P11.4, the viewer:** the Targets panel for venting and humidity (it has the heating
+  targets), the loop's name in the Equipment panel, and the loops' switches in the
+  timeline's air lane.
+- **P11.5, the reference greenhouse by its targets:** its daily vent and fan commands give
+  way to venting and humidity targets, so its run, replay, reference views and screenshots
+  are written again, announced to consumers first. P13's daily commands of the reference
+  run become a standing plan then.
+- **P11.6, its QA scenario,** as P11's document has it, with the March and June
+  measurements of its acceptance.
+- **A test of two loops on one device:** a venting stage above the humidity crack, one
+  loop clearing and the other's request left standing. The code does it; no test holds it.
 
 ## Crop work within the day
 
@@ -59,6 +76,27 @@ it: a crop steps at its model's step, a day or a whole divisor of one, and
 its crop work is carried out at that step's boundaries. What remains is the
 organ crop's own: a plant's contract stepping within its day, which
 decision 0024's day sets, and so a decision of its own.
+
+## Actions and plans, after P13
+
+Recorded 2026-11-06, as [P13](p13-actions.md) was done. What its steps and its
+final QA left open:
+
+- **A server's crew** ([P13.6](p13-actions.md#settled-in-p136)): the server takes
+  no crew of its own, so its runs have none; and a hand the crop refuses an action
+  for is not handed back to the actions assigned after it, which keep their instants.
+- **A JSON plan in a run's request** ([P13.7](p13-actions.md#settled-in-p137)): a
+  plan that is part of a run's identity is still given in the address's spellings.
+- **The schedule's remove and repeat**, in the viewer
+  ([P13.8](p13-actions.md#settled-in-p138)), edit the run drawn, not the plan, and so
+  make another run while one is followed.
+- **Who cancelled, in the plan lane** (the
+  [final QA](p13-actions.md#recorded-at-88f35bae), step 9): the lane reads
+  "cancelled: cancelled", though the outcome names who cancelled it.
+- **Tests for two of its criteria** ([P13](p13-actions.md#acceptance-criteria)),
+  held by their code alone: a manager's revision checked only for what it adds or
+  changes, and a run restored from a checkpoint after a withdrawal of rights not
+  carrying the refused action out.
 
 ## CO₂ and light targets
 
@@ -288,6 +326,12 @@ and main runs them all ([engineering](../engineering.md#local-checks)); the
 simulator's part then took 6.9 minutes on the first pull request to run it. What
 follows is making the long tests of logic short, so that they run on every pull
 request and only claims about a model's full length stay `slow`.
+
+### Documents checked against the published schemas
+
+Recorded 2026-11-06, from [P13.1](p13-actions.md#settled-in-p131). The tests hold each
+of the protocol's published schemas to its record's export, but check no document
+against a schema: that waits for a JSON Schema validator as a development dependency.
 
 ## A second repository audit
 

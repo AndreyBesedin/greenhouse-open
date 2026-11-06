@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { DAY_S, dayStart, runDay } from "../clock";
+import { DAY_S, dayNumber, dayStart, runDay } from "../clock";
 
 // The time of day moves a minute at a time.
 export const CLIMATE_STEP_S = 60;
@@ -23,10 +23,11 @@ export const PACES: readonly { stepS: number; label: string }[] = [
 
 /** A moment of a climate run, as the viewer writes it: `10 min` in its
  * first hour, `5 h 05 min` after it, and, on a later day, its day before
- * them (`day 3, 5 h 05 min`). A day's last moment is its midnight, `24 h
- * 00 min` (`../clock`). */
+ * them, counted from 1 as a replay's timeline counts it: `day 4, 5 h 05 min`
+ * is its `Day 4, 05:05` (`dayNumber`). A day's last moment is its midnight,
+ * `24 h 00 min` (`../clock`). */
 export function describeTime(seconds: number): string {
-  const day = runDay(seconds);
+  const day = dayNumber(seconds);
   const within = seconds - dayStart(seconds);
   let said: string;
   if (within < SECONDS_PER_HOUR) {
@@ -36,7 +37,7 @@ export function describeTime(seconds: number): string {
     const minutes = Math.round((within - hours * SECONDS_PER_HOUR) / SECONDS_PER_MINUTE);
     said = `${hours} h ${String(minutes).padStart(MINUTE_DIGITS, "0")} min`;
   }
-  return day === 0 ? said : `day ${day}, ${said}`;
+  return day === 1 ? said : `day ${day}, ${said}`;
 }
 
 /** A climate run's moment in a line, as its section folded says it (#273):

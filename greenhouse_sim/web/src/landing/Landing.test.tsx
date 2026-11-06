@@ -536,6 +536,21 @@ describe("the page where a person decides what to do", () => {
       await vi.waitFor(() => expect(asked.filter((url) => url === "/api/runs")).toHaveLength(2));
     });
 
+    it("puts the keyboard on the list's heading once the run has gone, not on the page", async () => {
+      const { container, named } = await listed(
+        run({ epoch: 4, seed: 9 }),
+        () => new Response(JSON.stringify({ deleted: "x" })),
+      );
+
+      act(() => named(DELETE)?.click());
+      act(() => named(DELETE)?.click());
+
+      const heading = [...container.querySelectorAll("h3")].find(
+        (each) => each.textContent === "Recent runs",
+      );
+      await vi.waitFor(() => expect(document.activeElement).toBe(heading));
+    });
+
     it("keeps a run when asked to, with the keyboard back where it was", async () => {
       const { asked, named } = await listed(
         run({ epoch: 4, seed: 9 }),
@@ -738,6 +753,21 @@ describe("the page where a person decides what to do", () => {
       "epoch 0",
     );
     expect(container.querySelectorAll(".landing-run")).toHaveLength(5);
+  });
+
+  it("lists a run still being computed, however many have been started since", async () => {
+    // The newest first: the run computing and the one waiting are the oldest.
+    const many = Array.from({ length: 8 }, (_, epoch) => run({ epoch }));
+    many[6] = run({ epoch: 6, status: "queued" });
+    many[7] = run({ epoch: 7, status: "running", progress: 0.5 });
+    const { container } = await shown(
+      { "/api/scenarios": SCENARIOS, "/api/runs": many },
+      "epoch 0",
+    );
+    const rows = [...container.querySelectorAll(".landing-run")].map((row) => row.textContent);
+    expect(rows).toHaveLength(7);
+    expect(rows[5]).toContain("epoch 6");
+    expect(rows[6]).toContain("epoch 7");
   });
 
   it("says so when the simulator cannot be reached, and when the runs cannot be listed", async () => {

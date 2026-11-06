@@ -4,6 +4,7 @@ import { entityBounds, type OverlayPrimitive } from "../debug/overlays";
 import { HomeButton } from "../landing/HomeButton";
 import {
   BUILDER_PATH,
+  draftAddress,
   draftAsked,
   LANDING_PATH,
   newRunAddress,
@@ -125,6 +126,13 @@ function aspectOf(view: HTMLElement | null): number {
   return view !== null && view.clientHeight > 0
     ? view.clientWidth / view.clientHeight
     : window.innerWidth / window.innerHeight;
+}
+
+/** The page's address made `address`, in place: no step back to the one before. */
+function showAddress(address: string): void {
+  if (`${location.pathname}${location.hash}` !== address) {
+    history.replaceState(history.state, "", address);
+  }
 }
 
 /** A fetch that `controller` cancels. */
@@ -396,7 +404,8 @@ export function Builder({
     );
   }
 
-  /** An installation's file opened as a draft not saved: a draft of its
+  /** An installation's file opened as a draft not saved, said to be a house
+   * file, as a scenario file's house is said to be its: a draft of its
    * identifier is left as it is kept, and a save of this one is refused until
    * it is renamed. */
   function beginImported(
@@ -408,7 +417,7 @@ export function Builder({
     begin(
       asked,
       { schemaVersion: schema_version, history: begun(installation), saved: null },
-      `Imported ${installation.name} from ${fileName}; not saved yet.`,
+      `Imported ${installation.name} from ${fileName}, a house file: it holds no run settings; not saved yet.`,
       known,
     );
   }
@@ -561,6 +570,9 @@ export function Builder({
       return null;
     }
     const { installation, draft } = answer.value;
+    // A reload opens the draft saved, not the file or scenario the address
+    // named, which would open again as not saved.
+    showAddress(draftAddress(draft.draft_id));
     // What was saved, whatever was edited while it was on its way.
     setEditing((now) =>
       now === null

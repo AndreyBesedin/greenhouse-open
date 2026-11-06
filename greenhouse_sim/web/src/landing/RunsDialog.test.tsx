@@ -259,6 +259,9 @@ describe("the runs of a scenario, in a dialog", () => {
   it("removes a run only once it is confirmed, and not when it is kept", async () => {
     const asked = simulator();
     const { container, onChanged } = shown([run({ epoch: 3, seed: 5 })]);
+    // Not focusable until a run is gone: showModal() puts the keyboard on the
+    // dialog's first focusable element, which must stay its first control.
+    expect(container.querySelector("h2")?.hasAttribute("tabindex")).toBe(false);
 
     click(button(container, "Delete the run with seed 5, epoch 3"));
     expect(document.activeElement).toBe(button(container, "Keep it"));
@@ -271,6 +274,8 @@ describe("the runs of a scenario, in a dialog", () => {
 
     await vi.waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
     expect(asked).toEqual([{ url: `/api/runs/${RUN_ID}/epochs/3/delete`, method: "POST" }]);
+    // Its row is going: the keyboard is on the dialog's heading, not the page's body.
+    await vi.waitFor(() => expect(document.activeElement).toBe(container.querySelector("h2")));
   });
 
   it("says why when a run is not removed", async () => {

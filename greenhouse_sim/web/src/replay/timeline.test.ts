@@ -99,7 +99,7 @@ describe("the days", () => {
     const from = (first: number, end: number) =>
       dayTicks({ startS: first * DAY_S, frontierS: first * DAY_S, endS: end * DAY_S });
 
-    expect(from(2, 14)).toEqual([2, 7, 14]);
+    expect(from(4, 24)).toEqual([4, 10, 15, 20, 24]);
     expect(from(1, 120)).toEqual([1, 30, 60, 90, 120]);
     expect(from(29, 120)).toEqual([29, 60, 90, 120]);
     // A start that is itself a tick is not labelled twice.
@@ -109,8 +109,15 @@ describe("the days", () => {
   it("always label the timeline's end, in place of a tick too near it", () => {
     const of = (days: number) => dayTicks({ startS: 0, frontierS: DAY_S, endS: days * DAY_S });
 
-    expect(of(10)).toEqual([0, 7, 10]);
-    expect(of(8)).toEqual([0, 8]);
+    expect(of(21)).toEqual([0, 5, 10, 15, 21]);
+  });
+
+  it("tick a short run evenly, not at a week's step cut short by its end", () => {
+    const of = (days: number) => dayTicks({ startS: 0, frontierS: DAY_S, endS: days * DAY_S });
+
+    expect(of(10)).toEqual([0, 2, 4, 6, 8, 10]);
+    expect(of(8)).toEqual([0, 2, 4, 6, 8]);
+    expect(of(30)).toEqual([0, 5, 10, 15, 20, 25, 30]);
   });
 });
 

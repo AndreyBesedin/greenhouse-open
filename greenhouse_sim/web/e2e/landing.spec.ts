@@ -135,6 +135,23 @@ test("a scenario is searched for and opened in the viewer", async ({ page }) => 
   await expect(page.locator("canvas")).toBeVisible();
 });
 
+test("a search offers first the scenarios it names, before those it is only a word of", async ({
+  page,
+}) => {
+  await page.goto(LANDING_PATH);
+  const search = page.getByRole("combobox", { name: "Scenario" });
+
+  // "tom" is in the reference greenhouse's description, and two scenarios' names.
+  await search.fill("tom");
+  const options = page.getByRole("option");
+  await expect(options.nth(0)).toContainText(/Tomato compartment|TOMGRO house/);
+  await expect(options.nth(1)).toContainText(/Tomato compartment|TOMGRO house/);
+  await search.press("Enter");
+  await expect(page.getByRole("dialog").getByRole("heading", { level: 2 })).toContainText(
+    /Tomato compartment|TOMGRO house/,
+  );
+});
+
 test("the viewer is at its own address, and an address with a query is still the viewer", async ({
   page,
 }) => {
