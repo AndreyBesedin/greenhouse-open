@@ -50,9 +50,10 @@ run on machines of their own, as 0032's lanes do.
 
 - On the slower runners, from the table above, the three lanes' tests take
   5.0, 4.6 and 7.4 minutes, and on the faster about 2.6, 3.6 and 3.8, where
-  the one lane took 17.0 and 10.0. The last, the longest, holds the two
-  walks through the reference greenhouse (`p09-final-qa`, `readme-demo`),
-  which run last of all as before.
+  the one lane took 17.0 and 10.0. On the first run, setup included, the
+  jobs took 4.5, 5.5 and 6.4 minutes, and `chromium` 5.6. The last, the
+  longest, holds the two walks through the reference greenhouse
+  (`p09-final-qa`, `readme-demo`), which run last of all as before.
 - CI runs two more jobs for each pull request, each repeating the setup of
   about a minute. The repository's ruleset requires each lane by its name,
   so `browser tests (worker-runs)` and `browser tests (models-qa)` join its
