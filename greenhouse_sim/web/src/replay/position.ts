@@ -21,7 +21,8 @@ const NOT_FOUND = 404;
 
 const checkPosition = contractCheck<PositionState>(POSITION_SCHEMA, "the position");
 
-function epochUrl(runId: string, epoch: number): string {
+/** A stored epoch's address: the epoch as the list of runs shows it, and the root of its routes. */
+export function epochUrl(runId: string, epoch: number): string {
   return `/api/runs/${encodeURIComponent(runId)}/epochs/${epoch}`;
 }
 

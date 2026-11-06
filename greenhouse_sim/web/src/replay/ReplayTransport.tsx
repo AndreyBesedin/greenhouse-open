@@ -30,6 +30,25 @@ export function canFollow(position: PositionState): boolean {
 export const HELD_NOTE =
   "A playback in the viewer holds this run's clock: nothing more of it is kept until that plays on. Stop it from Other runs to carry it on with a worker.";
 
+/** What is said while a fork's replay is held back by the fork's frontier, or
+ * null. A fork's position is bound for the moment it was made from, and stands
+ * at the newest moment computed until the fork is computed that far; then it
+ * stands there, by itself (decision 0065). One moved back, or a fork that is no
+ * longer computed, waits for nothing. Moved to the frontier, as by End, it reads
+ * as waiting until the frontier passes the fork's moment. */
+export function forkWaitNote(position: PositionState): string | null {
+  const fork = position.fork;
+  if (
+    fork === null ||
+    !canFollow(position) ||
+    position.frontier_s >= fork.at_s ||
+    position.time_s < position.frontier_s
+  ) {
+    return null;
+  }
+  return `This fork was made at ${dayLabel(fork.at_s)}: until it is computed that far, the newest moment computed is shown, and the replay moves on to ${dayLabel(fork.at_s)} by itself.`;
+}
+
 /**
  * What moves a position, under the scene (P17.6): a day back, play, a day
  * on, where it stands and how far the epoch is computed, how fast a day
@@ -66,6 +85,7 @@ export function ReplayTransport({
     (position.paused || position.status === "interrupted" || position.status === "failed") &&
     position.time_s >= position.frontier_s;
   const atItsEnd = position.duration_s !== null && position.time_s >= position.duration_s;
+  const forkWait = forkWaitNote(position);
   const paceId = useId();
   const paces = PACES_S.includes(position.seconds_per_day)
     ? PACES_S
@@ -80,6 +100,11 @@ export function ReplayTransport({
       {position.paused && (
         <p role="status" className="replay-refused" data-testid="replay-held">
           {HELD_NOTE}
+        </p>
+      )}
+      {forkWait !== null && (
+        <p role="status" className="replay-refused" data-testid="replay-fork-wait">
+          {forkWait}
         </p>
       )}
       <div className="replay-controls">
