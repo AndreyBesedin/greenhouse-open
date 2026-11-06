@@ -70,7 +70,12 @@ takes one checks first that it is still there.
 - [x] The green test cube shows behind an error.
 - [x] "before day one is not available" is awkward wording.
 - [x] The wind label shows through the light panel, and faintly through the dark one.
-- [ ] The console reports the deprecation of `THREE.Clock`, from `@react-three/fiber`.
+- [x] The console reports the deprecation of `THREE.Clock`, from `@react-three/fiber`.
+  Still there at `a2c27d2a`, with three 0.187.0. Left for upstream: the viewer makes no
+  `Clock`, and `@react-three/fiber` 9.8.2, its latest release, makes one for every canvas.
+  Its next major, 10.0.0, drops it
+  ([pmndrs/react-three-fiber#3741](https://github.com/pmndrs/react-three-fiber/issues/3741)),
+  and so does its alpha.6; the warning goes with the move to 10.0.0 once it is released.
 - [x] The console reports a 404 for `favicon.ico`.
 
 **Replay**
