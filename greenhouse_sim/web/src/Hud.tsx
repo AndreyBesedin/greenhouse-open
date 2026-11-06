@@ -21,6 +21,8 @@ const PRESET_LABELS: Record<PresetName, string> = {
 };
 
 const PENDING = "…";
+// After an idle view's frame time, which is that of the last frames it drew.
+const IDLE_FRAME_TIME_NOTE = " (last drawn)";
 
 // A narrow window docks the panels under the view (styles.css), where the
 // HUD keeps its place among them.
@@ -188,7 +190,8 @@ function HudBody({
           {pointer ? `x ${formatMetres(pointer.x)}, y ${formatMetres(pointer.y)}` : "—"}
         </dd>
         {/* The view draws only when something changes (decision 0053): still,
-            it has no frame rate, and its frame time is that of its last frames. */}
+            it has no frame rate, and its frame time is that of its last frames,
+            said to be so, lest it read as the time of frames drawn now. */}
         <dt>Frame rate</dt>
         <dd data-testid="frame-rate">
           {sample === null
@@ -202,7 +205,9 @@ function HudBody({
         <dt>Frame time</dt>
         <dd data-testid="frame-time">
           {sample?.rate
-            ? formatFrameTime(sample.rate.frameTimeMs, sample.rate.worstFrameMs)
+            ? `${formatFrameTime(sample.rate.frameTimeMs, sample.rate.worstFrameMs)}${
+                sample.drawing ? "" : IDLE_FRAME_TIME_NOTE
+              }`
             : PENDING}
         </dd>
         <dt>Draw calls</dt>
