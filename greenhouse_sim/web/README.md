@@ -407,8 +407,8 @@ work climate runs out to noon, and last P07's final QA,
 `e2e/weather-day.spec.ts`, which works the climate through a whole day: each
 in its own Playwright project, so that none slows another into a timeout. On
 CI the projects are cut into lanes that run at once, each on a machine of its
-own with an API of its own (decision 0032); `BROWSER_TEST_LANE=<lane>` runs
-one lane here, as CI does (`LANE_STARTS` in `playwright.config.ts`).
+own with an API of its own (decisions 0032, 0071); `BROWSER_TEST_LANE=<lane>`
+runs one lane here, as CI does (`LANE_STARTS` in `playwright.config.ts`).
 `uv run setup` installs the browser, Chromium.
 
 The page shows the simulator version, read from `../pyproject.toml` at build
