@@ -723,6 +723,24 @@ describe("the setup builder (P12.2)", () => {
       expect(said(shown.container, "builder-draft")).toContain("not saved");
     });
 
+    it("is at the draft's address once it is renamed and saved, so that a reload opens what was saved", async () => {
+      runningDrafts();
+      keepHouse(houseId, { fileName: "my_greenhouse.json", text: "{}" });
+      history.replaceState(null, "", `/builder#installation=${houseId}`);
+
+      shown = render(<Builder hash={`#installation=${houseId}`} />);
+      const page = shown.container;
+      await settled();
+      enter(page.querySelector(".builder-identity input") as HTMLInputElement, "renamed_house");
+      click(button(page, "Rename"));
+      click(button(page, "Save"));
+      await settled();
+
+      expect(said(page, "builder-status")).toBe("Saved as revision 1.");
+      expect(`${location.pathname}${location.hash}`).toBe("/builder#draft=renamed_house");
+      history.replaceState(null, "", "/");
+    });
+
     it("says a draft of its identifier is kept, though the page has only just listed them", async () => {
       simulator([DRAFT_OF_IT]);
       keepHouse(houseId, { fileName: "my_greenhouse.json", text: "{}" });

@@ -192,6 +192,12 @@ test("a house built, downloaded and uploaded from the start page opens in the bu
   // No scenario was made of it on the way.
   const listed = (await (await page.request.get("/api/scenarios")).json()) as { id: string }[];
   expect(listed.map((each) => each.id)).not.toContain(id);
+
+  // The address is the saved draft's: a reload opens it, saved, not the file.
+  await expect(page).toHaveURL(new RegExp(`${BUILDER_PATH}#draft=${id}_b$`));
+  await page.reload();
+  await expect(status).toHaveText("Opened Round trip, revision 1.", ARRIVES);
+  await expect(page.getByTestId("builder-draft")).toHaveText(`Round trip (${id}_b), revision 1`);
 });
 
 test("a house no draft holds, uploaded from the start page, is opened with nothing to rename", async ({

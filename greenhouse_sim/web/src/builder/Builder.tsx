@@ -3,6 +3,7 @@ import { entityBounds, type OverlayPrimitive } from "../debug/overlays";
 import { HomeButton } from "../landing/HomeButton";
 import {
   BUILDER_PATH,
+  draftAddress,
   draftAsked,
   LANDING_PATH,
   newRunAddress,
@@ -116,6 +117,13 @@ function unsaved(editing: Editing | null): boolean {
     madeOn(editing) === null ||
     !same(editing.saved?.installation ?? editing.history.present, editing.history.present)
   );
+}
+
+/** The page's address made `address`, in place: no step back to the one before. */
+function showAddress(address: string): void {
+  if (`${location.pathname}${location.hash}` !== address) {
+    history.replaceState(history.state, "", address);
+  }
 }
 
 /** A fetch that `controller` cancels. */
@@ -552,6 +560,9 @@ export function Builder({
       return null;
     }
     const { installation, draft } = answer.value;
+    // A reload opens the draft saved, not the file or scenario the address
+    // named, which would open again as not saved.
+    showAddress(draftAddress(draft.draft_id));
     // What was saved, whatever was edited while it was on its way.
     setEditing((now) =>
       now === null
