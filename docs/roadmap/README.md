@@ -125,6 +125,7 @@ pull request lands, and holds the state of each of its steps.
 | [P19](p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | In progress: P19.1 to P19.6 done |
 | [P20](p20-crop-parameter-assets.md) | Crop parameters as versioned assets, edited by forms and reproduced from their versions | Proposed |
 | [P21](p21-rows-of-different-crops.md) | Rows of different crops in one house | Proposed |
+| [P22](p22-watching-and-starting-a-run.md) | Watching and starting a run: one *Play*, steering from the replay, a new run's form | Proposed |
 
 ## After a QA
 
@@ -144,7 +145,9 @@ what it planned is in its report.
 1. **Finish P17:** what its QA scenario (P17.10) and its walks left in
    [the clean-up](p17-cleanup.md).
 2. **P18:** what a run used counted, then limited (P18.2 to P18.6).
-3. **P19:** the design system's remaining steps (P19.7 on).
+3. **P19:** the design system's remaining steps (P19.7 on), and beside it
+   [P22](p22-watching-and-starting-a-run.md), what the QA of 2026-11-04 planned, whose
+   start page and panels line up with P19.8, P19.10 and P19.11.
 4. **The [research priorities](research-validation-priorities.md)**
    ([decision 0057](../decisions/0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md),
    proposed): two published tomato models reproduced and made P14 models, a validation
