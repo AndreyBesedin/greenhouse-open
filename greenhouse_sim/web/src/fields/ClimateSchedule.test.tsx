@@ -153,7 +153,7 @@ describe("a climate run's schedule", () => {
     expect(html.match(/data-testid="daily-command"/g)).toHaveLength(1);
     expect(html).toContain('aria-label="Go to heater 100% every day at 18 h 00 min"');
     expect(html).toContain('aria-label="Remove heater 100% every day at 18 h 00 min"');
-    expect(html).toContain('aria-label="Repeat fan 100% at day 1, 10 min every day"');
+    expect(html).toContain('aria-label="Repeat fan 100% at day 2, 10 min every day"');
     // Today's evening is still to come; the fan's command has come.
     expect(html).toContain('class="to-come daily" style="left:75%"');
     expect(html.match(/data-testid="schedule-marker"/g)).toHaveLength(2);
@@ -179,8 +179,8 @@ describe("a climate run's schedule", () => {
     expect(html).toContain('class="applied" style="left:25%"');
     // Every command is listed, each at its day.
     expect(html.match(/data-testid="schedule-command"/g)).toHaveLength(3);
-    expect(html).toContain('aria-label="Go to heater off at day 1, 6 h 00 min"');
-    expect(html).toContain('aria-label="Go to fan 100% at day 2, 10 min"');
+    expect(html).toContain('aria-label="Go to heater off at day 2, 6 h 00 min"');
+    expect(html).toContain('aria-label="Go to fan 100% at day 3, 10 min"');
   });
 
   it("is folded at first to how many commands it has and the next, and opens on them", () => {
@@ -233,7 +233,7 @@ describe("a climate run's schedule", () => {
     );
     // The day's last given, the next is the next day's first.
     expect(describeSchedule({ ...twoDays, time: 80000 })).toBe(
-      "Schedule: 2 commands. Next at day 1, 18 h 00 min: heater 100%.",
+      "Schedule: 2 commands. Next at day 2, 18 h 00 min: heater 100%.",
     );
     // A command for a moment, sooner than the day's.
     expect(
@@ -259,7 +259,7 @@ describe("a climate run's schedule", () => {
         ...pastLastMidnight,
         schedule: [{ timeS: 2 * DAY_S, actuatorId: "fan", level: 0 }],
       }),
-    ).toBe("Schedule: 2 commands. Next at day 1, 24 h 00 min: fan off.");
+    ).toBe("Schedule: 2 commands. Next at day 2, 24 h 00 min: fan off.");
     const fan = { timeS: 60, actuatorId: "fan", level: 1 };
     expect(describeSchedule({ schedule: [fan], daily: [], time: 60, days: 1 })).toBe(
       "Schedule: 1 command, none to come.",

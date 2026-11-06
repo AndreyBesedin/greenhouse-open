@@ -1,4 +1,4 @@
-import { DAY_S, runDay } from "../clock";
+import { DAY_S, dayNumber, runDay } from "../clock";
 import { baseLayout, MOVES_MARK } from "../scene/moves";
 
 /**
@@ -86,7 +86,7 @@ export function dayLabel(timeS: number): string {
   const within = Math.round(timeS - day * DAY_S);
   const hours = Math.floor(within / SECONDS_PER_HOUR);
   const minutes = Math.floor((within - hours * SECONDS_PER_HOUR) / SECONDS_PER_MINUTE);
-  return `Day ${day + 1}, ${String(hours).padStart(TWO_DIGITS, "0")}:${String(minutes).padStart(TWO_DIGITS, "0")}`;
+  return `Day ${dayNumber(timeS)}, ${String(hours).padStart(TWO_DIGITS, "0")}:${String(minutes).padStart(TWO_DIGITS, "0")}`;
 }
 
 /** What a fork came from, in words, and the layout it goes on in if another: that

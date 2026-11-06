@@ -27,11 +27,11 @@ test("reference schedule: the run vents by its own clock, its thermostat heats i
 
   await test.step("in its second evening, the thermostat heats the house to the night's 16 °C", async () => {
     await page.goto(`/?scenario=reference_greenhouse&field=climate&t=${SECOND_EVENING_S}`);
-    await expect(moment).toHaveText("day 1, 22 h 00 min", ARRIVES);
+    await expect(moment).toHaveText("day 2, 22 h 00 min", ARRIVES);
     // Its vents and fans by the clock; its heater by no command.
     await expect(daily).toHaveCount(16);
     await expect(summary).toHaveText(
-      "Schedule: 16 commands. Next at day 2, 8 h 00 min: fan left 100% and 1 more.",
+      "Schedule: 16 commands. Next at day 3, 8 h 00 min: fan left 100% and 1 more.",
     );
     await expect(daily.first()).toBeHidden();
     await expect(heater).toHaveText("100%, 30 kW, by its thermostat at 16 °C", ARRIVES);
@@ -44,7 +44,7 @@ test("reference schedule: the run vents by its own clock, its thermostat heats i
   await test.step("by the next noon, to the day's 18 °C", async () => {
     await run.getByRole("button", { name: "Next day" }).click();
     await run.getByRole("slider", { name: "Time of day" }).fill("43200");
-    await expect(moment).toHaveText("day 2, 12 h 00 min", ARRIVES);
+    await expect(moment).toHaveText("day 3, 12 h 00 min", ARRIVES);
     await expect(heater).toHaveText(/, by its thermostat at 18 °C$/, ARRIVES);
     await expect(air).toHaveText("Air 17.6 °C, all off 13.5 °C", ARRIVES);
   });

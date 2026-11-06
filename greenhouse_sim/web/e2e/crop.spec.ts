@@ -107,7 +107,7 @@ test("crop: shown from the list, the reference greenhouse opens on its first day
   await (await chooser(page)).getByRole("button", { name: "Open reference_greenhouse" }).click();
   await expect(page).toHaveURL(/[?&]field=climate(&|$)/);
   await expect(page).toHaveURL(new RegExp(`&t=${86.5 * DAY_S}(&|$)`));
-  await expect(page.getByTestId("climate-time")).toHaveText("day 86, 12 h 00 min", ARRIVES);
+  await expect(page.getByTestId("climate-time")).toHaveText("day 87, 12 h 00 min", ARRIVES);
   await expect(page.getByTestId("scene-status")).toContainText(
     "reference_greenhouse, day 86,",
     ARRIVES,
@@ -141,10 +141,15 @@ test("crop: stepped on from its opening day, a day given up on the way, the crop
   /** The entities drawn, as the scene's status counts them. */
   const drawn = async (): Promise<number> =>
     Number(/([\d,]+) entities/.exec((await status.textContent()) ?? "")?.[1]?.replaceAll(",", ""));
-  /** What is drawn while a step is on its way, sampled until it arrives. */
+  /** What is drawn while a step is on its way, sampled until it arrives. The
+   * day is the scene's, as its status counts it, from 0; its moment says it
+   * from 1. */
   async function whileOnItsWay(day: number): Promise<number[]> {
     const seen: number[] = [];
-    while ((await moment.textContent()) !== `day ${day}, 10 min` || (await pending.isVisible())) {
+    while (
+      (await moment.textContent()) !== `day ${day + 1}, 10 min` ||
+      (await pending.isVisible())
+    ) {
       seen.push(await drawn());
       await page.waitForTimeout(250);
     }
@@ -152,7 +157,7 @@ test("crop: stepped on from its opening day, a day given up on the way, the crop
   }
 
   await page.goto(`/?scenario=reference_greenhouse&field=climate&t=${86 * DAY_S + 600}`);
-  await expect(moment).toHaveText("day 86, 10 min", ARRIVES);
+  await expect(moment).toHaveText("day 87, 10 min", ARRIVES);
   await expect(pending).toBeHidden(ARRIVES);
   await expect(status).toContainText("reference_greenhouse, day 86,");
   const counts = [await drawn()];

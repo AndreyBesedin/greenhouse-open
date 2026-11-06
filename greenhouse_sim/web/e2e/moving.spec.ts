@@ -228,7 +228,7 @@ test("moving while following the run played back: applied, the playback starts o
 
   await test.step("followed, a session says the run played back starts over with its moves", async () => {
     await page.goto(`/?scenario=climate_box&field=climate&follow=1&camera=${cameraText(ACROSS)}`);
-    await expect(page.getByTestId("climate-time")).toHaveText("day 2, 5 h 00 min", ARRIVES);
+    await expect(page.getByTestId("climate-time")).toHaveText("day 3, 5 h 00 min", ARRIVES);
     await selectAt(page, HEATER_SIDE, "climate_box_heater", ACROSS);
     await move.getByRole("button", { name: "Move", exact: true }).click();
     await expect(move.getByTestId("move-new-run")).toContainText(

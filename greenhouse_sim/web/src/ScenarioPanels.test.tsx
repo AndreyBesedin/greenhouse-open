@@ -129,7 +129,7 @@ describe("a stored run's panels", () => {
     rendered.unmount();
 
     rendered = panels({ source: at });
-    expect(said(rendered.container, "climate-time")).toBe("day 9, 2 h 24 min");
+    expect(said(rendered.container, "climate-time")).toBe("day 10, 2 h 24 min");
   });
 
   it("makes a fork of levels once it is asked for, and not as a slider moves", () => {
@@ -279,7 +279,7 @@ describe("a stored run's panels", () => {
     // A view keeps its own way of saying a moment.
     rendered = panels({ source: at, days: 120 });
     expect(said(rendered.container, "schedule-summary")).toBe(
-      "Schedule: 1 command. Next at day 39, 8 h 00 min: fan 100%.",
+      "Schedule: 1 command. Next at day 40, 8 h 00 min: fan 100%.",
     );
   });
 });

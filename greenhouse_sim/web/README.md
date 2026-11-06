@@ -110,7 +110,7 @@ scenario: "Climate run" moves through a day a minute at a time, and through
 the run a day at a time, or plays it, a minute at a time through its first
 hour and five minutes at a time after it, or at the pace chosen, an hour or
 a day a step (`&t=600`, ten minutes in; `&t=18000`, five hours;
-`&t=87000`, the second day, ten minutes in, `day 1, 10 min`). A day ends at
+`&t=87000`, the second day, ten minutes in, `day 2, 10 min`). A day ends at
 its midnight, `24 h 00 min`, and the next begins a minute after it. "House
 air" charts the house's air as one volume through the moment's day
 (`GET /api/scenarios/{id}/climate/house`), as the weather's and a sensor's

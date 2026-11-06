@@ -34,18 +34,18 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await page.goto(VIEWER_PATH);
   await say(page, "1. The reference greenhouse, seed 42, from the scenario list");
   await (await chooser(page)).getByRole("button", { name: "Open reference_greenhouse" }).click();
-  await expect(moment).toHaveText("day 86, 12 h 00 min", ARRIVES);
+  await expect(moment).toHaveText("day 87, 12 h 00 min", ARRIVES);
   await expect(page.getByTestId("scene-status")).toContainText("day 86,", ARRIVES);
   await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
   // The camera on the house from here on: the address keeps it.
   await page.goto(`${page.url()}&camera=${ON_THE_HOUSE}`);
   await expect(page.getByTestId("camera-position")).toHaveText("x -5.00, y -14.00, z 11.00");
-  await expect(moment).toHaveText("day 86, 12 h 00 min", ARRIVES);
+  await expect(moment).toHaveText("day 87, 12 h 00 min", ARRIVES);
   await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
   // The house is drawn before its crop: the opening shot waits for both.
   await expect(page.getByTestId("scene-status")).toContainText("day 86,", ARRIVES);
   await markOpening(testInfo, recording);
-  await say(page, "1. Opened on day 86, its first day with red fruit");
+  await say(page, "1. Opened on day 87, its first day with red fruit");
 
   // 2. The house's dimensions and the crop's layout.
   const dimensions = page.getByRole("checkbox", { name: "Dimensions and axis labels" });
@@ -58,10 +58,10 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   // 3. Morning to noon: the sun, its shadows and its light.
   const timeOfDay = run.getByRole("slider", { name: "Time of day" });
   await timeOfDay.fill(String(6 * HOUR_S));
-  await expect(moment).toHaveText("day 86, 6 h 00 min", ARRIVES);
+  await expect(moment).toHaveText("day 87, 6 h 00 min", ARRIVES);
   await say(page, "3. Dawn: the sun 11° up in the east-north-east, its shadows long");
   await timeOfDay.fill(String(12 * HOUR_S + 40 * 60));
-  await expect(moment).toHaveText("day 86, 12 h 40 min", ARRIVES);
+  await expect(moment).toHaveText("day 87, 12 h 40 min", ARRIVES);
   await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
   await say(page, "3. The sun's noon, 12:40: 59° up in the south");
 
@@ -104,11 +104,11 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   const vent = page.getByTestId("opening-roof_vent_1");
   await unfold(page, "Openings");
   await timeOfDay.fill(String(8 * HOUR_S));
-  await expect(moment).toHaveText("day 86, 8 h 00 min", ARRIVES);
+  await expect(moment).toHaveText("day 87, 8 h 00 min", ARRIVES);
   await expect(vent).toHaveText(/^0%, /, ARRIVES);
   await say(page, "6. At 8:00 the roof vents are shut");
   await timeOfDay.fill(String(11 * HOUR_S));
-  await expect(moment).toHaveText("day 86, 11 h 00 min", ARRIVES);
+  await expect(moment).toHaveText("day 87, 11 h 00 min", ARRIVES);
   await expect(vent).toHaveText(/^100%, /, ARRIVES);
   await say(page, "6. From 11:00 the schedule has them fully open");
   await page.getByRole("group", { name: "Openings" }).getByRole("slider").first().fill("0");
@@ -128,12 +128,12 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   const developer = page.getByRole("region", { name: "QA mode" });
   // The panel settled first, then the moment moved: a slider filled while
   // the panels around it are drawn anew can lose its change.
-  await expect(page.getByTestId("developer-clock")).toContainText("day 86, 11 h 00 min", ARRIVES);
+  await expect(page.getByTestId("developer-clock")).toContainText("day 87, 11 h 00 min", ARRIVES);
   await expect(async () => {
     await timeOfDay.fill(String(HOUR_S + 20 * 60));
-    await expect(moment).toHaveText("day 86, 1 h 20 min", { timeout: 5_000 });
+    await expect(moment).toHaveText("day 87, 1 h 20 min", { timeout: 5_000 });
   }).toPass(ARRIVES);
-  await expect(page.getByTestId("developer-clock")).toContainText("day 86, 1 h 20 min", ARRIVES);
+  await expect(page.getByTestId("developer-clock")).toContainText("day 87, 1 h 20 min", ARRIVES);
   await say(page, "7. QA mode's developer panel: what every process holds now");
   await developer.getByRole("button", { name: /^temperature_back: / }).click();
   const selected = page.getByTestId("selected-entity");
@@ -166,7 +166,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
 
   // 9. The crop, a day on: no two plants alike, its fruit ripening.
   await run.getByRole("button", { name: "Next day" }).click();
-  await expect(moment).toHaveText(/^day 87, /, ARRIVES);
+  await expect(moment).toHaveText(/^day 88, /, ARRIVES);
   await expect(page.getByTestId("scene-status")).toContainText("day 87,", ARRIVES);
   await say(page, "9. A day on: each plant drawn from seed 42, its fruit ripening");
 
@@ -179,7 +179,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
     ARRIVES,
   );
   await targets.getByLabel("By night, °C").fill("22");
-  await targets.getByRole("button", { name: /^Set from day 87, / }).click();
+  await targets.getByRole("button", { name: /^Set from day 88, / }).click();
   await expect(page).toHaveURL(/targets=\d+:heating_night:22/);
   await unfold(page, "Equipment");
   await expect(page.getByTestId("equipment-heater")).toHaveText(
@@ -201,14 +201,14 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
 
   // 11. A checkpoint, a branch, and two schedules compared.
   await page.goBack();
-  await expect(moment).toHaveText(/^day 87, /, ARRIVES);
+  await expect(moment).toHaveText(/^day 88, /, ARRIVES);
   const checkpoints = page.locator("details", { hasText: "Checkpoints" });
   await checkpoints.locator("summary").click();
-  await checkpoints.getByRole("button", { name: "Save day 87's start" }).click();
-  // Listed beside the kept opening day, day 86, the earliest first.
-  const compare = checkpoints.getByRole("button", { name: /^Compare with day 87, / });
+  await checkpoints.getByRole("button", { name: "Save day 88's start" }).click();
+  // Listed beside the kept opening day, day 87, the earliest first.
+  const compare = checkpoints.getByRole("button", { name: /^Compare with day 88, / });
   await expect(compare).toBeVisible(ARRIVES);
-  await say(page, "11. Day 87's start saved");
+  await say(page, "11. Day 88's start saved");
   // Its thermostat runs the heater through the night: a branch turns it off.
   await unfold(page, "Equipment");
   await page

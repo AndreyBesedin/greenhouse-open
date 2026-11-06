@@ -66,7 +66,7 @@ describe("the run a view follows as it is played back", () => {
     );
     // One progress across the run's days: a day and a half of fourteen.
     expect(progress(container)).toEqual({ value: 129_600, max: 14 * DAY_S });
-    expect(said(container, "playback-progress")).toBe("day 1, 12 h 00 min of 14 days");
+    expect(said(container, "playback-progress")).toBe("day 2, 12 h 00 min of 14 days");
     click(button(container, "Pause"));
     click(button(container, "Start over"));
     expect(onCommand.mock.calls).toEqual([["pause"], ["restart"]]);
@@ -83,7 +83,7 @@ describe("the run a view follows as it is played back", () => {
     }
 
     expect(reached).toEqual([DAY_S + 20 * 3600, 2 * DAY_S + 5 * 3600, 2 * DAY_S + 14 * 3600]);
-    expect(said(container, "playback-progress")).toBe("day 2, 14 h 00 min of 14 days");
+    expect(said(container, "playback-progress")).toBe("day 3, 14 h 00 min of 14 days");
   });
 
   it("paused, offers to play, and its progress says the minute the view draws", () => {
@@ -93,7 +93,7 @@ describe("the run a view follows as it is played back", () => {
     });
 
     expect(said(container, "playback-status")).toContain("epoch 1: paused; worked out to day 4.");
-    expect(said(container, "playback-progress")).toBe("day 2, 3 h 59 min of 14 days");
+    expect(said(container, "playback-progress")).toBe("day 3, 3 h 59 min of 14 days");
     click(button(container, "Play"));
     expect(onCommand).toHaveBeenCalledExactlyOnceWith("play");
   });
@@ -102,7 +102,7 @@ describe("the run a view follows as it is played back", () => {
     const { container } = shown(LOADED, [], null);
 
     expect(progress(container)).toBeNull();
-    expect(said(container, "playback-progress")).toBe("day 1, 12 h 00 min");
+    expect(said(container, "playback-progress")).toBe("day 2, 12 h 00 min");
   });
 
   it("says why the run failed, and offers to play it again", () => {

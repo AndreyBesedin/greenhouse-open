@@ -149,7 +149,7 @@ describe("the checkpoints panel", () => {
     await settle();
     expect(shown.container.textContent).toContain("None kept for this scenario.");
 
-    await act(async () => button(details, "Save day 1's start").click());
+    await act(async () => button(details, "Save day 2's start").click());
     await settle();
     await settle();
 
@@ -159,9 +159,9 @@ describe("the checkpoints panel", () => {
     );
     expect(said(details, "checkpoint-description")).toBe(describeCheckpoint(CHECKPOINT));
     expect(describeCheckpoint(CHECKPOINT)).toBe(
-      "day 1: 1 commands before it, its scenario's daily commands, under default@80",
+      "day 2: 1 commands before it, its scenario's daily commands, under default@80",
     );
-    await act(async () => button(details, "Restore day 1, a6c84f7670591ba5").click());
+    await act(async () => button(details, "Restore day 2, a6c84f7670591ba5").click());
     expect(onRestore).toHaveBeenCalledWith(CHECKPOINT);
   });
 
