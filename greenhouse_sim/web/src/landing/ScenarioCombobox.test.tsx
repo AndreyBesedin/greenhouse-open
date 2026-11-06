@@ -114,6 +114,21 @@ describe("the choice of a scenario to open", () => {
     ]);
   });
 
+  it("offers first, and opens on Enter, a scenario a search names, not one its description holds it in", () => {
+    const { input, options, press, onChoose } = shown();
+    act(() => input.focus());
+
+    // "tom" is in the reference greenhouse's description, and in TOMGRO's name.
+    enter(input, "tom");
+    expect(options().map((option) => option.textContent?.slice(0, 12))).toEqual([
+      "TOMGRO house",
+      "Reference gr",
+      "Build a new ",
+    ]);
+    press("Enter");
+    expect(onChoose).toHaveBeenCalledExactlyOnceWith("tomgro_house");
+  });
+
   it("says when nothing matches, and still offers to build one", () => {
     const { input, options } = shown();
     act(() => input.focus());

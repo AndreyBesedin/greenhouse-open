@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 
-import { scenarioMatches } from "../ScenarioList";
+import { scenariosMatching } from "../ScenarioList";
 import type { ScenarioSummary } from "../scenarios";
 import { runCountText } from "./storedRuns";
 
@@ -47,7 +47,7 @@ export function ScenarioCombobox({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
-  const listed = scenarios.filter((scenario) => scenarioMatches(scenario, query));
+  const listed = scenariosMatching(scenarios, query);
   const entries: readonly Entry[] = [
     ...listed.map((scenario): Entry => ({ kind: "scenario", id: scenario.id })),
     { kind: "build" },
