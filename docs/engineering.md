@@ -451,7 +451,7 @@ uv run viewer-checks   # lint, type check, coverage, build
 uv run browser-tests   # Playwright, serving the simulator from the workspace's Python
 ```
 
-CI runs the browser tests in lanes at once, a job each (decision 0032);
+CI runs the browser tests in lanes at once, a job each (decisions 0032, 0071);
 `uv run browser-tests` runs every lane, one after another. To run one lane
 as CI does, name it: `BROWSER_TEST_LANE=crop uv run browser-tests`. What
 follows the command goes to Playwright: `uv run browser-tests e2e/camera.spec.ts`.

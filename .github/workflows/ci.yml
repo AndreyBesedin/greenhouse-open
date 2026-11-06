@@ -161,12 +161,12 @@ jobs:
         run: npm run build
 
   # The browser tests, in lanes that run at once, each on a machine of its
-  # own with a simulator of its own (decision 0032). A lane is named for the
-  # stage of `playwright.config.ts` it starts at; the configuration refuses
-  # a lane it does not cut, and runs none unless all of them are here. The
-  # ruleset requires each lane by its name, which a job skipped before its
-  # matrix expands does not report: for documentation alone, each lane runs
-  # and skips its steps.
+  # own with a simulator of its own (decisions 0032, 0071). A lane is named
+  # for the stage of `playwright.config.ts` it starts at; the configuration
+  # refuses a lane it does not cut, and runs none unless all of them are
+  # here. The ruleset requires each lane by its name, which a job skipped
+  # before its matrix expands does not report: for documentation alone,
+  # each lane runs and skips its steps.
   browser:
     name: browser tests (${{ matrix.lane }})
     needs: changes
@@ -177,7 +177,7 @@ jobs:
       # Every lane runs to its end, so that one run shows every failure.
       fail-fast: false
       matrix:
-        lane: [chromium, renderer-smoke, weather-day, crop]
+        lane: [chromium, renderer-smoke, weather-day, crop, worker-runs, models-qa]
     defaults:
       run:
         working-directory: greenhouse_sim/web
