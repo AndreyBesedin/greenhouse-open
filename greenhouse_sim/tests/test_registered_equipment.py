@@ -1,14 +1,16 @@
 """A kind of equipment is a module and its registration (P14.5, decisions
 0054 and 0055): a kind the simulator was not written with, registered from
-another module, is placed by a layout, does what its capabilities say in a
-run, and is drawn and named by what it does, with no change to the
-climate, the scene or the viewer."""
+another module (`radiant_panel`), is placed by a layout, does what its
+capabilities say in a run, and is drawn and named by what it does, with no
+change to the climate, the scene or the viewer."""
 
+import sys
 from collections.abc import Iterator
-from typing import Any, Final, Literal
+from pathlib import Path
+from typing import Any, Final
 
 import pytest
-from pydantic import PositiveFloat, TypeAdapter, ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED, Catalogue
@@ -18,31 +20,19 @@ from greenhouse_sim.services.climate_runs import climate_run
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import SceneChanges, initial_scene
 from greenhouse_sim.services.simulator import Simulator
-from greenhouse_sim.world.capabilities import Capability, Heats
 from greenhouse_sim.world.equipment import (
     EQUIPMENT_KINDS,
     Equipment,
     Fan,
-    Unit,
     register_equipment,
 )
 
+sys.path.insert(0, str(Path(__file__).parent))
+
+from radiant_panel import RadiantPanel
+
 SCENARIO: Final = "climate_box"
 HOUR_S: Final = 3600.0
-
-
-class RadiantPanel(Unit):
-    """A radiant panel standing on the floor: its power, all of it heating
-    the air around its body."""
-
-    kind: Literal["radiant_panel"] = "radiant_panel"
-    power_w: PositiveFloat
-
-    def rated(self) -> dict[str, float]:
-        return {"power_w": self.power_w}
-
-    def capabilities(self) -> tuple[Capability, ...]:
-        return (Heats(power_w=self.power_w),)
 
 
 # One in the climate box, clear of its other equipment.
