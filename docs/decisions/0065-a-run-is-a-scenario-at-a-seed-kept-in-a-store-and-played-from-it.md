@@ -189,7 +189,7 @@ interface's rules (decision 0040); checkpoints and branches from a day
 - **Drafts become a dependency.** A run of a builder's draft names the draft's
   installation by digest, so that it can be opened and resumed after the
   draft has changed or the simulator has restarted.
-- **What stays open** is in [P17](../roadmap/p17-runs-and-playbacks.md): the
+- **What stays open** is in [P17](../roadmap/archive/p17-runs-and-playbacks.md): the
   physical commit and format, the default segment length, the worker
   technology, retention, the store's place and a repeated launch.
 - **Worth revisiting** if a `full` epoch's states are too large to keep, when
