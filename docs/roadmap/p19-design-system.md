@@ -398,6 +398,7 @@ Separate from the above, each seen in review, none required by it:
 | Contrast: what `CONTRAST_FAILURES` lists, and the builder's note on a view with no ground of its own (`--text-muted` on the browser's white, 2.16 in the dark theme), which no pair of tokens can show | Charts, control outlines, the builder |
 | A first visit follows `prefers-color-scheme`, not always dark | First visit only |
 | `color-scheme` set once on `:root`, not in five rules | Scrollbars and controls outside those rules |
+| Buttons by what they do, from the [QA of 2026-11-04](qa-2026-11-04.md): *Delete* in a red role and *Play* in a green one, each a token of its own (`danger` is `--warn`'s orange today, and no green role exists) | Every *Delete* and *Play*, once pages use `Button` |
 
 ## What must stay stable
 
