@@ -181,6 +181,68 @@ def test_a_device_gone_when_the_clock_continues_is_refused_as_it_is_carried() ->
     assert len(executor.reports()) == 3
 
 
+class _Sending(MemoryExecutor):
+    """A memory executor that records each assignment id it is sent, by the
+    action it is for, in the order first sent."""
+
+    def __init__(self, start: datetime, *, lead_s: float, duration_s: float, longest_s: float):
+        super().__init__(start, lead_s=lead_s, duration_s=duration_s, longest_s=longest_s)
+        self.sent: dict[str, list[str]] = {}
+
+    def perform(self, assignment: Assignment) -> None:
+        ids = self.sent.setdefault(assignment.ref.action_id, [])
+        if assignment.assignment_id not in ids:
+            ids.append(assignment.assignment_id)
+        super().perform(assignment)
+
+
+def test_a_continued_clock_reassigns_what_had_not_started_and_keeps_what_had() -> None:
+    """Step 11's assigned actions: one sent and not started is revoked and
+    sent again under a new assignment id; one already started keeps its
+    assignment. Each is carried out once."""
+    executor = _Sending(
+        START,
+        lead_s=2 * HOUR.total_seconds(),
+        duration_s=HOUR.total_seconds(),
+        longest_s=2 * HOUR.total_seconds(),
+    )
+    gateway = _gateway(conformance_authorisation(), START, executor)
+    gateway.submit(
+        _plan(
+            gateway,
+            _vent("running", timing=At(at=START + HOUR / 2)),
+            _vent("sent", timing=At(at=START + 2 * HOUR)),
+        ),
+        by=OPERATOR,
+    )
+    gateway.advance(START + HOUR)
+    assert {str(s.ref): s.state for s in gateway.actions()} == {
+        "running": ActionStateKind.STARTED,
+        "sent": ActionStateKind.ASSIGNED,
+    }
+    (running,), (sent,) = executor.sent["running"], executor.sent["sent"]
+
+    gateway.restart(continue_clock=True)
+
+    assert executor.status(sent) == AssignmentStatus.REVOKED
+    assert executor.status(running) == AssignmentStatus.STARTED
+    assert executor.sent["running"] == [running]
+    (_, sent_again) = executor.sent["sent"]
+    assert sent_again != sent
+    assert {str(s.ref): s.state for s in gateway.actions()} == {
+        "running": ActionStateKind.STARTED,
+        "sent": ActionStateKind.ASSIGNED,
+    }
+
+    gateway.advance(START + 4 * HOUR)
+
+    assert [(str(o.ref), o.status) for o in gateway.outcomes().outcomes] == [
+        ("running", OutcomeStatus.EXECUTED),
+        ("sent", OutcomeStatus.EXECUTED),
+    ]
+    assert [report.assignment_id for report in executor.reports()] == [running, sent_again]
+
+
 def test_a_run_that_ends_cancels_what_is_still_to_come() -> None:
     gateway = _gateway(conformance_authorisation(), START)
     gateway.submit(_plan(gateway, _vent("vent")), by=OPERATOR)

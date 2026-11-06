@@ -74,11 +74,13 @@ never one a document names.
   then recurring actions, then the order the gateway accepted revisions
   in, then place in the plan.
 - **A run that continues the clock** (its descriptor's `continues_from`)
-  carries the actions not yet resolved, checked again, assignments kept; one
-  that starts its clock over cancels them, the run having started over, as
-  the first outcomes of its new epoch, where a consumer reads them; one
-  that ends for good cancels them. A finished or recorded run refuses a plan
-  with `ActionNotExecutable`.
+  carries the actions not yet resolved, checked again: one already started
+  keeps its assignment, and one assigned but not started is revoked and
+  assigned again, so nothing is carried out twice. A run that starts its
+  clock over cancels them, the run having started over, as the first
+  outcomes of its new epoch, where a consumer reads them; one that ends for
+  good cancels them. A finished or recorded run refuses a plan with
+  `ActionNotExecutable`.
 - **Every action, occurrence and fallback ends in exactly one outcome,** in
   a log with the consumer interface's rules (`check_polls`).
 
