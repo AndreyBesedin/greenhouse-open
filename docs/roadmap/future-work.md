@@ -97,7 +97,7 @@ final QA left open:
   ([P13](archive/p13-actions.md#acceptance-criteria)'s criterion 8): carried on from its
   checkpoint, it stops with a conflict, since its log keeps no change of authorisation;
   an entry of the
-  [P17 clean-up](p17-cleanup.md#from-p13s-acceptance-an-epoch-resumed-after-its-authorisation-changed).
+  [P17 clean-up](archive/p17-cleanup.md#from-p13s-acceptance-an-epoch-resumed-after-its-authorisation-changed).
 
 ## CO₂ and light targets
 
@@ -203,6 +203,30 @@ none of them P14.7's own. Planned then:
   without a word: the panel says whose it is, or refuses one that is not its scenario's.
 - **The builder's run step for an uploaded copy** offers its own start and seed (1 April, 0)
   rather than the file's (1 March, 42).
+
+## Runs and playbacks, after P17
+
+[P17](archive/p17-runs-and-playbacks.md) closed on 2026-11-06. It keeps each run in a store, plays a
+position over what it holds, computes runs on workers that a restart leaves running or finds
+interrupted and resumes, forks them, and gives the viewer a start page, a replay and the
+scenario file (decisions 0065 and 0066). Steering a running epoch from the viewer, which
+P17.8 left to the route, is [P22.1](p22-watching-and-starting-a-run.md). Left, from P17,
+each designed in its document:
+
+- **A `present` store** (P17.6, its QA's step 6): an epoch that keeps only a window `W`
+  behind its frontier, the newest checkpoint at or before `F - W` and what follows it,
+  so that a batch of runs for training keeps about 0.2 to 0.4 MB at day 120 in place of
+  11 to 24 MB. Its invariant and its measurements are in P17's design and its P17.1
+  record. Every epoch is kept whole today, and the viewer's header says so.
+- **The consumer interface and the policy port reading a stored epoch** (P17.4, P17.7):
+  they read the live playbacks, so a consumer follows a run its server plays, not an
+  epoch a worker computes or one kept from before a restart.
+- **A crop action still under way at a kept state** (P17.8, P17.9): a fork or a resume
+  from a state kept while a crew was still at an action is refused, since nothing kept
+  says what the action did. A crew's work in progress kept with the checkpoint would let
+  both go on.
+- **An epoch stepped by a caller** (P17.9) is carried on only by that caller, as an
+  experiment steps it; a worker does not take it up.
 
 ## Greenhouse R&D workflows and Modelica comparison
 
