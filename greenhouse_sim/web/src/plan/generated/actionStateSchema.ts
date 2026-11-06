@@ -36,7 +36,6 @@ export const ACTION_STATE_SCHEMA = {
     },
     "ActionRef": {
       "additionalProperties": false,
-      "description": "Which action a record is about: a planned action, one occurrence of a\nrecurring one, or the fallback carried out in its place. `str()` spells\nit for people, `harvest@3` or `vent/fallback`; records keep the parts.",
       "properties": {
         "action_id": {
           "$ref": "#/$defs/ActionId"
@@ -78,7 +77,6 @@ export const ACTION_STATE_SCHEMA = {
     },
     "Asap": {
       "additionalProperties": false,
-      "description": "As soon as what it waits for is done, before its deadline if it has\none.",
       "properties": {
         "kind": {
           "const": "asap",
@@ -103,7 +101,6 @@ export const ACTION_STATE_SCHEMA = {
     },
     "At": {
       "additionalProperties": false,
-      "description": "Due at an instant.",
       "properties": {
         "kind": {
           "const": "at",
@@ -228,7 +225,6 @@ export const ACTION_STATE_SCHEMA = {
     },
     "Lower": {
       "additionalProperties": false,
-      "description": "Lower a plant's stem: by so many centimetres, by so many internodes,\nor until its top has so much head room under its wire. Exactly one.",
       "oneOf": [
         {
           "properties": {
@@ -323,7 +319,6 @@ export const ACTION_STATE_SCHEMA = {
     },
     "Principal": {
       "additionalProperties": false,
-      "description": "Who asks for an action, by identity: a person, a control policy, a\nschedule, a scenario's own plan, a platform.",
       "properties": {
         "kind": {
           "$ref": "#/$defs/PrincipalKind"
@@ -396,7 +391,6 @@ export const ACTION_STATE_SCHEMA = {
     },
     "SetLevel": {
       "additionalProperties": false,
-      "description": "A device's level, from 0 (off) to 1 (full), or `auto` to hand the\ndevice back to whatever control loop runs it. A door or vent is a\ndevice, its level how far it is open.",
       "properties": {
         "kind": {
           "const": "set_level",
@@ -431,7 +425,6 @@ export const ACTION_STATE_SCHEMA = {
     },
     "SetTarget": {
       "additionalProperties": false,
-      "description": "A climate controller's heating setpoint, by day or by night, in °C.\nEach kind of target has its own unit and range: the venting and humidity\ntargets, when a controller has them, are members of their own beside\nthis one.",
       "properties": {
         "kind": {
           "const": "set_target",
@@ -502,7 +495,6 @@ export const ACTION_STATE_SCHEMA = {
     },
     "Window": {
       "additionalProperties": false,
-      "description": "Due between two instants: it starts at the earliest one in them an\nexecutor can honour and is free to take.",
       "properties": {
         "kind": {
           "const": "window",
@@ -526,7 +518,6 @@ export const ACTION_STATE_SCHEMA = {
     }
   },
   "additionalProperties": false,
-  "description": "An action not yet resolved, as it stands: what a gateway lists. Once\nresolved, it is an outcome in the outcome log, not a state.",
   "properties": {
     "plan_id": {
       "$ref": "#/$defs/Identifier"

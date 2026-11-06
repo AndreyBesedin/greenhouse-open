@@ -15,7 +15,6 @@ export const EDIT_SCHEMA = {
     },
     "BoxPrimitive": {
       "additionalProperties": false,
-      "description": "A box standing on the floor or anything else: its base centred on\n`base`, turned about the vertical by `heading` radians from the\ngreenhouse's x.",
       "properties": {
         "fixture_id": {
           "title": "Fixture Id",
@@ -93,10 +92,8 @@ export const EDIT_SCHEMA = {
     },
     "Camera": {
       "additionalProperties": false,
-      "description": "A camera at its position, looking at `target`, with its intrinsics.",
       "properties": {
         "sensor_id": {
-          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
           "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Sensor Id",
           "type": "string"
@@ -133,7 +130,6 @@ export const EDIT_SCHEMA = {
       "type": "object"
     },
     "CameraIntrinsics": {
-      "description": "Pinhole intrinsics of one image stream, in pixels, with the\ncalibration's distortion coefficients exactly as given.",
       "properties": {
         "width": {
           "exclusiveMinimum": 0,
@@ -190,7 +186,6 @@ export const EDIT_SCHEMA = {
     },
     "CylinderPrimitive": {
       "additionalProperties": false,
-      "description": "An upright cylinder, its base centred on `base`.",
       "properties": {
         "fixture_id": {
           "title": "Fixture Id",
@@ -257,10 +252,8 @@ export const EDIT_SCHEMA = {
     },
     "Dehumidifier": {
       "additionalProperties": false,
-      "description": "A dehumidifier: the water it takes out of the air at full power, and\nthe heat it gives the air while it does.",
       "properties": {
         "actuator_id": {
-          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
           "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Actuator Id",
           "type": "string"
@@ -340,10 +333,8 @@ export const EDIT_SCHEMA = {
     },
     "Fan": {
       "additionalProperties": false,
-      "description": "A fan: a rotor of a diameter, centred on `position`, blowing its rated\nflow of air along its heading.",
       "properties": {
         "actuator_id": {
-          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
           "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Actuator Id",
           "type": "string"
@@ -383,7 +374,6 @@ export const EDIT_SCHEMA = {
       "type": "object"
     },
     "FixtureKind": {
-      "description": "What a fixture is, for every consumer of its geometry.",
       "enum": [
         "crop_gutter",
         "bench",
@@ -399,10 +389,8 @@ export const EDIT_SCHEMA = {
     },
     "Heater": {
       "additionalProperties": false,
-      "description": "A unit heater: its rated power, all of it given to the air as heat.",
       "properties": {
         "actuator_id": {
-          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
           "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Actuator Id",
           "type": "string"
@@ -455,7 +443,6 @@ export const EDIT_SCHEMA = {
     },
     "Imperfections": {
       "additionalProperties": false,
-      "description": "How a sensor errs, each in its own unit; all nothing for a clean one.\n\nNoise is Gaussian, of a standard deviation; a reading is rounded to the\nquantization step; a fixed bias is added, and a drift that grows linearly\nwith time since the run's start; a sample drops out with a probability;\nand a reading is delivered a fixed time after its sample.",
       "properties": {
         "noise_sd": {
           "default": 0,
@@ -498,7 +485,6 @@ export const EDIT_SCHEMA = {
     },
     "JsonValue": {},
     "Material": {
-      "description": "What a fixture, or a part of the envelope, is made of.",
       "enum": [
         "steel",
         "aluminium",
@@ -510,7 +496,6 @@ export const EDIT_SCHEMA = {
       "type": "string"
     },
     "Obstruction": {
-      "description": "What a fixture stands in the way of.",
       "enum": [
         "movement",
         "airflow",
@@ -520,10 +505,8 @@ export const EDIT_SCHEMA = {
       "type": "string"
     },
     "Opening": {
-      "description": "A door or vent: a rectangle on its host surface, centred at `centre` in\nthe host's own x-y plane, `width` along the host's x and `height` along\nits y, open by `opening`, from 0 (closed) to 1.",
       "properties": {
         "opening_id": {
-          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
           "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Opening Id",
           "type": "string"
@@ -585,7 +568,6 @@ export const EDIT_SCHEMA = {
     },
     "PipePrimitive": {
       "additionalProperties": false,
-      "description": "A straight pipe, its axis from `start` to `end`.",
       "properties": {
         "fixture_id": {
           "title": "Fixture Id",
@@ -650,7 +632,6 @@ export const EDIT_SCHEMA = {
     },
     "PipeRunPrimitive": {
       "additionalProperties": false,
-      "description": "Pipes repeated in parallel, such as heating pipes stacked along a wall:\nthe first from `start` to `end`, each next one `step` further on, `count`\nin all. Each is its own multiple of the step from the first, and is called\n`<fixture_id>_<n>`, from 1.",
       "properties": {
         "fixture_id": {
           "title": "Fixture Id",
@@ -726,7 +707,6 @@ export const EDIT_SCHEMA = {
     },
     "PlaceItems": {
       "additionalProperties": false,
-      "description": "Pieces of equipment, sensors, zones or fixtures like `item`, the\nfirst where it stands and each next `step` further, named after its\nidentifier.",
       "properties": {
         "edit": {
           "const": "place_items",
@@ -775,7 +755,6 @@ export const EDIT_SCHEMA = {
     },
     "PlaceOpenings": {
       "additionalProperties": false,
-      "description": "On each chosen surface, doors or vents like `opening`, the first at\nits centre and each next `step` further in the surface's plane.",
       "properties": {
         "edit": {
           "const": "place_openings",
@@ -817,7 +796,6 @@ export const EDIT_SCHEMA = {
       "type": "object"
     },
     "Point2": {
-      "description": "A point in a shape's own x-y plane.",
       "properties": {
         "x": {
           "title": "X",
@@ -852,10 +830,8 @@ export const EDIT_SCHEMA = {
     },
     "PointSensor": {
       "additionalProperties": false,
-      "description": "A sensor reading one quantity of the air at its position, or, outside\nthe house, of the weather.",
       "properties": {
         "sensor_id": {
-          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
           "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Sensor Id",
           "type": "string"
@@ -931,7 +907,6 @@ export const EDIT_SCHEMA = {
     },
     "RailPrimitive": {
       "additionalProperties": false,
-      "description": "A rail of two parallel tubes, `gauge` apart from axis to axis, either\nside of its centre line from `start` to `end`. Its tubes are\n`<fixture_id>_right` and `<fixture_id>_left`, as seen looking along it.",
       "properties": {
         "fixture_id": {
           "title": "Fixture Id",
@@ -1002,7 +977,6 @@ export const EDIT_SCHEMA = {
     },
     "RemoveItems": {
       "additionalProperties": false,
-      "description": "The chosen equipment, sensors, zones, fixtures, doors and vents\ntaken out.",
       "properties": {
         "edit": {
           "const": "remove_items",
@@ -1026,7 +1000,6 @@ export const EDIT_SCHEMA = {
     },
     "RepeatItems": {
       "additionalProperties": false,
-      "description": "Each chosen piece of equipment, sensor, zone or fixture copied\n`count` times, each copy `step` further than the one before.",
       "properties": {
         "edit": {
           "const": "repeat_items",
@@ -1058,7 +1031,6 @@ export const EDIT_SCHEMA = {
     },
     "RepeatOpenings": {
       "additionalProperties": false,
-      "description": "Each chosen door or vent copied `count` times on its surface, each\ncopy `step` further than the one before.",
       "properties": {
         "edit": {
           "const": "repeat_openings",
@@ -1116,7 +1088,6 @@ export const EDIT_SCHEMA = {
     },
     "SetField": {
       "additionalProperties": false,
-      "description": "One field, a nested one by its path (`base.z`), given one value over\nthe chosen items: equipment, sensors, zones, fixtures, doors or\nvents.",
       "properties": {
         "edit": {
           "const": "set_field",
@@ -1150,7 +1121,6 @@ export const EDIT_SCHEMA = {
     },
     "SetValue": {
       "additionalProperties": false,
-      "description": "One field of the installation, by its path from the top\n(`envelope.length`), given a value.",
       "properties": {
         "edit": {
           "const": "set_value",
@@ -1176,7 +1146,6 @@ export const EDIT_SCHEMA = {
     },
     "SpaceItems": {
       "additionalProperties": false,
-      "description": "The chosen pieces of equipment, sensors, zones and fixtures spaced\nevenly along an axis of the greenhouse.",
       "properties": {
         "edit": {
           "const": "space_items",
@@ -1204,7 +1173,6 @@ export const EDIT_SCHEMA = {
     },
     "SpaceOpenings": {
       "additionalProperties": false,
-      "description": "The chosen doors and vents of one surface spaced evenly along it.",
       "properties": {
         "edit": {
           "const": "space_openings",
@@ -1228,7 +1196,6 @@ export const EDIT_SCHEMA = {
     },
     "SpreadOpenings": {
       "additionalProperties": false,
-      "description": "On each chosen surface, `count` doors or vents like `opening`, spread\nevenly along it.",
       "properties": {
         "edit": {
           "const": "spread_openings",
@@ -1260,7 +1227,6 @@ export const EDIT_SCHEMA = {
     },
     "Strip": {
       "additionalProperties": false,
-      "description": "A rectangle of the floor: a centre line from `start` to `end`, `width`\nwide.",
       "properties": {
         "start": {
           "$ref": "#/$defs/Point2"
@@ -1284,7 +1250,6 @@ export const EDIT_SCHEMA = {
     },
     "TrayPrimitive": {
       "additionalProperties": false,
-      "description": "An open tray, such as a crop gutter: `width` across and `depth` deep,\nits bottom's centre line from `start` to `end`. It may slope, as gutters\ndo to drain; it stays level across.",
       "properties": {
         "fixture_id": {
           "title": "Fixture Id",
@@ -1378,7 +1343,6 @@ export const EDIT_SCHEMA = {
     },
     "WalkwayPrimitive": {
       "additionalProperties": false,
-      "description": "A path on the floor, `width` wide, its centre line from `start` to\n`end`.",
       "properties": {
         "fixture_id": {
           "title": "Fixture Id",
@@ -1443,7 +1407,6 @@ export const EDIT_SCHEMA = {
     },
     "Zone": {
       "additionalProperties": false,
-      "description": "A service zone or keep-out volume: a strip of the floor, rising\n`height` above it.",
       "properties": {
         "zone_id": {
           "title": "Zone Id",
@@ -1471,7 +1434,6 @@ export const EDIT_SCHEMA = {
       "type": "object"
     },
     "ZoneKind": {
-      "description": "What an area of the floor is kept for.",
       "enum": [
         "service",
         "keep_out"

@@ -11,7 +11,6 @@ export const RECEIPT_SCHEMA = {
     },
     "ActionKey": {
       "additionalProperties": false,
-      "description": "An action as a caller saw it, to cancel it: in a plan, a revision and\nan epoch. A key whose action a later revision replaced, or whose epoch\nhas ended, is stale: refused, and nothing cancelled. An occurrence of\nNone, for a recurring action, means every occurrence still to come.",
       "properties": {
         "plan_id": {
           "$ref": "#/$defs/Identifier"
@@ -41,7 +40,6 @@ export const RECEIPT_SCHEMA = {
     },
     "ActionRef": {
       "additionalProperties": false,
-      "description": "Which action a record is about: a planned action, one occurrence of a\nrecurring one, or the fallback carried out in its place. `str()` spells\nit for people, `harvest@3` or `vent/fallback`; records keep the parts.",
       "properties": {
         "action_id": {
           "$ref": "#/$defs/ActionId"
@@ -78,7 +76,6 @@ export const RECEIPT_SCHEMA = {
     }
   },
   "additionalProperties": false,
-  "description": "A gateway's answer to a write. A request refused whole has its\nerrors and changed nothing; one accepted lists what it refused at once,\nwhat it cancelled, and the keys it would not act on.",
   "properties": {
     "accepted": {
       "title": "Accepted",

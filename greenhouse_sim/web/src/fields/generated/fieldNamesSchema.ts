@@ -3,7 +3,6 @@
 
 export const FIELD_NAMES_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "The fields a scenario offers with one of its layouts, its own airflow\nfirst, and the name of its own airflow.",
   "properties": {
     "fields": {
       "items": {

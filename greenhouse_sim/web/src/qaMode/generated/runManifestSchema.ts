@@ -5,7 +5,6 @@ export const RUN_MANIFEST_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "ModelRun": {
-      "description": "A part's model as a run runs it: its name and version.",
       "properties": {
         "model": {
           "title": "Model",
@@ -24,7 +23,6 @@ export const RUN_MANIFEST_SCHEMA = {
       "type": "object"
     }
   },
-  "description": "What a scenario's run is made from, as QA mode shows it (P09.6): its\nmanifest's format and version, its seed and days, and the models it\nruns, under the weather the run is asked for.",
   "properties": {
     "scenario_id": {
       "title": "Scenario Id",

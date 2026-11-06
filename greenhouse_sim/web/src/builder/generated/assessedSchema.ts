@@ -6,7 +6,6 @@ export const ASSESSED_SCHEMA = {
   "$defs": {
     "BoxPrimitive": {
       "additionalProperties": false,
-      "description": "A box standing on the floor or anything else: its base centred on\n`base`, turned about the vertical by `heading` radians from the\ngreenhouse's x.",
       "properties": {
         "fixture_id": {
           "title": "Fixture Id",
@@ -89,10 +88,8 @@ export const ASSESSED_SCHEMA = {
     },
     "Camera": {
       "additionalProperties": false,
-      "description": "A camera at its position, looking at `target`, with its intrinsics.",
       "properties": {
         "sensor_id": {
-          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
           "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Sensor Id",
           "type": "string"
@@ -131,7 +128,6 @@ export const ASSESSED_SCHEMA = {
       "type": "object"
     },
     "CameraIntrinsics": {
-      "description": "Pinhole intrinsics of one image stream, in pixels, with the\ncalibration's distortion coefficients exactly as given.",
       "properties": {
         "width": {
           "exclusiveMinimum": 0,
@@ -183,7 +179,6 @@ export const ASSESSED_SCHEMA = {
       "type": "object"
     },
     "CropModel": {
-      "description": "How a scenario's run grows its crop: plant by plant, by the simple\ndaily model (`greenhouse_sim.core.simple_crop`) or organ by organ\n(`greenhouse_sim.core.crop`); or by area, by Reduced-State TOMGRO\n(`greenhouse_sim.core.tomgro_crop`, decision 0060).",
       "enum": [
         "simple",
         "organ",
@@ -194,7 +189,6 @@ export const ASSESSED_SCHEMA = {
     },
     "CropRows": {
       "additionalProperties": false,
-      "description": "Parallel rows of planting positions, in metres and radians.",
       "properties": {
         "origin": {
           "$ref": "#/$defs/Point2"
@@ -290,7 +284,6 @@ export const ASSESSED_SCHEMA = {
     },
     "CropWires": {
       "additionalProperties": false,
-      "description": "A crop wire above each run of a row's positions, `height` above the\nfloor, which the plants are trained up to; or, `offset` to either side\nof the row, a pair of them, a high-wire double row's, which its plants\nare trained to by turns (`greenhouse_sim.world.training`).",
       "properties": {
         "height": {
           "exclusiveMinimum": 0,
@@ -320,7 +313,6 @@ export const ASSESSED_SCHEMA = {
     },
     "CylinderPrimitive": {
       "additionalProperties": false,
-      "description": "An upright cylinder, its base centred on `base`.",
       "properties": {
         "fixture_id": {
           "title": "Fixture Id",
@@ -391,10 +383,8 @@ export const ASSESSED_SCHEMA = {
     },
     "Dehumidifier": {
       "additionalProperties": false,
-      "description": "A dehumidifier: the water it takes out of the air at full power, and\nthe heat it gives the air while it does.",
       "properties": {
         "actuator_id": {
-          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
           "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Actuator Id",
           "type": "string"
@@ -454,7 +444,6 @@ export const ASSESSED_SCHEMA = {
       "type": "object"
     },
     "DraftRevision": {
-      "description": "The draft an installation is kept as, and its revision.",
       "properties": {
         "draft_id": {
           "title": "Draft Id",
@@ -479,7 +468,6 @@ export const ASSESSED_SCHEMA = {
       "type": "object"
     },
     "Envelope": {
-      "description": "A greenhouse's envelope, in metres, no larger than any greenhouse.",
       "properties": {
         "length": {
           "exclusiveMinimum": 0,
@@ -587,10 +575,8 @@ export const ASSESSED_SCHEMA = {
     },
     "Fan": {
       "additionalProperties": false,
-      "description": "A fan: a rotor of a diameter, centred on `position`, blowing its rated\nflow of air along its heading.",
       "properties": {
         "actuator_id": {
-          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
           "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Actuator Id",
           "type": "string"
@@ -633,7 +619,6 @@ export const ASSESSED_SCHEMA = {
     },
     "Finding": {
       "additionalProperties": false,
-      "description": "Something a draft gets wrong, or lacks: a stable code an editor\nreads, a message a person reads, and what it concerns, the layout's\nitems by their ids and the crop rows by their numbers, so that an editor\ncan point at them.",
       "properties": {
         "severity": {
           "enum": [
@@ -679,7 +664,6 @@ export const ASSESSED_SCHEMA = {
       "type": "object"
     },
     "FixtureKind": {
-      "description": "What a fixture is, for every consumer of its geometry.",
       "enum": [
         "crop_gutter",
         "bench",
@@ -695,10 +679,8 @@ export const ASSESSED_SCHEMA = {
     },
     "Heater": {
       "additionalProperties": false,
-      "description": "A unit heater: its rated power, all of it given to the air as heat.",
       "properties": {
         "actuator_id": {
-          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
           "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Actuator Id",
           "type": "string"
@@ -753,7 +735,6 @@ export const ASSESSED_SCHEMA = {
     },
     "Imperfections": {
       "additionalProperties": false,
-      "description": "How a sensor errs, each in its own unit; all nothing for a clean one.\n\nNoise is Gaussian, of a standard deviation; a reading is rounded to the\nquantization step; a fixed bias is added, and a drift that grows linearly\nwith time since the run's start; a sample drops out with a probability;\nand a reading is delivered a fixed time after its sample.",
       "properties": {
         "noise_sd": {
           "default": 0,
@@ -804,10 +785,8 @@ export const ASSESSED_SCHEMA = {
     },
     "Installation": {
       "additionalProperties": false,
-      "description": "A greenhouse as authored: no weather, period, control or policy,\nwhich are a scenario's.",
       "properties": {
         "installation_id": {
-          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
           "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Installation Id",
           "type": "string"
@@ -844,7 +823,6 @@ export const ASSESSED_SCHEMA = {
     },
     "Layout": {
       "additionalProperties": false,
-      "description": "What stands inside a greenhouse, in metres, in its frame.",
       "properties": {
         "crop_rows": {
           "anyOf": [
@@ -901,7 +879,6 @@ export const ASSESSED_SCHEMA = {
       "type": "object"
     },
     "Material": {
-      "description": "What a fixture, or a part of the envelope, is made of.",
       "enum": [
         "steel",
         "aluminium",
@@ -913,7 +890,6 @@ export const ASSESSED_SCHEMA = {
       "type": "string"
     },
     "Obstruction": {
-      "description": "What a fixture stands in the way of.",
       "enum": [
         "movement",
         "airflow",
@@ -923,10 +899,8 @@ export const ASSESSED_SCHEMA = {
       "type": "string"
     },
     "Opening": {
-      "description": "A door or vent: a rectangle on its host surface, centred at `centre` in\nthe host's own x-y plane, `width` along the host's x and `height` along\nits y, open by `opening`, from 0 (closed) to 1.",
       "properties": {
         "opening_id": {
-          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
           "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Opening Id",
           "type": "string"
@@ -990,7 +964,6 @@ export const ASSESSED_SCHEMA = {
     },
     "PipePrimitive": {
       "additionalProperties": false,
-      "description": "A straight pipe, its axis from `start` to `end`.",
       "properties": {
         "fixture_id": {
           "title": "Fixture Id",
@@ -1059,7 +1032,6 @@ export const ASSESSED_SCHEMA = {
     },
     "PipeRunPrimitive": {
       "additionalProperties": false,
-      "description": "Pipes repeated in parallel, such as heating pipes stacked along a wall:\nthe first from `start` to `end`, each next one `step` further on, `count`\nin all. Each is its own multiple of the step from the first, and is called\n`<fixture_id>_<n>`, from 1.",
       "properties": {
         "fixture_id": {
           "title": "Fixture Id",
@@ -1138,7 +1110,6 @@ export const ASSESSED_SCHEMA = {
       "type": "object"
     },
     "Point2": {
-      "description": "A point in a shape's own x-y plane.",
       "properties": {
         "x": {
           "title": "X",
@@ -1173,10 +1144,8 @@ export const ASSESSED_SCHEMA = {
     },
     "PointSensor": {
       "additionalProperties": false,
-      "description": "A sensor reading one quantity of the air at its position, or, outside\nthe house, of the weather.",
       "properties": {
         "sensor_id": {
-          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
           "pattern": "^[A-Za-z0-9_.-]+$",
           "title": "Sensor Id",
           "type": "string"
@@ -1241,7 +1210,6 @@ export const ASSESSED_SCHEMA = {
       ]
     },
     "Quaternion": {
-      "description": "A rotation as a unit quaternion; the default is no rotation.",
       "properties": {
         "w": {
           "default": 1,
@@ -1275,7 +1243,6 @@ export const ASSESSED_SCHEMA = {
     },
     "RailPrimitive": {
       "additionalProperties": false,
-      "description": "A rail of two parallel tubes, `gauge` apart from axis to axis, either\nside of its centre line from `start` to `end`. Its tubes are\n`<fixture_id>_right` and `<fixture_id>_left`, as seen looking along it.",
       "properties": {
         "fixture_id": {
           "title": "Fixture Id",
@@ -1350,7 +1317,6 @@ export const ASSESSED_SCHEMA = {
     },
     "RowCrop": {
       "additionalProperties": false,
-      "description": "The crop one row grows: its model and its variety. Rows are numbered\nfrom 1, as `CropRows` numbers them.",
       "properties": {
         "row": {
           "exclusiveMinimum": 0,
@@ -1376,7 +1342,6 @@ export const ASSESSED_SCHEMA = {
     },
     "RowRails": {
       "additionalProperties": false,
-      "description": "A pipe rail in each path between neighbouring rows wide enough for it:\ntwo tubes `gauge` apart from axis to axis, their axes `height` above the\nfloor, along the rows. They are often the heating pipes too.",
       "properties": {
         "gauge": {
           "exclusiveMinimum": 0,
@@ -1416,7 +1381,6 @@ export const ASSESSED_SCHEMA = {
     },
     "RowSupport": {
       "additionalProperties": false,
-      "description": "What carries each crop row: a top along the row, its upper surface\n`height` above the floor, `width` across and `depth` thick, reaching\n`overhang` beyond the row's first and last positions, its centre line\n`offset` to the left of the row's. Legs stand under it at most\n`leg_spacing` apart, from the floor to its underside; without, it hangs\nfrom the structure above.",
       "properties": {
         "kind": {
           "default": "crop_gutter",
@@ -1522,7 +1486,6 @@ export const ASSESSED_SCHEMA = {
     },
     "Slab": {
       "additionalProperties": false,
-      "description": "Substrate laid along the top of a row's support.",
       "properties": {
         "width": {
           "exclusiveMinimum": 0,
@@ -1549,7 +1512,6 @@ export const ASSESSED_SCHEMA = {
     },
     "Strip": {
       "additionalProperties": false,
-      "description": "A rectangle of the floor: a centre line from `start` to `end`, `width`\nwide.",
       "properties": {
         "start": {
           "$ref": "#/$defs/Point2"
@@ -1572,7 +1534,6 @@ export const ASSESSED_SCHEMA = {
       "type": "object"
     },
     "Transform": {
-      "description": "Places a shape's own frame in the world: rotate, then translate.",
       "properties": {
         "position": {
           "$ref": "#/$defs/Vector3"
@@ -1596,7 +1557,6 @@ export const ASSESSED_SCHEMA = {
     },
     "TrayPrimitive": {
       "additionalProperties": false,
-      "description": "An open tray, such as a crop gutter: `width` across and `depth` deep,\nits bottom's centre line from `start` to `end`. It may slope, as gutters\ndo to drain; it stays level across.",
       "properties": {
         "fixture_id": {
           "title": "Fixture Id",
@@ -1694,7 +1654,6 @@ export const ASSESSED_SCHEMA = {
     },
     "WalkwayPrimitive": {
       "additionalProperties": false,
-      "description": "A path on the floor, `width` wide, its centre line from `start` to\n`end`.",
       "properties": {
         "fixture_id": {
           "title": "Fixture Id",
@@ -1763,7 +1722,6 @@ export const ASSESSED_SCHEMA = {
     },
     "Zone": {
       "additionalProperties": false,
-      "description": "A service zone or keep-out volume: a strip of the floor, rising\n`height` above it.",
       "properties": {
         "zone_id": {
           "title": "Zone Id",
@@ -1791,7 +1749,6 @@ export const ASSESSED_SCHEMA = {
       "type": "object"
     },
     "ZoneKind": {
-      "description": "What an area of the floor is kept for.",
       "enum": [
         "service",
         "keep_out"
@@ -1800,7 +1757,6 @@ export const ASSESSED_SCHEMA = {
       "type": "string"
     }
   },
-  "description": "An installation, the format a file of it is written in, and what\nstops it running, or what it lacks; and, if it is a draft's, the draft\nand the revision it is (`services.drafts`). One answer for both, so that\nthe contract published for it describes an installation once.",
   "properties": {
     "schema_version": {
       "default": 7,

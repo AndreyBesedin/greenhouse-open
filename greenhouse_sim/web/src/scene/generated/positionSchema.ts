@@ -6,7 +6,6 @@ export const POSITION_SCHEMA = {
   "$defs": {
     "ForkOf": {
       "additionalProperties": false,
-      "description": "Where a fork comes from (decision 0065): its parent, the exact instant\nit branches at, the state it inherits (a checkpoint at `start_s`, kept as a\ncopy of its own, and the parent's trajectory digest through it; none for\none from its run's start), how many entries of its log are its parent's,\nand the layout it changes to, if it does.",
       "properties": {
         "run_id": {
           "title": "Run Id",
@@ -91,7 +90,6 @@ export const POSITION_SCHEMA = {
       "type": "string"
     }
   },
-  "description": "Where a position stands over its epoch: the epoch, the moment, both as\nan instant and as seconds into the run (as the viewer asks for a moment),\nwhether it plays or follows, how far the epoch is committed, whether a playback\nholds the epoch's clock, as the runs listed say, and the changes given to it, as\nits plan holds them, spelled as a run's `&targets=`, `&schedule=` and `&crop=`\nwrite them, for the viewer to draw it under.",
   "properties": {
     "position_id": {
       "title": "Position Id",

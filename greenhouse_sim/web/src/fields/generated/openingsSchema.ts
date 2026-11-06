@@ -6,7 +6,6 @@ export const OPENINGS_SCHEMA = {
   "$defs": {
     "OpeningFlow": {
       "additionalProperties": false,
-      "description": "What an open door or vent passes: its net flow into the house (m³/s,\nnegative out), and what it exchanges each way besides.",
       "properties": {
         "opening_id": {
           "title": "Opening Id",
@@ -31,7 +30,6 @@ export const OPENINGS_SCHEMA = {
     }
   },
   "additionalProperties": false,
-  "description": "What each open door and vent passes at a moment of a run.",
   "properties": {
     "time_s": {
       "title": "Time S",

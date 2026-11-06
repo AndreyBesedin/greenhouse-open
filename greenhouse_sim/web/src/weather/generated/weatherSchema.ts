@@ -11,7 +11,6 @@ export const WEATHER_SCHEMA = {
     },
     "OutsideLight": {
       "additionalProperties": false,
-      "description": "The light outside at a moment: its global horizontal irradiance, its\nbeam's direct normal irradiance and the diffuse sky's on a level\nsurface, in W/m², and its PAR on a level surface, in µmol/m²/s.",
       "properties": {
         "ghi_w_m2": {
           "minimum": 0,
@@ -50,7 +49,6 @@ export const WEATHER_SCHEMA = {
     },
     "Site": {
       "additionalProperties": false,
-      "description": "Where the world lies: its latitude and longitude (degrees north and\neast), its elevation (metres above sea level), its time zone (by its\nIANA name, such as `Europe/Amsterdam`), and the bearing of its x axis.",
       "properties": {
         "latitude_deg": {
           "maximum": 90,
@@ -90,7 +88,6 @@ export const WEATHER_SCHEMA = {
     },
     "SunPosition": {
       "additionalProperties": false,
-      "description": "Where the sun stands at a moment, seen from a site: its elevation\nabove the horizon (refraction included) and its azimuth, clockwise from\nnorth, both in degrees; with its declination and the equation of time,\nin minutes, for those who check them.",
       "properties": {
         "elevation_deg": {
           "title": "Elevation Deg",
@@ -143,7 +140,6 @@ export const WEATHER_SCHEMA = {
     },
     "WeatherState": {
       "additionalProperties": false,
-      "description": "The weather at a moment: the outside air's temperature, relative\nhumidity and CO2, the wind's speed and the direction it blows from, the\nbarometric pressure, the global radiation and the cloud cover.",
       "properties": {
         "air_temperature_c": {
           "default": 10,
@@ -207,7 +203,6 @@ export const WEATHER_SCHEMA = {
       "type": "object"
     }
   },
-  "description": "The weather at a moment of a scenario's run: its site, the moment, as\nan instant and in seconds from the run's start, the weather then, the\nwind's velocity in the world's axes, where the sun stands, with the\ndirection towards it in the world's axes (P08.1), and its light and the\nsky's (P08.3).",
   "properties": {
     "site": {
       "$ref": "#/$defs/Site"

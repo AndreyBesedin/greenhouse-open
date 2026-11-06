@@ -3,7 +3,6 @@
 
 export const SCENARIO_DOWNLOAD_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "A scenario's file, for a client to offer as a download.",
   "properties": {
     "file_name": {
       "title": "File Name",

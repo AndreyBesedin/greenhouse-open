@@ -6,7 +6,6 @@ export const HOUSE_AIR_SCHEMA = {
   "$defs": {
     "HouseSeries": {
       "additionalProperties": false,
-      "description": "The house's air at each moment of a trace: its temperature (°C),\nrelative humidity (%) and CO₂ (ppm), and the water it has lost to\nequipment and to condensation so far (kg).",
       "properties": {
         "temperature_c": {
           "items": {
@@ -56,7 +55,6 @@ export const HOUSE_AIR_SCHEMA = {
     }
   },
   "additionalProperties": false,
-  "description": "The house's air through a climate run, and through the same run with\neverything off unless left out, at each of its moments, in seconds.",
   "properties": {
     "times_s": {
       "items": {

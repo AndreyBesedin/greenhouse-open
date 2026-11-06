@@ -5,7 +5,6 @@ export const SNAPSHOT_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "Axes": {
-      "description": "A reference marker: one arrow from the origin along each of +x, +y and\n+z.",
       "properties": {
         "shape": {
           "const": "axes",
@@ -27,7 +26,6 @@ export const SNAPSHOT_SCHEMA = {
       "type": "object"
     },
     "Box": {
-      "description": "A rectangular box standing on its frame's origin: its base is centred\non the origin, and it rises along +z.",
       "properties": {
         "shape": {
           "const": "box",
@@ -61,7 +59,6 @@ export const SNAPSHOT_SCHEMA = {
       "type": "object"
     },
     "Color": {
-      "description": "An sRGB colour, each channel from 0 to 1.",
       "properties": {
         "r": {
           "maximum": 1,
@@ -91,7 +88,6 @@ export const SNAPSHOT_SCHEMA = {
       "type": "object"
     },
     "Cylinder": {
-      "description": "An upright cylinder: its base is centred on its frame's origin and it\nrises along +z. A height of zero is allowed: a plant can be lowered by its\nwhole visible height.",
       "properties": {
         "shape": {
           "const": "cylinder",
@@ -119,7 +115,6 @@ export const SNAPSHOT_SCHEMA = {
       "type": "object"
     },
     "Ellipsoid": {
-      "description": "An ellipsoid centred on its frame's origin, as long, wide and thick as\nits sizes along x, y and z, such as a leaflet lying in its frame's x-y\nplane.",
       "properties": {
         "shape": {
           "const": "ellipsoid",
@@ -153,7 +148,6 @@ export const SNAPSHOT_SCHEMA = {
       "type": "object"
     },
     "Material": {
-      "description": "What a fixture, or a part of the envelope, is made of.",
       "enum": [
         "steel",
         "aluminium",
@@ -165,7 +159,6 @@ export const SNAPSHOT_SCHEMA = {
       "type": "string"
     },
     "Plane": {
-      "description": "A flat rectangle in its frame's x-y plane, centred on its origin,\nfacing +z.",
       "properties": {
         "shape": {
           "const": "plane",
@@ -193,7 +186,6 @@ export const SNAPSHOT_SCHEMA = {
       "type": "object"
     },
     "Point2": {
-      "description": "A point in a shape's own x-y plane.",
       "properties": {
         "x": {
           "title": "X",
@@ -212,7 +204,6 @@ export const SNAPSHOT_SCHEMA = {
       "type": "object"
     },
     "Polygon": {
-      "description": "A flat polygon in its frame's x-y plane, facing +z: its corners in\norder, counter-clockwise as seen from its front, such as a greenhouse's\ngable end.",
       "properties": {
         "shape": {
           "const": "polygon",
@@ -237,7 +228,6 @@ export const SNAPSHOT_SCHEMA = {
       "type": "object"
     },
     "Quaternion": {
-      "description": "A rotation as a unit quaternion; the default is no rotation.",
       "properties": {
         "w": {
           "default": 1,
@@ -408,7 +398,6 @@ export const SNAPSHOT_SCHEMA = {
       ]
     },
     "Sphere": {
-      "description": "A sphere centred on its frame's origin, such as a flower bud or a\nfruit.",
       "properties": {
         "shape": {
           "const": "sphere",
@@ -430,7 +419,6 @@ export const SNAPSHOT_SCHEMA = {
       "type": "object"
     },
     "Transform": {
-      "description": "Places a shape's own frame in the world: rotate, then translate.",
       "properties": {
         "position": {
           "$ref": "#/$defs/Vector3"
@@ -476,7 +464,6 @@ export const SNAPSHOT_SCHEMA = {
       "type": "object"
     }
   },
-  "description": "One greenhouse at one simulated day, as a viewer draws it. Positions\nand sizes are in metres, in right-handed world axes with z up.",
   "properties": {
     "schema_version": {
       "default": 17,

@@ -5,7 +5,6 @@ export const EQUIPMENT_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "ThermostatAt": {
-      "description": "A run's thermostat at a moment (`climate.thermostat`): the heater it\nruns, the temperature it heats the house's air to then, its setpoints by\nday and by night then, as the run's target changes have left them\n(#274), and whether it runs the heater then, or a command to the heater\nhas taken it over.",
       "properties": {
         "actuator_id": {
           "title": "Actuator Id",
@@ -39,7 +38,6 @@ export const EQUIPMENT_SCHEMA = {
       "type": "object"
     }
   },
-  "description": "A run's equipment at a moment: each piece's level, as its commands set\nit and its thermostat runs its heater, and the thermostat, if it has\none.",
   "properties": {
     "time_s": {
       "title": "Time S",

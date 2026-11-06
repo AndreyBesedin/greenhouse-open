@@ -21,7 +21,6 @@ export const CHECKPOINT_SCHEMA = {
       "type": "array"
     }
   },
-  "description": "A checkpoint as a client lists it: its identifier, its run's parts,\nits day and moment, and how many plants it keeps.",
   "properties": {
     "checkpoint_id": {
       "title": "Checkpoint Id",

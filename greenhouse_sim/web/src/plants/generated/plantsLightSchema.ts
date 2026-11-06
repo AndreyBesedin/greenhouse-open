@@ -3,7 +3,6 @@
 
 export const PLANTS_LIGHT_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "The light on each of a scenario's plants at a moment of a run, in\nseconds from its start: its PAR then, in µmol/m²/s, and its daily light\nintegral on the day the moment belongs to (`greenhouse_sim.core.clock`),\nin mol/m²/d, by plant.",
   "properties": {
     "time_s": {
       "title": "Time S",
