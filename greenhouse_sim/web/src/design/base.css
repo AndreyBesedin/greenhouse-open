@@ -8,3 +8,9 @@ body,
 body {
   font-family: system-ui, sans-serif;
 }
+
+/* The browser's own drawing follows the theme, once, for the whole page: its
+ * ground before a page draws its own, its scrollbars and its controls. */
+html {
+  color-scheme: var(--scheme);
+}
