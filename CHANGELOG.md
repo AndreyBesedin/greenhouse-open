@@ -13,6 +13,44 @@ Unreleased section holds the entries written here before that.
 
 ## Unreleased
 
+## 0.7.0 - 2026-11-06
+
+A simulator's runs are now limited (P18, decision 0067): how many workers run at once, how
+many runs wait, the free disk a run needs to begin and the bytes of the store, and for each
+run its bytes, its worker's memory, and its CPU and wall time. A run refused for a limit is
+answered with a 409 that names the limit and its figures. A run that passes one ends as
+`failed`, keeping what it committed, and once the limit is raised it carries on to the digests
+of a run never ended. A crop grown by area can be measured, with `canopy_sample` (decision
+0062), and the viewer's design system has a reference page at `/qa/design` (P19). The rest are
+fixes from the viewer's QA of 2026-11-04: one day number on every page, counted from 1; no
+white flash between pages in the dark theme; the builder framing the whole house, and its
+address following a saved draft; and clearer search, runs list, replay and info panel.
+
+What breaks: `Simulator(workers=...)` is now `Simulator(limits=Limits(workers=...))`. With no
+limit set, a server keeps at most 200 runs waiting and begins none with less than 2 GB of disk
+free. No run id, digest or golden moves. Manifests, checkpoints and scenes keep their formats.
+The published schemas only gain fields (`Observation.scope_id`, four observation types,
+`canopy_sample` in a scenario), and what 0.6.0 wrote is still read.
+
+- A simulator's runs have limits (`--limits <file>` and an option for each): workers at once, runs waiting (200), free disk before a run begins (2 GB) and bytes of the store. A run, a resume or a fork past one is refused with a 409 that says which and the figures. `Simulator(workers=...)` is now `Simulator(limits=Limits(workers=...))`. Workers run at a lower priority than the API. (#576)
+- Added: a reference page of the viewer's design system at `/qa/design`, showing each token and component in each state. (#577)
+- A run past a limit ends, keeping what it committed: at the commit past its bytes (`--epoch-bytes`), or where it stands past its worker's memory (`--worker-memory-bytes`, by default half the machine's, shared between the workers) or its CPU or wall time (`--epoch-cpu-s`, `--epoch-wall-s`). It is `failed` with the limit and the figures as its reason, and can be carried on once the limit is raised, to the digests of a run never ended. (#578)
+- The setup builder's crop form starts from what the rows grow, and offers every crop model. (#585)
+- Added: `canopy_sample`, a measurement model a manifest may choose for a crop grown by area: each scope's leaf area index and dry weights, with noise and bias. `Observation.scope_id`, optional, and four observation types. No packaged run changes. (#583)
+- Fixed: a policy's context described a crop grown by area as grown by plant. (#583)
+- Development: `uv run setup` installs Node 24 into the workspace's `.venv` when the machine's Node is missing or older, so a clone needs only uv before it. The machine's own Node is left as it is. (#591)
+- viewer: the View panel says an idle view's frame time is that of the frames it last drew, rather than showing it beside "idle" as if current. (#595)
+- viewer: a scenario search lists the scenarios whose name or identifier matches before those only whose description does, so Enter opens a scenario the search names. (#600)
+- viewer: a house file uploaded or imported says it is a house file, with no run settings, rather than only opening. (#603)
+- viewer: the start page's *Recent runs* always lists runs still being computed, and a run deleted leaves the keyboard's focus on the list's heading rather than the page's body. (#597)
+- viewer: once a draft is saved, the builder's address is the draft's, so a reload opens the saved revision rather than the uploaded file or scenario it came from. (#605)
+- viewer: a replay's short timeline ticks evenly (every 2 or 5 days), a fork's replay says when it is held at the newest moment computed until the fork reaches the moment it was made from, and a failed run's replay says why it failed. (#602)
+- viewer: every panel counts a run's days from 1, as a replay's timeline does, so one page no longer shows two day numbers for one moment ("day 3, 12 h 00 min" beside "Day 4, 12:00" now reads "day 4, 12 h 00 min"); checkpoints are named by the day they begin. (#607)
+- viewer: pages open dark in the dark theme, with no white flash between them, and the browser's own scrollbars and controls follow the theme on every page. (#610)
+- viewer: the builder's view frames the whole house, however long, rather than a fixed pose that a large house runs off. (#609)
+- viewer: the info panel no longer needs a scroll bar in a 1280 x 720 window on systems whose default font has tall lines, such as Noto Sans. Its line height is now the same whatever the font. (#613)
+- viewer: a moment's day is named from 1 and a count of days is said as a count, so no page shows two day numbers for one day. The scene's status and the plant lab say "86 days in", QA mode says "1 day lived" and a replay says "41 of 120 days computed", where each said "day N" counted from 0. A plant's charts name the last day it lived from 1 ("on day 1" for its first), and QA mode's manifest names the opening day as the viewer opens on it ("opening on day 87"). (#616)
+
 ## 0.6.0 - 2026-11-05
 
 A run is now kept (P17, decisions 0065 and 0066): a run store holds each run's days as
