@@ -13,8 +13,10 @@ never listed:
 - **its state:** the nearest checkpoint at or before the instant, a copy of its
   own, so that it can be carried on and read when its parent has been deleted;
 - **its log:** the entries given by the instant, renamed to its own run and
-  epoch, then the changes it is asked to make there. A worker takes it up as it
-  takes up an epoch to be carried on (`workers.resume`): the checkpoint
+  epoch, the rights in force there among them; then, if the simulator that forks
+  it has other rights, those, from the instant (decision 0072); then the changes it
+  is asked to make there, which were checked under them. A worker takes it up as
+  it takes up an epoch to be carried on (`workers.resume`): the checkpoint
   restored, and the log applied again;
 - **its parent's outcomes,** which say what crop actions before its checkpoint
   did: they are not worked out again here either.
@@ -44,6 +46,7 @@ from greenhouse_sim.services.interventions import (
     LOGGED,
     ActionsCancelled,
     Asked,
+    AuthorisationChanged,
     LevelsAsked,
     Logged,
     PlanCancelled,
@@ -51,6 +54,7 @@ from greenhouse_sim.services.interventions import (
     TargetsAsked,
     TargetsChanged,
     check_allowed,
+    in_force_after,
     levels_plan,
     spelled,
 )
@@ -108,6 +112,35 @@ def fork(
         )
     if manifest.duration_s is not None and at_s >= manifest.duration_s:
         raise Conflict(f"the run ends at {at_s:.15g} s: there is nothing to fork from there")
+    # Under the simulator's lock of its authorisation, so that the fork's changes
+    # are checked under the rights it goes on under, and a change made meanwhile
+    # is either those or one it is asked to take (`authorise_kept`).
+    with simulator.authorising:
+        return _forked(
+            simulator,
+            objects,
+            parent,
+            at_s,
+            layout=layout,
+            changes=changes,
+            seconds_per_day=seconds_per_day,
+            queued_at=queued_at,
+        )
+
+
+def _forked(
+    simulator: Simulator,
+    objects: ObjectStore,
+    parent: EpochStore,
+    at_s: float,
+    *,
+    layout: str | None,
+    changes: Sequence[Asked],
+    seconds_per_day: float | None,
+    queued_at: datetime | None,
+) -> EpochStore:
+    """All of `fork` that reads the simulator's authorisation, and writes."""
+    run_id, epoch, manifest = parent.run_id, parent.epoch, parent.manifest()
     for change in changes:
         check_allowed(simulator, change)
     chosen = layout_name(layout or manifest.layout)
@@ -124,8 +157,10 @@ def fork(
     number = started[-1] + 1 if started else FIRST_EPOCH
     made = EpochStore(objects, new_run, number)
     entries = _inherited_log(parent, branch_s, new_run, number)
+    rights = _rights_at(simulator, entries, branch_s)
     logged = [
         *entries,
+        *rights,
         *_changes_at(
             simulator,
             request,
@@ -133,7 +168,7 @@ def fork(
             run_id=new_run,
             number=number,
             at_s=branch_s,
-            first=len(entries),
+            first=len(entries) + len(rights),
         ),
     ]
     scenario_file = scenario_files.carry(simulator.catalogue, objects, manifest.scenario_id)
@@ -192,6 +227,24 @@ def _inherited_log(parent: EpochStore, at_s: float, run_id: str, number: int) ->
     return found
 
 
+def _rights_at(simulator: Simulator, inherited: list[LogEntry], at_s: float) -> list[LogEntry]:
+    """The entry that gives a fork the rights of the simulator that forks it from
+    its instant, if they are not those in force there: none, if they are."""
+    if in_force_after(inherited) == simulator.authorisation:
+        return []
+    return [
+        LogEntry(
+            seq=len(inherited),
+            at_s=at_s,
+            given_s=at_s,
+            by=spelled(LOCAL_OPERATOR),
+            what=AuthorisationChanged(authorisation=simulator.authorisation).model_dump(
+                mode="json"
+            ),
+        )
+    ]
+
+
 def _renamed(
     what: dict[str, JsonValue], parent: EpochStore, run_id: str, number: int
 ) -> dict[str, JsonValue] | None:
@@ -212,7 +265,7 @@ def _renamed(
             if epoch != was:
                 return None
             change = change.model_copy(update={"epoch": number})
-        case TargetsChanged():
+        case TargetsChanged() | AuthorisationChanged():
             pass
     return change.model_dump(mode="json")
 
