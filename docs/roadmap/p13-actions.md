@@ -1,9 +1,11 @@
 # P13: One action format, and a plan a run's gateway carries out
 
-**Status:** in progress. The design is accepted (decision 0046), its
-questions [decided](#decided); P13.1 to P13.9 are done, and P13.10's QA
-scenario is [recorded](#recorded-at-88f35bae), with one clause left. Part of
-the [simulator roadmap](README.md).
+**Status:** done: P13.1 to P13.10, the final QA [recorded](#recorded-at-88f35bae)
+on 2026-11-05 and its last clause held on 2026-11-06 (#594). The design is
+decision 0046's, its questions [decided](#decided); what the steps left open is
+[future work](future-work.md#actions-and-plans-after-p13) or a note in
+[P18](p18-resources-and-deployment.md#steps). Part of the
+[simulator roadmap](README.md).
 
 ## Goal
 
@@ -603,86 +605,95 @@ within the day; the action format needs no change for it.
 | P13.7 | The gateway's write side and its routes: give a plan before a run, steer a playing one, list the actions as they stand, cancel a plan or chosen actions, read the plan in force; the playback's targets route becomes an alias. | `feat(api): give, steer and read a run's plan` | Done |
 | P13.8 | The viewer: the Equipment, Openings and Targets panels and the plant lab write one plan; a plan lane in the timeline shows what was due, what happened and why. | `feat(viewer): one plan, and its outcomes in the timeline` | Done: the panels steer a followed run through its plan (#385), its plan lane (#386), and crop actions given from the viewer |
 | P13.9 | The old paths removed: the engine's actions, `greenhouse_sim.executor`, the deprecated aliases (`RequestedAction`, `ActionResult` and the old execution names), `LabAction`; the close-the-loop example as a policy loop on the run; the protocol's minor version moves again, and the changelog says so. | `refactor: one way to act on a greenhouse` | Done: the close-the-loop example as a policy (#393), the plant lab's crop actions (#394), the engine's actions and executor (#395), and the protocol's first action format |
-| P13.10 | The QA scenario below, run and recorded. | `test(e2e): a plan carried out, late, on time and refused` | Run at `88f35bae`, [recorded below](#recorded-at-88f35bae): all twelve steps but step 11's last clause, an assigned action keeping its assignment as it is carried, which is what is left; steps 5 and 6 through the simulator's service, as no route offers them |
+| P13.10 | The QA scenario below, run and recorded. | `test(e2e): a plan carried out, late, on time and refused` | Done: run at `88f35bae`, [recorded below](#recorded-at-88f35bae), all twelve steps passed, steps 5 and 6 through the simulator's service, as no route offers them; step 11's last clause, what becomes of an assigned action as it is carried, held by a test (#594) |
 
 ## Acceptance criteria
 
-- [ ] The protocol has one action type, one plan, one outcome record, one
+- [x] The protocol has one action type, one plan, one outcome record, one
   authorisation model, and one gateway and one executor contract, each
   with conformance checks and a published schema.
-- [ ] Every way of acting in decision 0046's table goes through them, and
+- [x] Every way of acting in decision 0046's table goes through them, and
   none of the old types or routes is left (a test lists the names that
   may not come back).
-- [ ] The simulator's gateway passes the gateway contract's conformance
+- [x] The simulator's gateway passes the gateway contract's conformance
   tests, the ones a physical site's gateway would be held to.
-- [ ] A plan of today's kinds gives today's run: every run id, replay
+- [x] A plan of today's kinds gives today's run: every run id, replay
   digest, kept opening day and reference view unchanged.
-- [ ] The same plan gives the same records and outcomes, run after run;
+- [x] The same plan gives the same records and outcomes, run after run;
   simultaneous actions in the documented order.
-- [ ] Each lateness policy gives the documented outcomes, its dependents
+- [x] Each lateness policy gives the documented outcomes, its dependents
   included, on the simulated executor with durations.
-- [ ] Every planned action, every occurrence and every fallback ends in
+- [x] Every planned action, every occurrence and every fallback ends in
   exactly one outcome with its `resolved_at`, and the outcome log keeps the
   consumer interface's rules (`check_polls`).
-- [ ] An action its principal may not carry out is refused when the plan is
+- [x] An action its principal may not carry out is refused when the plan is
   given; one whose rights are withdrawn before it falls due is refused
   then, and a replay from a checkpoint refuses it again. No executor
   contract method takes a principal.
-- [ ] A plan whose actions name a principal other than its authenticated
+- [x] A plan whose actions name a principal other than its authenticated
   submitter, without a grant on its behalf, is refused whole; so is a
   malformed plan, by its receipt, with no outcome written.
-- [ ] Actions at one instant run in a stable topological order, a
+- [x] Actions at one instant run in a stable topological order, a
   prerequisite before what waits for it whatever its place, and actions of
   different plans in the gateway's order of acceptance, the same every
   time.
-- [ ] `on_late` is one choice, `critical` among them; a plan that gives a
+- [x] `on_late` is one choice, `critical` among them; a plan that gives a
   fallback without choosing it is malformed.
-- [ ] A manager's revision keeps the owner's unchanged actions and their
+- [x] A manager's revision keeps the owner's unchanged actions and their
   principals, and checks only what it adds or changes against its own
   rights.
-- [ ] A cancellation key, or a whole-plan cancellation, from a revision a
+- [x] A cancellation key, or a whole-plan cancellation, from a revision a
   later one replaced, or from an epoch that has ended, is stale: refused
   in the receipt, nothing cancelled; a plan given for an ended epoch is
   refused whole.
-- [ ] A window or an as-soon-as-possible action starts at the earliest
+- [x] A window or an as-soon-as-possible action starts at the earliest
   instant an executor can honour, the same in every run.
-- [ ] A recurrence with a period that is not positive, or a plan beyond the
+- [x] A recurrence with a period that is not positive, or a plan beyond the
   gateway's limits, is refused whole; the graph is checked without
   expanding its occurrences.
-- [ ] A `set_target` outside its target's unit or range is malformed.
-- [ ] An assignment already sent whose authorisation is withdrawn before it
+- [x] A `set_target` outside its target's unit or range is malformed.
+- [x] An assignment already sent whose authorisation is withdrawn before it
   falls due is revoked: refused if it had not started.
-- [ ] An executor states its lead time for each kind, and a gateway sends no
+- [x] An executor states its lead time for each kind, and a gateway sends no
   assignment earlier than that before its instant.
-- [ ] On an executor that drops messages: no assignment is carried out
+- [x] On an executor that drops messages: no assignment is carried out
   twice, a revoked one that had not started is cancelled, and one whose
   report never comes is `unconfirmed`, with what waits for it cancelled.
-- [ ] An action refused when due, because the greenhouse is not as it
+- [x] An action refused when due, because the greenhouse is not as it
   needed, is refused then, not when the plan was given; one no executor
   can carry out, or not at its instant, is refused at once.
-- [ ] A revision steers a playing run from the next instant its executors
+- [x] A revision steers a playing run from the next instant its executors
   honour, in the same run and epoch, for every kind.
-- [ ] Listing the actions as they stand returns every one not yet
+- [x] Listing the actions as they stand returns every one not yet
   resolved, with its state, due instant where known, principal and
   dependencies, filtered by state, kind, target and plan; a resolved one
   is in the outcome log, not the listing.
-- [ ] Cancelling chosen actions cancels those and no others, each outcome
+- [x] Cancelling chosen actions cancels those and no others, each outcome
   naming who cancelled it; one already assigned is revoked; what waits for
   it is cancelled unless its plan says `proceed`; one the caller may not
   cancel is refused in the receipt and left as it was.
-- [ ] When the next run or epoch continues the previous one's clock, as
+- [x] When the next run or epoch continues the previous one's clock, as
   its gateway says (`continues_from`), its pending actions are carried,
   checked again: one whose
   target no longer exists, whose kind or instant no executor honours, or
   which its principal may no longer do is refused with that reason, the
-  others keep their ids, principals and dependencies; one already assigned
-  keeps its assignment and is not carried out twice.
-- [ ] When the next run or epoch starts its clock again from the run's
+  others keep their ids, principals and dependencies; one already started
+  keeps its assignment, and one assigned but not started is revoked and
+  assigned again, so that none is carried out twice.
+- [x] When the next run or epoch starts its clock again from the run's
   start, as the playback's restart does, its pending actions are
   cancelled, each with the reason that the run started over. A run that
   ends for good cancels its pending actions.
-- [ ] A finished or recorded run refuses a plan with `ActionNotExecutable`.
-- [ ] A control policy runs on the run through the loop above.
+- [x] A finished or recorded run refuses a plan with `ActionNotExecutable`.
+- [x] A control policy runs on the run through the loop above.
+
+All 27 were checked on 2026-11-06 against the tests and the code that hold
+them. Two clauses are held by their code alone, with no test that fails
+without it: a manager's revision checking only what it adds or changes, and a
+replay from a checkpoint refusing an action whose rights were withdrawn, which
+a checkpoint does by keeping the run's plan, from which what was revoked or
+refused is left out (`RunExecutor.plan`). Tests for the two are
+[future work](future-work.md#actions-and-plans-after-p13).
 
 ## Final QA scenario
 
@@ -726,7 +737,8 @@ consumer following:
     that continues, again into a new epoch, a device gone from its
     configuration: the pending action that sets it is refused as it is
     carried, with that reason; the others keep their ids, principals and
-    dependencies, and an assigned one keeps its assignment.
+    dependencies; an assigned one that has started keeps its assignment,
+    and one not yet started is revoked and assigned again.
 12. A plan of today's commands and targets alone: the run id is today's.
 
 ### Recorded at `88f35bae`
@@ -738,8 +750,9 @@ The walk was made three times over, twice on day 31, where truss 3 of plant 30 e
 on day 2 with truss 1. A plan needs a run with a gateway, and a run a worker computes has none, so
 the run is the playback the viewer follows, by the viewer's *Follow*, or
 `?scenario=reference_greenhouse&field=climate&follow=1`, not a run started from the start page.
-No route takes a plan from another principal or changes the authorisation (P13.7), so steps 5 and 6
-gave those two through the simulator's service, in the API's own process.
+No route takes a plan from another principal or changes the authorisation, by design: every write
+to the local API is the local operator's (decision 0052, P13.7). So steps 5 and 6 gave those two
+through the simulator's service, in the API's own process.
 
 | Step | Result | What was seen |
 | --- | --- | --- |
@@ -753,31 +766,34 @@ gave those two through the simulator's service, in the API's own process.
 | 8 | Passed | A client of the protocol's records and two routes alone, `/actuation/v1` and `/consumer/v1`, on a server started with `--play`, against the same plan given through the simulator's service in another process: the same four outcomes, in order, with their moments, effects and event identifiers. |
 | 9 | Passed | Listed with state, due instant, principal, and what waits for each. Cancelling `first`, which `second` waits for, and `third`, which nothing waits for: both `cancelled`, `cancelled_by` the local operator; `second` cancelled with its prerequisite; a second listing holds `fourth` alone, as it was. The lane says "cancelled: cancelled", and not by whom. |
 | 10 | Passed for the restart; nothing was left to cancel at the end | *Start over* with an action still to come: epoch 1 from day 0, its first outcome that action, `cancelled: the run started over`, and no level, target or crop action of the epoch before applying. Played to its end, in a new epoch, 18 minutes: nothing was pending when it ended, since whatever a run is given resolves by then. A level due at its last instant, and another waiting for it, were `executed`; a harvest waiting for it `missed`, "no instant its executor honours is left". A plan given after that answers 409, "has finished". Cancelling what is pending at the end is held on the in-memory gateway, `the run finished`. |
-| 11 | **Passed but for its last clause** | With a test's own way to lose a device, as the in-memory gateway's interface has none: `gone` refused as it is carried, "the run has no heater, as it was carried", the first outcome of the new epoch; the others keep their identifiers, principals and dependencies, and each is carried out once. An action assigned and not started does not keep its assignment: `restart` revokes it and sends it again, `e0-a1` becoming `e1-a4`, where the contract says "assignments kept". |
+| 11 | Passed, its last clause on 2026-11-06 | With a test's own way to lose a device, as the in-memory gateway's interface has none: `gone` refused as it is carried, "the run has no heater, as it was carried", the first outcome of the new epoch; the others keep their identifiers, principals and dependencies, and each is carried out once. An action assigned and not started does not keep its assignment: `restart` revokes it and sends it again, `e0-a1` becoming `e1-a4`. That is P13's design, above ("one that had not started is revoked, then carried and assigned again"), where the step, its criterion and the gateway contract's summary had said "assignments kept". They now say what the design does, and a test holds it (#594): one started keeps its assignment id and is not sent again, one not started is sent again under a new id, and each is carried out once. Decision 0046's summary still says that an action already assigned keeps its assignment; it is an accepted record, and P13's design is the detail. |
 | 12 | Passed | `test_run_identity`'s pinned runs, levels and targets among them, hold, 22 of 22. |
 
 Also seen: once, in the first walk, at a pause just after a day's start, the *Run played back* panel
 was gone from the page for over 30 s, which ended that walk before a picture was taken. A new page
 on the same state had it, and it did not happen in the later crossings of a day's start, so its
-cause is unknown. A plan given to a paused run by another client shows in the lane
-once the clock moves (P13.8). Under load the view's moment was up to 9 hours behind a paused clock,
-"Loading day 30, 8 h 55 min... 61 s", after a plan had the day worked again.
+cause is unknown; not reproduced, it has no follow-up. A plan given to a paused run by another
+client shows in the lane once the clock moves (P13.8). Under load the view's moment was up to 9
+hours behind a paused clock, "Loading day 30, 8 h 55 min... 61 s", after a plan had the day worked
+again: a note in [P18](p18-resources-and-deployment.md#steps). The lane's "cancelled: cancelled"
+in step 9, which does not say who, is [future work](future-work.md#actions-and-plans-after-p13).
 
 A followed run at its end reads "paused", with *Play* offered. A replay has no plan lane, and a run
 a worker computes no gateway: a plan to one answers 404, "no run". So a run started from the start
 page cannot be given a plan, and is steered by `/changes` (P17) instead.
 
-What is left of P13.10: step 11's last clause, either an assigned action kept as it is carried or
-the contract's words changed; and the panel gone once, if it comes again.
+Nothing is left of P13.10: step 11's last clause is held by a test (#594), and the contract's
+words now say what the gateway does.
 
-Not run: `--authorisation` with a file, which `test_run_authorisation` holds; an executor with
-hands in the viewer, which `test_run_crew` holds; the lane in a light theme; a plan on a followed
-run with another layout.
+Not run, and not followed up: `--authorisation` with a file, which `test_run_authorisation`
+holds; an executor with hands in the viewer, which `test_run_crew` holds; the lane in a light
+theme; a plan on a followed run with another layout.
 
 Tests hold what can be held: `e2e/plan-qa.spec.ts`, the lane and the consumer on one run, on a
 production build; `greenhouse_sim/tests/test_plan_final_qa.py`, steps 1 to 10 through the gateway's
-and the consumer's routes; `test_actuation_contracts.py`, step 11, each carried out once, and what a
-run that ends cancels. `test_run_identity` holds step 12.
+and the consumer's routes; `test_actuation_contracts.py`, step 11, each carried out once, what
+becomes of an assigned action as it is carried, and what a run that ends cancels.
+`test_run_identity` holds step 12.
 
 ## Settled in P13.1
 
@@ -815,7 +831,8 @@ What the design left to its first step, as P13.1 settles it:
   cannot, a plan's graph and an outcome's agreement with its status, the
   records and the conformance checks hold. Checking documents against the
   schemas with a JSON Schema validator in the tests waits for that
-  validator as a development dependency: a follow-up.
+  validator as a development dependency:
+  [future work](future-work.md#documents-checked-against-the-published-schemas).
 - **Numbers are finite** in every record of acting on a greenhouse: JSON
   has no infinity and no NaN.
 - **The reference implementation** is in the package, beside the store's
@@ -912,7 +929,8 @@ What the design left to its first step, as P13.1 settles it:
   logs have them.
 - **Later:** the routes that give, steer, list and cancel plans (P13.7),
   and the viewer's plan lane (P13.8). Until then, the playback's state
-  lists its target changes, not the levels a plan sets.
+  lists its target changes, not the levels a plan sets. Both came, in
+  P13.7 and P13.8.
 
 ## Settled in P13.4
 
@@ -1019,7 +1037,9 @@ which changes no run, then the run carrying out a plan's crop actions.
   within the day (the roadmap's project of its own). Until the viewer
   follows a playback's whole plan (P13.8), its state lists its target
   changes alone: a viewer following it draws the crop without the crop
-  actions given to it, which its records include.
+  actions given to it, which its records include. The routes and the
+  viewer came, in P13.7 and P13.8; crop work within the day is
+  [future work](future-work.md#crop-work-within-the-day).
 
 ## Settled in P13.6
 
@@ -1065,7 +1085,8 @@ which changes no run, then the run carrying out a plan's crop actions.
   decided ahead of the records.
 - **Not yet:** the server takes no crew of its own, so its runs have none.
   A hand that the crop refuses an action for is not handed back to the
-  actions already assigned after it, which keep their instants.
+  actions already assigned after it, which keep their instants. Both are
+  [future work](future-work.md#actions-and-plans-after-p13).
 
 ## Settled in P13.7
 
@@ -1087,7 +1108,8 @@ which changes no run, then the run carrying out a plan's crop actions.
   run and epoch, as a plan given while it plays does from then on, so the
   run keeps its identity. A plan that is part of a run's request, and of
   its identity, is still the address's spellings (P13.2). Taking one as a
-  JSON plan is not yet done.
+  JSON plan is not yet done:
+  [future work](future-work.md#actions-and-plans-after-p13).
 - **The targets route is an alias,** deprecated. Each call gives the plan
   `targets` its next revision: the changes so far and the new ones. A
   revision given over the routes is the one it revises next, so the two
@@ -1103,8 +1125,9 @@ which changes no run, then the run carrying out a plan's crop actions.
   working the season's daily commands out again
   (`climate_runs.checked_actions`); that check had cost 6 ms an action.
 - **Not yet:** the number of plans is not bounded, only each plan. No
-  route serves a gateway's limits. The viewer's development server does
-  not pass `/actuation` on to the API (P13.8).
+  route serves a gateway's limits. Both are a note in
+  [P18](p18-resources-and-deployment.md#steps). The viewer's development
+  server did not pass `/actuation` on to the API: P13.8 does.
 
 ## Settled in P13.8
 
@@ -1168,7 +1191,8 @@ plan, the timeline's plan lane, and crop actions given from the viewer.
   gateway; its actions, the protocol's (P13.5), are its address's plan, as
   a run's are before it runs.
 - **Not yet:** the schedule's remove and repeat edit the run drawn, not the
-  plan, and so make another run while one is followed.
+  plan, and so make another run while one is followed:
+  [future work](future-work.md#actions-and-plans-after-p13).
 
 ## Settled in P13.9
 
