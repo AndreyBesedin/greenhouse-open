@@ -61,7 +61,12 @@ takes one checks first that it is still there.
 **Builder**
 
 - [x] "Run this revision" with an empty seed gives no feedback beside the button.
-- [ ] Some text is too pale in the dark theme.
+- [x] Some text is too pale in the dark theme. Measured at `a2c27d2a`, in both themes: the
+  note where the house is to be drawn, 2.16 on the browser's white at the walk, reads 8.66
+  since #610 gave the page the browser's dark ground. Short of 4.5 was the inspector's
+  placeholder, "power_w, base.z", the browser's #757575 on its dark field, 2.43. It now
+  takes `--text-muted`, 5.18, and a browser test holds the builder's words to 4.5 on what
+  each is drawn on.
 - [x] `builder/portable.py` words its refusals as "format None" and "not JSON:
   Expecting value…".
 

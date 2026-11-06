@@ -395,7 +395,7 @@ Separate from the above, each seen in review, none required by it:
 | The four button families' differences: padding 12 or 18, a page's ground or none | Landing, replay |
 | `Button` drawn from tokens on the builder and panels, not by the browser | All panels: the largest change here |
 | Alerts in `--warn`: the 17 bare ones | Panels, when each shows |
-| Contrast: what `CONTRAST_FAILURES` lists, and the builder's note on a view with no ground of its own (`--text-muted` on the browser's white, 2.16 in the dark theme), which no pair of tokens can show | Charts, control outlines, the builder |
+| Contrast: what `CONTRAST_FAILURES` lists. The builder's words on a ground no pair of tokens can show are held by `e2e/builder.spec.ts`: its note on a view with no ground of its own, 2.16 on the browser's white in the dark theme, is 8.66 on its dark ground since #610, and its placeholder took `--text-muted` in [P17's clean-up](p17-cleanup.md) | Charts, control outlines |
 | A first visit follows `prefers-color-scheme`, not always dark | First visit only |
 | `color-scheme` set once on `:root`, not in five rules | Scrollbars and controls outside those rules |
 | Buttons by what they do, from the [QA of 2026-11-04](qa-2026-11-04.md): *Delete* in a red role and *Play* in a green one, each a token of its own (`danger` is `--warn`'s orange today, and no green role exists) | Every *Delete* and *Play*, once pages use `Button` |

@@ -1699,6 +1699,13 @@
   color: var(--text-muted);
 }
 
+/* What stands in for a value left empty, as a note is written. The browser's own
+ * is #757575 in both themes: 2.43:1 on its dark field. `e2e/builder.spec.ts`
+ * holds the builder's words to 4.5:1 on what they are drawn on. */
+.builder-side ::placeholder {
+  color: var(--text-muted);
+}
+
 /* A scenario handed on as a file, and the two ways out of the builder
  * (P17.11). */
 .builder-share,
