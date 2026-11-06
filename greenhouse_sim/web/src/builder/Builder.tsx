@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { framing } from "../camera";
 import { entityBounds, type OverlayPrimitive } from "../debug/overlays";
 import { HomeButton } from "../landing/HomeButton";
 import {
@@ -17,10 +18,10 @@ import {
   uploadedHouse,
   uploadedScenario,
 } from "../landing/uploaded";
-import { greenhouseExtent, qaGreenhousePose } from "../qa/greenhouseViews";
 import type { ScenarioSummary, ScenariosState } from "../scenarios";
 import { loadScenarios } from "../scenarios";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
+import { houseBox } from "../scene/useFollowFraming";
 import { Viewport } from "../Viewport";
 import {
   assess,
@@ -116,6 +117,14 @@ function unsaved(editing: Editing | null): boolean {
     madeOn(editing) === null ||
     !same(editing.saved?.installation ?? editing.history.present, editing.history.present)
   );
+}
+
+/** The width of a view over its height, the window's while it has no size of
+ * its own (before it is laid out, or in a DOM that lays nothing out). */
+function aspectOf(view: HTMLElement | null): number {
+  return view !== null && view.clientHeight > 0
+    ? view.clientWidth / view.clientHeight
+    : window.innerWidth / window.innerHeight;
 }
 
 /** A fetch that `controller` cancels. */
@@ -695,14 +704,17 @@ export function Builder({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // The house seen from outside, as the greenhouse's QA view frames it: once
-  // for each size it has, so that an edit leaves the camera where it is.
-  const extent = snapshot === null ? null : greenhouseExtent(snapshot);
-  const extentKey = JSON.stringify(extent);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: framed once for each extent
+  // The house framed whole in the view, however large it is, as a scenario
+  // opened in the viewer is: once for each box it stands in, so that an edit
+  // leaves the camera where it is. The view is laid out before any house is
+  // drawn in it, so its shape is read as it stands.
+  const view = useRef<HTMLDivElement>(null);
+  const box = snapshot === null ? null : houseBox(snapshot);
+  const boxKey = JSON.stringify(box);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: framed once for each box
   const pose = useMemo(
-    () => (extent === null ? null : qaGreenhousePose("outside", extent)),
-    [extentKey],
+    () => (box === null ? null : framing(box.base, box.size, aspectOf(view.current))),
+    [boxKey],
   );
 
   // The items an error names, outlined on the house; the one item chosen,
@@ -927,7 +939,7 @@ export function Builder({
           </>
         )}
       </div>
-      <div className="builder-view" data-testid="builder-view">
+      <div ref={view} className="builder-view" data-testid="builder-view">
         {snapshot !== null ? (
           <Viewport
             snapshot={snapshot}
