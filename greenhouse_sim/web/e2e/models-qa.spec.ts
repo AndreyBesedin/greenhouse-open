@@ -94,7 +94,10 @@ test("P14.7's QA: a copy growing the simple crop is drawn with its harvest, and 
     page,
     await changedFile(page, REFERENCE, (document) => {
       document.greenhouse_id = COPY;
-      document.name = "Reference greenhouse, simple crop";
+      // Named so that it does not start "Reference greenhouse": it stays
+      // registered in the lane's simulator, where later specs, such as the
+      // README demo's, search for the reference greenhouse by that prefix.
+      document.name = "Simple-crop copy of the reference greenhouse";
       document.description = "The reference greenhouse, its rows growing the simple crop.";
       document.models.crop = { model: "simple", parameters: {} };
       const { row_crops } = document.installation as { row_crops: { crop_model: string }[] };
@@ -280,9 +283,15 @@ test.describe("a kind of equipment the viewer was built without", () => {
       await expect(page.getByTestId("equipment-summary")).toHaveText(
         /^Equipment: panel 1 100%, panel 2 100%;/,
       );
-      await expect(air).toContainText(/Air [\d.]+ °C, all off 8\.0 °C/, ARRIVES);
-      const warmed = Number(/Air ([\d.]+) °C/.exec((await air.textContent()) ?? "")?.[1]);
-      expect(warmed).toBeGreaterThan(8.0 + 5);
+      // The panel keeps the hour before's trace while the next one loads,
+      // so the reading is asked again until the warmed air arrives.
+      await expect
+        .poll(
+          async () => Number(/Air ([\d.]+) °C/.exec((await air.textContent()) ?? "")?.[1]),
+          ARRIVES,
+        )
+        .toBeGreaterThan(8.0 + 5);
+      await expect(air).toContainText(/all off 8\.0 °C/);
     });
     // The view may still be asking for what it draws.
     await page.unrouteAll({ behavior: "ignoreErrors" });
