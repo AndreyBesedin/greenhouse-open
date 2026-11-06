@@ -366,10 +366,12 @@ saved revision run as a scenario of its own, which the viewer opens.
 ## Develop
 
 Node 24 (see `.nvmrc`) and npm. `uv run setup`, from the repository's root,
-installs the packages (`npm ci`) and the browsers; `uv run viewer-checks`
+installs them into the workspace's `.venv` when the machine's Node is missing
+or older, then the packages (`npm ci`) and the browsers; `uv run viewer-checks`
 runs the lint, the type check, the coverage and the build as CI does, and
 `uv run browser-tests` the browser tests, with the workspace's Python. From
-this directory, each step:
+this directory, each step, with `uv run` before it, or `.venv` activated,
+when the Node is the workspace's:
 
 ```bash
 npm ci

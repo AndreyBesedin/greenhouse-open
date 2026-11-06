@@ -69,12 +69,15 @@ def problems(api_port: int, viewer_port: int) -> list[str]:
         )
     node = shutil.which("node")
     if node is None or shutil.which("npm") is None:
-        found.append(f"Node {NODE_NEEDED} and npm are needed: https://nodejs.org")
+        found.append(f"Node {NODE_NEEDED} and npm are needed: uv run setup installs them")
     else:
         version = subprocess.run([node, "--version"], capture_output=True, text=True).stdout
         major = int(version.strip().lstrip("v").split(".")[0] or 0)
         if major < NODE_NEEDED:
-            found.append(f"Node {NODE_NEEDED} or newer is needed; this is {version.strip()}.")
+            found.append(
+                f"Node {NODE_NEEDED} or newer is needed; this is {version.strip()}: "
+                "uv run setup installs it"
+            )
     if not (WEB / "node_modules").is_dir():
         found.append("The viewer's packages are not installed: uv run setup")
     for name, port, flag in (

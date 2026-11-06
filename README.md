@@ -37,12 +37,11 @@ path from its observations, so decision logic cannot use it by accident.
 
 ## Run it
 
-On a machine with [uv](https://docs.astral.sh/uv/getting-started/installation/)
-and, for the browser viewer, [Node 24](https://nodejs.org):
+On a machine with [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
 git clone https://github.com/AndreyBesedin/greenhouse-open.git && cd greenhouse-open
-uv run setup   # installs everything: Python 3.14 if missing, the packages, the viewer
+uv run setup   # installs everything: Python 3.14 and Node 24 if missing, the packages, the viewer
 uv run demo    # starts the simulator and its viewer, on the reference greenhouse
 ```
 

@@ -34,16 +34,17 @@ decision 0044).
 
 ## Set up development checks
 
-With [uv](https://docs.astral.sh/uv/getting-started/installation/) and Node 24
-(see `greenhouse_sim/web/.nvmrc`), once, from the clone:
+With [uv](https://docs.astral.sh/uv/getting-started/installation/), once, from
+the clone:
 
 ```bash
 uv run setup
 ```
 
 `uv run` installs Python 3.14 when the machine has none, the packages and
-the development tools; `setup` adds the viewer's packages, Playwright's
-Chromium and the repository's git hooks. The pre-commit hook handles fast
+the development tools; `setup` adds Node 24 (`greenhouse_sim/web/.nvmrc`),
+into `.venv`, when the machine's is missing or older, then the viewer's
+packages, Playwright's Chromium and the repository's git hooks. The pre-commit hook handles fast
 file hygiene, Ruff fixes and formatting, the named-numbers check, and Biome
 for viewer files, which needs the viewer's packages for any commit that
 touches `greenhouse_sim/web/`, a README fix included. The pre-push hook runs

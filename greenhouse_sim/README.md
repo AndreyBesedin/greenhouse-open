@@ -136,7 +136,7 @@ run at a moment of it, or followed as it is played back, growing as its
 clock moves on, with controls to play, pause and start it over.
 `uv run demo`, from a clone, starts both and opens the reference greenhouse
 ([docs/demo.md](../docs/demo.md)), once `uv run setup` has installed the
-viewer's packages (Node 24). Or start the local API, then the viewer:
+viewer's packages (and Node 24, if the machine's is older). Or start the local API, then the viewer:
 
 ```bash
 uv run api      # http://127.0.0.1:8765/api

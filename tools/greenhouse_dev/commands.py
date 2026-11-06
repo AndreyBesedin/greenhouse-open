@@ -1,8 +1,9 @@
 """A command for each task, run from a clone as `uv run <command>`.
 
 `uv run` installs Python 3.14 and the Python packages before it runs any of
-them; `uv run setup` installs what it cannot: the viewer's packages,
-Playwright's Chromium and the git hooks. Each command works from the
+them; `uv run setup` installs what it cannot: Node, when the machine's is
+missing or too old, the viewer's packages, Playwright's Chromium and the git
+hooks. Each command works from the
 repository's root, whichever directory it is called from, with the
 workspace's Python, and passes what follows its name on:
 `uv run demo --no-browser`, `uv run check --fast`.
@@ -14,11 +15,15 @@ by the script's name.
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tomllib
+import urllib.error
+import urllib.request
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,6 +35,10 @@ WEB = ROOT / "greenhouse_sim" / "web"
 SCRIPTS = ROOT / "scripts"
 # The Node the viewer's `.nvmrc` names (decision 0008).
 NODE_NEEDED = int((WEB / ".nvmrc").read_text().strip())
+# Node's releases, each with its version, from which `uv run setup` takes the
+# latest of the version needed when it installs Node, and how long it waits.
+NODE_RELEASES = "https://nodejs.org/dist/index.json"
+NODE_RELEASES_TIMEOUT_S = 30
 # Where `uv run record-demo` finds the video Playwright recorded.
 DEMO_VIDEOS = WEB / "test-results" / "demo"
 # The simulator's version, which the demo's video is named for.
@@ -50,19 +59,80 @@ def _environment(**extra: str) -> dict[str, str]:
     return dict(os.environ, PATH=path, PYTHON=sys.executable, **extra)
 
 
+def _which(name: str) -> str | None:
+    """`name`'s path on the workspace's path, where the Node `uv run setup`
+    installs comes before the machine's."""
+    return shutil.which(name, path=_environment()["PATH"])
+
+
+def _node_found() -> str:
+    """The version of the Node the workspace's path has, such as `v24.11.0`,
+    or "" when it has no Node and npm."""
+    node = _which("node")
+    if node is None or _which("npm") is None:
+        return ""
+    return subprocess.run([node, "--version"], capture_output=True, text=True).stdout.strip()
+
+
 def _node() -> str:
     """npm's path, once Node is found at the version the viewer needs."""
-    node, npm = shutil.which("node"), shutil.which("npm")
-    if node is None or npm is None:
+    version = _node_found()
+    if not version:
         raise Unready(
-            f"Node {NODE_NEEDED} and npm are needed for the viewer: https://nodejs.org, "
-            f"or `nvm install {NODE_NEEDED}`."
+            f"Node {NODE_NEEDED} and npm are needed for the viewer: "
+            "`uv run setup` installs them in the workspace."
         )
-    version = subprocess.run([node, "--version"], capture_output=True, text=True).stdout.strip()
-    major = int(version.lstrip("v").split(".")[0] or 0)
-    if major < NODE_NEEDED:
-        raise Unready(f"Node {NODE_NEEDED} or newer is needed for the viewer; this is {version}.")
-    return npm
+    if int(version.lstrip("v").split(".")[0] or 0) < NODE_NEEDED:
+        raise Unready(
+            f"Node {NODE_NEEDED} or newer is needed for the viewer; the path's is {version}: "
+            "`uv run setup` installs it in the workspace."
+        )
+    return str(_which("npm"))
+
+
+def _latest_node(major: int) -> str:
+    """The latest release of Node `major`, such as `24.11.0`. nodeenv would
+    find it from `--node=24` itself, but nodeenv 1.11 stops at the first
+    pre-release Node's list holds, such as `v27.0.0-alpha.0.0.0`."""
+    try:
+        with urllib.request.urlopen(NODE_RELEASES, timeout=NODE_RELEASES_TIMEOUT_S) as answer:
+            releases = json.load(answer)
+    except (OSError, ValueError) as failed:
+        raise Unready(
+            f"Node's releases could not be read from {NODE_RELEASES} ({failed}): install "
+            f"Node {NODE_NEEDED} from https://nodejs.org, or run `uv run setup` again."
+        ) from None
+    release = re.compile(rf"v{major}\.(\d+)\.(\d+)")
+    found = [
+        (int(matched[1]), int(matched[2]))
+        for entry in releases
+        if (matched := release.fullmatch(str(entry.get("version", ""))))
+    ]
+    if not found:
+        raise Unready(f"{NODE_RELEASES} lists no release of Node {major}.")
+    minor, patch = max(found)
+    return f"{major}.{minor}.{patch}"
+
+
+def _install_node() -> int:
+    """Installs the Node the viewer needs, the latest of its major version,
+    into the workspace's environment (decision 0069): its `bin`, which
+    `uv run` puts first on the path, for the workspace's commands alone."""
+    version = _latest_node(NODE_NEEDED)
+    print(
+        f"Node {NODE_NEEDED} is not on the path ({_node_found() or 'no Node'}): installing "
+        f"Node {version} in the workspace's environment, {sys.prefix}, for its commands alone."
+    )
+    return _run(
+        [
+            sys.executable,
+            "-m",
+            "nodeenv",
+            f"--python-virtualenv={sys.prefix}",
+            "--prebuilt",
+            f"--node={version}",
+        ]
+    )
 
 
 def _viewer() -> str:
@@ -91,7 +161,13 @@ def _arguments() -> list[str]:
 
 
 def _setup() -> int:
-    npm = _node()
+    try:
+        npm = _node()
+    except Unready:
+        code = _install_node()
+        if code:
+            return code
+        npm = _node()
     steps: list[tuple[list[str], Path]] = [
         ([npm, "ci"], WEB),
         ([npm, "exec", "--", "playwright", "install", "chromium"], WEB),
@@ -203,7 +279,8 @@ class Command:
 COMMANDS: dict[str, Command] = {
     "help": Command(_help, "list these commands"),
     "setup": Command(
-        _setup, "install what uv does not: the viewer's packages, Chromium and the git hooks"
+        _setup,
+        "install what uv does not: Node if needed, the viewer's packages, Chromium, the git hooks",
     ),
     "demo": Command(_demo, "the simulator and its viewer, open on the reference greenhouse"),
     "start": Command(_start, "the simulator and its viewer, open on the viewer's start page"),

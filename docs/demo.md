@@ -13,7 +13,10 @@ does not start.
   ([decision 0003](decisions/0003-require-python-3-14.md),
   [decision 0039](decisions/0039-develop-with-uv-one-workspace-a-command-for-each-task.md)).
 - **Node 24 and npm**, for the viewer
-  ([decision 0008](decisions/0008-build-the-viewer-with-npm-node-24-and-vite.md)).
+  ([decision 0008](decisions/0008-build-the-viewer-with-npm-node-24-and-vite.md)):
+  `uv run setup` installs them into the workspace's `.venv` when the
+  machine's Node is missing or older
+  ([decision 0069](decisions/0069-setup-installs-node-when-the-machines-is-missing-or-too-old.md)).
 - **A browser with WebGL**, on a machine with a graphics card for a smooth
   view. No other service is needed, and nothing leaves the machine: the API
   answers on the loopback interface only.
@@ -201,7 +204,8 @@ memory until it stops.
   on 8766 and previews on 4317 to 4320, apart from the demo's;
   `TEST_PORT_OFFSET` moves them all.
 - **The wrong Node.** The demo checks it before it starts, and says which
-  it needs: the version `greenhouse_sim/web/.nvmrc` names. `uv run`
+  it needs: the version `greenhouse_sim/web/.nvmrc` names. `uv run setup`
+  installs it into `.venv`, which `uv run` puts first on the path, as it
   provides the Python.
 - **The viewer's packages missing.** `uv run setup`.
 - **A slow first answer.** Opening day 86 is quick, from its kept
