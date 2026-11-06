@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { type CameraPose, framing } from "../camera";
 import type { Pending } from "../useLoad";
 import type { Point3 } from "../world";
+import type { SceneSnapshot } from "./generated/snapshotTypes";
 import type { SceneState } from "./sceneLoad";
 import type { SetSource } from "./useSource";
 
@@ -29,21 +30,25 @@ function useWindowAspect(): number {
   return aspect;
 }
 
+/** The box a scene's house stands in: the middle of its floor and its size,
+ * in metres, as `framing` frames it; none if the scene bounds no house. */
+export function houseBox(snapshot: SceneSnapshot): { base: Point3; size: Point3 } | null {
+  const bounds = snapshot.entities.find((entity) => entity.kind === "GREENHOUSE_BOUNDS");
+  return bounds?.shape.shape === "box"
+    ? {
+        base: bounds.transform.position,
+        size: { x: bounds.shape.size_x, y: bounds.shape.size_y, z: bounds.shape.size_z },
+      }
+    : null;
+}
+
 /** The box a scene's house stands in, from the scene the latest request asked
  * for, never one kept on show while another envelope is on its way. */
 function useLatestBounds(latestScene: SceneState | Pending) {
-  return useMemo(() => {
-    const bounds =
-      latestScene.status === "loaded"
-        ? latestScene.snapshot.entities.find((entity) => entity.kind === "GREENHOUSE_BOUNDS")
-        : undefined;
-    return bounds?.shape.shape === "box"
-      ? {
-          base: bounds.transform.position,
-          size: { x: bounds.shape.size_x, y: bounds.shape.size_y, z: bounds.shape.size_z },
-        }
-      : null;
-  }, [latestScene]);
+  return useMemo(
+    () => (latestScene.status === "loaded" ? houseBox(latestScene.snapshot) : null),
+    [latestScene],
+  );
 }
 
 /**
