@@ -128,6 +128,46 @@ describe("the replay's header", () => {
     );
   });
 
+  it("says why a failed run failed, and keeps only what it computed", () => {
+    rendered = render(
+      <ReplayHeader
+        name={null}
+        position={position({ status: "failed" })}
+        otherRunsHref="/"
+        failure="its worker ran out of memory"
+        onFork={noFork}
+      />,
+    );
+    const { container } = rendered;
+
+    expect(said(container, "replay-failed")).toBe("This run failed: its worker ran out of memory.");
+    expect(said(container, "replay-subtitle")).toBe("seed 2 · epoch 3 · kept to where it failed");
+  });
+
+  it("says a run failed while why is on its way, and nothing of one that did not", () => {
+    rendered = render(
+      <ReplayHeader
+        name={null}
+        position={position({ status: "failed" })}
+        otherRunsHref="/"
+        onFork={noFork}
+      />,
+    );
+    expect(said(rendered.container, "replay-failed")).toBe("This run failed.");
+    rendered.unmount();
+
+    rendered = render(
+      <ReplayHeader
+        name={null}
+        position={position()}
+        otherRunsHref="/"
+        failure="ignored"
+        onFork={noFork}
+      />,
+    );
+    expect(rendered.container.querySelector('[data-testid="replay-failed"]')).toBeNull();
+  });
+
   describe("a fork from the moment shown", () => {
     function shown(onFork: () => void) {
       rendered = render(
