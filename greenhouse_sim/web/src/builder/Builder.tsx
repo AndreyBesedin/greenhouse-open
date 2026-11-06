@@ -387,7 +387,8 @@ export function Builder({
     );
   }
 
-  /** An installation's file opened as a draft not saved: a draft of its
+  /** An installation's file opened as a draft not saved, said to be a house
+   * file, as a scenario file's house is said to be its: a draft of its
    * identifier is left as it is kept, and a save of this one is refused until
    * it is renamed. */
   function beginImported(
@@ -399,7 +400,7 @@ export function Builder({
     begin(
       asked,
       { schemaVersion: schema_version, history: begun(installation), saved: null },
-      `Imported ${installation.name} from ${fileName}; not saved yet.`,
+      `Imported ${installation.name} from ${fileName}, a house file: it holds no run settings; not saved yet.`,
       known,
     );
   }

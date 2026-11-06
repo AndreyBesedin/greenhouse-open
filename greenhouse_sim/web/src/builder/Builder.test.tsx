@@ -718,7 +718,7 @@ describe("the setup builder (P12.2)", () => {
       await settled();
 
       expect(said(shown.container, "builder-status")).toBe(
-        `Imported ${houseName} from my_greenhouse.json; not saved yet.`,
+        `Imported ${houseName} from my_greenhouse.json, a house file: it holds no run settings; not saved yet.`,
       );
       expect(said(shown.container, "builder-draft")).toContain("not saved");
     });
