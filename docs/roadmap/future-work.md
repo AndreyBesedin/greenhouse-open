@@ -93,10 +93,11 @@ final QA left open:
 - **Who cancelled, in the plan lane** (the
   [final QA](archive/p13-actions.md#recorded-at-88f35bae), step 9): the lane reads
   "cancelled: cancelled", though the outcome names who cancelled it.
-- **Tests for two of its criteria** ([P13](archive/p13-actions.md#acceptance-criteria)),
-  held by their code alone: a manager's revision checked only for what it adds or
-  changes, and a run restored from a checkpoint after a withdrawal of rights not
-  carrying the refused action out.
+- **An epoch resumed after its authorisation changed**
+  ([P13](archive/p13-actions.md#acceptance-criteria)'s criterion 8): carried on from its
+  checkpoint, it stops with a conflict, since its log keeps no change of authorisation;
+  an entry of the
+  [P17 clean-up](p17-cleanup.md#from-p13s-acceptance-an-epoch-resumed-after-its-authorisation-changed).
 
 ## CO₂ and light targets
 
@@ -184,6 +185,24 @@ neither held to a published result. Planned then:
   the crop part's other models.
 - **Each model held to its sources:** the data it was validated against
   kept as a reference test, where its licence allows.
+
+## Models and devices, after P14
+
+Recorded 2026-11-06, from [P14.7's QA](archive/p14-models-by-manifest.md#recorded-at-67a8cebc),
+none of them P14.7's own. Planned then:
+
+- **A registered kind in a stored run.** A kind of equipment registered by a module the API
+  imports is not known to the workers the API spawns, so a stored run of a house that has one
+  fails before its first day ("no kind of equipment 'radiant_panel'"), though the viewer's
+  climate runs use it. The workers register what the API does, or entry points come (decision
+  0054's open question 3).
+- **The builder and a kind it was not built with:** it opens no such house, since its forms are
+  read from the published schema, which names the kinds the simulator was written with; the
+  viewer draws, lists and runs it.
+- **A checkpoint uploaded into another scenario's panel** is kept for the scenario it names,
+  without a word: the panel says whose it is, or refuses one that is not its scenario's.
+- **The builder's run step for an uploaded copy** offers its own start and seed (1 April, 0)
+  rather than the file's (1 March, 42).
 
 ## Greenhouse R&D workflows and Modelica comparison
 

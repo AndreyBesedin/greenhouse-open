@@ -451,7 +451,11 @@ uv run viewer-checks   # lint, type check, coverage, build
 uv run browser-tests   # Playwright, serving the simulator from the workspace's Python
 ```
 
-CI runs the browser tests in lanes at once, a job each (decision 0032);
+CI runs the browser tests in lanes at once, a job each (decisions 0032, 0071);
 `uv run browser-tests` runs every lane, one after another. To run one lane
 as CI does, name it: `BROWSER_TEST_LANE=crop uv run browser-tests`. What
-follows the command goes to Playwright: `uv run browser-tests e2e/camera.spec.ts`.
+follows the command goes to Playwright: `uv run browser-tests e2e/camera.spec.ts`
+runs that spec alone, without the stages before it (`--no-deps`, which the
+command adds when a spec is named). Specs named together share one simulator,
+which the stages otherwise keep apart: add `--workers=1` for those that must
+not run at once.

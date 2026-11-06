@@ -211,6 +211,46 @@ def test_the_demos_recording_says_it_needs_ffmpeg_before_it_records(
     assert ran == []
 
 
+@pytest.mark.parametrize(
+    ("given", "playwright_gets"),
+    [
+        # A spec named runs alone, with or without the `--` written before it.
+        (["--", "e2e/camera.spec.ts"], ["--no-deps", "e2e/camera.spec.ts"]),
+        (["e2e/camera.spec.ts", "--workers=1"], ["--no-deps", "e2e/camera.spec.ts", "--workers=1"]),
+        (["--no-deps", "e2e/camera.spec.ts"], ["--no-deps", "e2e/camera.spec.ts"]),
+        # No spec named: every stage, in order, as CI's lanes run them.
+        ([], []),
+        (["--", "--list"], ["--list"]),
+    ],
+)
+def test_the_browser_tests_pass_on_what_they_are_given_and_run_a_spec_named_alone(
+    monkeypatch: pytest.MonkeyPatch,
+    started: list[list[str]],
+    given: list[str],
+    playwright_gets: list[str],
+) -> None:
+    monkeypatch.setattr(commands, "_viewer", lambda: "npm")
+    monkeypatch.setattr(sys, "argv", ["/workspace/.venv/bin/browser-tests", *given])
+
+    with pytest.raises(SystemExit):
+        commands.main()
+
+    assert started == [["npm", "run", "e2e", "--", *playwright_gets]]
+
+
+def test_a_command_takes_what_follows_a_dash_dash_as_its_arguments(
+    monkeypatch: pytest.MonkeyPatch, started: list[list[str]]
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["/workspace/.venv/bin/demo", "--", "--no-browser"])
+
+    with pytest.raises(SystemExit):
+        commands.main()
+
+    assert [command[1:] for command in started] == [
+        [str(commands.SCRIPTS / "demo.py"), "--no-browser"]
+    ]
+
+
 def test_the_demos_help_needs_no_viewer(
     monkeypatch: pytest.MonkeyPatch, started: list[list[str]]
 ) -> None:

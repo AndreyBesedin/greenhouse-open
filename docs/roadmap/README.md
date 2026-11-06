@@ -139,8 +139,9 @@ A project's QA and a manual walk end the same way, in this order:
 3. **Plan the rest,** in the report, the project's clean-up or a project of its own.
 4. **Release.** Work that adds a feature starts again after it.
 
-The last QA is [the walk of 2026-11-04](qa-2026-11-04.md). What it found to fix is fixed, and
-what it planned is in its report.
+The last QA is [the walk of 2026-11-04](qa-2026-11-04.md), closed: what it found to fix is
+fixed, and what it planned is in [P22](p22-watching-and-starting-a-run.md) and P19, as its
+report says.
 
 ## Order of work
 
@@ -163,9 +164,9 @@ what it planned is in its report.
 
 - **[Future work](future-work.md):** the plans with no project of their own yet.
   Camera imperfections, climate setpoints beyond heating (P11's rest), crop work within
-  the day, actions and plans after P13, CO₂ and light targets, intelligence
-  components, crop models from plant research, a Modelica comparison, the test suite
-  and CI time, a second repository audit, and an assistant in the viewer.
+  the day, actions and plans after P13, models and devices after P14, CO₂ and light targets,
+  intelligence components, crop models from plant research, a Modelica comparison, the
+  test suite and CI time, a second repository audit, and an assistant in the viewer.
 - **[QA of 2026-11-04](qa-2026-11-04.md):** what a manual walk of the viewer found, and what follows from it.
 - **[P17's clean-up](p17-cleanup.md):** what P17's QA and walks left.
 - **[The archive](archive/README.md):** the documents of finished projects, read

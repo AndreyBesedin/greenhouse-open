@@ -172,6 +172,25 @@ pale text.
   and has no start button, though a start now plays the run again. It now answers 409 with its
   epoch's `reason`, the list leaves it out, and the panel says why and offers to play it again.
 
+### From P13's acceptance: an epoch resumed after its authorisation changed
+
+Found on 2026-11-06 while writing a test for [P13](archive/p13-actions.md#acceptance-criteria)'s
+criterion 8, on the one-plant box with an epoch store, and not seen in a walk.
+
+- [ ] **Medium: an epoch whose authorisation changed while it ran cannot be carried on.**
+  The local operator's heater level, due at noon, was refused at noon, "no longer
+  authorised", after the right to set levels was withdrawn at 6 h; its first day was kept,
+  its checkpoint without the action. Carried on from that checkpoint (`workers.resume`, then
+  `Playback.resume_at`), the epoch stops with a conflict, "the log of epoch 0 of …, applied
+  again, does not give the outcomes it kept". A change of authorisation is not in the
+  epoch's log (`LogEntry`) or anywhere in the run store, so the log is applied again under one
+  authorisation, the resuming simulator's: under the first, the level is executed; under the
+  one that withdrew it, it is refused at once, "not authorised to set_level". Each differs
+  from the outcome kept, so the epoch refuses to go on rather than carrying a withdrawn action
+  out. The same epoch with no withdrawal is carried on to its end. The likely remedy is to log
+  each change of authorisation with its moment, and apply it again at that moment as a plan
+  given is; a test that resumes such an epoch is to come with the fix.
+
 ## Not covered by the walk
 
 About 75 of the first walk's 101 screenshots were not opened. The second walk did not

@@ -161,12 +161,12 @@ jobs:
         run: npm run build
 
   # The browser tests, in lanes that run at once, each on a machine of its
-  # own with a simulator of its own (decision 0032). A lane is named for the
-  # stage of `playwright.config.ts` it starts at; the configuration refuses
-  # a lane it does not cut, and runs none unless all of them are here. The
-  # ruleset requires each lane by its name, which a job skipped before its
-  # matrix expands does not report: for documentation alone, each lane runs
-  # and skips its steps.
+  # own with a simulator of its own (decisions 0032, 0071). A lane is named
+  # for the stage of `playwright.config.ts` it starts at; the configuration
+  # refuses a lane it does not cut, and runs none unless all of them are
+  # here. The ruleset requires each lane by its name, which a job skipped
+  # before its matrix expands does not report: for documentation alone,
+  # each lane runs and skips its steps.
   browser:
     name: browser tests (${{ matrix.lane }})
     needs: changes
@@ -177,7 +177,7 @@ jobs:
       # Every lane runs to its end, so that one run shows every failure.
       fail-fast: false
       matrix:
-        lane: [chromium, renderer-smoke, weather-day, crop]
+        lane: [chromium, renderer-smoke, weather-day, crop, worker-runs, models-qa]
     defaults:
       run:
         working-directory: greenhouse_sim/web
@@ -213,9 +213,16 @@ jobs:
         working-directory: .
         run: uv sync --locked --no-editable --no-dev
 
+      # Chromium alone, from Playwright's own servers. The runner's image has
+      # every library it needs: what `--with-deps` added was fonts alone
+      # (Japanese, Chinese, Thai, GNU FreeFont, Unifont, X's core fonts),
+      # 20 MB from an apt mirror that took ten minutes for them on about one
+      # job in ten. Should a later image lack a library, Playwright names it
+      # when it launches Chromium. The screenshots compared with baselines
+      # are drawn in the pinned image of `visual checks` (decision 0014).
       - name: Install Chromium
         if: needs.changes.outputs.documentation_only != 'true'
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Browser tests
         if: needs.changes.outputs.documentation_only != 'true'

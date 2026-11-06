@@ -91,8 +91,10 @@ const STAGES: Stage[] = [
 // of its own with a simulator of its own, so that a stage still shares it
 // with none of those above (decision 0032). A lane starts at the first
 // stage and at each of these, and is named for the stage it starts at.
+// The stages from `crop` on are cut in three, so that no lane takes more
+// than about ten minutes on CI (decision 0071).
 // Here, on one machine, the lanes run one after another, as one.
-const LANE_STARTS = ["renderer-smoke", "weather-day", "crop"];
+const LANE_STARTS = ["renderer-smoke", "weather-day", "crop", "worker-runs", "models-qa"];
 // The lane a CI job runs, and how many lanes CI runs: all of them
 // (`.github/workflows/ci.yml`).
 const LANE = process.env.BROWSER_TEST_LANE;

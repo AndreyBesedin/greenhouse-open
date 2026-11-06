@@ -386,7 +386,8 @@ before the API starts, as decision 0054 has a package do while there are no entr
 | 3.1 | Passed in the viewer; the builder cannot open it | The climate box's file under `radiant_box_qa`, with two panels of 5 kW on its floor at x 3 m and 8 m, uploaded from the start page: the simulator registered it, and the builder said "The uploaded scenario cannot be opened: not an assessed installation", since it reads an installation against the schema it was built with, which has no radiant panel. Opened in the viewer at `/?scenario=radiant_box_qa&field=climate`, its climate run worked out by the API. |
 | 3.2 | Passed | Its scene draws `panel 1` and `panel 2` as equipment, `device_kind` `radiant_panel`, doing `heats`, `heats_w` 5000; the Equipment panel lists them, off, beside the fan, the heater and the dehumidifier; each is drawn as a box on the floor, grey while off and in heating's colour while it runs. Both on at 1 h, at 2 h: "Air 20.8 °C, all off 8.0 °C", and the humidity 42.6 % against 97.4 %, which falls as the air warms, where the fogger's would have risen. |
 
-What is left: none of P14.7's own. Found on the way, and not P14.7's:
+What is left: none of P14.7's own. Found on the way, and not P14.7's, each now in
+[future work](../future-work.md#models-and-devices-after-p14):
 
 - A checkpoint uploaded into another scenario's panel is taken into its own scenario's
   checkpoints without a word: the panel could say whose it is, or refuse one that is not its

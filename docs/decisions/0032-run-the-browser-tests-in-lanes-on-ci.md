@@ -1,6 +1,6 @@
 # 0032: Run the browser tests in lanes on CI
 
-**Status:** Accepted
+**Status:** Accepted; its four lanes and their cut superseded by [0071](0071-cut-the-browser-tests-last-lane-in-three.md)
 **Date:** 2026-10-13
 
 ## Context

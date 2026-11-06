@@ -45,7 +45,7 @@ decision that changes course is a new record that supersedes the old one.
 | [0029](0029-test-hooks-mounted-in-a-dom-file-by-file.md) | Test hooks and components mounted, in a DOM, file by file | Accepted |
 | [0030](0030-hold-the-viewers-unit-test-coverage-to-a-floor.md) | Hold the viewer's unit-test coverage to a floor | Accepted |
 | [0031](0031-scenarios-are-versioned-json-manifests.md) | Scenarios are versioned JSON manifests | Accepted |
-| [0032](0032-run-the-browser-tests-in-lanes-on-ci.md) | Run the browser tests in lanes on CI | Accepted |
+| [0032](0032-run-the-browser-tests-in-lanes-on-ci.md) | Run the browser tests in lanes on CI | Accepted; its four lanes and their cut superseded by 0071 |
 | [0033](0033-update-dependencies-with-dependabot.md) | Update dependencies with Dependabot, minor and patch updates merging by themselves | Accepted; its review tick on Dependabot's pull requests superseded by 0034 |
 | [0034](0034-approve-dependabots-pull-requests-to-acknowledge-them.md) | Approve Dependabot's pull requests to acknowledge their review | Accepted |
 | [0035](0035-one-simulator-the-run-every-part-on-a-ladder-of-fidelity.md) | One simulator, the run, with every part on a ladder of fidelity | Accepted |
@@ -84,6 +84,7 @@ decision that changes course is a new record that supersedes the old one.
 | [0068](0068-the-viewers-design-system-is-its-own-tokens-and-components.md) | The viewer's design system is its own tokens and components | Accepted |
 | [0070](0070-a-finished-project-moves-to-the-roadmaps-archive.md) | A finished project moves to the roadmap's archive | Accepted |
 | [0069](0069-setup-installs-node-when-the-machines-is-missing-or-too-old.md) | `uv run setup` installs Node when the machine's is missing or too old | Accepted |
+| [0071](0071-cut-the-browser-tests-last-lane-in-three.md) | Cut the browser tests' last lane in three | Accepted |
 
 ## Template
 
