@@ -157,7 +157,12 @@ def _become(command: Sequence[str], cwd: Path = ROOT, env: Mapping[str, str] | N
 
 
 def _arguments() -> list[str]:
-    return sys.argv[1:]
+    """What follows the command's name, without a `--` before it: `uv run`
+    passes `uv run browser-tests -- e2e/x.spec.ts` on as it is written, and
+    the npm script each viewer command runs puts its own `--` first, so a
+    second would reach the tool as an argument."""
+    arguments = sys.argv[1:]
+    return arguments[1:] if arguments[:1] == ["--"] else arguments
 
 
 def _setup() -> int:
@@ -255,8 +260,19 @@ def _viewer_checks() -> int:
     return 0
 
 
+# Playwright runs a project's dependencies whole, whatever files are named,
+# and each stage of the browser tests depends on the one before
+# (`playwright.config.ts`): a spec named runs alone only without them.
+NO_DEPENDENCIES = "--no-deps"
+
+
 def _browser_tests() -> int:
-    return _become([_viewer(), "run", "e2e", "--", *_arguments()], WEB)
+    arguments = _arguments()
+    if any(argument.endswith(".spec.ts") for argument in arguments) and (
+        NO_DEPENDENCIES not in arguments
+    ):
+        arguments = [NO_DEPENDENCIES, *arguments]
+    return _become([_viewer(), "run", "e2e", "--", *arguments], WEB)
 
 
 def _help() -> int:
