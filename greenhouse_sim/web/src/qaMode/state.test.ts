@@ -71,7 +71,7 @@ describe("what each process of a run holds", () => {
     expect(said.clock).toBe("10 min (2025-12-31 23:10 UTC), run climate_box-climate-4c7732e2");
     expect(said.houseAir).toBe("19.45 °C, 67.36%, 420 ppm");
     expect(said.crop).toBe("32 plants, the simple daily model; no day lived yet");
-    // A crop grown by area: no plants, the model by name, its last day.
+    // A crop grown by area: no plants, the model by name, the days it lived.
     const byArea = {
       ...parseRunState(SERVED),
       plants: 0,
@@ -79,7 +79,7 @@ describe("what each process of a run holds", () => {
       daysLived: 3,
     };
     expect(describeRunState(byArea).crop).toBe(
-      "Reduced-State TOMGRO, by area on each row; last day 2",
+      "Reduced-State TOMGRO, by area on each row; 3 days lived",
     );
     expect(said.levels).toBe("fan 0%, heater 100%");
     expect(said.commands).toEqual(["0 min: heater 100%"]);

@@ -1,4 +1,5 @@
 import type { CameraPose } from "../camera";
+import { dayCount } from "../clock";
 import type { ScalarRange } from "../debug/scalar";
 import type { Slice, SliceQuantity } from "../fields/display";
 import { quantityScale } from "../fields/drawing";
@@ -30,8 +31,9 @@ const MOMENTS = ["dawn", "noon", "evening", "fans-off", "vents-shut", "young"] a
 export type ReferenceMomentName = (typeof MOMENTS)[number];
 
 /** What one moment's views draw: the house then, without its crop, the
- * crop's day, the weather, the climate field's channels its views draw and
- * what its vents pass, where they draw them, and its state probes. */
+ * days its crop has lived (`cropDay`), the weather, the climate field's
+ * channels its views draw and what its vents pass, where they draw them,
+ * and its state probes. */
 export interface ReferenceMoment {
   timeS: number;
   house: SceneSnapshot;
@@ -210,11 +212,11 @@ export function parseReferenceQa(body: unknown): ReferenceQa {
   }
   const keptCrops: Record<string, SceneSnapshot> = {};
   for (const [day, crop] of Object.entries(crops)) {
-    keptCrops[day] = scene(crop, `day ${day} crop`);
+    keptCrops[day] = scene(crop, `crop of ${dayCount(Number(day))}`);
   }
   for (const moment of Object.values(parsed)) {
     if (keptCrops[String(moment.cropDay)] === undefined) {
-      throw new Error(`the reference QA has no crop on day ${moment.cropDay}`);
+      throw new Error(`the reference QA has no crop of ${dayCount(moment.cropDay)}`);
     }
   }
   return {

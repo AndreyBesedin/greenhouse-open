@@ -1,3 +1,4 @@
+import { dayBegun } from "../clock";
 import { contractReader, loadJson } from "../loadJson";
 import { type RunParts, runParameters, scenarioUrl } from "../scene/run";
 import { RUN_MANIFEST_SCHEMA } from "./generated/runManifestSchema";
@@ -22,7 +23,8 @@ export interface RunManifest {
   version: string;
   seed: number;
   /** Its start date, as the manifest writes it, its days, and the day a
-   * viewer opens it on, if its manifest names one. */
+   * viewer opens it on, if its manifest names one: as the manifest keeps it,
+   * the days ended before it, so that 86 is the run's day 87. */
   startDate: string;
   days: number;
   openingDay: number | null;
@@ -151,7 +153,7 @@ export function describeManifest(manifest: RunManifest): {
     scenario: `${manifest.scenarioId}, version ${manifest.version}, format ${manifest.format}`,
     seed: String(manifest.seed),
     season: `from ${manifest.startDate}, ${manifest.days} days${
-      manifest.openingDay === null ? "" : `, opening on day ${manifest.openingDay}`
+      manifest.openingDay === null ? "" : `, opening on day ${dayBegun(manifest.openingDay)}`
     }`,
     crop: `${manifest.variety}, ${cropModelInWords(manifest.cropModel)}`,
     airflow: `${manifest.airflow}, prescribed`,

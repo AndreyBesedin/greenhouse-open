@@ -53,7 +53,7 @@ const CENTIMETRE = 0.01;
 
 async function select(page: Page, layout: string, at: Point, entityId: string, pose: CameraPose) {
   await page.goto(`${LAB_RUN}${layout}&camera=${cameraText(pose)}`);
-  await expect(page.getByTestId("scene-status")).toContainText("sensor_lab, day 0");
+  await expect(page.getByTestId("scene-status")).toContainText("sensor_lab, 0 days in");
   await selectAt(page, at, entityId, pose);
 }
 

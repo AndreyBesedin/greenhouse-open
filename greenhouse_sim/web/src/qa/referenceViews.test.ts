@@ -77,7 +77,7 @@ describe("the reference greenhouse's golden views", () => {
     expect(() => parseReferenceQa({ moments: {}, crops: {} })).toThrow("has no dawn");
     const body = BODY as { crops: Record<string, unknown> };
     expect(() => parseReferenceQa({ ...body, crops: { "86": body.crops["86"] } })).toThrow(
-      "no crop on day 21",
+      "no crop of 21 days",
     );
   });
 });

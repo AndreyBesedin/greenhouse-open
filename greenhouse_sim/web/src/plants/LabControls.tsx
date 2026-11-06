@@ -1,3 +1,4 @@
+import { dayCount } from "../clock";
 import { useLoad } from "../useLoad";
 import {
   describeEnvironment,
@@ -74,9 +75,11 @@ export function LabControls({
           max={PLANT_LAB_LAST_DAY}
           step={1}
           value={run.day}
+          aria-valuetext={`${dayCount(run.day)} in`}
           onChange={(event) => onChange({ day: Number(event.target.value) })}
         />
-        <span data-testid="plant-day">{shownDay === null ? "…" : `day ${shownDay}`}</span>
+        {/* The days since its transplant, a count: "30 days in". */}
+        <span data-testid="plant-day">{shownDay === null ? "…" : `${dayCount(shownDay)} in`}</span>
       </label>
       <div className="lab-control">
         <button

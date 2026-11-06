@@ -190,7 +190,7 @@ describe("a plant's days", () => {
 
   it("are written as the last day's and their range", () => {
     expect(describeDays([17.97, 18.33, 18.1], "Light", "mol/m²/d", 1)).toBe(
-      "Light 18.1 mol/m²/d on day 2, 18.0 to 18.3",
+      "Light 18.1 mol/m²/d on day 3, 18.0 to 18.3",
     );
   });
 
@@ -199,11 +199,11 @@ describe("a plant's days", () => {
     const state: CropPlantState = { status: "loaded", plant: parseCropPlant(BODY) };
     shown = render(<PlantDays state={state} selectedOrgan={null} onSelect={onSelect} />);
 
-    expect(said(shown.container, "plant-days-air")).toBe("Air 13.6 °C on day 1, 13.6 to 13.6");
+    expect(said(shown.container, "plant-days-air")).toBe("Air 13.6 °C on day 2, 13.6 to 13.6");
     expect(said(shown.container, "plant-days-light")).toBe(
-      "Light 18.3 mol/m²/d on day 1, 18.0 to 18.3",
+      "Light 18.3 mol/m²/d on day 2, 18.0 to 18.3",
     );
-    expect(said(shown.container, "plant-days-co2")).toBe("CO₂ 420 ppm on day 1, 420 to 420");
+    expect(said(shown.container, "plant-days-co2")).toBe("CO₂ 420 ppm on day 2, 420 to 420");
     expect(said(shown.container, "plant-event")).toBe(
       `at 880 °Cd: harvested ${PLANT_ID}_t01_fr01, 98 g`,
     );

@@ -61,7 +61,7 @@ test("the fixture gallery shows each primitive at its size, made of its material
   test.slow();
   await page.goto("/?scene=fixtures");
   await expect(page.getByTestId("scene-status")).toHaveText(
-    "Showing the fixture gallery: qa_fixtures, day 0, 30 entities.",
+    "Showing the fixture gallery: qa_fixtures, 0 days in, 30 entities.",
   );
   await page.getByRole("button", { name: "Top" }).click();
   const inspector = page.getByRole("region", { name: "Inspector" });

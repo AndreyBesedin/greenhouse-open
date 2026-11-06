@@ -18,7 +18,7 @@ const RING_M = 0.03;
 test("planting positions can be counted and measured from their coordinates", async ({ page }) => {
   await page.goto("/?scenario=tomato_compartment");
   await expect(page.getByTestId("scene-status")).toContainText(
-    "tomato_compartment, day 0, 896 entities",
+    "tomato_compartment, 0 days in, 896 entities",
   );
   const position = page.getByTestId("selected-position");
   const plantingPosition = page.getByTestId("property-planting_position");

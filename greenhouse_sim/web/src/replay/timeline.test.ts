@@ -71,9 +71,12 @@ describe("the days", () => {
   });
 
   it("are computed once their last moment is", () => {
-    expect(computedText(RUN)).toBe("Computed to day 41 of 120");
-    expect(computedText({ ...RUN, frontierS: 41 * DAY_S - 1 })).toBe("Computed to day 40 of 120");
-    expect(computedText({ startS: 0, frontierS: 3 * DAY_S, endS: null })).toBe("Computed to day 3");
+    expect(computedText(RUN)).toBe("41 of 120 days computed");
+    expect(computedText({ ...RUN, frontierS: 41 * DAY_S - 1 })).toBe("40 of 120 days computed");
+    expect(computedText({ startS: 0, frontierS: 3 * DAY_S, endS: null })).toBe("3 days computed");
+    // Before its first day is whole, none is: said as a count, not as "day 0".
+    expect(computedText({ ...RUN, frontierS: DAY_S - 1 })).toBe("0 of 120 days computed");
+    expect(computedText({ startS: 0, frontierS: DAY_S, endS: null })).toBe("1 day computed");
   });
 
   it("are ticked at a step that reads well", () => {

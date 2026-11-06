@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DAY_S, dayBegun, dayEnd, dayNumber, dayStart, daysEnded, runDay } from "./clock";
+import { DAY_S, dayBegun, dayCount, dayEnd, dayNumber, dayStart, daysEnded, runDay } from "./clock";
 
 describe("a run's clock", () => {
   it.each([
@@ -33,5 +33,14 @@ describe("a run's clock", () => {
     // The start of the run's second day, once one day has ended.
     expect(dayBegun(daysEnded(DAY_S))).toBe(2);
     expect(dayBegun(daysEnded(DAY_S))).toBe(dayNumber(DAY_S + 1));
+  });
+
+  it("says a count of days as a count, never as the name of a day", () => {
+    expect(dayCount(0)).toBe("0 days");
+    expect(dayCount(1)).toBe("1 day");
+    expect(dayCount(86)).toBe("86 days");
+    // Noon on day 87: 86 days in, not "day 86".
+    expect(dayNumber(86.5 * DAY_S)).toBe(87);
+    expect(dayCount(daysEnded(86.5 * DAY_S))).toBe("86 days");
   });
 });

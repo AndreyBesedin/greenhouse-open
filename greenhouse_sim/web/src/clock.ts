@@ -7,6 +7,13 @@
  * ends: 86 400 s is still day 0, the end of its first day. So a later day
  * runs from just after its midnight to the next, inclusive. Its crop lives
  * each day at the midnight that ends it, so by 86 400 s it has lived one.
+ *
+ * The viewer says one thing for one day, by one rule. A moment's day is
+ * named, counted from 1: "day 87" (`dayNumber`, `dayBegun`), as a replay's
+ * timeline and every panel write a moment. A count of days, elapsed or
+ * lived, is said as a count: "86 days in", "after 86 days" (`dayCount`),
+ * never "day 86", which would name another day. Noon on the run's 87th day
+ * is "day 87, 12 h 00 min", and its crop, a scene of it, is 86 days in.
  */
 
 export const DAY_S = 86_400;
@@ -29,6 +36,13 @@ export function dayNumber(seconds: number): number {
  * ended before it, is named by it. */
 export function dayBegun(ended: number): number {
   return ended + 1;
+}
+
+/** A count of days as a person says it, "1 day" or "86 days": what a
+ * count of days elapsed or lived is written with, so that it is never read
+ * as the name of a day. */
+export function dayCount(count: number): string {
+  return count === 1 ? "1 day" : `${count} days`;
 }
 
 /** When the day a moment belongs to began, in seconds from the run's start. */

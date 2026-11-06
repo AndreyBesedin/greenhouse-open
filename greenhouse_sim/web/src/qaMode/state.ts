@@ -1,3 +1,4 @@
+import { dayCount } from "../clock";
 import { describeTime } from "../fields/ClimateTime";
 import { contractReader, loadJson } from "../loadJson";
 import { formatValue } from "../readouts";
@@ -129,13 +130,14 @@ export function describeRunState(state: RunState): {
   cameras: { id: string; text: string }[];
 } {
   const air = state.houseAir;
-  const lastDay = state.daysLived - 1;
   return {
     clock: `${describeTime(state.timeS)} (${instant(state.at)}), run ${state.runId}`,
     houseAir: `${formatValue(air.temperatureC)} °C, ${formatValue(air.humidityPct)}%, ${formatValue(air.co2Ppm)} ppm`,
     // A crop grown by area has no plants to count.
     crop: `${state.plants > 0 ? `${state.plants} plants, ` : ""}${cropModelInWords(state.cropModel)}; ${
-      lastDay < 0 ? "no day lived yet" : `last ${state.plants > 0 ? "plant " : ""}day ${lastDay}`
+      // A count of days, not the name of the last: on day 2 its crop has
+      // lived 1 day, the run's day 1.
+      state.daysLived === 0 ? "no day lived yet" : `${dayCount(state.daysLived)} lived`
     }`,
     levels:
       Object.keys(state.levels).length === 0

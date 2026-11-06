@@ -119,7 +119,7 @@ test("a scenario opened to look at starts with its house framed, and its address
   page,
 }) => {
   await page.goto(`${VIEWER_PATH}?scenario=climate_box`);
-  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0");
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box, 0 days in");
   const camera = page.getByTestId("camera-position");
 
   // The climate box's bounds: 12 m by 6.4 m, 4.8 m to its ridge; the window, 1280 by 720.
@@ -144,14 +144,14 @@ test("a preset chosen in one scenario leaves another's opening frame as it is", 
   page,
 }) => {
   await page.goto(`${VIEWER_PATH}?scenario=climate_box`);
-  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0");
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box, 0 days in");
   await page.getByRole("button", { name: "Isometric" }).click();
   const camera = page.getByTestId("camera-position");
   await expect(camera).toHaveText(DEFAULT_VIEW);
 
   await (await chooser(page)).getByRole("button", { name: "Open sensor_lab" }).click();
 
-  await expect(page.getByTestId("scene-status")).toContainText("sensor_lab, day 0");
+  await expect(page.getByTestId("scene-status")).toContainText("sensor_lab, 0 days in");
   await expect(camera).not.toHaveText(DEFAULT_VIEW);
 });
 
@@ -159,7 +159,7 @@ test("a link from before the landing page opens a scenario at the default view",
   page,
 }) => {
   await page.goto("/?scenario=climate_box");
-  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0");
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box, 0 days in");
   await expect(page.getByTestId("camera-position")).toHaveText(DEFAULT_VIEW);
 });
 
@@ -167,7 +167,7 @@ test("the wheel zooms towards the greenhouse under the pointer, which stays unde
   page,
 }) => {
   await page.goto("/?scenario=climate_box");
-  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0");
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box, 0 days in");
   const camera = page.getByTestId("camera-position");
   await expect(camera).toHaveText(DEFAULT_VIEW);
   const from = CAMERA_PRESETS[DEFAULT_PRESET].position;

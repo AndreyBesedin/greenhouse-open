@@ -120,7 +120,7 @@ test("P14.7's QA: a copy growing the simple crop is drawn with its harvest, and 
       `/?scenario=${COPY}&field=climate&t=${HARVESTED_DAY * DAY_S + NOON_S}&camera=${CAMERA}`,
     );
     await expect(page.getByTestId("scene-status")).toContainText(
-      `${COPY}, day ${HARVESTED_DAY},`,
+      `${COPY}, ${HARVESTED_DAY} days in,`,
       ARRIVES,
     );
     const selected = page.getByTestId("selected-entity");
@@ -137,10 +137,10 @@ test("P14.7's QA: a copy growing the simple crop is drawn with its harvest, and 
     const panel = page.locator("details.checkpoints");
     const kept = panel.getByTestId("checkpoint");
     await page.goto(`/?scenario=${COPY}&field=climate&t=${DAY_S + HOUR_S}`);
-    await expect(page.getByTestId("climate-time")).toHaveText("day 1, 1 h 00 min", ARRIVES);
+    await expect(page.getByTestId("climate-time")).toHaveText("day 2, 1 h 00 min", ARRIVES);
     await panel.locator("summary").click();
-    await panel.getByRole("button", { name: "Save day 1's start" }).click();
-    const saved = kept.filter({ hasText: "day 1:" });
+    await panel.getByRole("button", { name: "Save day 2's start" }).click();
+    const saved = kept.filter({ hasText: "day 2:" });
     await expect(saved).toHaveCount(1, ARRIVES);
     const href = await saved.getByRole("link", { name: "Download" }).getAttribute("href");
     const checkpoint = (await (await page.request.get(href ?? "")).json()) as Document;

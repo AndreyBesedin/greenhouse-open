@@ -153,7 +153,7 @@ test("info panel: a card with nothing in it is not drawn (#306)", async ({ page 
   // The sensor lab has no equipment and no openings, nothing is probed, and
   // no run is played back or worked out.
   await page.goto("/?scenario=sensor_lab");
-  await expect(page.getByTestId("scene-status")).toContainText("sensor_lab, day 0", {
+  await expect(page.getByTestId("scene-status")).toContainText("sensor_lab, 0 days in", {
     timeout: 20_000,
   });
   const panel = page.locator(".info-panel");

@@ -28,7 +28,9 @@ function polyline(values: number[], low: number, high: number): string {
 }
 
 /** A quantity of a plant's days in words: its last day's, and its range
- * over the days lived, "Light 22.9 mol/m²/d on day 4, 19.8 to 23.1". */
+ * over the days lived, "Light 22.9 mol/m²/d on day 5, 19.8 to 23.1". Its
+ * last day is named as a moment's day is (`dayNumber`), from 1: the fifth
+ * day it lived is day 5, the last it has lived at a moment of day 6. */
 export function describeDays(
   values: number[],
   name: string,
@@ -38,7 +40,7 @@ export function describeDays(
   const last = values.at(-1) ?? 0;
   const low = Math.min(...values).toFixed(decimals);
   const high = Math.max(...values).toFixed(decimals);
-  return `${name} ${last.toFixed(decimals)} ${unit} on day ${values.length - 1}, ${low} to ${high}`;
+  return `${name} ${last.toFixed(decimals)} ${unit} on day ${values.length}, ${low} to ${high}`;
 }
 
 function Days({ plant }: { plant: CropPlant }) {

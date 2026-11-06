@@ -1,4 +1,5 @@
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { dayCount } from "../src/clock.ts";
 import { BUILDER_PATH, LANDING_PATH, replayTarget, VIEWER_PATH } from "../src/landing/paths";
 import { caption, linger, markOpening, say } from "./demoSteps";
 import { unfold } from "./folds";
@@ -84,7 +85,7 @@ async function preparedRun(request: APIRequestContext): Promise<KeptRun> {
 }
 
 /** Moves the replay to noon of a day (counted from 1), by the pointer on its
- * timeline, and waits for the scene of that day. */
+ * timeline, and waits for the scene of that day, the days before it in. */
 async function moveToDay(page: Page, day: number): Promise<void> {
   const track = page.getByTestId("replay-track");
   const box = await track.boundingBox();
@@ -95,7 +96,10 @@ async function moveToDay(page: Page, day: number): Promise<void> {
     position: { x: (box.width * (day - 0.5)) / RUN_DAYS, y: box.height / 2 },
   });
   await expect(page.getByTestId("replay-moment")).toHaveText(new RegExp(`^Day ${day}, `), ARRIVES);
-  await expect(page.getByTestId("scene-status")).toContainText(`, day ${day - 1},`, ARRIVES);
+  await expect(page.getByTestId("scene-status")).toContainText(
+    `, ${dayCount(day - 1)} in,`,
+    ARRIVES,
+  );
 }
 
 let prepared: KeptRun;
@@ -122,7 +126,7 @@ test("the README's demo shows the simulator's main features, each under its capt
   );
   await expect(page.getByTestId("climate-time")).toHaveText(OPENING_MOMENT, ARRIVES);
   // The house is drawn before its crop, its air after: the shot waits for all.
-  await expect(page.getByTestId("scene-status")).toContainText("day 86,", ARRIVES);
+  await expect(page.getByTestId("scene-status")).toContainText("86 days in,", ARRIVES);
   await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
   // Folded away from the view, and kept so from page to page.
   await page.getByRole("button", { name: "Fold the info panel" }).click();
@@ -171,7 +175,7 @@ test("the README's demo shows the simulator's main features, each under its capt
     .click();
   const handle = page.getByRole("slider", { name: "Position in the run" });
   await expect(handle).toHaveAttribute("aria-valuetext", "Day 1, 00:00", ARRIVES);
-  await expect(page.getByTestId("scene-status")).toContainText(", day 0,", ARRIVES);
+  await expect(page.getByTestId("scene-status")).toContainText(", 0 days in,", ARRIVES);
   // Once the scene is framed, which the first scene does.
   await page.getByTestId("main-view").hover();
   await page.mouse.wheel(0, CLOSER_PX);
