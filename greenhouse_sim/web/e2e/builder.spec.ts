@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 
 import { expect, type Page, test } from "@playwright/test";
 
+import { lowContrast } from "./contrast.ts";
+
 // The setup builder (P12.2): a house drafted from the first form and drawn,
 // its rows given another crop and that undone, saved, exported, run as a
 // scenario the viewer opens, reopened from the drafts and imported again.
@@ -495,3 +497,41 @@ test("builder: at a phone's width the page fits its window, with the house under
   expect(drawn?.y).toBe((forms?.y ?? 0) + (forms?.height ?? 0));
   expect((drawn?.y ?? 0) + (drawn?.height ?? 0)).toBeLessThanOrEqual(PHONE.height);
 });
+
+// Where a theme is kept in this browser (`design/theme.ts`).
+const THEME_KEY = "greenhouse-sim.panels";
+
+for (const theme of ["dark", "light"] as const) {
+  test(`builder: its words stand out from what they are drawn on, ${theme}`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.addInitScript(({ key, chosen }) => localStorage.setItem(key, chosen), {
+      key: THEME_KEY,
+      chosen: theme,
+    });
+    const builder = page.locator("main.builder");
+    const palette = page.locator(".builder-palette");
+
+    // The first step: the forms, and the note where the house is to be drawn, on a
+    // pane with no ground of its own but the browser's.
+    await page.goto("/builder");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await expect(page.getByTestId("builder-view")).toContainText("drawn here");
+    expect(await lowContrast(builder)).toEqual([]);
+
+    // A house with two heaters in one place: its findings, an error among them, and
+    // the two chosen, whose field to set shows a placeholder until written.
+    await field(page, "Identifier").fill(`e2e_contrast_${theme}_${Date.now()}`);
+    await page.getByRole("button", { name: "Draft this house" }).click();
+    await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+    await palette.getByLabel("What").selectOption("heater");
+    await palette.getByLabel("y (m)", { exact: true }).fill("0.6");
+    await palette.getByRole("button", { name: "Place" }).click();
+    await expect(page.getByLabel("Choose heater_1")).toBeVisible(ARRIVES);
+    await palette.getByRole("button", { name: "Place" }).click();
+    await expect(page.locator(".builder-finding-error")).toBeVisible(ARRIVES);
+    await page.getByLabel("Choose heater_1").check();
+    await page.getByLabel("Choose heater_2").check();
+    await expect(page.getByPlaceholder("power_w, base.z")).toHaveValue("");
+    expect(await lowContrast(builder)).toEqual([]);
+  });
+}
