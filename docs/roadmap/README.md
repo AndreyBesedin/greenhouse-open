@@ -116,7 +116,7 @@ pull request lands, and holds the state of each of its steps.
 | [P10](p10-consumer-interface.md) | A consumer's interface to a running simulation | Done |
 | [P11](p11-climate-setpoints.md) | Climate setpoints: targets that run the house's equipment | In progress: P11.1, P11.2 and P11.3 for the heating loop's targets done |
 | [P12](p12-setup-builder.md) | The setup builder: greenhouse installations authored, assessed and exchanged | In progress: P12.0 to P12.3 done; their QA recorded, but for its first day's check; the rest moved to P20 and P21 |
-| [P13](p13-actions.md) | One action format, and a plan a run's gateway carries out | In progress: P13.1 to P13.9 done; P13.10's QA recorded, one clause left |
+| [P13](p13-actions.md) | One action format, and a plan a run's gateway carries out | Done: P13.1 to P13.10, its final QA recorded |
 | [P14](p14-models-by-manifest.md) | Models chosen by the manifest, from a registry | In progress: P14.1 to P14.8 done, P14.7 but for its QA; P14.9 done; P14.10 under way |
 | [P15](p15-policy-port.md) | A policy's port, and an experiment that steps a run | Done: final QA passed on 2026-11-01 |
 | [P16](p16-crop-at-its-models-step.md) | A run's crop at its model's step, not the run's day | Done, but for P16.4, deferred until a model takes crop work within its day |
@@ -157,7 +157,8 @@ what it planned is in its report.
 ## Elsewhere
 
 - **[Future work](future-work.md):** the plans with no project of their own yet.
-  Camera imperfections, crop work within the day, CO₂ and light targets, intelligence
+  Camera imperfections, climate setpoints beyond heating (P11's rest), crop work within
+  the day, actions and plans after P13, CO₂ and light targets, intelligence
   components, crop models from plant research, a Modelica comparison, the test suite
   and CI time, a second repository audit, and an assistant in the viewer.
 - **[QA of 2026-11-04](qa-2026-11-04.md):** what a manual walk of the viewer found, and what follows from it.
