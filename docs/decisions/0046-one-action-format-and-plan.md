@@ -217,7 +217,7 @@ actuation contract of its own in the protocol.
   simulator's `ActionExecutor`, the lab's `LabAction`, the separate
   `Command`, `DailyCommand` and `TargetChange` types, `CropWork` and the
   playback's targets route are folded into the one format and then
-  removed, step by step ([P13](../roadmap/p13-actions.md)). The address's
+  removed, step by step ([P13](../roadmap/archive/p13-actions.md)). The address's
   `&set=`, `&schedule=`, `&daily=` and `&targets=` stay as short spellings
   of a plan, read into it.
 - The simulator ships a gateway, in process: its playback, which owns its

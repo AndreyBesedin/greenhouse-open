@@ -2,7 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { DAY_S } from "../src/clock.ts";
 
 // P13's final scenario, what of it a person sees in the viewer
-// (`docs/roadmap/p13-actions.md`): a plan given to the reference greenhouse's
+// (`docs/roadmap/archive/p13-actions.md`): a plan given to the reference greenhouse's
 // playing run, and its plan lane saying what the consumer interface says of
 // each action. What the gateway decides is held where the code is
 // (`greenhouse_sim/tests/test_plan_final_qa.py`).

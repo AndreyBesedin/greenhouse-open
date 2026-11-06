@@ -30,7 +30,7 @@ findings it closes and what tells that it is done.
 
 Part of the [audits](README.md). The earlier frontend audits of 6 and 11
 October are recorded in the roadmap's
-[frontend maintenance plan](../roadmap/frontend-maintenance.md).
+[frontend maintenance plan](../roadmap/archive/frontend-maintenance.md).
 
 ## Using this audit to start work
 
@@ -153,7 +153,7 @@ What to keep, because it works:
 
 What the suites establish is behaviour and repeatability, not scientific
 calibration. P09 records its approximations, in
-[its document](../roadmap/p09-integrated-scenario.md): the crop's
+[its document](../roadmap/archive/p09-integrated-scenario.md): the crop's
 transpiration and CO₂ uptake do not feed back into the air, its water
 status stays at 1, and the house's shading takes the crop's first crowns.
 
@@ -171,10 +171,10 @@ code at `467821f`; *review*, reproduced by a review and not again here.
 
 | Finding | Status | Checked | Priority | Work |
 | --- | --- | --- | --- | --- |
-| `AUDIT.1` Two simulation paths, and the contracts belong to the older one | corrected | read | decide | D1 (decision 0035, #180), P10 as [P14](../roadmap/p14-models-by-manifest.md) |
-| `AUDIT.2` Models are chosen by code, not by the manifest | corrected | read | P10 | P10 as [P14](../roadmap/p14-models-by-manifest.md) |
-| `AUDIT.3` A new device touches ten files | corrected | read | P10 | P10 as [P14](../roadmap/p14-models-by-manifest.md) |
-| `AUDIT.4` One model's parameters sit at the top of every scenario | confirmed | read | P10 | P10 as [P14](../roadmap/p14-models-by-manifest.md) |
+| `AUDIT.1` Two simulation paths, and the contracts belong to the older one | corrected | read | decide | D1 (decision 0035, #180), P10 as [P14](../roadmap/archive/p14-models-by-manifest.md) |
+| `AUDIT.2` Models are chosen by code, not by the manifest | corrected | read | P10 | P10 as [P14](../roadmap/archive/p14-models-by-manifest.md) |
+| `AUDIT.3` A new device touches ten files | corrected | read | P10 | P10 as [P14](../roadmap/archive/p14-models-by-manifest.md) |
+| `AUDIT.4` One model's parameters sit at the top of every scenario | confirmed | read | P10 | P10 as [P14](../roadmap/archive/p14-models-by-manifest.md) |
 | `AUDIT.5` There is no recipe, for a person or an assistant | corrected | read | now | W6 (#164), W14 (#263) |
 | `AUDIT.6` The run request is written out 22 times | corrected | read | next | W11 (#280) |
 | `AUDIT.7` Five caches, five locks, and what they share | corrected | read | next | W9 (#253) |

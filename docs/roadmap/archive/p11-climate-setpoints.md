@@ -2,13 +2,13 @@
 
 **Status:** done for what it delivered, closed on 2026-11-06: P11.1; P11.2,
 every loop decided by the house
-([decision 0058](../decisions/0058-a-climate-controller-switches-each-loop-at-its-edge.md));
+([decision 0058](../../decisions/0058-a-climate-controller-switches-each-loop-at-its-edge.md));
 and P11.3 for the heating loop's targets, released in 0.3.0. The venting and
 humidity targets, the viewer's Targets panel, the reference greenhouse by its
 targets and the QA scenario (the rest of P11.3, and P11.4 to P11.6) moved to
-[future work](future-work.md#climate-setpoints), as [below](#closed). The
+[future work](../future-work.md#climate-setpoints), as [below](#closed). The
 open questions are at the end.
-Part of the [simulator roadmap](README.md).
+Part of the [simulator roadmap](../README.md).
 
 ## Goal
 
@@ -22,7 +22,7 @@ they make another run.
 ## Where it starts from
 
 - **The heater already runs to a setpoint** (P10.3,
-  [decision 0042](../decisions/0042-a-season-a-thermostat-and-the-heat-it-gives-as-a-modelled-record.md)).
+  [decision 0042](../../decisions/0042-a-season-a-thermostat-and-the-heat-it-gives-as-a-modelled-record.md)).
   The reference greenhouse heats to 18 °C from 07:00 and to 16 °C from
   19:00, in a band of 1 °C. The heater switches the moment the house's air
   reaches the band's edge, found from the house's exact solution through
@@ -112,10 +112,10 @@ keeps it.
 | --- | --- | --- |
 | P11.1 | **The controller as data:** `climate/control.py` holds the loops, their targets, bands and stages, and checks them (the dead band between heating and venting, stages in order, times of day on the minute). A manifest's `thermostat` becomes its `control`, in the manifest's next format, with a migration of the one before. | Done (#283) |
 | P11.2 | **The house decides every loop exactly:** the next switch is the earliest moment any loop's edge is reached. The house's course through a stretch gains its humidity, so that a relative humidity's edge is found too. The grid follows each device a loop runs. Checkpoints keep each loop's state, in a checkpoint format of their own; one written before it, whose run has the heating loop alone, is read with the other loops off. **With the heating loop alone, a run is today's run, to the last digit.** | Done: venting and circulation (#390), and dehumidifying (#391); decision 0058 |
-| P11.3 | **Targets as a run's input:** a `&targets=` parameter on every route that makes or keeps a run, wherever `&daily=` is read today: the climate's, the crop's, the timeline's, the observations', the playback's and a checkpoint's. It is read once and checked (refused with the reason, as commands are), it is part of the run's identity, and a checkpoint keeps it, so that it is restored as the same run. The audit's run request (W11) would make this one change in one place. The equipment route says which loop runs each device, its state and its target at the moment. | Done for the heating loop's targets, changed from a moment on (#284, #274, decision 0043); the venting and humidity targets, and the loops on the equipment route, moved to [future work](future-work.md#climate-setpoints) |
-| P11.4 | **The viewer:** a Targets panel (heating and venting, each by day and by night, and humidity) that keeps its values in the address, and passes them on every run's request. The Equipment panel names the loop that runs each device. The timeline shows the loops' switches in the air's lane. | Moved to [future work](future-work.md#climate-setpoints); the Targets panel exists for the heating targets |
-| P11.5 | **The reference greenhouse by its targets, not the clock:** its daily vent and fan commands give way to venting and humidity targets in its manifest. Its run changes, so its opening day, replay, reference views and screenshots are written again, and the changelog says that its identity changes. Consumers follow its run, so when it switches is decided first. | Moved to [future work](future-work.md#climate-setpoints) |
-| P11.6 | **The QA scenario** (below), run and recorded. | Moved to [future work](future-work.md#climate-setpoints), with P11.5, which it needs |
+| P11.3 | **Targets as a run's input:** a `&targets=` parameter on every route that makes or keeps a run, wherever `&daily=` is read today: the climate's, the crop's, the timeline's, the observations', the playback's and a checkpoint's. It is read once and checked (refused with the reason, as commands are), it is part of the run's identity, and a checkpoint keeps it, so that it is restored as the same run. The audit's run request (W11) would make this one change in one place. The equipment route says which loop runs each device, its state and its target at the moment. | Done for the heating loop's targets, changed from a moment on (#284, #274, decision 0043); the venting and humidity targets, and the loops on the equipment route, moved to [future work](../future-work.md#climate-setpoints) |
+| P11.4 | **The viewer:** a Targets panel (heating and venting, each by day and by night, and humidity) that keeps its values in the address, and passes them on every run's request. The Equipment panel names the loop that runs each device. The timeline shows the loops' switches in the air's lane. | Moved to [future work](../future-work.md#climate-setpoints); the Targets panel exists for the heating targets |
+| P11.5 | **The reference greenhouse by its targets, not the clock:** its daily vent and fan commands give way to venting and humidity targets in its manifest. Its run changes, so its opening day, replay, reference views and screenshots are written again, and the changelog says that its identity changes. Consumers follow its run, so when it switches is decided first. | Moved to [future work](../future-work.md#climate-setpoints) |
+| P11.6 | **The QA scenario** (below), run and recorded. | Moved to [future work](../future-work.md#climate-setpoints), with P11.5, which it needs |
 
 ### P11.1 as built
 
@@ -257,7 +257,7 @@ run's input, steered from a moment on. Against the acceptance above:
   and the reference greenhouse's March and June measurements, which need it
   run by its targets (P11.5).
 
-What moved is listed under [Climate setpoints](future-work.md#climate-setpoints)
+What moved is listed under [Climate setpoints](../future-work.md#climate-setpoints)
 in future work, with what waits on it: P13's daily commands of the reference
 run become a standing plan when its run is written again by its targets.
 The QA scenario below was not run; it stays here as the one that work

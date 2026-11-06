@@ -1,6 +1,6 @@
 # P01: Greenhouse envelope and world geometry
 
-**Status:** done. Part of the [simulator roadmap](README.md).
+**Status:** done. Part of the [simulator roadmap](../README.md).
 
 ## Goal
 
@@ -11,7 +11,7 @@ structure and openings.
 ## Direction
 
 - SI units, and the world axes of
-  [decision 0007](../decisions/0007-world-coordinates-metres-right-handed-z-up.md).
+  [decision 0007](../../decisions/0007-world-coordinates-metres-right-handed-z-up.md).
   The greenhouse has its own origin and axes within the world, and both are
   explicit.
 - Geometry is generated from a semantic description of the greenhouse (its
@@ -53,7 +53,7 @@ debug mode. Visible result: a transparent bounding volume with its width,
 length and height labelled. Tests: known points map to the expected
 positions, and the axes are labelled in the view.
 
-As implemented (see [decision 0016](../decisions/0016-the-greenhouse-has-its-own-frame.md)):
+As implemented (see [decision 0016](../../decisions/0016-the-greenhouse-has-its-own-frame.md)):
 
 - The greenhouse's frame has its origin at a floor corner, x along its
   length, y across its width and z up. An `Envelope`
@@ -88,7 +88,7 @@ surface with a semantic identifier. Visible result: an empty glasshouse box
 with visible frame edges, which the camera can enter. Tests: changing the
 dimensions in a scenario's configuration changes the geometry accordingly.
 
-As implemented (see [decision 0017](../decisions/0017-envelope-surfaces-face-into-the-greenhouse.md)):
+As implemented (see [decision 0017](../../decisions/0017-envelope-surfaces-face-into-the-greenhouse.md)):
 
 - `Envelope.surfaces()` generates the floor and four walls in the
   greenhouse's frame, each a rectangle with an identifier and a category,
@@ -189,7 +189,7 @@ Semantic openings with an open fraction or angle, with a roof vent and a side
 vent as examples. Visible result: a slider opens a roof vent in the view.
 Tests: an opening exposes the expected aperture area at the boundary.
 
-As implemented (see [decision 0018](../decisions/0018-openings-lie-on-a-surface-and-expose-an-aperture.md)):
+As implemented (see [decision 0018](../../decisions/0018-openings-lie-on-a-surface-and-expose-an-aperture.md)):
 
 - The envelope's `openings` are rectangles on a host surface, given in the
   host's own plane, each a door, roof vent or side vent with an open fraction.
@@ -309,11 +309,11 @@ As implemented ([#35](https://github.com/AndreyBesedin/greenhouse-open/pull/35))
 - [x] A configurable greenhouse shell exists as semantic geometry, not only
   as meshes: an `Envelope` description generates every surface, opening,
   gutter and member, each with a semantic category (decisions
-  [0016](../decisions/0016-the-greenhouse-has-its-own-frame.md) and
-  [0017](../decisions/0017-envelope-surfaces-face-into-the-greenhouse.md)).
+  [0016](../../decisions/0016-the-greenhouse-has-its-own-frame.md) and
+  [0017](../../decisions/0017-envelope-surfaces-face-into-the-greenhouse.md)).
 - [x] Openings can later become airflow boundaries: each lies on a host
   surface, with its open fraction and the aperture it exposes (decision
-  [0018](../decisions/0018-openings-lie-on-a-surface-and-expose-an-aperture.md)).
+  [0018](../../decisions/0018-openings-lie-on-a-surface-and-expose-an-aperture.md)).
 - [x] World dimensions are physically meaningful and inspectable: metres
   throughout, with the dimensions labelled, every entity's size and place in
   the inspector, and the dimensions checked over the grid of greenhouses.

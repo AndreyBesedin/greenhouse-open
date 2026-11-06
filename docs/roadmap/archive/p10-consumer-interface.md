@@ -2,7 +2,7 @@
 
 **Status:** done: P10.1 to P10.4, and its QA scenario, run on 2026-10-20
 ([below](#qa-scenario-run-on-2026-10-20)).
-Part of the [simulator roadmap](README.md).
+Part of the [simulator roadmap](../README.md).
 
 ## Goal
 

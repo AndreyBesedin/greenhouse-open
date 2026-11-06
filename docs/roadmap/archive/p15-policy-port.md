@@ -1,8 +1,8 @@
 # P15: A policy's port, and an experiment that steps a run
 
 **Status:** done: P15.1 to P15.7, the final QA passed on 2026-11-01. Stage A of decision
-[0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md).
-Part of the [simulator roadmap](README.md).
+[0061](../../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md).
+Part of the [simulator roadmap](../README.md).
 
 ## Goal
 
@@ -18,7 +18,7 @@ process: trusted code, an injected clock it moves after polling the run,
 its heater and sensor named by hand. Over HTTP, every write is the local
 operator's (decision 0052), and the local API serves the simulated world's
 truth beside its observations (decision 0036). The
-[policy evaluation memo](../research/policy-evaluation-contract.md) lists
+[policy evaluation memo](../../research/policy-evaluation-contract.md) lists
 the rest of what is missing.
 
 This project is stage A of decision 0061: the ports, the context, the

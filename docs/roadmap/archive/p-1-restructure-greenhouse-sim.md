@@ -1,6 +1,6 @@
 # P-1: Restructure `greenhouse_sim`
 
-**Status:** done; final QA passed on 2026-10-03. Part of the [simulator roadmap](README.md).
+**Status:** done; final QA passed on 2026-10-03. Part of the [simulator roadmap](../README.md).
 
 ## Goal
 
@@ -126,7 +126,7 @@ their imports. The risk gate and dependency tests that name file paths are
 updated in the same change, so moving a file never silently removes it from
 their protection.
 
-As implemented (see [decision 0004](../decisions/0004-organize-greenhouse-sim-by-domain.md)):
+As implemented (see [decision 0004](../../decisions/0004-organize-greenhouse-sim-by-domain.md)):
 
 | Before | After |
 | --- | --- |
@@ -199,7 +199,7 @@ the current scalar environment, so that new tomato or environment models do
 not grow one world module. No move to array storage yet. Ground-truth access
 rules stay enforced.
 
-As implemented (see [decision 0005](../decisions/0005-keep-model-state-apart-from-the-world.md)):
+As implemented (see [decision 0005](../../decisions/0005-keep-model-state-apart-from-the-world.md)):
 
 - `PlantWorld` and `Fruit` keep only what the world is. The simple tomato
   model's own values (a plant's growth multiplier and water stress; a fruit's
@@ -224,7 +224,7 @@ Only the interfaces the roadmap already justifies: plant development,
 environment and sensor generation. No empty interfaces for hypothetical
 components. Contract tests run the existing simple backends.
 
-As implemented (see [decision 0006](../decisions/0006-plug-models-in-through-minimal-protocols.md)):
+As implemented (see [decision 0006](../../decisions/0006-plug-models-in-through-minimal-protocols.md)):
 
 - `biology/contract.py` (`PlantModel[StateT]`), `environment/contract.py`
   (`EnvironmentModel`) and `sensors/contract.py` (`SensorModel`) are
@@ -254,7 +254,7 @@ and schema-valid.
 
 As implemented:
 
-- `world/geometry.py` fixes the geometry conventions ([decision 0007](../decisions/0007-world-coordinates-metres-right-handed-z-up.md)):
+- `world/geometry.py` fixes the geometry conventions ([decision 0007](../../decisions/0007-world-coordinates-metres-right-handed-z-up.md)):
   metres and radians, right-handed axes with z up, the ground at z = 0, and
   rotations as quaternions with named components. It defines the shapes the
   first scene needs (`Plane`, `Cylinder`, `Axes`), each described in its own
@@ -279,7 +279,7 @@ As implemented:
 build, and a bootstrap page that identifies itself as the `greenhouse-sim`
 viewer and shows build metadata.
 
-As implemented (see [decision 0008](../decisions/0008-build-the-viewer-with-npm-node-24-and-vite.md)):
+As implemented (see [decision 0008](../../decisions/0008-build-the-viewer-with-npm-node-24-and-vite.md)):
 
 - npm on Node 24 (`.nvmrc`, `engines`), Vite and Vitest, and strict
   TypeScript, including unchecked index access and exact optional
@@ -304,7 +304,7 @@ on the observation path. Visible result: the browser lists `gh_001`, `gh_002`
 and `gh_demo` from Python. Core tests run without importing the API, and API
 integration tests run separately.
 
-As implemented (see [decision 0009](../decisions/0009-a-standard-library-local-api-until-streaming-is-needed.md)):
+As implemented (see [decision 0009](../../decisions/0009-a-standard-library-local-api-until-streaming-is-needed.md)):
 
 - `greenhouse_sim.api` uses the standard library's HTTP server, so it adds no
   dependency. It binds to loopback, answers GET only, and serves
@@ -329,7 +329,7 @@ Keep the Python checks and add frontend install, tests, build and a
 lightweight browser smoke test. Expensive CFD or rendering work stays out of
 default CI.
 
-As implemented (see [decision 0010](../decisions/0010-check-the-viewer-with-biome-vitest-and-playwright.md)):
+As implemented (see [decision 0010](../../decisions/0010-check-the-viewer-with-biome-vitest-and-playwright.md)):
 
 - A `viewer checks` CI job runs `npm ci`, Biome, the type check, Vitest, the
   production build and a Playwright smoke test. The Python job is unchanged.
@@ -357,7 +357,7 @@ As implemented:
   the tests that keep the core headless. It also covers the public API by
   task, starting the viewer, and links to this roadmap and the decision
   records. The root README mentions the viewer and its separate checks.
-- The public API is settled ([decision 0011](../decisions/0011-the-public-api-is-the-top-level-modules-contracts-and-scene.md)):
+- The public API is settled ([decision 0011](../../decisions/0011-the-public-api-is-the-top-level-modules-contracts-and-scene.md)):
   the short top-level modules stay the stable way to run a simulation, with
   the model contracts, the simple models, the geometry and the scene snapshot
   added. `tests/test_public_imports.py` lists every public name, and

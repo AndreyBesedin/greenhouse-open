@@ -98,28 +98,30 @@ keeps the rules that leave it possible.
 Every project ends with a named browser QA scenario and an explicit
 checklist. Every commit keeps the simulator runnable and, where practical,
 adds a visible or measurable result. A project's document is added when its first
-pull request lands, and holds the state of each of its steps.
+pull request lands, and holds the state of each of its steps. When the project
+closes, its document moves to [the archive](archive/README.md) and its row here
+links there.
 
 | Project | Goal | Status |
 | --- | --- | --- |
-| [P-1](p-1-restructure-greenhouse-sim.md) | Restructure `greenhouse_sim` into a modular foundation, without changing behavior | Done |
-| [P00](p00-browser-renderer.md) | Browser renderer and visual QA foundation | Done |
-| [P01](p01-greenhouse-envelope.md) | Greenhouse envelope and world geometry | Done |
-| [P02](p02-greenhouse-layout.md) | Static greenhouse fixtures and layout | Done |
-| [P03](p03-tomato-development.md) | Stochastic tomato development and procedural plant geometry | Done |
-| [P04](p04-environment-fields.md) | Environmental fields and airflow foundation | Done |
-| [P05](p05-climate-actuators.md) | Climate actuators: fans, heaters, dehumidification and vents | Done |
-| [P06](p06-virtual-sensors.md) | Virtual sensors and the observation layer | Done |
-| [P07](p07-external-weather.md) | External weather and greenhouse boundary coupling | Done |
-| [P08](p08-sun-and-radiation.md) | Sun position, glazing and radiation propagation | Done |
-| [P09](p09-integrated-scenario.md) | Integrated greenhouse scenario, replay and release QA | Done |
-| [P10](p10-consumer-interface.md) | A consumer's interface to a running simulation | Done |
-| [P11](p11-climate-setpoints.md) | Climate setpoints: targets that run the house's equipment | Done for what it delivered: P11.1, P11.2 and P11.3 for the heating loop's targets; the rest moved to [future work](future-work.md#climate-setpoints) |
-| [P12](p12-setup-builder.md) | The setup builder: greenhouse installations authored, assessed and exchanged | Done: P12.0 to P12.3 and their QA; the rest moved to P20 and P21 |
-| [P13](p13-actions.md) | One action format, and a plan a run's gateway carries out | Done: P13.1 to P13.10, its final QA recorded |
-| [P14](p14-models-by-manifest.md) | Models chosen by the manifest, from a registry | Done: P14.1 to P14.9 and P14.10 for Reduced-State TOMGRO; Vanthoor's registration moved to the research priorities |
-| [P15](p15-policy-port.md) | A policy's port, and an experiment that steps a run | Done: final QA passed on 2026-11-01 |
-| [P16](p16-crop-at-its-models-step.md) | A run's crop at its model's step, not the run's day | Done, but for P16.4, deferred until a model takes crop work within its day |
+| [P-1](archive/p-1-restructure-greenhouse-sim.md) | Restructure `greenhouse_sim` into a modular foundation, without changing behavior | Done |
+| [P00](archive/p00-browser-renderer.md) | Browser renderer and visual QA foundation | Done |
+| [P01](archive/p01-greenhouse-envelope.md) | Greenhouse envelope and world geometry | Done |
+| [P02](archive/p02-greenhouse-layout.md) | Static greenhouse fixtures and layout | Done |
+| [P03](archive/p03-tomato-development.md) | Stochastic tomato development and procedural plant geometry | Done |
+| [P04](archive/p04-environment-fields.md) | Environmental fields and airflow foundation | Done |
+| [P05](archive/p05-climate-actuators.md) | Climate actuators: fans, heaters, dehumidification and vents | Done |
+| [P06](archive/p06-virtual-sensors.md) | Virtual sensors and the observation layer | Done |
+| [P07](archive/p07-external-weather.md) | External weather and greenhouse boundary coupling | Done |
+| [P08](archive/p08-sun-and-radiation.md) | Sun position, glazing and radiation propagation | Done |
+| [P09](archive/p09-integrated-scenario.md) | Integrated greenhouse scenario, replay and release QA | Done |
+| [P10](archive/p10-consumer-interface.md) | A consumer's interface to a running simulation | Done |
+| [P11](archive/p11-climate-setpoints.md) | Climate setpoints: targets that run the house's equipment | Done for what it delivered: P11.1, P11.2 and P11.3 for the heating loop's targets; the rest moved to [future work](future-work.md#climate-setpoints) |
+| [P12](archive/p12-setup-builder.md) | The setup builder: greenhouse installations authored, assessed and exchanged | Done: P12.0 to P12.3 and their QA; the rest moved to P20 and P21 |
+| [P13](archive/p13-actions.md) | One action format, and a plan a run's gateway carries out | Done: P13.1 to P13.10, its final QA recorded |
+| [P14](archive/p14-models-by-manifest.md) | Models chosen by the manifest, from a registry | Done: P14.1 to P14.9 and P14.10 for Reduced-State TOMGRO; Vanthoor's registration moved to the research priorities |
+| [P15](archive/p15-policy-port.md) | A policy's port, and an experiment that steps a run | Done: final QA passed on 2026-11-01 |
+| [P16](archive/p16-crop-at-its-models-step.md) | A run's crop at its model's step, not the run's day | Done, but for P16.4, deferred until a model takes crop work within its day |
 | [P17](p17-runs-and-playbacks.md) | Runs kept in a store, playbacks as positions, and a place to choose | In progress: P17.1 to P17.9 done, some with parts left; P17.10, its QA, run for what is delivered; P17.11 in progress; [the clean-up](p17-cleanup.md) left |
 | [P18](p18-resources-and-deployment.md) | Resources counted and limited, and a run that can move | In progress: P18.1 to P18.4 done |
 | [P19](p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | In progress: P19.1 to P19.6 done |
@@ -166,13 +168,15 @@ report says.
   intelligence components, crop models from plant research, a Modelica comparison, the
   test suite and CI time, a second repository audit, and an assistant in the viewer.
 - **[QA of 2026-11-04](qa-2026-11-04.md):** what a manual walk of the viewer found, and what follows from it.
-- **Clean-ups:** what reviews and walks left, per project:
-  [P03](p03-cleanup.md), [P14](p14-cleanup.md), [P17](p17-cleanup.md).
-- **[Frontend maintenance](frontend-maintenance.md):** the frontend audits of
-  6 and 11 October, their findings and the order of work that followed.
+- **[P17's clean-up](p17-cleanup.md):** what P17's QA and walks left.
+- **[The archive](archive/README.md):** the documents of finished projects, read
+  when a task cites their steps: P-1 to P16, the clean-ups of
+  [P03](archive/p03-cleanup.md) and [P14](archive/p14-cleanup.md), and
+  [the frontend maintenance](archive/frontend-maintenance.md) that followed the
+  frontend audits of 6 and 11 October.
 - **[Audits](../audits/README.md):** a periodic look at the repository as a whole,
   from the [audit of 2026-10-13](../audits/2026-10-13-repository-audit.md), which led
-  to [P14](p14-models-by-manifest.md).
+  to [P14](archive/p14-models-by-manifest.md).
 - **[Dependency updates](../dependency-updates.md):** how Dependabot is set up, and
   what moves by hand.
 - **[Decisions](../decisions/README.md):** what was decided, and why.

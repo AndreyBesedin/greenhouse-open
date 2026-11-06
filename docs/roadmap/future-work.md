@@ -20,7 +20,7 @@ take every frame on time, and draw perfect images. Planned then:
 ## Climate setpoints
 
 Recorded 2026-10-20, after P10; proposed as
-[P11](p11-climate-setpoints.md). A target, set by
+[P11](archive/p11-climate-setpoints.md). A target, set by
 a person, for the air's temperature and humidity, which runs the house's
 equipment as a climate computer would. Today the reference greenhouse heats
 to a setpoint (decision 0042) and runs the rest of its equipment by the
@@ -36,7 +36,7 @@ Each target is a run's input: changed, it makes another run, as a command
 does. Targets set from outside the simulator, by a consumer, wait for an
 actuation interface, which P10 leaves out.
 
-[P11](p11-climate-setpoints.md) delivered part of it, and closed on 2026-11-06: the
+[P11](archive/p11-climate-setpoints.md) delivered part of it, and closed on 2026-11-06: the
 controller as data, every loop (heating, venting, circulation, dehumidifying) decided by
 the house at its edge (decision 0058), and the heating targets as a run's input. Left,
 from P11, each designed in its document:
@@ -59,7 +59,7 @@ from P11, each designed in its document:
 ## Crop work within the day
 
 Recorded 2026-10-22, future work, after
-[P13](p13-actions.md). The organ crop steps a day at a time, so the
+[P13](archive/p13-actions.md). The organ crop steps a day at a time, so the
 simulated run carries out harvesting, lowering and leaf removal at a day's
 start only, and refuses them at any other instant (decision 0046).
 Automation plans and stacks crop work through the day: a harvest at 10:00
@@ -71,7 +71,7 @@ then:
 - the simulated run honouring crop actions at any instant; the action
   format, which already takes any instant, unchanged.
 
-[P16](p16-crop-at-its-models-step.md) (decision 0064) does the run's half of
+[P16](archive/p16-crop-at-its-models-step.md) (decision 0064) does the run's half of
 it: a crop steps at its model's step, a day or a whole divisor of one, and
 its crop work is carried out at that step's boundaries. What remains is the
 organ crop's own: a plant's contract stepping within its day, which
@@ -79,22 +79,22 @@ decision 0024's day sets, and so a decision of its own.
 
 ## Actions and plans, after P13
 
-Recorded 2026-11-06, as [P13](p13-actions.md) was done. What its steps and its
+Recorded 2026-11-06, as [P13](archive/p13-actions.md) was done. What its steps and its
 final QA left open:
 
-- **A server's crew** ([P13.6](p13-actions.md#settled-in-p136)): the server takes
+- **A server's crew** ([P13.6](archive/p13-actions.md#settled-in-p136)): the server takes
   no crew of its own, so its runs have none; and a hand the crop refuses an action
   for is not handed back to the actions assigned after it, which keep their instants.
-- **A JSON plan in a run's request** ([P13.7](p13-actions.md#settled-in-p137)): a
+- **A JSON plan in a run's request** ([P13.7](archive/p13-actions.md#settled-in-p137)): a
   plan that is part of a run's identity is still given in the address's spellings.
 - **The schedule's remove and repeat**, in the viewer
-  ([P13.8](p13-actions.md#settled-in-p138)), edit the run drawn, not the plan, and so
+  ([P13.8](archive/p13-actions.md#settled-in-p138)), edit the run drawn, not the plan, and so
   make another run while one is followed.
 - **Who cancelled, in the plan lane** (the
-  [final QA](p13-actions.md#recorded-at-88f35bae), step 9): the lane reads
+  [final QA](archive/p13-actions.md#recorded-at-88f35bae), step 9): the lane reads
   "cancelled: cancelled", though the outcome names who cancelled it.
 - **An epoch resumed after its authorisation changed**
-  ([P13](p13-actions.md#acceptance-criteria)'s criterion 8): carried on from its
+  ([P13](archive/p13-actions.md#acceptance-criteria)'s criterion 8): carried on from its
   checkpoint, it stops with a conflict, since its log keeps no change of authorisation;
   an entry of the
   [P17 clean-up](p17-cleanup.md#from-p13s-acceptance-an-epoch-resumed-after-its-authorisation-changed).
@@ -132,7 +132,7 @@ what is expected from outside it, is designed first, in a decision:
   format through an authenticated policy-facing interface; forecasts and
   perception later, giving typed, timestamped records (decision
   [0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md);
-  its stage A is [P15](p15-policy-port.md)).
+  its stage A is [P15](archive/p15-policy-port.md)).
 - **Base components in the simulator,** behind that interface: simple,
   documented with their limits, as its base models are, so that a run, a
   policy's evaluation and the viewer work with nothing from outside. A
@@ -188,7 +188,7 @@ neither held to a published result. Planned then:
 
 ## Models and devices, after P14
 
-Recorded 2026-11-06, from [P14.7's QA](p14-models-by-manifest.md#recorded-at-67a8cebc),
+Recorded 2026-11-06, from [P14.7's QA](archive/p14-models-by-manifest.md#recorded-at-67a8cebc),
 none of them P14.7's own. Planned then:
 
 - **A registered kind in a stored run.** A kind of equipment registered by a module the API
@@ -348,7 +348,7 @@ request and only claims about a model's full length stay `slow`.
 
 ### Documents checked against the published schemas
 
-Recorded 2026-11-06, from [P13.1](p13-actions.md#settled-in-p131). The tests hold each
+Recorded 2026-11-06, from [P13.1](archive/p13-actions.md#settled-in-p131). The tests hold each
 of the protocol's published schemas to its record's export, but check no document
 against a schema: that waits for a JSON Schema validator as a development dependency.
 

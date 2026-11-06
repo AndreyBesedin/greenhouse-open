@@ -3,9 +3,9 @@
 **Status:** Proposed, 2026-10-27, with
 [decision 0057](../decisions/0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md).
 It orders the work after the projects in progress; it changes no numbered
-project's scope. The projects' own documents ([P11](p11-climate-setpoints.md),
-[P12](p12-setup-builder.md), [P13](p13-actions.md),
-[P14](p14-models-by-manifest.md)) and the roadmap's [future
+project's scope. The projects' own documents ([P11](archive/p11-climate-setpoints.md),
+[P12](archive/p12-setup-builder.md), [P13](archive/p13-actions.md),
+[P14](archive/p14-models-by-manifest.md)) and the roadmap's [future
 work](future-work.md) hold the plans it orders.
 
 ## Why now
@@ -26,16 +26,16 @@ data.
    A finding found open again is fixed as any defect is, and the second
    audit, on the roadmap, is the next look.
 2. **Finish the setup builder as far as P12.3.** P12.0 to P12.3 are done.
-   What is left of them is [P12](p12-setup-builder.md)'s QA scenario, run
+   What is left of them is [P12](archive/p12-setup-builder.md)'s QA scenario, run
    in the browser and recorded, and its open questions, answered or
    carried into P20 and P21. Nothing more is added to the viewer for
    now, and no assistant.
 3. **Finish what a first experiment needs of P14, P11 and P13.** Of
-   [P14](p14-models-by-manifest.md), each model registered with its
+   [P14](archive/p14-models-by-manifest.md), each model registered with its
    identity, version, parameters, checkpoint state and conformance tests,
-   and chosen by the manifest. Of [P13](p13-actions.md), P13.9's policy loop
+   and chosen by the manifest. Of [P13](archive/p13-actions.md), P13.9's policy loop
    on the run, the first user of item 7; P13 is done, its QA recorded.
-   Of [P11](p11-climate-setpoints.md), P11.2, venting and humidity
+   Of [P11](archive/p11-climate-setpoints.md), P11.2, venting and humidity
    on the controller, for a rule-based climate baseline and a matched
    Modelica comparison; the rest waits. The gateway's speed, which bounds a
    plan at 1,000 occurrences, waits for an experiment that needs larger
@@ -75,7 +75,7 @@ data.
    reproduces neither GreenLight's answer nor GreenLight's own answer to
    the declared tolerances.
    Of milestone B, Reduced-State TOMGRO is a crop model of the run, grown
-   in the TOMGRO house's documented season ([P14.10](p14-models-by-manifest.md#steps)).
+   in the TOMGRO house's documented season ([P14.10](archive/p14-models-by-manifest.md#steps)).
    Left here when P14 closed, on 2026-11-06: Vanthoor's model registered,
    chosen by a manifest and shown in a documented scenario, its rung
    (`core.vanthoor_crop.VanthoorRung`) already held to its reproduction on
@@ -105,7 +105,7 @@ data.
    truth. In stages:
    1. the contracts: observations, actions, capabilities, identity and
       security, and the clock, for policies in the process and remote
-      ([P15](p15-policy-port.md));
+      ([P15](archive/p15-policy-port.md));
    2. an experiment harness: the policy's identity, its actions' trace,
       paired seeds and weather;
    3. the measures, defined exactly, with the evaluator's instrumentation

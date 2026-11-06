@@ -174,7 +174,7 @@ pale text.
 
 ### From P13's acceptance: an epoch resumed after its authorisation changed
 
-Found on 2026-11-06 while writing a test for [P13](p13-actions.md#acceptance-criteria)'s
+Found on 2026-11-06 while writing a test for [P13](archive/p13-actions.md#acceptance-criteria)'s
 criterion 8, on the one-plant box with an epoch store, and not seen in a walk.
 
 - [ ] **Medium: an epoch whose authorisation changed while it ran cannot be carried on.**

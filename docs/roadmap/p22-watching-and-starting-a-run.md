@@ -41,7 +41,7 @@ The walk of 2026-11-04 found the viewer working, and hard to find one's way in:
 
 - A run's identity, its records and its replay digests: this project changes how
   a run is shown and started, not what it computes.
-- The playback routes and the policy's port ([P15](p15-policy-port.md)), until a
+- The playback routes and the policy's port ([P15](archive/p15-policy-port.md)), until a
   decision of this project says what becomes of them.
 - The design system's rules ([P19](p19-design-system.md)): new controls are its
   components, and a change of look is one of its named visual changes.

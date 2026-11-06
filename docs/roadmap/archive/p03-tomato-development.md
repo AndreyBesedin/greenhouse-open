@@ -1,6 +1,6 @@
 # P03: Stochastic tomato development and procedural plant geometry
 
-**Status:** done. Part of the [simulator roadmap](README.md).
+**Status:** done. Part of the [simulator roadmap](../README.md).
 
 ## Goal
 
@@ -55,7 +55,7 @@ merged. Since the clean-up, the shared vocabulary (organ kinds, stages and
 their allowed changes) is in `greenhouse_sim.domain`, and what fruiting crops
 share, among it the seed hierarchy (`seeds`), the environment interface
 (`environment`) and variation (`variation`) named below, is in
-`greenhouse_sim.biology.plant` ([decision 0025](../decisions/0025-shared-vocabulary-in-a-domain-package-and-a-generic-plant.md)).
+`greenhouse_sim.biology.plant` ([decision 0025](../../decisions/0025-shared-vocabulary-in-a-domain-package-and-a-generic-plant.md)).
 
 ## Steps
 
@@ -79,7 +79,7 @@ birth time, thermal age and stage; and the seed hierarchy. Visible result: a
 debug tree in the browser, and a schematic 3D stick plant built from the
 topology. Tests: topology invariants, and deterministic identifiers.
 
-As implemented (see [decision 0022](../decisions/0022-plant-organs-are-named-by-where-they-sit.md)):
+As implemented (see [decision 0022](../../decisions/0022-plant-organs-are-named-by-where-they-sit.md)):
 
 - `greenhouse_sim.biology.tomato.organ.topology` describes a plant: its main
   stem (axis) of phytomers, each with its internode and leaf and perhaps a
@@ -250,7 +250,7 @@ row of 20 plants that clearly varies while remaining recognisably the same
 crop. Tests: the same seed reproduces geometry, different seeds change
 plants, and distributions stay within their configured ranges.
 
-As implemented (see [decision 0023](../decisions/0023-plants-vary-through-a-shared-vigour-and-keep-their-draws.md)):
+As implemented (see [decision 0023](../../decisions/0023-plants-vary-through-a-shared-vigour-and-keep-their-draws.md)):
 
 - **Traits:** `organ.variation` draws each plant's traits from the seed
   hierarchy.
@@ -429,7 +429,7 @@ Visible result: two plants side by side under different environments
 diverge in growth and ripening. Tests: a controlled perturbation gives the
 expected direction of response.
 
-As implemented (see [decision 0024](../decisions/0024-plants-take-their-environment-a-day-at-a-time.md)):
+As implemented (see [decision 0024](../../decisions/0024-plants-take-their-environment-a-day-at-a-time.md)):
 
 - **The interface:** `organ.environment` defines it.
   - **A day:** a `LocalEnvironment` is the day's mean temperature, PAR

@@ -7,7 +7,7 @@
 
 P11 gives a run a climate controller: loops that run its heater, vents,
 fans and dehumidifier towards targets, in place of the clock's daily
-commands ([P11](../roadmap/p11-climate-setpoints.md)). Its heating loop is
+commands ([P11](../roadmap/archive/p11-climate-setpoints.md)). Its heating loop is
 decision 0042's thermostat: the whole house's air switches the heater the
 moment it reaches the band's edge, found from the air's exact course, and
 the grid follows. P11.1 made the controller data, its loops checked

@@ -1,6 +1,6 @@
 # P04: Environmental fields and airflow foundation
 
-**Status:** done. Part of the [simulator roadmap](README.md).
+**Status:** done. Part of the [simulator roadmap](../README.md).
 
 ## Goal
 
@@ -47,7 +47,7 @@ serialization. Visible result: a synthetic vector field appears as arrows in
 the greenhouse. Tests: an analytic field sampled at known coordinates matches
 its expected values.
 
-As implemented (see [decision 0026](../decisions/0026-environment-fields-are-cell-centred-grids-of-packed-floats.md)):
+As implemented (see [decision 0026](../../decisions/0026-environment-fields-are-cell-centred-grids-of-packed-floats.md)):
 
 - **The air's quantities** are domain vocabulary: `domain.air.AirQuantity`
   (velocity, temperature, humidity, CO₂, pressure), with their units and
@@ -197,7 +197,7 @@ browser. Visible result: a debug mode colours exactly the surfaces that
 become CFD boundaries. Tests: the exported surfaces' count and categories
 match the simulator's semantics.
 
-As implemented (see [decision 0027](../decisions/0027-cfd-runs-out-of-process-on-the-fields-grid.md)):
+As implemented (see [decision 0027](../../decisions/0027-cfd-runs-out-of-process-on-the-fields-grid.md)):
 
 - **The domain** (`greenhouse_sim.cfd.geometry`) is a scenario's field box,
   the air under its gutters, on the field's own grid, so a solver's cells

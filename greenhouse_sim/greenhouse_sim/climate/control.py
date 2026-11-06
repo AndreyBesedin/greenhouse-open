@@ -1,7 +1,7 @@
 """A greenhouse's climate controller, as data (P11.1): the loops that run its
 heater, vents, fans and dehumidifier by its house's air, each with its
 targets and its band, its vents in stages, as a climate computer runs them
-(`docs/roadmap/p11-climate-setpoints.md`).
+(`docs/roadmap/archive/p11-climate-setpoints.md`).
 
 Each loop reads one quantity of the air and switches its devices in steps,
 with hysteresis: every edge it switches at is a value of the air, with a

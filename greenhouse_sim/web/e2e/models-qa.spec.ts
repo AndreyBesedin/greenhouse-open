@@ -9,7 +9,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { unfold } from "./folds";
 import { clickAt } from "./view";
 
-// P14.7's QA scenario (`docs/roadmap/p14-models-by-manifest.md`), as it is
+// P14.7's QA scenario (`docs/roadmap/archive/p14-models-by-manifest.md`), as it is
 // recorded: the reference greenhouse's manifest names each part's model; a
 // copy of it growing the simple crop is drawn with its harvest, and its
 // checkpoint is refused by the organ crop's run, naming the crop; and a kind
