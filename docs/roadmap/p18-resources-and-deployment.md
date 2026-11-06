@@ -146,6 +146,11 @@ limit, and `RLIMIT_AS` on macOS, are in "What P18.3 limits" below.
 P18.1 comes first, because the viewer's moving to workers needs it. P18.2 to P18.4
 can follow in any order.
 
+From P13, for its open steps to weigh: a playback's gateway bounds each plan, at 1,000
+occurrences, but not how many plans a run holds, and no route serves its limits
+([P13.7](p13-actions.md#settled-in-p137)); and under load a followed run's view fell up
+to 9 hours behind a paused clock ([P13's final QA](p13-actions.md#recorded-at-88f35bae)).
+
 ### What P18.2 counts
 
 `usage.json`, beside the manifest, is written after each commit and as the epoch

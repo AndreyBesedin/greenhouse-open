@@ -60,6 +60,27 @@ its crop work is carried out at that step's boundaries. What remains is the
 organ crop's own: a plant's contract stepping within its day, which
 decision 0024's day sets, and so a decision of its own.
 
+## Actions and plans, after P13
+
+Recorded 2026-11-06, as [P13](p13-actions.md) was done. What its steps and its
+final QA left open:
+
+- **A server's crew** ([P13.6](p13-actions.md#settled-in-p136)): the server takes
+  no crew of its own, so its runs have none; and a hand the crop refuses an action
+  for is not handed back to the actions assigned after it, which keep their instants.
+- **A JSON plan in a run's request** ([P13.7](p13-actions.md#settled-in-p137)): a
+  plan that is part of a run's identity is still given in the address's spellings.
+- **The schedule's remove and repeat**, in the viewer
+  ([P13.8](p13-actions.md#settled-in-p138)), edit the run drawn, not the plan, and so
+  make another run while one is followed.
+- **Who cancelled, in the plan lane** (the
+  [final QA](p13-actions.md#recorded-at-88f35bae), step 9): the lane reads
+  "cancelled: cancelled", though the outcome names who cancelled it.
+- **Tests for two of its criteria** ([P13](p13-actions.md#acceptance-criteria)),
+  held by their code alone: a manager's revision checked only for what it adds or
+  changes, and a run restored from a checkpoint after a withdrawal of rights not
+  carrying the refused action out.
+
 ## CO₂ and light targets
 
 Recorded 2026-10-20, future work, after the
@@ -288,6 +309,12 @@ and main runs them all ([engineering](../engineering.md#local-checks)); the
 simulator's part then took 6.9 minutes on the first pull request to run it. What
 follows is making the long tests of logic short, so that they run on every pull
 request and only claims about a model's full length stay `slow`.
+
+### Documents checked against the published schemas
+
+Recorded 2026-11-06, from [P13.1](p13-actions.md#settled-in-p131). The tests hold each
+of the protocol's published schemas to its record's export, but check no document
+against a schema: that waits for a JSON Schema validator as a development dependency.
 
 ## A second repository audit
 
