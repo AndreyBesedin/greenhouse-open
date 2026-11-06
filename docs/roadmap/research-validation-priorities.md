@@ -34,8 +34,8 @@ data.
    [P14](p14-models-by-manifest.md), each model registered with its
    identity, version, parameters, checkpoint state and conformance tests,
    and chosen by the manifest. Of [P13](p13-actions.md), P13.9's policy loop
-   on the run, the first user of item 7; P13.10's recorded QA scenario
-   waits. Of [P11](p11-climate-setpoints.md), P11.2, venting and humidity
+   on the run, the first user of item 7; P13.10's QA scenario is recorded.
+   Of [P11](p11-climate-setpoints.md), P11.2, venting and humidity
    on the controller, for a rule-based climate baseline and a matched
    Modelica comparison; the rest waits. The gateway's speed, which bounds a
    plan at 1,000 occurrences, waits for an experiment that needs larger

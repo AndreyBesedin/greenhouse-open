@@ -1,8 +1,9 @@
 # P13: One action format, and a plan a run's gateway carries out
 
 **Status:** in progress. The design is accepted (decision 0046), its
-questions [decided](#decided); P13.1 to P13.4 are done. Part of the
-[simulator roadmap](README.md).
+questions [decided](#decided); P13.1 to P13.9 are done, and P13.10's QA
+scenario is [recorded](#recorded-at-88f35bae), with one clause left. Part of
+the [simulator roadmap](README.md).
 
 ## Goal
 
@@ -602,7 +603,7 @@ within the day; the action format needs no change for it.
 | P13.7 | The gateway's write side and its routes: give a plan before a run, steer a playing one, list the actions as they stand, cancel a plan or chosen actions, read the plan in force; the playback's targets route becomes an alias. | `feat(api): give, steer and read a run's plan` | Done |
 | P13.8 | The viewer: the Equipment, Openings and Targets panels and the plant lab write one plan; a plan lane in the timeline shows what was due, what happened and why. | `feat(viewer): one plan, and its outcomes in the timeline` | Done: the panels steer a followed run through its plan (#385), its plan lane (#386), and crop actions given from the viewer |
 | P13.9 | The old paths removed: the engine's actions, `greenhouse_sim.executor`, the deprecated aliases (`RequestedAction`, `ActionResult` and the old execution names), `LabAction`; the close-the-loop example as a policy loop on the run; the protocol's minor version moves again, and the changelog says so. | `refactor: one way to act on a greenhouse` | Done: the close-the-loop example as a policy (#393), the plant lab's crop actions (#394), the engine's actions and executor (#395), and the protocol's first action format |
-| P13.10 | The QA scenario below, run and recorded. | `test(e2e): a plan carried out, late, on time and refused` | Planned |
+| P13.10 | The QA scenario below, run and recorded. | `test(e2e): a plan carried out, late, on time and refused` | Run at `88f35bae`, [recorded below](#recorded-at-88f35bae): all twelve steps but step 11's last clause, an assigned action keeping its assignment as it is carried, which is what is left; steps 5 and 6 through the simulator's service, as no route offers them |
 
 ## Acceptance criteria
 
@@ -727,6 +728,56 @@ consumer following:
     carried, with that reason; the others keep their ids, principals and
     dependencies, and an assigned one keeps its assignment.
 12. A plan of today's commands and targets alone: the run id is today's.
+
+### Recorded at `88f35bae`
+
+Run on 5 November 2026 on `88f35bae`, 0.6.0 and what merged after it, on the Vite development
+server (StrictMode) in a headed Chromium drawing with the machine's GPU (ANGLE Metal, Apple M2),
+with an API and a state folder of its own, on a machine shared with other work (load 3 to 30).
+The walk was made three times over, twice on day 31, where truss 3 of plant 30 exists, and once
+on day 2 with truss 1. A plan needs a run with a gateway, and a run a worker computes has none, so
+the run is the playback the viewer follows, by the viewer's *Follow*, or
+`?scenario=reference_greenhouse&field=climate&follow=1`, not a run started from the start page.
+No route takes a plan from another principal or changes the authorisation (P13.7), so steps 5 and 6
+gave those two through the simulator's service, in the API's own process.
+
+| Step | Result | What was seen |
+| --- | --- | --- |
+| 1 | Passed | Four actions given in one plan, as the local operator; all accepted. |
+| 2 | Passed, once the view catches up | Each due, then done, in the lane: `heating_day to 22 °C` at 8 h 00, `roof_vent_1 to 100%` at 11 h 00 of its 11 h 00 to 11 h 30, the harvest and the lowering at a day's start, in that order. The consumer read the same statuses, moments and effects, and each crop action's event names its action (`parameters.action`). A lane is read for the moment drawn, which falls behind the clock under load, so it may say `assigned` of what a consumer reads as done until the view arrives. Truss 3 on day 31 bore no fruit (`fruit_count: 0`), and truss 1, two days on, one fruit, 0.11 g. The scenario's own daily commands open the same vent at 11 h 00, so the view looks the same with or without the plan. |
+| 3 | Passed | At 10 h 05: `missed: late`, and `cancelled: its prerequisite critical/too_late did not end done`. |
+| 4 | Passed | Refused when given: "no executor honours harvest at 2026-03-31T13:00:00+00:00: the run's crop steps a day at a time: it carries out harvest at a day's start, not at 2642400 s". |
+| 5 | Passed, through the service | "grower is not authorised to harvest". |
+| 6 | Passed, through the service | Refused at 15 h 00: "grower is no longer authorised". The plan's state lists version 2 of the authorisation at the moment of the change, 14 h 30. |
+| 7 | Passed | Superseded, by revision 2, while the run played; the same run and epoch; the 118,959 observations and 2 events delivered before it unchanged. |
+| 8 | Passed | A client of the protocol's records and two routes alone, `/actuation/v1` and `/consumer/v1`, on a server started with `--play`, against the same plan given through the simulator's service in another process: the same four outcomes, in order, with their moments, effects and event identifiers. |
+| 9 | Passed | Listed with state, due instant, principal, and what waits for each. Cancelling `first`, which `second` waits for, and `third`, which nothing waits for: both `cancelled`, `cancelled_by` the local operator; `second` cancelled with its prerequisite; a second listing holds `fourth` alone, as it was. The lane says "cancelled: cancelled", and not by whom. |
+| 10 | Passed for the restart; nothing was left to cancel at the end | *Start over* with an action still to come: epoch 1 from day 0, its first outcome that action, `cancelled: the run started over`, and no level, target or crop action of the epoch before applying. Played to its end, in a new epoch, 18 minutes: nothing was pending when it ended, since whatever a run is given resolves by then. A level due at its last instant, and another waiting for it, were `executed`; a harvest waiting for it `missed`, "no instant its executor honours is left". A plan given after that answers 409, "has finished". Cancelling what is pending at the end is held on the in-memory gateway, `the run finished`. |
+| 11 | **Passed but for its last clause** | With a test's own way to lose a device, as the in-memory gateway's interface has none: `gone` refused as it is carried, "the run has no heater, as it was carried", the first outcome of the new epoch; the others keep their identifiers, principals and dependencies, and each is carried out once. An action assigned and not started does not keep its assignment: `restart` revokes it and sends it again, `e0-a1` becoming `e1-a4`, where the contract says "assignments kept". |
+| 12 | Passed | `test_run_identity`'s pinned runs, levels and targets among them, hold, 22 of 22. |
+
+Also seen: once, in the first walk, at a pause just after a day's start, the *Run played back* panel
+was gone from the page for over 30 s, which ended that walk before a picture was taken. A new page
+on the same state had it, and it did not happen in the later crossings of a day's start, so its
+cause is unknown. A plan given to a paused run by another client shows in the lane
+once the clock moves (P13.8). Under load the view's moment was up to 9 hours behind a paused clock,
+"Loading day 30, 8 h 55 min... 61 s", after a plan had the day worked again.
+
+A followed run at its end reads "paused", with *Play* offered. A replay has no plan lane, and a run
+a worker computes no gateway: a plan to one answers 404, "no run". So a run started from the start
+page cannot be given a plan, and is steered by `/changes` (P17) instead.
+
+What is left of P13.10: step 11's last clause, either an assigned action kept as it is carried or
+the contract's words changed; and the panel gone once, if it comes again.
+
+Not run: `--authorisation` with a file, which `test_run_authorisation` holds; an executor with
+hands in the viewer, which `test_run_crew` holds; the lane in a light theme; a plan on a followed
+run with another layout.
+
+Tests hold what can be held: `e2e/plan-qa.spec.ts`, the lane and the consumer on one run, on a
+production build; `greenhouse_sim/tests/test_plan_final_qa.py`, steps 1 to 10 through the gateway's
+and the consumer's routes; `test_actuation_contracts.py`, step 11, each carried out once, and what a
+run that ends cancels. `test_run_identity` holds step 12.
 
 ## Settled in P13.1
 
