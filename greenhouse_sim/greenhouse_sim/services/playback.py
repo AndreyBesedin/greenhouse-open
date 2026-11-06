@@ -1739,11 +1739,14 @@ class Playbacks:
         return [found for _, found in self._store.values()]
 
     def kept(self) -> set[tuple[str, int]]:
-        """The epochs they keep, by run and number, those replaced still working
-        included: each is told of a change of the simulator's authorisation by
-        its playback, and not through the store."""
+        """The epochs the playbacks in place keep, by run and number: each is
+        told of a change of the simulator's authorisation by its playback, and
+        not through the store. Those replaced or stopped are left out: a change
+        goes past one to the playback in its place (`Playback.authorise`), so
+        the epoch it leaves is asked through the store, and takes it when it
+        is carried on."""
         with self.rearranging:
-            playing = [*self.all(), *self._replaced]
+            playing = self.all()
         return {key for found in playing if (key := found.epoch_kept()) is not None}
 
     def held(self) -> set[tuple[str, int]]:
