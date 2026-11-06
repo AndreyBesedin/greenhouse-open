@@ -114,8 +114,8 @@ pull request lands, and holds the state of each of its steps.
 | [P08](p08-sun-and-radiation.md) | Sun position, glazing and radiation propagation | Done |
 | [P09](p09-integrated-scenario.md) | Integrated greenhouse scenario, replay and release QA | Done |
 | [P10](p10-consumer-interface.md) | A consumer's interface to a running simulation | Done |
-| [P11](p11-climate-setpoints.md) | Climate setpoints: targets that run the house's equipment | In progress: P11.1, P11.2 and P11.3 for the heating loop's targets done |
-| [P12](p12-setup-builder.md) | The setup builder: greenhouse installations authored, assessed and exchanged | In progress: P12.0 to P12.3 done; their QA recorded, but for its first day's check; the rest moved to P20 and P21 |
+| [P11](p11-climate-setpoints.md) | Climate setpoints: targets that run the house's equipment | Done for what it delivered: P11.1, P11.2 and P11.3 for the heating loop's targets; the rest moved to [future work](future-work.md#climate-setpoints) |
+| [P12](p12-setup-builder.md) | The setup builder: greenhouse installations authored, assessed and exchanged | Done: P12.0 to P12.3 and their QA; the rest moved to P20 and P21 |
 | [P13](p13-actions.md) | One action format, and a plan a run's gateway carries out | Done: P13.1 to P13.10, its final QA recorded |
 | [P14](p14-models-by-manifest.md) | Models chosen by the manifest, from a registry | In progress: P14.1 to P14.8 done, P14.7 but for its QA; P14.9 done; P14.10 under way |
 | [P15](p15-policy-port.md) | A policy's port, and an experiment that steps a run | Done: final QA passed on 2026-11-01 |
