@@ -1,9 +1,11 @@
 # P12: The setup builder
 
-**Status:** in progress: P12.0 to P12.3 are done, and their QA scenario
-[recorded](#recorded-at-88f35bae): all but its first day's check passed.
+**Status:** done, closed on 2026-11-06: P12.0 to P12.3, and their QA scenario
+[recorded](#recorded-at-88f35bae), its first day's check
+[compared as design point 1 has it](#the-first-days-check): the house and its rows.
 What came after them has moved: [P20](p20-crop-parameter-assets.md) takes the crops'
-parameters and [P21](p21-rows-of-different-crops.md) rows of different crops.
+parameters and [P21](p21-rows-of-different-crops.md) rows of different crops; what the
+QA saw of the builder's form goes with [P19.9](p19-design-system.md#steps).
 Part of the [simulator roadmap](README.md).
 
 ## Goal
@@ -221,26 +223,36 @@ scenario's words.
 | Roof vents over two slopes, in one edit | Passed | Four on each of `roof 1 left` and `roof 2 left`: "Placed 4 roof vents on 2 surfaces.", 31 items, `roof_vent_4` to `roof_vent_11`, drawn on the roof. Over `roof 1 right`, which holds a vent: "Doors or vents overlap: roof_vent_1 with roof_vent_5, roof_vent_1 with roof_vent_6", the items outlined on the house, and it cannot run. |
 | Undo | Passed | One step: 23 items, and it can run. |
 | Two rows given another variety | Passed | "Rows grow different crops; a run grows one model and one variety." *Save and start a run* is disabled, and the run step says why. |
-| Put back | Passed, once the model is chosen too | The rows' form starts at the `simple` model whatever the rows grow, so typing only the variety back leaves rows 2 and 3 on another model, and the same error. Choosing `organ` as well: it can run. |
+| Put back | Passed, once the model is chosen too | The rows' form starts at the `simple` model whatever the rows grow, so typing only the variety back leaves rows 2 and 3 on another model, and the same error. Choosing `organ` as well: it can run. Since fixed by #585: the form starts from what the rows grow. |
 | Export | Passed | *Download house file*: `<identifier>.house.json`. |
 | Import into an empty builder | Passed | *Start again*, which asks first, then the file: the same 23 items and 4 rows, nothing found against it. |
 | Run it | Passed | From 1 March 2026, seed 42, 2 days: `ref_qa_10816_r1-climate-806a05ba`, finished on a worker, its replay drawn. |
 | Its scene matches the reference greenhouse's | Passed for the house | The 148 entities that are not plants' are equal, but for the scenario's name each holds; the envelope, layout, crop and site read from the file equal the scenario's. The plants differ, 2,883 entities against 2,958: a plant is drawn from its identifier and seed (`transplant`), and its identifier holds the scenario's name, so a house copied under another name grows other plants at the same seed. |
-| Its first day matches the reference greenhouse's | **Failed as written** | The house's air starts at 18 °C, not 14 °C, and averages 10.1 °C over the day, not 17.0 °C. A house's file holds no more than the house (design point 1): the run has neither the scenario's heating loops (`control`), its daily commands (`daily`), its weather, its crop work, its start of the air (`climate`) nor its `airflow`. The run step offers the presets by name, and not the reference's season. |
+| Its first day matches the reference greenhouse's | **Failed as written;** [compared again below](#the-first-days-check) | The house's air starts at 18 °C, not 14 °C, and averages 10.1 °C over the day, not 17.0 °C. A house's file holds no more than the house (design point 1): the run has neither the scenario's heating loops (`control`), its daily commands (`daily`), its weather, its crop work, its start of the air (`climate`) nor its `airflow`. The run step offers the presets by name, and not the reference's season. |
 
-What is left: to say what this check should compare. Either the scenario's words change to the
-house and its plants' rows, as design point 1 has it, or copying a scenario's house offers to keep
-that scenario's settings for the run, as `services.drafts` keeps those of a scenario that is not
-packaged (`_kept_from_its_scenario`). Until that is decided the check stands as failed. P12.0 to
-P12.3 keep their status: what each was accepted for passed in the walk.
+#### The first day's check
+
+The scenario's words asked more than an installation holds. A house's file is the house: its
+envelope, its layout and the crop each row grows (design point 1, decision 0050). The weather, the
+period, the controller, its daily commands and the start of the air are a scenario's, and a run of
+the file takes them from the run step, so its first day was never the reference greenhouse's. The
+check is therefore what design point 1 says the builder keeps: **the house and its plants' rows
+match the scenario's.** The row before it shows that: the 148 entities that are not plants' equal,
+and the envelope, layout, crop and site read from the file equal the scenario's. So it passes, and
+`builder.spec.ts` holds it.
+
+Copying a scenario's house and keeping that scenario's settings for the run, as `services.drafts`
+keeps those of a scenario that is not packaged (`_kept_from_its_scenario`), is not planned: it
+would make the file a scenario's, which the design keeps apart.
 
 Also seen: the house form's labels *Origin Position X* and *Origin X* say little of what tells them
-apart. The console was clean but for the renderer library's deprecation warning.
+apart. The console was clean but for the renderer library's deprecation warning. The labels go with
+the builder's controls in [P19.9](p19-design-system.md#steps).
 
-Not run: the house form and palette by keyboard alone, which the browser tests do in part; a
-packaged scenario's own file, whose upload is refused as a packaged scenario's
-(`e2e/scenario-file.spec.ts`); a first day compared at the replay's own readings, the comparison
-above being the API's climate run of each scenario.
+Not run: the house form and palette by keyboard alone, which the browser tests do in part, and
+which goes with P19.9 too; a packaged scenario's own file, whose upload is refused as a packaged
+scenario's (`e2e/scenario-file.spec.ts`), by design; a first day compared at the replay's own
+readings, moot once the check compares the house.
 
 A browser test holds what can be held: `builder.spec.ts`, the reference greenhouse's house edited,
 put back, through its file and run, its scene's house equal to the scenario's.
