@@ -14,7 +14,7 @@ from greenhouse_protocol.actions import (
     SetTarget,
 )
 from greenhouse_protocol.assignment import Assignment, ExecutionReport, ReportStatus
-from greenhouse_protocol.authorisation import AuthorisationConfig
+from greenhouse_protocol.authorisation import AuthorisationConfig, AuthorisationGroup, Grant
 from greenhouse_protocol.contracts.consumer import check_polls
 from greenhouse_protocol.contracts.execution import (
     ActionNotExecutable,
@@ -46,6 +46,8 @@ from greenhouse_protocol.plan import (
     OnLate,
     Plan,
     PlannedAction,
+    Principal,
+    PrincipalKind,
     Recurrence,
 )
 from greenhouse_protocol.run import RunEpoch
@@ -440,6 +442,40 @@ def test_a_prerequisite_done_then_revised_is_waited_for_again() -> None:
     gateway.advance(START + 3 * HOUR + timedelta(minutes=30))
 
     assert [s.ref.action_id for s in gateway.actions()] == ["then", "first"]
+
+
+def test_a_manager_s_revision_checks_only_what_it_adds_or_changes_against_its_rights() -> None:
+    """P13's criterion 12. The manager may manage plans and inspect, but
+    neither set levels nor propose for the operator: the operator's action
+    it keeps unchanged keeps its principal and is carried out; the one it
+    adds is checked against its own rights, and refused; and changing the
+    operator's action is proposing for the operator, refused whole."""
+    manager = Principal(kind=PrincipalKind.PERSON, id="manager")
+    managers = AuthorisationGroup(
+        group_id="managers",
+        principals=frozenset({manager}),
+        grants=(Grant(kinds=frozenset({ActionKind.INSPECT}), manage_plans=True),),
+    )
+    config = conformance_authorisation()
+    gateway = _gateway(config.model_copy(update={"groups": (*config.groups, managers)}), START)
+    gateway.submit(_plan(gateway, _vent("vent")), by=OPERATOR)
+    kept = _plan(gateway, _vent("vent"), _vent("own", proposed_by=manager))
+
+    receipt = gateway.submit(kept.model_copy(update={"revision": 2}), by=manager)
+    changed = _plan(gateway, _vent("vent", action=SetLevel(device_id="vent_1", level=0.5)))
+    refused = gateway.submit(changed.model_copy(update={"revision": 3}), by=manager)
+    gateway.advance(START + 2 * HOUR)
+    outcomes = {o.ref.action_id: o for o in gateway.outcomes().outcomes}
+
+    assert receipt.accepted and receipt.refused == (ActionRef(action_id="own"),)
+    assert not refused.accepted
+    assert refused.errors == ("manager may not propose vent for operator",)
+    assert _ends(gateway) == [
+        ("own", 2, OutcomeStatus.REFUSED),
+        ("vent", 2, OutcomeStatus.EXECUTED),
+    ]
+    assert outcomes["own"].reason == "manager is not authorised to set_level"
+    assert outcomes["vent"].principal == OPERATOR
 
 
 def test_an_aborted_plans_actions_are_never_given_to_its_executor() -> None:

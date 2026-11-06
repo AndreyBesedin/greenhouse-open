@@ -4,6 +4,8 @@ enforced by every playback's gateway when a plan is given and when each of
 its actions falls due, and changed while runs play, each change recorded."""
 
 import argparse
+import json
+import sys
 from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager
 from datetime import datetime, timedelta
@@ -11,7 +13,7 @@ from pathlib import Path
 from typing import Final
 
 import pytest
-from greenhouse_protocol.actions import ActionKind
+from greenhouse_protocol.actions import ActionKind, SetLevel
 from greenhouse_protocol.authorisation import (
     AuthorisationConfig,
     AuthorisationGroup,
@@ -19,9 +21,12 @@ from greenhouse_protocol.authorisation import (
     TargetSelector,
 )
 from greenhouse_protocol.outcome import OutcomeStatus
+from greenhouse_protocol.plan import At, Plan, PlannedAction
 
 from greenhouse_sim.api import server
+from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import playback
+from greenhouse_sim.services.checkpoints import read_checkpoint
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.gateway import (
     LOCAL_AUTHORISATION,
@@ -35,8 +40,14 @@ from greenhouse_sim.services.playback import (
     PlaybackCommand,
     delivered,
 )
+from greenhouse_sim.services.run_store import EpochStore, FolderStore, decompress
+from greenhouse_sim.services.runs import PlannedAt
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import HOUR_S
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+import short_runs
 
 SCENARIO: Final = "reference_greenhouse"
 # Every record there is, in one batch.
@@ -252,4 +263,57 @@ def _readings(
         (record.sensor_id, record.timestamp, record.value)
         for record in played.records_after(0, ALL).records
         if record.sensor_id is not None and after < delivered(record) <= until
+    ]
+
+
+def _kept_plan(
+    tmp_path: Path, *, withdrawn: bool
+) -> tuple[list[tuple[OutcomeStatus, str | None]], tuple[PlannedAt, ...]]:
+    """A short run's heater set by the local operator for noon, the right to
+    set levels withdrawn at 6 h if `withdrawn`: the outcomes, and the plan of
+    the checkpoint its epoch keeps at its first day's end."""
+    box = "climate_box_withdrawn"
+    with Simulator(authorisation=LEVELS_ONLY) as simulator:
+        simulator.catalogue.register(short_runs.one_plant_box(box, 2))
+        played = Playback(simulator, box, epochs=Epochs(tmp_path))
+        state = played.state()
+        noon = PlannedAction(
+            action_id="heat",
+            action=SetLevel(device_id="heater", level=1.0),
+            timing=At(at=played.start + timedelta(hours=12)),
+            proposed_by=LOCAL_OPERATOR,
+        )
+        played.submit(
+            Plan(
+                plan_id="noon", run_id=state.run_id, epoch=state.epoch, revision=1, actions=(noon,)
+            )
+        )
+        played.step_to(6 * HOUR_S)
+        if withdrawn:
+            played.authorise(DAY_TARGET_ONLY)
+        played.step_to(DAY_S + HOUR_S)
+        played.keep()
+        outcomes = played.plan("noon").outcomes
+    kept = EpochStore(FolderStore(tmp_path), state.run_id, state.epoch).checkpoint_at(DAY_S)
+    assert kept is not None
+    checkpoint = read_checkpoint(json.loads(decompress(kept[0])))
+    return [(o.status, o.reason) for o in outcomes], checkpoint.plan.actions
+
+
+def test_a_checkpoint_kept_after_a_withdrawal_leaves_the_refused_action_out(
+    tmp_path: Path,
+) -> None:
+    """P13's criterion 8, for a checkpoint: an action whose rights were
+    withdrawn before it fell due is refused then, and the checkpoint the
+    epoch keeps after it holds the run's plan without it, so that a run
+    restored from it does not carry it out. Without the withdrawal, the same
+    checkpoint keeps the action."""
+    refused, without = _kept_plan(tmp_path / "withdrawn", withdrawn=True)
+    executed, kept = _kept_plan(tmp_path / "kept", withdrawn=False)
+
+    assert refused == [(OutcomeStatus.REFUSED, "local_operator is no longer authorised")]
+    assert without == ()
+    assert executed == [(OutcomeStatus.EXECUTED, None)]
+    assert [(each.at_s, each.action) for each in kept] == [
+        (12 * HOUR_S, SetLevel(device_id="heater", level=1.0))
     ]
