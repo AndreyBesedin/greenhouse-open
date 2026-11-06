@@ -161,6 +161,8 @@ test("a run is stopped with what it computed, resumed as the same epoch, and del
     await row.getByRole("button", { name: /^Delete the run with seed/ }).click();
     await row.getByRole("button", { name: /^Delete the run with seed/ }).click();
     await expect(row).toHaveCount(0);
+    // The keyboard is left in the dialog, on its heading, not on the page's body.
+    await expect(dialog.getByRole("heading", { level: 2 })).toBeFocused();
   } finally {
     await page.request.post(
       `/api/runs/${encodeURIComponent(started.runId)}/epochs/${started.epoch}/stop`,
