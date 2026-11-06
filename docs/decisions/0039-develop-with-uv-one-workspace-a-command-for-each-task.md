@@ -1,6 +1,6 @@
 # 0039: Develop with uv: one workspace, a command for each task
 
-**Status:** Accepted
+**Status:** Accepted; Node 24 as a prerequisite superseded by [0069](0069-setup-installs-node-when-the-machines-is-missing-or-too-old.md)
 **Date:** 2026-10-18
 
 ## Context

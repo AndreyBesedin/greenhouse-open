@@ -45,11 +45,12 @@ repos:
         files: ^greenhouse_(protocol|sim|adapters)/greenhouse_(protocol|sim|adapters)/(api|services)/
 
       # The viewer's own Biome, so the hook and the lockfile always agree on
-      # its version: `uv run setup` installs it.
+      # its version: `uv run setup` installs it. Through uv, whose path has
+      # the Node that `uv run setup` installs when the machine has none.
       - id: biome
         name: biome format and lint (viewer)
         entry: >-
-          greenhouse_sim/web/node_modules/.bin/biome check --write
+          uv run greenhouse_sim/web/node_modules/.bin/biome check --write
           --no-errors-on-unmatched --files-ignore-unknown=true
         language: system
         files: ^greenhouse_sim/web/
