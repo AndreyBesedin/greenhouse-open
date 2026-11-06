@@ -39,6 +39,11 @@
   top: 12px;
   left: 12px;
   max-width: 420px;
+  /* A line's height set here, not left to the font: `normal` is each system
+   * font's own, from 1.16 of the size (DejaVu Sans) to 1.36 (Noto Sans), and
+   * with the second the folded panel scrolled in a window 720 px tall that
+   * it fits with the first (#273). */
+  line-height: 1.2;
 }
 
 .info-panel h1 {

@@ -85,8 +85,9 @@ test("info panel: every group a section folded to its line, the panel fitting a 
     for (const name of OPEN) {
       await expect(panel.locator(`details.${FOLDS[name]}`)).toHaveAttribute("open");
     }
-    const scrolls = await panel.evaluate((element) => element.scrollHeight > element.clientHeight);
-    expect(scrolls).toBe(false);
+    // How far it scrolls, in pixels: said, should it fail.
+    const scrolls = await panel.evaluate((element) => element.scrollHeight - element.clientHeight);
+    expect(scrolls).toBe(0);
     await expect(page.getByRole("button", { name: "Stop following" })).toBeInViewport();
     await expect(page.getByRole("group", { name: "Climate run" })).toBeInViewport();
   });
