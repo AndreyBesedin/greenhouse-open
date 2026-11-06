@@ -15,7 +15,7 @@ const SLAB_TOP = { x: 3.0, y: 2.4, z: 0.675 };
 test("the compartment's rows stand on gutters, with legs and a slab", async ({ page }) => {
   await page.goto("/?scenario=tomato_compartment");
   await expect(page.getByTestId("scene-status")).toContainText(
-    "tomato_compartment, day 0, 896 entities",
+    "tomato_compartment, 0 days in, 896 entities",
   );
   const inspector = page.getByRole("region", { name: "Inspector" });
   const shape = page.getByTestId("selected-shape");

@@ -11,13 +11,13 @@ const ON_THE_FIRST_BENCH = { x: 3.0, y: 1.9, z: 0.8 };
 test("a scenario's layouts are switched in the viewer, without code changes", async ({ page }) => {
   await page.goto("/?scenario=tomato_compartment");
   const status = page.getByTestId("scene-status");
-  await expect(status).toContainText("tomato_compartment, day 0, 896 entities");
+  await expect(status).toContainText("tomato_compartment, 0 days in, 896 entities");
   const picker = () => layoutPicker(page, "tomato_compartment");
   await expect(await picker()).toHaveValue("default");
 
   await (await picker()).selectOption("propagation");
   await expect(status).toHaveText(
-    "Showing the scenario tomato_compartment with its propagation layout, before day one: tomato_compartment, day 0, 898 entities.",
+    "Showing the scenario tomato_compartment with its propagation layout, before day one: tomato_compartment, 0 days in, 898 entities.",
   );
   await expect(page).toHaveURL(/\?scenario=tomato_compartment&layout=propagation$/);
   await selectAt(page, ON_THE_FIRST_BENCH, "tomato_compartment_row_1_support_1");
@@ -32,6 +32,6 @@ test("a scenario's layouts are switched in the viewer, without code changes", as
   await expect(await picker()).toHaveValue("propagation");
 
   await (await picker()).selectOption("default");
-  await expect(status).toContainText("tomato_compartment, day 0, 896 entities");
+  await expect(status).toContainText("tomato_compartment, 0 days in, 896 entities");
   await expect(page).toHaveURL(/\?scenario=tomato_compartment$/);
 });

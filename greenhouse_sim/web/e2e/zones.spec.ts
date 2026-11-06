@@ -22,7 +22,7 @@ test("the compartment's paths and zones are coloured and picked by what they are
 }) => {
   await page.goto("/?scenario=tomato_compartment");
   await expect(page.getByTestId("scene-status")).toContainText(
-    "tomato_compartment, day 0, 896 entities",
+    "tomato_compartment, 0 days in, 896 entities",
   );
 
   await unfold(page, "Display");

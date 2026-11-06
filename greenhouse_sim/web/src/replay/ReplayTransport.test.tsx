@@ -56,7 +56,7 @@ describe("what moves a position over a stored run", () => {
     const { container } = shown(position());
 
     expect(said(container, "replay-moment")).toBe("Day 18, 06:00");
-    expect(said(container, "replay-computed")).toBe("Computed to day 41 of 120");
+    expect(said(container, "replay-computed")).toBe("41 of 120 days computed");
   });
 
   it("plays, or pauses what plays", () => {

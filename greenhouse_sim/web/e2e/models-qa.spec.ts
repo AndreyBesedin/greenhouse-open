@@ -120,7 +120,7 @@ test("P14.7's QA: a copy growing the simple crop is drawn with its harvest, and 
       `/?scenario=${COPY}&field=climate&t=${HARVESTED_DAY * DAY_S + NOON_S}&camera=${CAMERA}`,
     );
     await expect(page.getByTestId("scene-status")).toContainText(
-      `${COPY}, day ${HARVESTED_DAY},`,
+      `${COPY}, ${HARVESTED_DAY} days in,`,
       ARRIVES,
     );
     const selected = page.getByTestId("selected-entity");

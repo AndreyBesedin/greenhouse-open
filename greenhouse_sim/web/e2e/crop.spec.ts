@@ -40,7 +40,7 @@ test("crop: the reference greenhouse's plants live each day in the house's air a
 
   await test.step("before its first day ends, its transplants have lived no day", async () => {
     await page.goto(`/?scenario=reference_greenhouse&field=climate&t=${NOON_S}&camera=${CAMERA}`);
-    await expect(status).toContainText("reference_greenhouse, day 0, 3106 entities", ARRIVES);
+    await expect(status).toContainText("reference_greenhouse, 0 days in, 3106 entities", ARRIVES);
     await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
     await selectThePlant(page);
     await expect(page.getByTestId("plant-days")).toContainText("No day lived yet", ARRIVES);
@@ -53,29 +53,29 @@ test("crop: the reference greenhouse's plants live each day in the house's air a
   await test.step("a day on, it has lived its first, and grown", async () => {
     await run.getByRole("button", { name: "Next day" }).click();
     await expect(page).toHaveURL(new RegExp(`&t=${DAY_S + NOON_S}(&|$)`));
-    await expect(status).toContainText("reference_greenhouse, day 1, 3159 entities", ARRIVES);
+    await expect(status).toContainText("reference_greenhouse, 1 day in, 3159 entities", ARRIVES);
     // The organ selected is still the same plant's, on its next day.
     await expect(page.getByTestId("selected-entity")).toHaveText(new RegExp(`^${PLANT}_`));
     await expect(page.getByTestId("plant-days-air")).toHaveText(
-      "Air 17.0 °C on day 0, 17.0 to 17.0",
+      "Air 17.0 °C on day 1, 17.0 to 17.0",
       ARRIVES,
     );
     await expect(page.getByTestId("plant-days-light")).toHaveText(
-      "Light 9.1 mol/m²/d on day 0, 9.1 to 9.1",
+      "Light 9.1 mol/m²/d on day 1, 9.1 to 9.1",
     );
-    await expect(page.getByTestId("plant-days-co2")).toHaveText("CO₂ 420 ppm on day 0, 420 to 420");
+    await expect(page.getByTestId("plant-days-co2")).toHaveText("CO₂ 420 ppm on day 1, 420 to 420");
     await expect(page.getByTestId("plant-daily-light")).toHaveText("19.6 mol/m²/d", ARRIVES);
   });
 
   await test.step("two days on, its days are charted one by one", async () => {
     await run.getByRole("button", { name: "Next day" }).click();
-    await expect(status).toContainText("reference_greenhouse, day 2, 3279 entities", ARRIVES);
+    await expect(status).toContainText("reference_greenhouse, 2 days in, 3279 entities", ARRIVES);
     await expect(page.getByTestId("plant-days-light")).toHaveText(
-      "Light 19.6 mol/m²/d on day 1, 9.1 to 19.6",
+      "Light 19.6 mol/m²/d on day 2, 9.1 to 19.6",
       ARRIVES,
     );
     await expect(page.getByTestId("plant-days-air")).toHaveText(
-      "Air 17.0 °C on day 1, 17.0 to 17.0",
+      "Air 17.0 °C on day 2, 17.0 to 17.0",
     );
     await expect(page.getByRole("figure", { name: "Plant days" }).getByRole("img")).toHaveCount(3);
     await expect(page.locator("details.plant-structure summary")).toHaveText(
@@ -87,17 +87,17 @@ test("crop: the reference greenhouse's plants live each day in the house's air a
     await page.goto(
       `/?scenario=reference_greenhouse&field=climate&t=${2 * DAY_S + NOON_S}&daily=none&set=heater:1&camera=${CAMERA}`,
     );
-    await expect(status).toContainText("day 2", ARRIVES);
+    await expect(status).toContainText("2 days in", ARRIVES);
     await selectThePlant(page);
     await expect(page.getByTestId("plant-days-air")).toHaveText(
-      "Air 27.4 °C on day 1, 26.9 to 27.4",
+      "Air 27.4 °C on day 2, 26.9 to 27.4",
       ARRIVES,
     );
   });
 });
 
 // The reference run's kept opening day (P09.5): shown from the list, it
-// opens on its first day with red fruit, day 86, which the API keeps as it
+// opens on its first day with red fruit, day 87, which the API keeps as it
 // starts, so that the day is not worked out from the run's start.
 test("crop: shown from the list, the reference greenhouse opens on its first day with red fruit", async ({
   page,
@@ -109,7 +109,7 @@ test("crop: shown from the list, the reference greenhouse opens on its first day
   await expect(page).toHaveURL(new RegExp(`&t=${86.5 * DAY_S}(&|$)`));
   await expect(page.getByTestId("climate-time")).toHaveText("day 87, 12 h 00 min", ARRIVES);
   await expect(page.getByTestId("scene-status")).toContainText(
-    "reference_greenhouse, day 86,",
+    "reference_greenhouse, 86 days in,",
     ARRIVES,
   );
   // Its air at noon, the vents open, drawn cell by cell: waited for, so that
@@ -141,13 +141,12 @@ test("crop: stepped on from its opening day, a day given up on the way, the crop
   /** The entities drawn, as the scene's status counts them. */
   const drawn = async (): Promise<number> =>
     Number(/([\d,]+) entities/.exec((await status.textContent()) ?? "")?.[1]?.replaceAll(",", ""));
-  /** What is drawn while a step is on its way, sampled until it arrives. The
-   * day is the scene's, as its status counts it, from 0; its moment says it
-   * from 1. */
-  async function whileOnItsWay(day: number): Promise<number[]> {
+  /** What is drawn while a step is on its way, sampled until it arrives:
+   * the scene `days` days in, at a moment of the day after them. */
+  async function whileOnItsWay(days: number): Promise<number[]> {
     const seen: number[] = [];
     while (
-      (await moment.textContent()) !== `day ${day + 1}, 10 min` ||
+      (await moment.textContent()) !== `day ${days + 1}, 10 min` ||
       (await pending.isVisible())
     ) {
       seen.push(await drawn());
@@ -159,19 +158,19 @@ test("crop: stepped on from its opening day, a day given up on the way, the crop
   await page.goto(`/?scenario=reference_greenhouse&field=climate&t=${86 * DAY_S + 600}`);
   await expect(moment).toHaveText("day 87, 10 min", ARRIVES);
   await expect(pending).toBeHidden(ARRIVES);
-  await expect(status).toContainText("reference_greenhouse, day 86,");
+  await expect(status).toContainText("reference_greenhouse, 86 days in,");
   const counts = [await drawn()];
 
-  // Day 87 asked for and given up for 88 before it arrives: two requests
+  // Day 88 asked for and given up for day 89 before it arrives: two requests
   // overlapping, the first superseded.
   await next.click();
   await next.click();
   const steps = [...(await whileOnItsWay(88))];
   counts.push(await drawn());
-  for (const day of [89, 90]) {
+  for (const days of [89, 90]) {
     await next.click();
-    steps.push(...(await whileOnItsWay(day)));
-    await expect(status).toContainText(`reference_greenhouse, day ${day},`);
+    steps.push(...(await whileOnItsWay(days)));
+    await expect(status).toContainText(`reference_greenhouse, ${days} days in,`);
     counts.push(await drawn());
   }
 

@@ -161,7 +161,7 @@ test("the viewer is at its own address, and an address with a query is still the
   await expect(page.getByRole("heading", { name: "greenhouse-sim viewer" })).toBeVisible();
 
   await page.goto("/?scenario=climate_box");
-  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0");
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box, 0 days in");
   await expect(page.getByRole("heading", { name: "What would you like to do?" })).toHaveCount(0);
 });
 

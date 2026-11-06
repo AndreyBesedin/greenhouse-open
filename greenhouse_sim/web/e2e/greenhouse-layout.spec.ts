@@ -40,7 +40,7 @@ test("greenhouse-layout: two layouts inspected, measured, clear and selected by 
   // The default layout: gutters, paths, zones, rails, pipes and wires, its
   // hundreds of cylinders drawn in a few instanced batches.
   await page.goto("/?scenario=tomato_compartment");
-  await expect(status).toContainText("tomato_compartment, day 0, 896 entities");
+  await expect(status).toContainText("tomato_compartment, 0 days in, 896 entities");
   await expect(page.getByTestId("draw-calls")).toHaveText(/^\d{2} \(/);
   await unfold(page, "Display");
   await page.getByRole("checkbox", { name: "Categories" }).check();
@@ -79,7 +79,7 @@ test("greenhouse-layout: two layouts inspected, measured, clear and selected by 
   // The second layout: the same rows on benches, the same spacing.
   await (await layoutPicker(page, "tomato_compartment")).selectOption("propagation");
   await expect(status).toContainText(
-    "propagation layout, before day one: tomato_compartment, day 0, 898",
+    "propagation layout, before day one: tomato_compartment, 0 days in, 898",
   );
   await selectAt(page, { x: 3.25, y: 2.4, ...z(BENCH_TOP_M) }, "tomato_compartment_plant_002");
   await expect(position).toHaveText("x 3.25, y 2.40, z 0.80");

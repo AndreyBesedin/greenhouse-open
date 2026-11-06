@@ -30,7 +30,7 @@ test("the viewer lists the simulator's scenarios, without console errors", async
 
 test("the HUD says how long the simulator took to answer the latest request", async ({ page }) => {
   await page.goto("/?scenario=climate_box");
-  await expect(page.getByTestId("scene-status")).toContainText("climate_box, day 0");
+  await expect(page.getByTestId("scene-status")).toContainText("climate_box, 0 days in");
 
   // As the API's Server-Timing header says it, through the preview's proxy.
   await expect(page.getByTestId("simulator-time")).toHaveText(

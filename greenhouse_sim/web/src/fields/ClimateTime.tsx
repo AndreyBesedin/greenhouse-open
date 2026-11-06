@@ -244,6 +244,7 @@ export function ClimateTime({
             max={days - 1}
             step={1}
             value={day}
+            aria-valuetext={`day ${dayNumber(time)}`}
             onChange={(event) => onTime(onDay(Number(event.target.value), within))}
           />
           <button

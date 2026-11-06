@@ -1,4 +1,4 @@
-import { DAY_S, dayNumber, runDay } from "../clock";
+import { DAY_S, dayCount, dayNumber, runDay } from "../clock";
 import { baseLayout, MOVES_MARK } from "../scene/moves";
 
 /**
@@ -106,12 +106,13 @@ export function daysComputed(span: Span): number {
   return Math.floor(span.frontierS / DAY_S);
 }
 
-/** `Computed to day 41 of 120`, or without the length if it is not known. */
+/** `41 of 120 days computed`, or without the length if it is not known: a
+ * count of days, as the list of runs says it, not a day's name. */
 export function computedText(span: Span): string {
   const done = daysComputed(span);
   return span.endS === null
-    ? `Computed to day ${done}`
-    : `Computed to day ${done} of ${Math.round(span.endS / DAY_S)}`;
+    ? `${dayCount(done)} computed`
+    : `${done} of ${dayCount(Math.round(span.endS / DAY_S))} computed`;
 }
 
 /** The day numbers a timeline labels, from 0, at a step that gives it about

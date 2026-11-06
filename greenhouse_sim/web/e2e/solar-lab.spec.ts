@@ -87,14 +87,14 @@ test("solar lab: its simple crop grows in its run a day at a time, each plant wi
   await page.goto(
     `/?scenario=solar_lab&field=climate&t=${DAY_S + NOON_S}&camera=${cameraText(fromTheNorth(EXPOSED_STEM))}`,
   );
-  await expect(status).toContainText("solar_lab, day 1,", arrives);
+  await expect(status).toContainText("solar_lab, 1 day in,", arrives);
   await selectAt(page, EXPOSED_STEM, "solar_lab_plant_016", fromTheNorth(EXPOSED_STEM));
   await expect(page.getByTestId("property-age_days")).toHaveText("1");
   const height = page.getByTestId("property-visible_height_cm");
   const first = await height.textContent();
 
   await run.getByRole("button", { name: "Next day" }).click();
-  await expect(status).toContainText("solar_lab, day 2,", arrives);
+  await expect(status).toContainText("solar_lab, 2 days in,", arrives);
   // The same plant, a day older and taller.
   await expect(page.getByTestId("selected-entity")).toHaveText("solar_lab_plant_016");
   await expect(page.getByTestId("property-age_days")).toHaveText("2");

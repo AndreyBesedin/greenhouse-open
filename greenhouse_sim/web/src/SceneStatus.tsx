@@ -1,11 +1,12 @@
+import { dayCount } from "./clock";
 import { DEFAULT_LAYOUT } from "./scenarios";
 import { baseLayout, movesIn } from "./scene/moves";
 import type { SceneState } from "./scene/sceneLoad";
 import type { SceneSource } from "./scene/source";
 
 /** What a source draws; a scenario's scene is before its first day, unless
- * its crop is drawn on a later one (`day`), and null says nothing of its day, as
- * of a scene that could not be drawn. */
+ * its crop is drawn some days in (`day`, the days it has lived), and null
+ * says nothing of its day, as of a scene that could not be drawn. */
 function describeSource(source: SceneSource, day: number | null = 0): string {
   switch (source.kind) {
     case "reference":
@@ -63,7 +64,7 @@ export function SceneStatus({ source, state }: { source: SceneSource; state: Sce
       return (
         <span data-testid="scene-status" role="status" className="visually-hidden">
           Showing the {describeSource(source, state.snapshot.simulated_day)}:{" "}
-          {state.snapshot.greenhouse_id}, day {state.snapshot.simulated_day},{" "}
+          {state.snapshot.greenhouse_id}, {dayCount(state.snapshot.simulated_day)} in,{" "}
           {state.snapshot.entities.length} entities.
         </span>
       );

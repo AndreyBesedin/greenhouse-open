@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { SceneStatus } from "./SceneStatus";
 import type { SceneState } from "./scene/sceneLoad";
+import { SUPPORTED_SCHEMA_VERSION } from "./scene/schemaVersion";
 import type { SceneSource } from "./scene/source";
 import { type Rendered, render } from "./testing/render";
 
@@ -27,6 +28,29 @@ describe("what the viewer says of the scene it draws", () => {
     expect(said.className).toContain("visually-hidden");
     expect(said.getAttribute("role")).toBe("status");
     expect(said.textContent).toBe("Showing the scenario climate_box, before day one.");
+  });
+
+  it("says how many days its crop has lived as a count, not as the name of a day", () => {
+    const loaded = (days: number): SceneState => ({
+      status: "loaded",
+      snapshot: {
+        schema_version: SUPPORTED_SCHEMA_VERSION,
+        greenhouse_id: "climate_box",
+        simulated_day: days,
+        entities: [],
+      },
+    });
+
+    // Noon on day 87 is drawn 86 days in: "day 86" would name the day before.
+    expect(status(loaded(86)).textContent).toBe(
+      "Showing the scenario climate_box: climate_box, 86 days in, 0 entities.",
+    );
+    rendered?.unmount();
+    expect(status(loaded(1)).textContent).toContain("climate_box, 1 day in,");
+    rendered?.unmount();
+    expect(status(loaded(0)).textContent).toBe(
+      "Showing the scenario climate_box, before day one: climate_box, 0 days in, 0 entities.",
+    );
   });
 
   it("shows a scene on its way", () => {

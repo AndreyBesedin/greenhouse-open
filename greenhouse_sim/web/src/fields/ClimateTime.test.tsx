@@ -99,8 +99,9 @@ describe("a climate run's moment", () => {
     expect(html).toContain(
       `type="range" aria-label="Time of day" min="60" max="${DAY_S}" step="60" value="600"`,
     );
+    // The slider's value counts from 0; it is heard as the day it names.
     expect(html).toContain(
-      'type="range" aria-label="Day of the run" min="0" max="13" step="1" value="3"',
+      'type="range" aria-label="Day of the run" min="0" max="13" step="1" aria-valuetext="day 4" value="3"',
     );
     expect(html).toContain('data-testid="climate-time">day 4, 10 min<');
     expect(html).toContain('aria-label="Previous day">');

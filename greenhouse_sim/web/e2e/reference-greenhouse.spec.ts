@@ -22,7 +22,7 @@ test("reference greenhouse: its manifest boots the whole scene, and it is listed
 
   await page.goto("/?scenario=reference_greenhouse");
   await expect(page.getByTestId("scene-status")).toContainText(
-    "reference_greenhouse, day 0, 3106 entities",
+    "reference_greenhouse, 0 days in, 3106 entities",
   );
   for (const device of ["fan_right", "fan_left", "dehumidifier"]) {
     await expect(page.getByTestId(`equipment-${device}`)).toHaveText("off");
@@ -52,7 +52,7 @@ test("reference greenhouse: a heater the run cannot say is reported, not drawn o
     failing.fulfill({ status: 500, json: { error: "a failure for the test" } }),
   );
   await page.goto("/?scenario=reference_greenhouse");
-  await expect(page.getByTestId("scene-status")).toContainText("reference_greenhouse, day 0");
+  await expect(page.getByTestId("scene-status")).toContainText("reference_greenhouse, 0 days in");
   await expect(page.getByTestId("scene-failures")).toHaveText(
     "Not drawn as asked: the equipment is not available (the simulator API answered 500).",
     { timeout: 60_000 },

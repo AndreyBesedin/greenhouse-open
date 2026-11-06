@@ -316,7 +316,7 @@ describe("drawing a checked scene", () => {
       />,
     );
 
-    expect(loaded).toContain(`climate_box, day 9, ${EXAMPLE.entities.length} entities`);
+    expect(loaded).toContain(`climate_box, 9 days in, ${EXAMPLE.entities.length} entities`);
     expect(rejected).toContain('role="alert"');
     expect(rejected).toContain("/entities/0/kind must be equal to one of the allowed values");
   });

@@ -18,26 +18,26 @@ const PAUSE_SETTLES_MS = 1_500;
 
 test("the season plays day after day, and stops when paused", async ({ page }) => {
   await page.goto("/?plants=lab");
-  await expect(page.getByTestId("plant-day")).toHaveText("day 0");
+  await expect(page.getByTestId("plant-day")).toHaveText("0 days in");
   await page.getByRole("combobox", { name: "Growth speed" }).selectOption("5");
 
   await page.getByRole("button", { name: "Play the run" }).click();
 
-  await expect(page.getByTestId("plant-day")).toHaveText(/^day ([3-9]|\d\d)$/);
+  await expect(page.getByTestId("plant-day")).toHaveText(/^([3-9]|\d\d) days in$/);
   await page.getByRole("button", { name: "Pause the run" }).click();
   // A day already on its way still arrives; then the run stays on it.
   await page.waitForTimeout(PAUSE_SETTLES_MS);
   const paused = new URL(page.url()).searchParams.get("day");
-  await expect(page.getByTestId("plant-day")).toHaveText(`day ${paused}`);
+  await expect(page.getByTestId("plant-day")).toHaveText(`${paused} days in`);
   await page.waitForTimeout(PAUSE_SETTLES_MS);
   await expect(page).toHaveURL(new RegExp(`day=${paused}$`));
-  await expect(page.getByTestId("plant-day")).toHaveText(`day ${paused}`);
+  await expect(page.getByTestId("plant-day")).toHaveText(`${paused} days in`);
 });
 
 test("every plant is named, and keeps the structure's rules all season", async ({ page }) => {
   await page.goto("/?plants=lab&day=45");
   await expect(page.getByTestId("rule-checks")).toHaveText(
-    `On day 45, all ${ROW_PLANTS} plants keep the structure's rules.`,
+    `45 days in, all ${ROW_PLANTS} plants keep the structure's rules.`,
   );
 
   await page.getByRole("checkbox", { name: "Plant names" }).check();
@@ -48,7 +48,7 @@ test("every plant is named, and keeps the structure's rules all season", async (
 
   await page.getByRole("slider").fill(String(PLANT_LAB_LAST_DAY));
   await expect(page.getByTestId("rule-checks")).toHaveText(
-    `On day ${PLANT_LAB_LAST_DAY}, all ${ROW_PLANTS} plants keep the structure's rules.`,
+    `${PLANT_LAB_LAST_DAY} days in, all ${ROW_PLANTS} plants keep the structure's rules.`,
   );
 });
 

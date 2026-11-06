@@ -15,7 +15,7 @@ const TOP_HEATING_PIPE = { x: 3.0, y: 0.25 - TUBE_RADIUS_M / 2, z: 0.75 + TUBE_R
 test("the compartment's rails and heating pipes are picked as what they are", async ({ page }) => {
   await page.goto("/?scenario=tomato_compartment");
   await expect(page.getByTestId("scene-status")).toContainText(
-    "tomato_compartment, day 0, 896 entities",
+    "tomato_compartment, 0 days in, 896 entities",
   );
   await page.getByRole("button", { name: "Top" }).click();
   const inspector = page.getByRole("region", { name: "Inspector" });

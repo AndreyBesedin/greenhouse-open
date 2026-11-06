@@ -35,7 +35,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await say(page, "1. The reference greenhouse, seed 42, from the scenario list");
   await (await chooser(page)).getByRole("button", { name: "Open reference_greenhouse" }).click();
   await expect(moment).toHaveText("day 87, 12 h 00 min", ARRIVES);
-  await expect(page.getByTestId("scene-status")).toContainText("day 86,", ARRIVES);
+  await expect(page.getByTestId("scene-status")).toContainText("86 days in,", ARRIVES);
   await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
   // The camera on the house from here on: the address keeps it.
   await page.goto(`${page.url()}&camera=${ON_THE_HOUSE}`);
@@ -43,7 +43,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await expect(moment).toHaveText("day 87, 12 h 00 min", ARRIVES);
   await expect(page.getByTestId("field-status")).toContainText("cells", ARRIVES);
   // The house is drawn before its crop: the opening shot waits for both.
-  await expect(page.getByTestId("scene-status")).toContainText("day 86,", ARRIVES);
+  await expect(page.getByTestId("scene-status")).toContainText("86 days in,", ARRIVES);
   await markOpening(testInfo, recording);
   await say(page, "1. Opened on day 87, its first day with red fruit");
 
@@ -167,7 +167,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   // 9. The crop, a day on: no two plants alike, its fruit ripening.
   await run.getByRole("button", { name: "Next day" }).click();
   await expect(moment).toHaveText(/^day 88, /, ARRIVES);
-  await expect(page.getByTestId("scene-status")).toContainText("day 87,", ARRIVES);
+  await expect(page.getByTestId("scene-status")).toContainText("87 days in,", ARRIVES);
   await say(page, "9. A day on: each plant drawn from seed 42, its fruit ripening");
 
   // New in 0.3.0 (#274): a heating target set from the panel, held from the
@@ -190,7 +190,7 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
 
   // 10. A harvest, by hand in the plant lab, in the plant's history.
   await page.goto("/?plants=lab&day=85");
-  await expect(page.getByTestId("scene-status")).toContainText("day 85", ARRIVES);
+  await expect(page.getByTestId("scene-status")).toContainText("85 days in", ARRIVES);
   await say(page, "10. The plant lab: a red fruit");
   await page.getByRole("button", { name: "p01_t01_fr01", exact: true }).click();
   await page.getByRole("button", { name: "Harvest this fruit" }).click();

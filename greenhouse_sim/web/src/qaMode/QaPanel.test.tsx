@@ -176,9 +176,7 @@ describe("QA mode's panel", () => {
       'data-testid="developer-clock">day 2, 12 h 00 min (2026-03-02 11:00 UTC), run reference_greenhouse-climate-c562c827<',
     );
     expect(html).toContain('data-testid="developer-house-air">20.35 °C, 32.34%, 420 ppm<');
-    expect(html).toContain(
-      'data-testid="developer-crop">32 plants, organ by organ; last plant day 0<',
-    );
+    expect(html).toContain('data-testid="developer-crop">32 plants, organ by organ; 1 day lived<');
     expect(html).toContain('data-testid="developer-levels">heater 0%, roof_vent_1 50%<');
     expect(html).toContain("2 given, the latest:");
     expect(html).toContain("<li>day 2, 9 h 00 min: roof_vent_1 50%</li>");

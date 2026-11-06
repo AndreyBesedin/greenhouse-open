@@ -77,7 +77,7 @@ test("the plant lab draws its row from its plants' structure, organ by organ", a
   const scene = await labScene(page, 0);
   await page.goto("/?plants=lab");
   await expect(page.getByTestId("scene-status")).toHaveText(
-    `Showing the plant lab: plant_lab, day 0, ${scene.entities.length} entities.`,
+    `Showing the plant lab: plant_lab, 0 days in, ${scene.entities.length} entities.`,
   );
 
   // The debug tree shows the row's first plant.
@@ -111,16 +111,16 @@ test("the row grows day by day, and an organ selected stays selected as it grows
 }) => {
   const later = await labScene(page, 30);
   await page.goto("/?plants=lab");
-  await expect(page.getByTestId("plant-day")).toHaveText("day 0");
+  await expect(page.getByTestId("plant-day")).toHaveText("0 days in");
   await page.getByRole("button", { name: "p01_n04_leaf" }).click();
   await expect(page.getByTestId("property-thermal_age_cd")).toHaveText("127.10");
 
   await page.getByRole("slider").fill("30");
 
   await expect(page.getByTestId("scene-status")).toHaveText(
-    `Showing the plant lab: plant_lab, day 30, ${later.entities.length} entities.`,
+    `Showing the plant lab: plant_lab, 30 days in, ${later.entities.length} entities.`,
   );
-  await expect(page.getByTestId("plant-day")).toHaveText("day 30");
+  await expect(page.getByTestId("plant-day")).toHaveText("30 days in");
   await expect(page).toHaveURL(/\?plants=lab&day=30$/);
   await expect(page.getByTestId("organ")).toHaveCount(await organCount(page, "p01", 30));
   // The same leaf, thirty days of 11 °Cd older.
@@ -145,7 +145,7 @@ test("another seed draws another row, and the tree follows the plant selected", 
 
   await expect(page).toHaveURL(/\?plants=lab&day=20&seed=2$/);
   await expect(page.getByTestId("scene-status")).toHaveText(
-    `Showing the plant lab: plant_lab, day 20, ${second.entities.length} entities.`,
+    `Showing the plant lab: plant_lab, 20 days in, ${second.entities.length} entities.`,
   );
   // The third plant's leaflet, clicked in the view, brings its plant's tree.
   const leaflet = "p03_n02_leaf_terminal";
@@ -169,7 +169,7 @@ test("a plant flowers and sets fruit, and a fruit is selected from the tree", as
   }
   await page.goto("/?plants=lab&day=45");
   // The tree and the scene arrive separately; an organ is selected in the scene.
-  await expect(page.getByTestId("scene-status")).toContainText("day 45");
+  await expect(page.getByTestId("scene-status")).toContainText("45 days in");
   await expect(page.getByTestId("organ")).toHaveCount(organsOf(plant));
   await expect(page.locator('[data-organ-kind="truss"]').first()).toBeVisible();
 
@@ -194,14 +194,14 @@ test("a fruit followed through the days grows and ripens from green to red", asy
     throw new Error("the lab's first plant has no red fruit by the end of its run");
   }
   await page.goto("/?plants=lab&day=60");
-  await expect(page.getByTestId("scene-status")).toContainText("day 60");
+  await expect(page.getByTestId("scene-status")).toContainText("60 days in");
   await page.getByRole("button", { name: ripe.fruit_id }).click();
   await expect(page.getByTestId("property-maturity")).toHaveText("green");
   const green = Number(await page.getByTestId("property-mass_g").textContent());
 
   await page.getByRole("slider").fill(String(PLANT_LAB_LAST_DAY));
 
-  await expect(page.getByTestId("scene-status")).toContainText(`day ${PLANT_LAB_LAST_DAY}`);
+  await expect(page.getByTestId("scene-status")).toContainText(`${PLANT_LAB_LAST_DAY} days in`);
   await expect(page.getByTestId("selected-entity")).toHaveText(ripe.fruit_id);
   await expect(page.getByTestId("property-maturity")).toHaveText("red");
   await expect(page.getByTestId("property-ripeness")).toHaveText("1");
@@ -226,7 +226,7 @@ test("two environments side by side: every second plant lives in the other", asy
     "25 °C, 32 mol/m²/d PAR, 1000 ppm CO₂, water 100%",
   );
   await expect(page.getByTestId("scene-status")).toHaveText(
-    `Showing the plant lab: plant_lab, day 10, ${scene.entities.length} entities.`,
+    `Showing the plant lab: plant_lab, 10 days in, ${scene.entities.length} entities.`,
   );
   // The row's second plant lives beside its first, in the other environment.
   for (const [plantId, environment] of [
@@ -244,14 +244,14 @@ test("a leaf pruned in the lab is gone from that day on, and there before it", a
   const pruning = "&act=30%3Ap01%3Aremove_leaf%3Ap01_n02_leaf";
   const pruned = await labScene(page, 30, 1, pruning);
   await page.goto("/?plants=lab&day=30");
-  await expect(page.getByTestId("scene-status")).toContainText("day 30");
+  await expect(page.getByTestId("scene-status")).toContainText("30 days in");
   await page.getByRole("button", { name: "p01_n02_leaf", exact: true }).click();
 
   await page.getByRole("button", { name: "Remove this leaf" }).click();
 
   await expect(page).toHaveURL(/\?plants=lab&day=30&act=30%3Ap01%3Aremove_leaf%3Ap01_n02_leaf$/);
   await expect(page.getByTestId("scene-status")).toHaveText(
-    `Showing the plant lab: plant_lab, day 30, ${pruned.entities.length} entities.`,
+    `Showing the plant lab: plant_lab, 30 days in, ${pruned.entities.length} entities.`,
   );
   await expect(page.getByTestId("plant-event")).toHaveText(["at 560 °Cd: removed p01_n02_leaf"]);
   const leaf = page.getByRole("button", { name: "p01_n02_leaf", exact: true });
@@ -260,11 +260,11 @@ test("a leaf pruned in the lab is gone from that day on, and there before it", a
 
   // Still pruned ten days on; not yet, ten days before.
   await page.getByRole("slider").fill("40");
-  await expect(page.getByTestId("scene-status")).toContainText("day 40");
+  await expect(page.getByTestId("scene-status")).toContainText("40 days in");
   await expect(leaf).toHaveCount(0);
   await expect(page.getByTestId("plant-event")).toHaveCount(1);
   await page.getByRole("slider").fill("20");
-  await expect(page.getByTestId("scene-status")).toContainText("day 20");
+  await expect(page.getByTestId("scene-status")).toContainText("20 days in");
   await expect(leaf).toHaveCount(1);
   await expect(page.getByTestId("plant-event")).toHaveCount(0);
 });
@@ -273,7 +273,7 @@ test("a fruit harvested leaves the plant, its weight in the history, until taken
   page,
 }) => {
   await page.goto("/?plants=lab&day=85");
-  await expect(page.getByTestId("scene-status")).toContainText("day 85");
+  await expect(page.getByTestId("scene-status")).toContainText("85 days in");
   const fruit = page.getByRole("button", { name: "p01_t01_fr01", exact: true });
   await fruit.click();
   await expect(page.getByTestId("property-maturity")).toHaveText("red");

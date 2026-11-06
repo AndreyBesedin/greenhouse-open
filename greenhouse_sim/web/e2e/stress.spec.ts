@@ -16,7 +16,7 @@ test("thousands of plants are drawn in a handful of draw calls, and each can be 
   await page.goto(`/?scene=stress&plants=${PLANTS}`);
 
   await expect(page.getByTestId("scene-status")).toHaveText(
-    `Showing the stress scene of ${PLANTS} plants: stress, day 0, ${PLANTS + 2} entities.`,
+    `Showing the stress scene of ${PLANTS} plants: stress, 0 days in, ${PLANTS + 2} entities.`,
   );
   // One batch draws every plant: the draw calls stay in single figures.
   await expect(page.getByTestId("draw-calls")).toHaveText(/^\d \(\d{1,3}(,\d{3})* triangles\)$/);

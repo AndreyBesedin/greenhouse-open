@@ -72,7 +72,7 @@ test("a stored run is replayed: its header, its scene and a timeline over what i
   await page.keyboard.press("PageUp");
   await expect(handle).toHaveAttribute("aria-valuetext", "Day 1, 24:00");
   await expect(page.getByTestId("replay-moment")).toHaveText("Day 1, 24:00");
-  await expect(page.getByTestId("scene-status")).toContainText("solar_lab, day 1,");
+  await expect(page.getByTestId("scene-status")).toContainText("solar_lab, 1 day in,");
 
   // The next day button does the same from the start.
   await page.keyboard.press("Home");

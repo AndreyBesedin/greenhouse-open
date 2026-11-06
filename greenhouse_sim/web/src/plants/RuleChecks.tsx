@@ -1,3 +1,4 @@
+import { dayCount } from "../clock";
 import { useLoad } from "../useLoad";
 import { labChecksUrl, loadLabChecks } from "./checks";
 import { type LabRun, labRunQuery } from "./lab";
@@ -26,14 +27,14 @@ export function RuleChecks({ run }: { run: LabRun }) {
       if (wrong.length === 0) {
         return (
           <p data-testid="rule-checks">
-            On day {state.day}, all {plants} plants keep the structure's rules.
+            {dayCount(state.day)} in, all {plants} plants keep the structure's rules.
           </p>
         );
       }
       return (
         <div data-testid="rule-checks" role="alert">
           <p>
-            On day {state.day}, {wrong.length} of {plants} plants break the structure's rules:
+            {dayCount(state.day)} in, {wrong.length} of {plants} plants break the structure's rules:
           </p>
           <ul>
             {wrong.map(([plantId, problems]) => (

@@ -89,7 +89,8 @@ describe("a run's manifest", () => {
     expect(describeManifest(MANIFEST)).toEqual({
       scenario: "reference_greenhouse, version 5a7c1ee05a34bf3c, format 1",
       seed: "42",
-      season: "from 2026-03-01, 120 days, opening on day 80",
+      // Its opening day, 80 days ended before it, is the run's day 81.
+      season: "from 2026-03-01, 120 days, opening on day 81",
       crop: "cherry_tomato, organ by organ",
       airflow: "uniform, prescribed",
       weather: "its own, synthetic",
