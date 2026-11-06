@@ -688,12 +688,19 @@ within the day; the action format needs no change for it.
 - [x] A control policy runs on the run through the loop above.
 
 All 27 were checked on 2026-11-06 against the tests and the code that hold
-them. Two clauses are held by their code alone, with no test that fails
-without it: a manager's revision checking only what it adds or changes, and a
-replay from a checkpoint refusing an action whose rights were withdrawn, which
-a checkpoint does by keeping the run's plan, from which what was revoked or
-refused is left out (`RunExecutor.plan`). Tests for the two are
-[future work](future-work.md#actions-and-plans-after-p13).
+them. Two clauses were then held by their code alone, with no test that failed
+without it, and each has a test since. A manager's revision checks only what it
+adds or changes (criterion 12):
+`test_a_manager_s_revision_checks_only_what_it_adds_or_changes_against_its_rights`,
+in `greenhouse_protocol/tests/test_actuation_contracts.py`. A replay from a
+checkpoint refuses an action whose rights were withdrawn (criterion 8) holds for
+a checkpoint's plan, from which what was revoked or refused is left out
+(`RunExecutor.plan`):
+`test_a_checkpoint_kept_after_a_withdrawal_leaves_the_refused_action_out`, in
+`greenhouse_sim/tests/test_run_authorisation.py`. An epoch carried on from such a
+checkpoint (P17.9) is refused, with a conflict, and carries nothing out: its log
+keeps no change of authorisation, an entry of the
+[P17 clean-up](p17-cleanup.md#from-p13s-acceptance-an-epoch-resumed-after-its-authorisation-changed).
 
 ## Final QA scenario
 

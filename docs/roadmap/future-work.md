@@ -93,10 +93,11 @@ final QA left open:
 - **Who cancelled, in the plan lane** (the
   [final QA](p13-actions.md#recorded-at-88f35bae), step 9): the lane reads
   "cancelled: cancelled", though the outcome names who cancelled it.
-- **Tests for two of its criteria** ([P13](p13-actions.md#acceptance-criteria)),
-  held by their code alone: a manager's revision checked only for what it adds or
-  changes, and a run restored from a checkpoint after a withdrawal of rights not
-  carrying the refused action out.
+- **An epoch resumed after its authorisation changed**
+  ([P13](p13-actions.md#acceptance-criteria)'s criterion 8): carried on from its
+  checkpoint, it stops with a conflict, since its log keeps no change of authorisation;
+  an entry of the
+  [P17 clean-up](p17-cleanup.md#from-p13s-acceptance-an-epoch-resumed-after-its-authorisation-changed).
 
 ## CO₂ and light targets
 
