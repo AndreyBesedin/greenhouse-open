@@ -864,6 +864,13 @@ class EpochStore:
         """Whether a process holds the epoch's claim."""
         return leases.alive(self.objects, self._home, now=now)
 
+    def worked_by_another(self) -> bool:
+        """Whether a process holds the epoch's claim and it is not this object's: by
+        one reading of the newest claim, not `worked` and then `claimed`, between which
+        the epoch's own process may end it and let go, as its limit does from a thread
+        beside the one that works it."""
+        return leases.alive(self.objects, self._home, other_than=self._claim)
+
     def ask_to_stop(self) -> None:
         """Asks whichever worker has the epoch to stop, at its next look. Asked
         twice, it is asked once."""
