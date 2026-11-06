@@ -1,6 +1,6 @@
 # P14 clean-up
 
-**Status:** nothing open. Part of [P14](p14-models-by-manifest.md).
+**Status:** closed with [P14](p14-models-by-manifest.md) on 2026-11-06: nothing open.
 
 The reviews of P14's pull requests find things best done once its steps
 are merged, in one pass. Each review adds what it finds here, under its

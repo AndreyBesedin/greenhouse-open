@@ -74,6 +74,14 @@ data.
    the same season. At GreenLight's default solver settings, the run
    reproduces neither GreenLight's answer nor GreenLight's own answer to
    the declared tolerances.
+   Of milestone B, Reduced-State TOMGRO is a crop model of the run, grown
+   in the TOMGRO house's documented season ([P14.10](p14-models-by-manifest.md#steps)).
+   Left here when P14 closed, on 2026-11-06: Vanthoor's model registered,
+   chosen by a manifest and shown in a documented scenario, its rung
+   (`core.vanthoor_crop.VanthoorRung`) already held to its reproduction on
+   every state and hour; and, for both models, each driver profile's effect
+   measured against the reproduction's forcing, with the canopy's
+   temperature, as decision 0062 asks.
 5. **Validate on measured data, as a workflow others can repeat.** Begin
    with the WUR AGC4 dataset, through its adapter, where what it measures
    and its licence allow: inventory what it records (weather, climate,
