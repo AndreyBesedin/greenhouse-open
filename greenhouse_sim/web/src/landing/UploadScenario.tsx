@@ -31,7 +31,7 @@ export function UploadScenario({ navigate }: { navigate: (address: string) => vo
         navigate(uploadedHouseAddress(installation.installation_id));
       } else {
         setProblem(
-          `${file.name} cannot be passed to the builder: this window keeps no files. Open the builder and import it there.`,
+          `${file.name} is a house file, and cannot be passed to the builder: this window keeps no files. Open the builder and import it there.`,
         );
       }
       return;
