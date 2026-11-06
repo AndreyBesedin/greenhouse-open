@@ -213,9 +213,16 @@ jobs:
         working-directory: .
         run: uv sync --locked --no-editable --no-dev
 
+      # Chromium alone, from Playwright's own servers. The runner's image has
+      # every library it needs: what `--with-deps` added was fonts alone
+      # (Japanese, Chinese, Thai, GNU FreeFont, Unifont, X's core fonts),
+      # 20 MB from an apt mirror that took ten minutes for them on about one
+      # job in ten. Should a later image lack a library, Playwright names it
+      # when it launches Chromium. The screenshots compared with baselines
+      # are drawn in the pinned image of `visual checks` (decision 0014).
       - name: Install Chromium
         if: needs.changes.outputs.documentation_only != 'true'
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Browser tests
         if: needs.changes.outputs.documentation_only != 'true'
