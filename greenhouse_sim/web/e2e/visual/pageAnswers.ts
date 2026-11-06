@@ -2,6 +2,7 @@ import type { Page, Route } from "@playwright/test";
 
 import { DAY_S } from "../../src/clock";
 import type { ScenarioSummary } from "../../src/generated/scenarioSummaryTypes";
+import type { Room } from "../../src/landing/generated/roomTypes";
 import type { PositionState } from "../../src/scene/generated/positionTypes";
 import type { StoredRun } from "../../src/scene/generated/storedRunTypes";
 
@@ -53,19 +54,48 @@ export const RUN: StoredRun = {
   fork: null,
   stopping: false,
   damaged: false,
-  days_computed: 0,
+  days_computed: DAYS_OF_THE_RUN,
   cpu_s: null,
   peak_memory_bytes: null,
+  wall_s: null,
+  past_limit: false,
   reason: null,
 };
 
-// Every state a run's status is told in, since each has its own colours.
+// Every state a run's status is told in, since each has its own colours; one
+// measured by its workers and ended by a limit, which says why under its row.
 const PART_WAY = { frontier_s: DAYS_COMPUTED * DAY_S, progress: DAYS_COMPUTED / DAYS_OF_THE_RUN };
+const MEASURED = {
+  days_computed: DAYS_COMPUTED,
+  cpu_s: 812,
+  peak_memory_bytes: 331_000_000,
+  wall_s: 905,
+};
 const RUNS: StoredRun[] = [
   RUN,
-  { ...RUN, ...PART_WAY, epoch: EPOCH + 1, status: "failed" },
-  { ...RUN, ...PART_WAY, epoch: EPOCH + 2, status: "interrupted" },
+  {
+    ...RUN,
+    ...PART_WAY,
+    ...MEASURED,
+    epoch: EPOCH + 1,
+    status: "failed",
+    past_limit: true,
+    reason:
+      "it took 812 s of a core, past the limit of 800 s on one run: what it committed can be read, and it can be carried on once that limit is raised",
+  },
+  { ...RUN, ...PART_WAY, days_computed: DAYS_COMPUTED, epoch: EPOCH + 2, status: "interrupted" },
 ];
+
+/** The room for runs the start page's baseline shows: one worker of two busy. */
+export const ROOM: Room = {
+  workers_busy: 1,
+  workers_limit: 2,
+  runs_waiting: 0,
+  runs_waiting_limit: 200,
+  disk_free_bytes: 45_200_000_000,
+  disk_free_limit_bytes: 2_000_000_000,
+  refusal: null,
+};
 
 // Stopped part of the way, so that a replay's track shows both what is computed
 // and what is not, and asks the simulator nothing more.
@@ -98,6 +128,7 @@ const POSITION: PositionState = {
 const ANSWERS: readonly (readonly [RegExp, unknown])[] = [
   [/^\/api\/scenarios$/, SCENARIOS],
   [/^\/api\/runs$/, RUNS],
+  [/^\/api\/room$/, ROOM],
   [/^\/api\/drafts$/, []],
   [/^\/api\/runs\/[^/]+\/epochs\/\d+\/positions$/, POSITION],
   [/^\/api\/positions\/[^/]+\/close$/, {}],

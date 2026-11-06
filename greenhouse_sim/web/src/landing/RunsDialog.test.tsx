@@ -32,7 +32,7 @@ function run(more: Partial<StoredRun>): StoredRun {
     duration_s: 120 * DAY_S,
     progress: 1,
     created_at: "2026-10-28T09:30:00Z",
-    size_bytes: 24 * 1024 * 1024,
+    size_bytes: 24 * 1000 * 1000,
     start_s: 0,
     fork: null,
     stopping: false,
@@ -40,6 +40,8 @@ function run(more: Partial<StoredRun>): StoredRun {
     days_computed: 0,
     cpu_s: null,
     peak_memory_bytes: null,
+    wall_s: null,
+    past_limit: false,
     reason: null,
     ...more,
   };
@@ -130,16 +132,17 @@ describe("the runs of a scenario, in a dialog", () => {
     const { rows } = shown([
       playing,
       replaced,
-      run({ epoch: 0, size_bytes: 400 * 1024, created_at: null }),
+      run({ epoch: 0, size_bytes: 400 * 1000, created_at: null }),
     ]);
     const texts = rows().map((row) => row.textContent);
 
     expect(texts[0]).toContain("Seed 2");
-    expect(texts[0]).toContain("epoch 2 · Oct 28 · 24.0 MB");
+    expect(texts[0]).toContain("epoch 2 · Oct 28");
+    expect(texts[0]).toContain("Kept24.0 MB");
     expect(texts[0]).toContain("Running");
     expect(texts[0]).toContain("41 of 120 days");
     expect(texts[1]).toContain("The scenario's seed");
-    expect(texts[2]).toContain("epoch 0 · 400 kB");
+    expect(texts[2]).toContain("Kept400 kB");
     expect(texts[2]).toContain("Finished");
     // A finished one has no newest day to follow.
     expect(follows().map((a) => a.getAttribute("href"))).toEqual([
@@ -241,6 +244,27 @@ describe("the runs of a scenario, in a dialog", () => {
       );
       click(button(container, "Start run"));
       await vi.waitFor(() => expect(asked).toHaveLength(2));
+    });
+
+    it("says a refusal for a limit in the simulator's words, which name it and its figures", async () => {
+      const limit =
+        "2 runs waiting for a worker, and this simulator lets 2 runs wait: ask again once some have begun, or raise that limit";
+      simulator({}, { status: 409, body: { error: limit } });
+      const { container, navigate } = shown([], true);
+
+      click(button(container, "Start run"));
+
+      // Under the form it was asked from, as a sentence, and not a status.
+      await vi.waitFor(() =>
+        expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+          `Not started: ${limit}.`,
+        ),
+      );
+      expect(container.querySelector("form")?.nextElementSibling?.getAttribute("role")).toBe(
+        "alert",
+      );
+      expect(container.textContent).not.toContain("409");
+      expect(navigate).not.toHaveBeenCalled();
     });
 
     it("says when the answer is not a run", async () => {
@@ -591,9 +615,55 @@ describe("the runs of a scenario, in a dialog", () => {
 
     await vi.waitFor(() =>
       expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-        "this run keeps no checkpoint at its frontier, from which to carry it on",
+        "Not resumed: this run keeps no checkpoint at its frontier, from which to carry it on.",
       ),
     );
+  });
+
+  it("says what a run used and why it failed under its row, and resumes one a limit ended", async () => {
+    const reason =
+      "it kept 21.0 MB, past the limit of 20.0 MB on what one run may keep: what it committed can be read, and it can be carried on once that limit is raised";
+    const asked = simulator(
+      {},
+      {
+        status: 409,
+        body: { error: `epoch 0 of ${RUN_ID}: ${reason}` },
+      },
+    );
+    const { rows } = shown([
+      run({
+        status: "failed",
+        past_limit: true,
+        reason,
+        size_bytes: 21_000_000,
+        days_computed: 3,
+        cpu_s: 4.2,
+        peak_memory_bytes: 190_000_000,
+        wall_s: 12.4,
+      }),
+      run({ epoch: 1, status: "failed", reason: null }),
+    ]);
+    const [limited, failed] = rows();
+
+    expect(limited?.querySelector(".landing-run-usage")?.textContent).toBe(
+      "Kept21.0 MBComputed3 daysCPU4.2 sPeak memory190.0 MBWall time12 s",
+    );
+    expect(limited?.querySelector(".landing-run-reason")?.textContent).toBe(
+      `This run failed: ${reason}.`,
+    );
+    // One that failed for another reason cannot be carried on, and says it kept none.
+    expect(failed?.querySelector('[aria-label^="Resume"]')).toBeNull();
+    expect(failed?.querySelector(".landing-run-reason")?.textContent).toBe(
+      "This run failed: the simulator kept no reason for it.",
+    );
+    expect(failed?.querySelector("[title]")?.getAttribute("title")).toContain("not zero");
+
+    // Asked to resume while the limit stands, it says why on its row, without the run's name.
+    click(button(limited as HTMLElement, "Resume the run with seed 1, epoch 0"));
+    await vi.waitFor(() =>
+      expect(limited?.querySelector('[role="alert"]')?.textContent).toBe(`Not resumed: ${reason}.`),
+    );
+    expect(asked).toEqual([{ url: `/api/runs/${RUN_ID}/epochs/0/resume`, method: "POST" }]);
   });
 
   it("drops a problem once the run has moved on", async () => {

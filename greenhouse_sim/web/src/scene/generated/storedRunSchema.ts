@@ -224,6 +224,18 @@ export const STORED_RUN_SCHEMA = {
       "default": null,
       "title": "Peak Memory Bytes"
     },
+    "wall_s": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Wall S"
+    },
     "reason": {
       "anyOf": [
         {
@@ -235,6 +247,11 @@ export const STORED_RUN_SCHEMA = {
       ],
       "default": null,
       "title": "Reason"
+    },
+    "past_limit": {
+      "default": false,
+      "title": "Past Limit",
+      "type": "boolean"
     }
   },
   "required": [
@@ -257,7 +274,9 @@ export const STORED_RUN_SCHEMA = {
     "days_computed",
     "cpu_s",
     "peak_memory_bytes",
-    "reason"
+    "wall_s",
+    "reason",
+    "past_limit"
   ],
   "title": "StoredRun",
   "type": "object"

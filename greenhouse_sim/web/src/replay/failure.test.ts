@@ -22,6 +22,8 @@ const FAILED = {
   days_computed: 1,
   cpu_s: null,
   peak_memory_bytes: null,
+  wall_s: null,
+  past_limit: false,
   reason: "its worker ran out of memory",
   start_s: 0,
   fork: null,

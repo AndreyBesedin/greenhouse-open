@@ -7,8 +7,9 @@ import { useLoad } from "../useLoad";
 import { newRunScenario, REPOSITORY_URL, runsScenario } from "./paths";
 import { RunControls } from "./RunControls";
 import { RunDelete, useRunDeletion } from "./RunDelete";
-import { FollowLink, ReplayLink, RunProgress, StatusChip } from "./RunParts";
+import { FollowLink, ReplayLink, RunFailure, RunProgress, RunUsage, StatusChip } from "./RunParts";
 import { RunsDialog } from "./RunsDialog";
+import { loadRoom, type RoomState, roomFigures, roomRefusalText } from "./room";
 import { SavedDrafts } from "./SavedDrafts";
 import { ScenarioCombobox } from "./ScenarioCombobox";
 import {
@@ -61,6 +62,10 @@ export function Landing({
   const [asked, setAsked] = useState(0);
   const runs = useLoad(asked, (_asked, fetchFn) => loadStoredRuns(fetchFn), {
     key: (each) => `runs-${each}`,
+  });
+  // The room for runs moves as they do: asked for with them.
+  const room = useLoad(asked, (_asked, fetchFn) => loadRoom(fetchFn), {
+    key: (each) => `room-${each}`,
   });
   // Counted from each answer, so that a slow one is never given up for the next.
   useEffect(() => {
@@ -129,6 +134,7 @@ export function Landing({
           <h3 id="landing-recent" ref={recent}>
             Recent runs
           </h3>
+          <RunsRoom room={room} />
           <RecentRuns
             runs={runs}
             names={names}
@@ -191,6 +197,33 @@ function ScenarioChoice({
     default:
       return <p>Loading scenarios from the simulator…</p>;
   }
+}
+
+/** What a run asked for now has room for (P18.5): the workers busy, the runs
+ * waiting and the disk free, each beside its limit, and the refusal a run would
+ * be given, in the simulator's words. The room last read stays while the next is
+ * asked for; one that cannot be read says why. */
+function RunsRoom({ room }: { room: RoomState | { status: "none" | "loading" } }) {
+  if (room.status === "unavailable") {
+    return <p className="landing-room">The room for runs cannot be read: {room.reason}.</p>;
+  }
+  if (room.status !== "loaded") {
+    return null;
+  }
+  const refused = roomRefusalText(room.room);
+  return (
+    <>
+      <dl className="landing-room" data-testid="landing-room">
+        {roomFigures(room.room).map(({ label, value }) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {refused !== null && <p className="landing-room-refusal">{refused}</p>}
+    </>
+  );
 }
 
 /** The runs a person most likely comes back to: the latest few, and every one
@@ -282,6 +315,8 @@ function RunRow({
         }}
       />
       <RunDelete name={named} onDelete={() => deletion.remove(run)} whenGone={heading} />
+      <RunUsage run={run} />
+      <RunFailure run={run} />
       {refusal !== null && (
         <p role="alert" className="landing-note">
           {refusal}

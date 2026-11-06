@@ -357,6 +357,79 @@ def test_what_a_store_holds_is_what_its_reports_say_and_what_no_epoch_holds(tmp_
     assert any(path.parts[-2] == "scenarios" for path in tmp_path.rglob("*.json"))
 
 
+def test_the_room_before_any_run_is_asked_for_is_every_worker_free_and_the_disk_as_it_is(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(FolderStore, "free_bytes", lambda _: 5 * GIGABYTE)
+    with _simulator(tmp_path, Limits(workers=3, waiting_runs=7)) as simulator:
+        room = scheduler.room(simulator)
+        answered = respond(simulator, "GET", "/api/room")
+
+        # Asking makes no scheduler, and so starts no thread of one.
+        assert simulator.scheduler is None
+    assert room == scheduler.Room(
+        workers_busy=0,
+        workers_limit=3,
+        runs_waiting=0,
+        runs_waiting_limit=7,
+        disk_free_bytes=5 * GIGABYTE,
+        disk_free_limit_bytes=DEFAULT_FREE_DISK_BYTES,
+        refusal=None,
+    )
+    assert answered.status == HTTPStatus.OK
+    assert answered.body == room.model_dump(mode="json")
+    assert _in_store(tmp_path) == []
+
+
+def test_the_room_counts_the_workers_busy_and_the_runs_waiting_and_says_the_refusal_to_come(
+    tmp_path: Path, held_workers: None
+) -> None:
+    with _simulator(tmp_path, Limits(workers=1, waiting_runs=1)) as simulator:
+        scheduler.start(simulator, LONG, seed=1)
+        room = scheduler.room(simulator)
+        assert (room.workers_busy, room.runs_waiting, room.refusal) == (1, 0, None)
+
+        scheduler.start(simulator, LONG, seed=2)
+        room = scheduler.room(simulator)
+        with pytest.raises(Conflict) as refused:
+            scheduler.start(simulator, LONG, seed=3)
+
+        # What the room says a run would be told is what the next is told.
+        assert (room.workers_busy, room.runs_waiting) == (1, 1)
+        assert room.refusal == refused.value.message
+        assert respond(simulator, "GET", "/api/room").body == room.model_dump(mode="json")
+
+
+def test_the_room_says_a_disk_under_its_floor_in_the_words_a_run_is_refused_with(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(FolderStore, "free_bytes", lambda _: GIGABYTE)
+    with _simulator(tmp_path, Limits(free_disk_bytes=2 * GIGABYTE)) as simulator:
+        room = scheduler.room(simulator)
+        with pytest.raises(Conflict) as refused:
+            scheduler.start(simulator, SHORT)
+
+    assert room.disk_free_bytes == GIGABYTE and room.disk_free_limit_bytes == 2 * GIGABYTE
+    assert room.refusal == refused.value.message
+    _refused_in_words(refused.value, "1.0 GB free", "2.0 GB")
+
+    # With no floor, or a store that cannot say, the disk refuses nothing.
+    with _simulator(tmp_path, Limits(free_disk_bytes=None)) as simulator:
+        assert scheduler.room(simulator).refusal is None
+    monkeypatch.setattr(FolderStore, "free_bytes", lambda _: None)
+    with _simulator(tmp_path, Limits(free_disk_bytes=2 * GIGABYTE)) as simulator:
+        room = scheduler.room(simulator)
+    assert room.disk_free_bytes is None and room.refusal is None
+
+
+def test_the_room_of_a_simulator_that_keeps_no_runs_is_not_found() -> None:
+    with Simulator() as simulator:
+        answered = respond(simulator, "GET", "/api/room")
+
+    assert answered.status == HTTPStatus.NOT_FOUND
+    assert answered.body == {"error": "this simulator keeps no runs: it was made with no run store"}
+
+
 def test_a_queue_longer_than_a_lowered_limit_keeps_waiting_and_no_more_are_let_in(
     tmp_path: Path, held_workers: None
 ) -> None:

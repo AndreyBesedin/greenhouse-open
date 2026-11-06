@@ -7,6 +7,10 @@ them (P17.4, decision 0065).
                                           epoch: seed, layout, status, how far
                                           each is committed, when it was
                                           started, and its size
+    GET /api/room                         what a run asked for now has room for:
+                                          the workers busy and the runs waiting,
+                                          the disk free, each beside its limit,
+                                          and the refusal it would be given, if any
     GET /api/runs/{run}/epochs/{n}        one stored epoch, as that list shows it
     GET /api/runs/{run}/epochs/{n}/observations|events|outcomes?after=&limit=&t=
                                           its records after a cursor that were
@@ -91,6 +95,8 @@ def get(simulator: Simulator, segments: list[str], query: Query) -> Response | N
             return answer(lambda: runs_kept.all_runs(simulator))
         case ["api", "scenarios", scenario_id, "runs"]:
             return answer(lambda: runs_kept.runs_of(simulator, scenario_id))
+        case ["api", "room"]:
+            return answer(lambda: scheduler.room(simulator))
         case ["api", "runs", run_id, "epochs", number]:
             return answer(lambda: runs_kept.epoch_of(simulator, run_id, _epoch(number)))
         case ["api", "runs", run_id, "epochs", number, "changes"]:

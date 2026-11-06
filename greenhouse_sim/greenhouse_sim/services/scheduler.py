@@ -26,7 +26,9 @@ priority than the API (decision 0067), so that a viewer stays responsive beside 
 A run asked for may be refused, saying why, for what the simulator's `limits` allow:
 too many waiting, too little disk free, or too much in the store. So may a resume or a
 fork, which ask for a worker in the same way. What waits already keeps waiting if the
-limits have been lowered since, under them as they are now.
+limits have been lowered since, under them as they are now. `room` says, before any is
+asked for, the workers busy, the runs waiting and the disk free beside their limits, and
+the refusal a run asked for then would be given.
 
 A worker keeps to the budget of its epoch, which the limits give as it is put in line
 (`workers.keep_within_budget`). Past one, it says the epoch failed and why and ends, and
@@ -57,11 +59,14 @@ from multiprocessing.context import SpawnProcess
 from pathlib import Path
 from typing import Final
 
+from pydantic import BaseModel, ConfigDict
+
 from greenhouse_sim.services import forks, interrupted, scenario_files
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.interventions import Asked
 from greenhouse_sim.services.limits import (
     Budget,
+    Limits,
     store_too_large,
     too_little_disk,
     too_many_waiting,
@@ -152,6 +157,53 @@ class Worker:
     run_id: str
     epoch: int
     pid: int
+
+
+class Room(BaseModel):
+    """What a simulator has room for as a run is asked for (decision 0067): its
+    workers busy and the runs waiting for one, each beside its limit, and what is
+    free on the run store's disk beside the floor a run begins above. A limit of
+    none is no limit, and a store that cannot say what is free says none.
+    `refusal` is what a run, a resume or a fork asked for now would be refused
+    with, in the words of that refusal, or none if it would be let in."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    workers_busy: int
+    workers_limit: int
+    runs_waiting: int
+    runs_waiting_limit: int | None
+    disk_free_bytes: int | None
+    disk_free_limit_bytes: int | None
+    refusal: str | None
+
+
+def _room_of(
+    limits: Limits, objects: FolderStore, *, busy: int, waiting: int, workers: int
+) -> Room:
+    """The room there is, with `busy` workers of `workers` and `waiting` runs in
+    line, and the refusal a run asked for now would be given, the first limit
+    that has no room for it."""
+    free_workers = max(0, workers - busy)
+    free = objects.free_bytes()
+    refusal = None
+    if limits.waiting_runs is not None and waiting - free_workers >= limits.waiting_runs:
+        refusal = too_many_waiting(waiting, limits.waiting_runs)
+    elif limits.free_disk_bytes is not None and free is not None and free < limits.free_disk_bytes:
+        refusal = too_little_disk(free, limits.free_disk_bytes)
+    elif limits.store_bytes is not None:
+        held = held_bytes(objects)
+        if held >= limits.store_bytes:
+            refusal = store_too_large(held, limits.store_bytes)
+    return Room(
+        workers_busy=busy,
+        workers_limit=workers,
+        runs_waiting=waiting,
+        runs_waiting_limit=limits.waiting_runs,
+        disk_free_bytes=free,
+        disk_free_limit_bytes=limits.free_disk_bytes,
+        refusal=refusal,
+    )
 
 
 @dataclass(frozen=True)
@@ -297,26 +349,28 @@ class Scheduler:
 
     def _check_room(self) -> None:
         """Under the lock: refuses a run the simulator's limits have no room for,
-        before anything of it is written, saying which limit and the figures. A run
-        that a free worker takes at once does not wait, so is not refused for that. A
-        server's limit may be lower than the workers a server before it left, and those
-        are not runs waiting."""
-        limits = self._simulator.limits
-        free_workers = max(0, self._limit - len(self._running) - len(self._elsewhere))
-        waiting = len(self._waiting)
-        if limits.waiting_runs is not None and waiting - free_workers >= limits.waiting_runs:
-            raise Conflict(too_many_waiting(waiting, limits.waiting_runs))
-        free = self._objects.free_bytes()
-        if (
-            limits.free_disk_bytes is not None
-            and free is not None
-            and free < limits.free_disk_bytes
-        ):
-            raise Conflict(too_little_disk(free, limits.free_disk_bytes))
-        if limits.store_bytes is not None:
-            held = held_bytes(self._objects)
-            if held >= limits.store_bytes:
-                raise Conflict(store_too_large(held, limits.store_bytes))
+        before anything of it is written, saying which limit and the figures."""
+        refused = self._room().refusal
+        if refused is not None:
+            raise Conflict(refused)
+
+    def room(self) -> Room:
+        """What a run asked for now has room for (`Room`)."""
+        with self._lock:
+            return self._room()
+
+    def _room(self) -> Room:
+        """Under the lock: the room there is, and why a run asked for now would be
+        refused, if it would. A run that a free worker takes at once does not wait,
+        so is not refused for that. A server's limit may be lower than the workers a
+        server before it left, and those are not runs waiting."""
+        return _room_of(
+            self._simulator.limits,
+            self._objects,
+            busy=len(self._running) + len(self._elsewhere),
+            waiting=len(self._waiting),
+            workers=self._limit,
+        )
 
     def workers(self) -> list[Worker]:
         """The epochs being executed now."""
@@ -572,6 +626,22 @@ def of(simulator: Simulator) -> Scheduler:
                 simulator, simulator.runs.root, limit=simulator.limits.workers
             )
         return simulator.scheduler
+
+
+def room(simulator: Simulator) -> Room:
+    """What a run asked of a simulator now has room for (`Room`): from its
+    scheduler, or, before one is made, with no worker busy and none waiting.
+    Refused as a run is if the simulator keeps no runs, or not in a folder."""
+    if simulator.runs is None:
+        raise NotFound("this simulator keeps no runs: it was made with no run store")
+    if not isinstance(simulator.runs, FolderStore):
+        raise Conflict("workers need the run store in a folder")
+    with simulator.scheduling:
+        made = simulator.scheduler
+    if made is not None:
+        return made.room()
+    limits = simulator.limits
+    return _room_of(limits, simulator.runs, busy=0, waiting=0, workers=limits.workers)
 
 
 def start(

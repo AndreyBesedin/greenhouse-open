@@ -89,11 +89,17 @@ export function progressShare(run: StoredRun): number {
   return run.progress === null ? 0 : Math.min(1, Math.max(0, run.progress));
 }
 
-const KILOBYTE = 1024;
+const KILOBYTE = 1000;
 const MEGABYTE = KILOBYTE * KILOBYTE;
+const GIGABYTE = KILOBYTE * MEGABYTE;
 
-/** A size in bytes, in the unit that reads best. */
+/** A size in bytes, in the unit that reads best: decimal, as the simulator's
+ * own refusals give their figures, so that a size here and one in its words
+ * agree. */
 export function sizeText(bytes: number): string {
+  if (bytes >= GIGABYTE) {
+    return `${(bytes / GIGABYTE).toFixed(1)} GB`;
+  }
   if (bytes >= MEGABYTE) {
     return `${(bytes / MEGABYTE).toFixed(1)} MB`;
   }
@@ -146,4 +152,12 @@ export function runKey(run: Pick<StoredRun, "run_id" | "epoch">): string {
  * deleted. */
 export function isComputing(run: StoredRun): boolean {
   return run.status === "queued" || run.status === "running";
+}
+
+/** Whether a worker can carry a run on from its last commit: one interrupted,
+ * or one ended by a limit (`past_limit`), alone of failures; not one with files
+ * missing, since what it would go on from is gone. */
+export function isResumable(run: StoredRun): boolean {
+  const ended = run.status === "interrupted" || (run.status === "failed" && run.past_limit);
+  return ended && !run.damaged;
 }

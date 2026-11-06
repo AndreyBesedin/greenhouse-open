@@ -25,6 +25,8 @@ const RUN = {
   days_computed: 0,
   cpu_s: null,
   peak_memory_bytes: null,
+  wall_s: null,
+  past_limit: false,
   reason: null,
   start_s: DAY_S,
   fork: {

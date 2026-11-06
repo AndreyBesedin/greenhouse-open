@@ -24,6 +24,17 @@ The view uses the simulator's world axes: metres, right-handed, z up. Three.js
 is y up, so `src/world.ts` converts once, at the root of the scene; nothing
 else in the viewer deals with the difference.
 
+The start page, at the bare address, lists the runs the simulator keeps
+(`GET /api/runs`), in it and in each scenario's dialog, each with what it
+used under its row: the bytes it keeps, the days it computed, and its
+workers' CPU, peak memory and wall time, "not measured" where no worker of
+its own measured them, which is not zero; a failed run says why, and one a
+limit ended can be resumed. Above them is the room for runs (`GET /api/room`):
+the workers busy, the runs waiting and the disk free, each beside its limit,
+and the refusal a run asked for now would be given. A run started, resumed or
+forked that a limit refuses says so in the simulator's words, which name the
+limit and its figures, where it was asked (P18.5, decision 0067).
+
 ## Scenes
 
 The panel chooses what is drawn, and the address bar keeps the choice:

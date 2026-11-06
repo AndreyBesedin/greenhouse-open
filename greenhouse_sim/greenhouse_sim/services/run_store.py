@@ -1405,13 +1405,16 @@ class StoredRun(BaseModel):
     # list, from how many its folders hold (`EpochStore.holds_as_counted`).
     damaged: bool = False
     # What it has used (`EpochUsage`): the days it has computed itself, and the
-    # seconds of a core and the most memory its workers took, none if none of
-    # them reported any.
+    # seconds of a core, the most memory and the seconds from each start its
+    # workers took, none if none of them reported any.
     days_computed: float = 0.0
     cpu_s: float | None = None
     peak_memory_bytes: int | None = None
-    # Why it failed, if it did and it says.
+    wall_s: float | None = None
+    # Why it failed, if it did and it says; and whether it was a limit, which
+    # alone of failures can be carried on (`EpochManifest.carries_on`).
     reason: str | None = None
+    past_limit: bool = False
 
 
 def _shown(
@@ -1444,7 +1447,9 @@ def _shown(
         days_computed=(frontier_s - start_s) / DAY_S,
         cpu_s=None if usage is None else usage.cpu_s,
         peak_memory_bytes=None if usage is None else usage.peak_memory_bytes,
+        wall_s=None if usage is None else usage.wall_s,
         reason=manifest.reason,
+        past_limit=manifest.past_limit,
     )
 
 

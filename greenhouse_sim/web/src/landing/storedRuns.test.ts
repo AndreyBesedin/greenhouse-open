@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DAY_S } from "../clock";
 import {
   isComputing,
+  isResumable,
   KEPT_SIZE_NOTE,
   keptText,
   loadStoredRuns,
@@ -38,6 +39,8 @@ function run(more: Partial<StoredRun> = {}): StoredRun {
     days_computed: 0,
     cpu_s: null,
     peak_memory_bytes: null,
+    wall_s: null,
+    past_limit: false,
     reason: null,
     ...more,
   };
@@ -106,7 +109,7 @@ describe("the runs the simulator has kept", () => {
   });
 
   it("says how many runs are kept and the size of their objects in all", () => {
-    const MB = 1024 * 1024;
+    const MB = 1000 * 1000;
     const runs = [
       run({ size_bytes: 8 * MB }),
       run({ epoch: 1, size_bytes: 4 * MB + MB / 2 }),
@@ -117,7 +120,7 @@ describe("the runs the simulator has kept", () => {
   });
 
   it("says one run kept in the singular, and its size in the unit that reads best", () => {
-    expect(keptText([run({ size_bytes: 1500 })])).toBe("1 run kept, 1 kB");
+    expect(keptText([run({ size_bytes: 1400 })])).toBe("1 run kept, 1 kB");
     expect(keptText([run({ size_bytes: 12 })])).toBe("1 run kept, 12 B");
   });
 
@@ -129,8 +132,28 @@ describe("the runs the simulator has kept", () => {
     expect(KEPT_SIZE_NOTE).toContain("not of the disk");
   });
 
-  it("writes sizes the same wherever they are read", () => {
-    expect([512, 2048, 8 * 1024 * 1024].map(sizeText)).toEqual(["512 B", "2 kB", "8.0 MB"]);
+  it("writes sizes the same wherever they are read, in the decimal units of the simulator's words", () => {
+    expect([512, 2000, 8_000_000, 2_500_000_000].map(sizeText)).toEqual([
+      "512 B",
+      "2 kB",
+      "8.0 MB",
+      "2.5 GB",
+    ]);
+    // As `limits.in_words` says a floor of 2 GB, and not 1.9.
+    expect(sizeText(2 * 10 ** 9)).toBe("2.0 GB");
+  });
+
+  it("carries on a run interrupted, or one a limit ended, and no other that has ended", () => {
+    const ended = (more: Partial<StoredRun>) => isResumable(run(more));
+
+    expect(ended({ status: "interrupted" })).toBe(true);
+    expect(ended({ status: "failed", past_limit: true })).toBe(true);
+    expect(ended({ status: "failed" })).toBe(false);
+    expect(ended({ status: "finished" })).toBe(false);
+    expect(ended({ status: "running" })).toBe(false);
+    // What it would go on from is gone.
+    expect(ended({ status: "interrupted", damaged: true })).toBe(false);
+    expect(ended({ status: "failed", past_limit: true, damaged: true })).toBe(false);
   });
 
   it("writes a run's start as the day it was where it is read", () => {
