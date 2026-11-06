@@ -161,9 +161,9 @@ what it planned is in its report.
 
 - **[Future work](future-work.md):** the plans with no project of their own yet.
   Camera imperfections, climate setpoints beyond heating (P11's rest), crop work within
-  the day, actions and plans after P13, CO₂ and light targets, intelligence
-  components, crop models from plant research, a Modelica comparison, the test suite
-  and CI time, a second repository audit, and an assistant in the viewer.
+  the day, actions and plans after P13, models and devices after P14, CO₂ and light targets,
+  intelligence components, crop models from plant research, a Modelica comparison, the
+  test suite and CI time, a second repository audit, and an assistant in the viewer.
 - **[QA of 2026-11-04](qa-2026-11-04.md):** what a manual walk of the viewer found, and what follows from it.
 - **Clean-ups:** what reviews and walks left, per project:
   [P03](p03-cleanup.md), [P14](p14-cleanup.md), [P17](p17-cleanup.md).
