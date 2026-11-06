@@ -1,6 +1,6 @@
 # P17 clean-up
 
-**Status:** open. Part of [P17](p17-runs-and-playbacks.md).
+**Status:** closed with [P17](p17-runs-and-playbacks.md) on 2026-11-06: nothing open.
 
 A walk of the viewer's pages at commit `28701e05`, on the Vite development server
 with a machine's GPU (ANGLE Metal, Apple M2), found these defects. The ones fixed
@@ -94,7 +94,7 @@ takes one checks first that it is still there.
   drawn at this width, so it cannot be moved aside. Turned to 844 by 390, the panel covers
   the scene almost whole.
   The panel scrolls and nothing else overflows.
-  Closed as out of scope: the viewer is not made for phones ([the roadmap](README.md#not-goals-for-the-first-versions)).
+  Closed as out of scope: the viewer is not made for phones ([the roadmap](../README.md#not-goals-for-the-first-versions)).
 
 ### From a second walk
 
@@ -184,10 +184,10 @@ pale text.
 
 ### From P13's acceptance: an epoch resumed after its authorisation changed
 
-Found on 2026-11-06 while writing a test for [P13](archive/p13-actions.md#acceptance-criteria)'s
+Found on 2026-11-06 while writing a test for [P13](p13-actions.md#acceptance-criteria)'s
 criterion 8, on the one-plant box with an epoch store, and not seen in a walk.
 
-- [ ] **Medium: an epoch whose authorisation changed while it ran cannot be carried on.**
+- [x] **Medium: an epoch whose authorisation changed while it ran cannot be carried on.**
   The local operator's heater level, due at noon, was refused at noon, "no longer
   authorised", after the right to set levels was withdrawn at 6 h; its first day was kept,
   its checkpoint without the action. Carried on from that checkpoint (`workers.resume`, then
@@ -200,6 +200,20 @@ criterion 8, on the one-plant box with an epoch store, and not seen in a walk.
   out. The same epoch with no withdrawal is carried on to its end. The likely remedy is to log
   each change of authorisation with its moment, and apply it again at that moment as a plan
   given is; a test that resumes such an epoch is to come with the fix.
+  Each change of authorisation is now an entry of the epoch's log, at its moment, and so are
+  the rights it begins under unless they are the local operator's
+  ([decision 0072](../../decisions/0072-an-epoch-keeps-its-authorisation-in-its-log.md)). The
+  epoch is carried on to its end with the outcome it kept, digest for digest the epoch that
+  was never interrupted, and a fork after the withdrawal refuses the heater too.
+- [x] **Medium: a worker decided every action under the local operator's rights.** Found
+  while fixing the item above, by reading the code and then a test. A worker's process builds
+  its own simulator, the local operator's, and the server's `--authorisation` and its changes
+  reached only the playbacks in the API's process. On 0.7.0, under a file that withholds levels,
+  a level asked of a worker's epoch through the store was executed; through the API the route
+  refused it as it was asked, but a change of the rights made while a worker computed never
+  reached it, and a fork went on under the local operator's rights. A worker now decides under
+  the rights its epoch's log says, and a change made on the server reaches every epoch a worker
+  computes, will compute or may carry on, as a request in the store, as a change does.
 
 ## Not covered by the walk
 

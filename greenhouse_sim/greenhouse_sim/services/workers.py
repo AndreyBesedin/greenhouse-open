@@ -31,7 +31,9 @@ cannot signal the worker (`EpochStore.ask_to_stop`): it ends as if told to stop.
 An epoch is started with what its worker needs (decision 0067): its scenario's
 file, if the scenario is not packaged, and its pace. One written before it kept
 them is given them when it is asked to go on, if this simulator still knows the
-run it is (`scenario_file_of`).
+run it is (`scenario_file_of`). Its log begins with the authorisation it begins
+under, unless that is the local operator's, and a change of the simulator's
+authorisation reaches it as a request, as a change does (decision 0072).
 
 A worker keeps to the budget the store gives its epoch (`keep_within_budget`):
 at the commit that passes its bytes, and by a look from a thread of its own at its
@@ -56,6 +58,7 @@ from greenhouse_sim.services import scenario_files
 from greenhouse_sim.services.checkpoints import upload_checkpoint
 from greenhouse_sim.services.errors import Conflict, InvalidRequest
 from greenhouse_sim.services.fields import air_through_a_run
+from greenhouse_sim.services.interventions import log_start
 from greenhouse_sim.services.limits import Budget
 from greenhouse_sim.services.playback import (
     DEFAULT_SECONDS_PER_DAY,
@@ -127,30 +130,33 @@ def queued(
 ) -> EpochStore:
     """A new epoch of the run of `scenario_id` at `layout` and `seed`, in
     `objects`, `queued`: the run's next epoch, its manifest written last, with
-    all a worker in another process needs to run it, and `queued_at` if a scheduler
-    puts it in line. A scenario, a layout or a seed refused starts nothing, as does
-    a scenario that cannot be written as a file. Whoever starts epochs of one store
-    does it one at a time, so that two are never given a number."""
+    all a worker in another process needs to run it, the simulator's authorisation
+    among it, and `queued_at` if a scheduler puts it in line. A scenario, a layout or
+    a seed refused starts nothing, as does a scenario that cannot be written as a
+    file. Whoever starts epochs of one store does it one at a time, so that two are
+    never given a number."""
     config = scenario(simulator.catalogue, scenario_id)
     chosen = layout_name(layout or DEFAULT_LAYOUT)
     _, run_id = air_through_a_run(simulator, RunRequest(scenario_id, layout=chosen, seed=seed))
     started = stored_epochs(objects, run_id)
     scenario_file = scenario_files.carry(simulator.catalogue, objects, scenario_id)
-    return EpochStore.create(
-        objects,
-        EpochManifest(
-            run_id=run_id,
-            epoch=started[-1] + 1 if started else FIRST_EPOCH,
-            scenario_id=scenario_id,
-            seed=seed,
-            layout=chosen,
-            duration_s=config.duration_days * DAY_S,
-            created_at=datetime.now(UTC),
-            queued_at=queued_at,
-            scenario_file=scenario_file,
-            seconds_per_day=seconds_per_day,
-        ),
+    manifest = EpochManifest(
+        run_id=run_id,
+        epoch=started[-1] + 1 if started else FIRST_EPOCH,
+        scenario_id=scenario_id,
+        seed=seed,
+        layout=chosen,
+        duration_s=config.duration_days * DAY_S,
+        created_at=datetime.now(UTC),
+        queued_at=queued_at,
+        scenario_file=scenario_file,
+        seconds_per_day=seconds_per_day,
     )
+    # Under the simulator's lock of it, so that a change made meanwhile is either
+    # the one it begins under or one it is asked to take (`authorise_kept`).
+    with simulator.authorising:
+        log_start(EpochStore(objects, run_id, manifest.epoch), simulator.authorisation)
+        return EpochStore.create(objects, manifest)
 
 
 def keep_within_budget(epoch: EpochStore) -> None:

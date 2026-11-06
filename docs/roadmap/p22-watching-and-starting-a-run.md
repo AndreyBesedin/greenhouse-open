@@ -22,7 +22,7 @@ The walk of 2026-11-04 found the viewer working, and hard to find one's way in:
   running epoch (`POST /api/runs/{run}/epochs/{n}/changes`,
   `greenhouse_sim/greenhouse_sim/api/routes/stored.py`), and the viewer never
   calls it: a replay's panels only fork
-  ([P17.8](p17-runs-and-playbacks.md), "not delivered").
+  ([P17.8](archive/p17-runs-and-playbacks.md), "not delivered").
 - **A new run asks two things.** A scenario's dialog
   (`src/landing/RunsDialog.tsx`) leads with *Open in the viewer*, whose purpose
   was not clear, and starts a run from a seed and a pace. Starting a run takes

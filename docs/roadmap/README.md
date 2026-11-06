@@ -122,7 +122,7 @@ links there.
 | [P14](archive/p14-models-by-manifest.md) | Models chosen by the manifest, from a registry | Done: P14.1 to P14.9 and P14.10 for Reduced-State TOMGRO; Vanthoor's registration moved to the research priorities |
 | [P15](archive/p15-policy-port.md) | A policy's port, and an experiment that steps a run | Done: final QA passed on 2026-11-01 |
 | [P16](archive/p16-crop-at-its-models-step.md) | A run's crop at its model's step, not the run's day | Done, but for P16.4, deferred until a model takes crop work within its day |
-| [P17](p17-runs-and-playbacks.md) | Runs kept in a store, playbacks as positions, and a place to choose | In progress: P17.1 to P17.9 done, some with parts left; P17.10, its QA, run for what is delivered; P17.11 in progress; [the clean-up](p17-cleanup.md) left |
+| [P17](archive/p17-runs-and-playbacks.md) | Runs kept in a store, playbacks as positions, and a place to choose | Done: P17.1 to P17.11, its QA run for what is delivered and its clean-up closed; steering a running epoch moved to P22.1, the rest to [future work](future-work.md#runs-and-playbacks-after-p17) |
 | [P18](p18-resources-and-deployment.md) | Resources counted and limited, and a run that can move | In progress: P18.1 to P18.5 done |
 | [P19](p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | In progress: P19.1 to P19.6 done |
 | [P20](p20-crop-parameter-assets.md) | Crop parameters as versioned assets, edited by forms and reproduced from their versions | Proposed |
@@ -145,18 +145,16 @@ report says.
 
 ## Order of work
 
-1. **Finish P17:** what its QA scenario (P17.10) and its walks left in
-   [the clean-up](p17-cleanup.md).
-2. **P18:** what a run used counted, then limited (P18.2 to P18.6).
-3. **P19:** the design system's remaining steps (P19.7 on), and beside it
+1. **P18:** its QA (P18.6), runs within their limits.
+2. **P19:** the design system's remaining steps (P19.7 on), and beside it
    [P22](p22-watching-and-starting-a-run.md), what the QA of 2026-11-04 planned, whose
    start page and panels line up with P19.8, P19.10 and P19.11.
-4. **The [research priorities](research-validation-priorities.md)**
+3. **The [research priorities](research-validation-priorities.md)**
    ([decision 0057](../decisions/0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md),
    proposed): two published tomato models reproduced and made P14 models, a validation
    on measured data, a bounded Modelica comparison, and the evaluation of policies.
    The projects' own documents keep their scope.
-5. **[P20](p20-crop-parameter-assets.md), then [P21](p21-rows-of-different-crops.md):** crop
+4. **[P20](p20-crop-parameter-assets.md), then [P21](p21-rows-of-different-crops.md):** crop
    parameters as versioned assets are the research priorities' last item, and rows of
    different crops come after them.
 
@@ -164,14 +162,15 @@ report says.
 
 - **[Future work](future-work.md):** the plans with no project of their own yet.
   Camera imperfections, climate setpoints beyond heating (P11's rest), crop work within
-  the day, actions and plans after P13, models and devices after P14, CO₂ and light targets,
+  the day, actions and plans after P13, models and devices after P14, runs and playbacks
+  after P17, CO₂ and light targets,
   intelligence components, crop models from plant research, a Modelica comparison, the
   test suite and CI time, a second repository audit, and an assistant in the viewer.
 - **[QA of 2026-11-04](qa-2026-11-04.md):** what a manual walk of the viewer found, and what follows from it.
-- **[P17's clean-up](p17-cleanup.md):** what P17's QA and walks left.
 - **[The archive](archive/README.md):** the documents of finished projects, read
-  when a task cites their steps: P-1 to P16, the clean-ups of
-  [P03](archive/p03-cleanup.md) and [P14](archive/p14-cleanup.md), and
+  when a task cites their steps: P-1 to P17, the clean-ups of
+  [P03](archive/p03-cleanup.md), [P14](archive/p14-cleanup.md) and
+  [P17](archive/p17-cleanup.md), and
   [the frontend maintenance](archive/frontend-maintenance.md) that followed the
   frontend audits of 6 and 11 October.
 - **[Audits](../audits/README.md):** a periodic look at the repository as a whole,

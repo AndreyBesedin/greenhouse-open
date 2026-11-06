@@ -700,7 +700,7 @@ a checkpoint's plan, from which what was revoked or refused is left out
 `greenhouse_sim/tests/test_run_authorisation.py`. An epoch carried on from such a
 checkpoint (P17.9) is refused, with a conflict, and carries nothing out: its log
 keeps no change of authorisation, an entry of the
-[P17 clean-up](../p17-cleanup.md#from-p13s-acceptance-an-epoch-resumed-after-its-authorisation-changed).
+[P17 clean-up](p17-cleanup.md#from-p13s-acceptance-an-epoch-resumed-after-its-authorisation-changed).
 
 ## Final QA scenario
 

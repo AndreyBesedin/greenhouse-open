@@ -6,7 +6,7 @@
 ## Context
 
 Decision 0065 keeps a run in a store as segments of records, checkpoints of
-models' states, an intervention log and commits. [P17.1](../roadmap/p17-runs-and-playbacks.md)
+models' states, an intervention log and commits. [P17.1](../roadmap/archive/p17-runs-and-playbacks.md)
 measured what they weigh and how they are read, on the reference greenhouse
 and on `tomgro_house`, and at 32, 128 and 512 plants.
 

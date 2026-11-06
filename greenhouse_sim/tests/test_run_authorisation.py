@@ -180,7 +180,7 @@ def test_one_change_of_a_simulators_authorisation_at_a_time(
     authorisation and every playback's take the changes in one order."""
     with Simulator() as simulator:
         assert not finishes_beside_held(
-            simulator._authorising, lambda: simulator.authorise(LEVELS_ONLY)
+            simulator.authorising, lambda: simulator.authorise(LEVELS_ONLY)
         )
         assert simulator.authorisation == LEVELS_ONLY
 

@@ -28,6 +28,7 @@ from greenhouse_sim.services import (
     climate_runs,
     crop,
     interrupted,
+    interventions,
     kept_states,
     scenario_files,
     sunlight,
@@ -56,9 +57,10 @@ class Simulator:
     ) -> None:
         self.catalogue = Catalogue() if catalogue is None else catalogue
         # Who may do what on its runs: each run's gateway enforces it. One
-        # change of it at a time, so that it and every playback's agree.
+        # change of it at a time, so that it and every playback's agree, and
+        # every epoch begun meanwhile begins under one or is asked to take it.
         self.authorisation = authorisation
-        self._authorising = threading.Lock()
+        self.authorising = threading.Lock()
         # Who carries its runs' crop actions out (P13.6): so many at once,
         # each taking its kind's time; every playback's run has it.
         self.crew = crew
@@ -106,12 +108,16 @@ class Simulator:
     def authorise(self, authorisation: AuthorisationConfig) -> None:
         """Who may do what on its runs from now on: every playback's gateway
         enforces it from its clock's moment, and records the change; a
-        playback started later takes it from the start. Changes made at once
-        are made one after the other, every playback's in the same order."""
-        with self._authorising:
+        playback started later takes it from the start. An epoch in its store
+        that no playback of it plays, one a worker computes, will compute or may
+        carry on, is asked to take it through the store, from the moment its
+        worker takes it (decision 0072). Changes made at once are made one after
+        the other, every playback's and every epoch's in the same order."""
+        with self.authorising:
             self.authorisation = authorisation
             for played in self.playbacks.all():
                 played.authorise(authorisation)
+            interventions.authorise_kept(self, authorisation)
 
     def forget(self) -> None:
         """Lets go of everything kept, those that build on others first: the

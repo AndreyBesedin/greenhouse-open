@@ -85,6 +85,7 @@ decision that changes course is a new record that supersedes the old one.
 | [0070](0070-a-finished-project-moves-to-the-roadmaps-archive.md) | A finished project moves to the roadmap's archive | Accepted |
 | [0069](0069-setup-installs-node-when-the-machines-is-missing-or-too-old.md) | `uv run setup` installs Node when the machine's is missing or too old | Accepted |
 | [0071](0071-cut-the-browser-tests-last-lane-in-three.md) | Cut the browser tests' last lane in three | Accepted |
+| [0072](0072-an-epoch-keeps-its-authorisation-in-its-log.md) | An epoch keeps its authorisation in its log | Accepted |
 
 ## Template
 
