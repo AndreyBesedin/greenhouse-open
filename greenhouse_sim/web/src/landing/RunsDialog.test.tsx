@@ -259,6 +259,9 @@ describe("the runs of a scenario, in a dialog", () => {
   it("removes a run only once it is confirmed, and not when it is kept", async () => {
     const asked = simulator();
     const { container, onChanged } = shown([run({ epoch: 3, seed: 5 })]);
+    // Not focusable until a run is gone: showModal() puts the keyboard on the
+    // dialog's first focusable element, which must stay its first control.
+    expect(container.querySelector("h2")?.hasAttribute("tabindex")).toBe(false);
 
     click(button(container, "Delete the run with seed 5, epoch 3"));
     expect(document.activeElement).toBe(button(container, "Keep it"));

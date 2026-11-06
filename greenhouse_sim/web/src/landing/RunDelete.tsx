@@ -88,7 +88,13 @@ export function RunDelete({
     if (await onDelete()) {
       // Not back on a button about to go.
       asked.current = false;
-      whenGone.current?.focus();
+      const heading = whenGone.current;
+      // Focusable only from now: a heading always focusable would be the first
+      // thing a dialog's showModal() puts the keyboard on.
+      if (heading !== null && !heading.hasAttribute("tabindex")) {
+        heading.tabIndex = -1;
+      }
+      heading?.focus();
     }
     setConfirming(false);
   }

@@ -94,7 +94,7 @@ export function RunsDialog({
     <dialog ref={dialog} className="landing-dialog" aria-labelledby={heading} onClose={onClose}>
       <header className="landing-dialog-head">
         <div>
-          <h2 id={heading} ref={title} tabIndex={-1}>
+          <h2 id={heading} ref={title}>
             {scenario.name}
           </h2>
           <p>

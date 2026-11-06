@@ -126,7 +126,7 @@ export function Landing({
           </section>
         </div>
         <section aria-labelledby="landing-recent">
-          <h3 id="landing-recent" ref={recent} tabIndex={-1}>
+          <h3 id="landing-recent" ref={recent}>
             Recent runs
           </h3>
           <RecentRuns
