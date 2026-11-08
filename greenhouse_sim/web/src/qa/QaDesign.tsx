@@ -74,6 +74,8 @@ const ROW: CSSProperties = {
   padding: 0,
   listStyle: "none",
 };
+// Fields side by side, each from the top, as they differ in height.
+const FIELD_ROW: CSSProperties = { ...ROW, alignItems: "start" };
 const TOKEN: CSSProperties = { display: "flex", alignItems: "center", gap: "var(--space-2)" };
 const SWATCH: CSSProperties = {
   width: "var(--space-7)",
@@ -167,7 +169,7 @@ export function QaDesign() {
         TONES.map((tone) => <ButtonsOf key={`${tone}-${size}`} tone={tone} size={size} />),
       )}
       <h2 style={HEADING}>Fields</h2>
-      <div style={ROW}>
+      <div style={FIELD_ROW}>
         <Field label="a field">{(control) => <input {...control} />}</Field>
         <Field label="a field, with a hint" hint="what it takes">
           {(control) => <input {...control} defaultValue="a value" />}
