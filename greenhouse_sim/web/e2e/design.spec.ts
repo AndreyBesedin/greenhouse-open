@@ -15,6 +15,10 @@ const COMPACT_TARGET_PX = 24;
 const COMPACT_CONTROLS = 3 * 5;
 const CONTROLS = 2 * COMPACT_CONTROLS + 1;
 const ENABLED = 2 * 3 * 3 + 1;
+// Each field's control, one of them disabled, and each fold's line (P19.7): drawn by
+// the browser, as on the pages that will use them.
+const FIELDS = 5;
+const FOLDS = 2;
 // A radius this large is cut down to half its box, so that a pixel moves nothing:
 // what shows is that it is drawn at all.
 const MOVED_BY_MORE: Readonly<Record<string, string>> = { "--radius-pill": "1px" };
@@ -28,6 +32,10 @@ const TOKENS = [
 
 function controls(page: Page): Locator {
   return page.locator("main").locator("button, a");
+}
+
+function fieldsAndFolds(page: Page): Locator {
+  return page.locator("main").locator("input, select, summary");
 }
 
 /** `written`, the value of a token, changed by the least that can show. */
@@ -69,9 +77,36 @@ for (const theme of THEMES) {
     });
 
     test("names every control", async ({ page }) => {
-      for (const control of await controls(page).all()) {
+      await expect(fieldsAndFolds(page)).toHaveCount(FIELDS + FOLDS);
+      for (const control of [
+        ...(await controls(page).all()),
+        ...(await fieldsAndFolds(page).all()),
+      ]) {
         await expect(control).toHaveAccessibleName(/\S/);
       }
+    });
+
+    test("names a field's control by its label, and describes it by its hint and problem", async ({
+      page,
+    }) => {
+      const refused = page.getByRole("textbox", { name: "a field, with a problem", exact: true });
+      await expect(refused).toHaveAccessibleDescription("what it takes why it is refused");
+      await expect(refused).toHaveAttribute("aria-invalid", "true");
+      const hinted = page.getByRole("textbox", { name: "a field, with a hint", exact: true });
+      await expect(hinted).toHaveAccessibleDescription("what it takes");
+      await expect(hinted).not.toHaveAttribute("aria-invalid");
+      await expect(page.getByRole("combobox", { name: "a choice", exact: true })).toBeVisible();
+    });
+
+    test("says each status and notice in words, and each notice in its role", async ({ page }) => {
+      await expect(page.locator("main .ds-status-chip")).toHaveText([
+        "plain",
+        "active",
+        "problem",
+        "problem, with a note what it means",
+      ]);
+      await expect(page.getByRole("alert")).toHaveText("a problem");
+      await expect(page.getByRole("status")).toHaveText("a status");
     });
 
     test("gives every control its target, measured", async ({ page }) => {
@@ -92,9 +127,12 @@ for (const theme of THEMES) {
 
     test("draws every component in the weight its words are read in", async ({ page }) => {
       // A change of weight alone may not show in the pinned container's images.
-      const weights = await controls(page).evaluateAll((all) => [
-        ...new Set(all.map((element) => getComputedStyle(element).fontWeight)),
-      ]);
+      const weights = await page
+        .locator("main")
+        .locator("button, a, .ds-status-chip, .ds-field > label")
+        .evaluateAll((all) => [
+          ...new Set(all.map((element) => getComputedStyle(element).fontWeight)),
+        ]);
       expect(weights).toEqual(["600"]);
     });
 
@@ -153,8 +191,10 @@ test.describe("a component, by keyboard", () => {
   test("reaches each one that is enabled, in order, and passes over the disabled", async ({
     page,
   }) => {
-    const enabled = page.locator("main").locator("button:enabled, a");
-    await expect(enabled).toHaveCount(ENABLED);
+    const enabled = page
+      .locator("main")
+      .locator("button:enabled, a, input:enabled, select:enabled, summary");
+    await expect(enabled).toHaveCount(ENABLED + FIELDS - 1 + FOLDS);
     // The page opens on its first control, which shows the focus.
     await expect(enabled.first()).toBeFocused();
     for (const control of (await enabled.all()).slice(1)) {
@@ -187,6 +227,17 @@ test.describe("a component, by keyboard", () => {
     await disabled.evaluate((element) => (element as HTMLElement).focus());
     await expect(disabled).not.toBeFocused();
     await expect(disabled).not.toHaveAttribute("data-pressed");
+  });
+
+  test("opens and folds a fold by its line, with Enter", async ({ page }) => {
+    const held = page.getByText("what it holds, folded", { exact: true });
+    await expect(held).toBeHidden();
+    await page.getByText("folded", { exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await expect(held).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(held).toBeHidden();
+    await expect(page.getByText("what it holds", { exact: true })).toBeVisible();
   });
 
   test("follows a link with Enter, and not with Space, as any link", async ({ page }) => {
