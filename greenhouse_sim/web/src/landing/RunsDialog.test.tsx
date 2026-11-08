@@ -105,8 +105,13 @@ describe("the runs of a scenario, in a dialog", () => {
     return { container: rendered.container, rows, field, navigate, onClose, onChanged };
   }
 
-  const follows = () =>
-    [...document.querySelectorAll("a")].filter((a) => a.textContent === "Follow");
+  /** Where each row's ways to watch its run go: a replay, or the Follow there was. */
+  const watches = () =>
+    [...document.querySelectorAll(".landing-run")].map((row) =>
+      [...row.querySelectorAll("a")]
+        .filter((a) => a.textContent === "Replay" || a.textContent === "Follow")
+        .map((a) => a.getAttribute("href")),
+    );
 
   it("opens as a dialog that names the scenario, and links to it in the viewer", () => {
     const { container } = shown([]);
@@ -118,7 +123,7 @@ describe("the runs of a scenario, in a dialog", () => {
     expect(container.querySelector(`a[href="${viewerAddress(SCENARIO.id)}"]`)).not.toBeNull();
   });
 
-  it("lists each run in words, and follows one computing in its replay", () => {
+  it("lists each run in words, with one way to watch each: its replay", () => {
     const playing = run({
       epoch: 2,
       seed: 2,
@@ -144,10 +149,12 @@ describe("the runs of a scenario, in a dialog", () => {
     expect(texts[1]).toContain("The scenario's seed");
     expect(texts[2]).toContain("Kept400 kB");
     expect(texts[2]).toContain("Finished");
-    // A finished one has no newest day to follow.
-    expect(follows().map((a) => a.getAttribute("href"))).toEqual([
-      replayAddress(RUN_ID, 2, true),
-      replayAddress(RUN_ID, 1, true),
+    // One way to watch each (P22.2): its replay, which follows the newest day of
+    // one computing, and opens a finished one at its start.
+    expect(watches()).toEqual([
+      [replayAddress(RUN_ID, 2, true)],
+      [replayAddress(RUN_ID, 1, true)],
+      [replayAddress(RUN_ID, 0)],
     ]);
   });
 
@@ -439,8 +446,7 @@ describe("the runs of a scenario, in a dialog", () => {
     expect(finished?.textContent).toContain("cannot be read whole");
     expect(finished?.textContent).not.toContain("Finished");
     expect(interrupted?.textContent).not.toContain("Interrupted");
-    expect(container.querySelector('a[aria-label^="Replay"]')).toBeNull();
-    expect(follows()).toHaveLength(0);
+    expect(watches()).toEqual([[], []]);
     expect(container.querySelector('button[aria-label^="Resume"]')).toBeNull();
     expect(button(container, "Delete the run with seed 1, epoch 1")).toBeDefined();
   });
@@ -449,7 +455,7 @@ describe("the runs of a scenario, in a dialog", () => {
     const { container } = shown([run({ status: "running", damaged: true })]);
 
     expect(button(container, "Stop the run with seed 1, epoch 0")).toBeDefined();
-    expect(follows()).toHaveLength(0);
+    expect(watches()).toEqual([[]]);
   });
 
   it("says what a fork came from, in its row; a run that is no fork says nothing of it", () => {

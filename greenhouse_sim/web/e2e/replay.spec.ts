@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { LANDING_PATH, REPLAY_PATH } from "../src/landing/paths";
+import { LANDING_PATH, REPLAY_PATH, runsAddress } from "../src/landing/paths";
 import { unfold } from "./folds";
 
 const DAY_S = 86_400;
@@ -140,13 +140,56 @@ test("a replay plays on its own pace, and pauses", async ({ page }) => {
   await expect(transport.getByRole("button", { name: "Play" })).toBeVisible();
 });
 
-test("a run that is being computed can be followed at its newest day", async ({ page }) => {
+test("a run being computed is watched from its list in the replay: at its newest day, and Play moves on as days arrive", async ({
+  page,
+}) => {
+  test.setTimeout(WAITS_FOR_A_DAY * 2);
   await replayOfANewRun(page, "43");
+  const replayed = page.url();
+  try {
+    // One way to watch it in its list (P22.2): its replay, which opens following.
+    await page.goto(runsAddress(SCENARIO));
+    const row = page
+      .getByRole("dialog")
+      .locator(".landing-run")
+      .filter({ hasText: /Seed 43(?!\d)/ })
+      .first();
+    await expect(row.getByRole("link")).toHaveCount(1);
+    await row.getByRole("link", { name: /^Replay the run with seed 43,/ }).click();
+    await expect(page).toHaveURL(new RegExp(`${REPLAY_PATH}\\?run=.*&follow=1$`));
 
-  const follow = page.getByRole("button", { name: "Follow the newest day" });
-  await expect(follow).toHaveAttribute("aria-pressed", "false");
-  await follow.click();
-  await expect(follow).toHaveAttribute("aria-pressed", "true");
+    const follow = page.getByRole("button", { name: "Follow the newest day" });
+    await expect(follow).toHaveAttribute("aria-pressed", "true");
+    // Following, the handle stands at the frontier as the run computes on.
+    const handle = page.getByRole("slider", { name: "Position in the run" });
+    await expect
+      .poll(async () => Number(await handle.getAttribute("aria-valuenow")), {
+        timeout: WAITS_FOR_A_DAY,
+      })
+      .toBeGreaterThanOrEqual(DAY_S);
+    const [followedTo, frontier] = await handle.evaluate((slider) => [
+      Number(slider.getAttribute("aria-valuenow")),
+      Number(slider.getAttribute("aria-valuemax")),
+    ]);
+    expect(followedTo).toBe(frontier);
+
+    // Played from the frontier, it waits there, and moves on as days arrive.
+    const transport = page.locator(".replay-transport");
+    await transport.getByLabel("Pace").selectOption("2");
+    await transport.getByRole("button", { name: "Play" }).click();
+    await expect(follow).toHaveAttribute("aria-pressed", "false");
+    await expect(transport.getByRole("button", { name: "Pause" })).toBeVisible();
+    await expect
+      .poll(async () => Number(await handle.getAttribute("aria-valuenow")), {
+        timeout: WAITS_FOR_A_DAY,
+      })
+      .toBeGreaterThan(followedTo);
+  } finally {
+    const started = new URL(replayed).searchParams;
+    await page.request.post(
+      `/api/runs/${encodeURIComponent(started.get("run") ?? "")}/epochs/${started.get("epoch")}/stop`,
+    );
+  }
 });
 
 test("keys pressed faster than the answers move from the moment last sought", async ({ page }) => {

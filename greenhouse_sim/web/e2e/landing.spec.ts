@@ -59,7 +59,6 @@ test("a list's rows line up, and a dialog's controls stay on their row, whatever
       ["progress", 3],
       [".landing-status", 3],
       [".landing-run-replay", 3],
-      [".landing-run-follow", 1],
       [".landing-run-control", 2],
       [".landing-run-delete", 3],
     ] as const) {
@@ -78,17 +77,14 @@ test("a list's rows line up, and a dialog's controls stay on their row, whatever
   await page.goto(runsAddress(SCENARIO_ID));
   const rows = page.getByRole("dialog").locator(".landing-run");
   await expectColumns(rows);
-  // Replay and Follow beside Stop and Delete, not above them, down to the width
-  // the rows give way at.
+  // Replay beside Stop and Delete, not above them, down to the width the rows
+  // give way at.
   await page.setViewportSize({ width: NARROWEST_WITH_COLUMNS, height: 800 });
   const running = rows.nth(1);
   const tops = await Promise.all(
-    [
-      ".landing-run-replay",
-      ".landing-run-follow",
-      ".landing-run-control",
-      ".landing-run-delete",
-    ].map(async (selector) => (await running.locator(selector).boundingBox())?.y),
+    [".landing-run-replay", ".landing-run-control", ".landing-run-delete"].map(
+      async (selector) => (await running.locator(selector).boundingBox())?.y,
+    ),
   );
   expect(new Set(tops).size, `the tops of a row's controls: ${tops.join(", ")}`).toBe(1);
 });
