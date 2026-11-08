@@ -241,7 +241,7 @@ def check_resumable(epoch: EpochStore) -> float:
         raise Conflict(
             f"epoch {epoch.epoch} of {epoch.run_id} is {status}: only an interrupted one resumes"
         )
-    if epoch.worked() and not epoch.claimed():
+    if epoch.worked_by_another():
         raise Conflict(f"epoch {epoch.epoch} of {epoch.run_id} is worked by a process still")
     commits = epoch.commits()
     if epoch.damaged(commits):

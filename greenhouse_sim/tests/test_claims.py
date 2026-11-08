@@ -7,6 +7,7 @@ import multiprocessing
 import os
 import signal
 import sys
+import threading
 import time
 from collections import Counter
 from collections.abc import Callable
@@ -320,6 +321,50 @@ def test_a_worker_is_not_put_off_by_a_process_refused_as_it_takes_the_epoch_up(
     assert len(refused) == 1
     assert worker.claimed() and worker.manifest().status == Status.QUEUED
     worker.let_go()
+
+
+class _AsItReadsTheNewest(FolderStore):
+    """A store that does `meanwhile`, once it is given one, just after its reader lists
+    the epoch's claims: it has read which is the newest, and stands there."""
+
+    def __init__(self, root: Path) -> None:
+        super().__init__(root)
+        self.meanwhile: Callable[[], None] | None = None
+
+    def names(self, prefix: str = "") -> list[str]:
+        found = super().names(prefix)
+        if self.meanwhile is not None and prefix.endswith(f"/{leases.CLAIMS}/"):
+            meanwhile, self.meanwhile = self.meanwhile, None
+            meanwhile()
+        return found
+
+
+def test_a_worker_whose_own_limit_ends_its_epoch_as_it_checks_it_is_not_told_another_has_it(
+    tmp_path: Path,
+) -> None:
+    """The budget's watch, a thread beside the one that works the epoch, ends it and
+    lets go of its claim just after the worker has read that claim as the newest."""
+    objects = _AsItReadsTheNewest(tmp_path)
+    worker = _epoch(objects)
+    assert worker.claim()
+
+    def its_limit_ends_it() -> None:
+        watch = threading.Thread(target=worker.end_past_limit, args=("past a limit",))
+        watch.start()
+        watch.join()
+
+    objects.meanwhile = its_limit_ends_it
+
+    assert workers.check_resumable(worker) == 0.0
+
+    assert objects.meanwhile is None
+    assert worker.manifest().past_limit and not worker.worked()
+    # Another's claim that stands is told apart still.
+    another = EpochStore(FolderStore(tmp_path), "run", 0)
+    assert another.claim()
+    with pytest.raises(Conflict, match="worked by a process still"):
+        workers.check_resumable(worker)
+    another.let_go()
 
 
 def test_what_a_crash_left_past_the_last_commit_is_removed_and_the_claim_is_not(
