@@ -1,4 +1,5 @@
 import { type Answered, refusal } from "../builder/api";
+import { DEFAULT_WEATHER } from "../scenarios";
 import { parseStoredRun, type StoredRun } from "./storedRuns";
 
 /** The pace a run is started at unless another is asked for, in real seconds
@@ -6,18 +7,21 @@ import { parseStoredRun, type StoredRun } from "./storedRuns";
 export const DEFAULT_PACE_S = "10";
 
 /** What a run is asked for at, as a person enters it: its seed, or none for the
- * scenario's own, and how many real seconds a simulated day takes, or none for
- * as fast as it can be computed. */
+ * scenario's own; how many real seconds a simulated day takes, or none for as
+ * fast as it can be computed; and, if given, its weather by name and its days,
+ * or the scenario's own (decision 0075). */
 export interface RunAsked {
   seed: string;
   secondsPerDay: string;
+  weather?: string;
+  days?: string;
 }
 
 /** A run of a scenario given to a worker, beside any others of it (decision
  * 0065): the epoch it is, queued, or why it was refused. */
 export async function startRun(
   scenarioId: string,
-  { seed, secondsPerDay }: RunAsked,
+  { seed, secondsPerDay, weather = DEFAULT_WEATHER, days = "" }: RunAsked,
   fetchFn: typeof fetch = fetch,
 ): Promise<Answered<StoredRun>> {
   const query = new URLSearchParams();
@@ -26,6 +30,12 @@ export async function startRun(
   }
   if (secondsPerDay !== "") {
     query.set("seconds_per_day", secondsPerDay);
+  }
+  if (weather !== DEFAULT_WEATHER) {
+    query.set("weather", weather);
+  }
+  if (days !== "") {
+    query.set("duration_days", days);
   }
   const url = `/api/scenarios/${encodeURIComponent(scenarioId)}/runs?${query}`;
   try {

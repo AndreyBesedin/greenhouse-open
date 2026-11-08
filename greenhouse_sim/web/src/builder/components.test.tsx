@@ -216,4 +216,19 @@ describe("the builder's parts (P12.2)", () => {
     click(copy);
     expect(onCopy).toHaveBeenCalledExactlyOnceWith(scenario, "my_copy");
   });
+
+  it("copy the scenario a runs dialog sent, once the scenarios are listed (P22.4)", () => {
+    const box = { id: "climate_box", name: "Climate box" } as ScenarioSummary;
+    const reference = { id: "reference_greenhouse", name: "Reference" } as ScenarioSummary;
+    const onCopy = vi.fn();
+    const copying = (scenarios: ScenarioSummary[]) => (
+      <CopyScenario scenarios={scenarios} first={reference.id} busy={false} onCopy={onCopy} />
+    );
+    shown = render(copying([]));
+    shown.rerender(copying([box, reference]));
+
+    expect(input(shown.container, "The copy's identifier").value).toBe("reference_greenhouse_copy");
+    click(button(shown.container, "Copy its house"));
+    expect(onCopy).toHaveBeenCalledExactlyOnceWith(reference, "reference_greenhouse_copy");
+  });
 });

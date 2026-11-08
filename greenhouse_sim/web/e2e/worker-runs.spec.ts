@@ -121,6 +121,63 @@ test("two runs of one scenario are computed at once, from the dialog, each follo
   }
 });
 
+test("a run is started for the form's days and under its weather, and repeated by its seed (P22.4)", async ({
+  page,
+}) => {
+  test.setTimeout(360_000);
+  const errors = collectErrors(page);
+  const started: { runId: string; epoch: number }[] = [];
+  /** A day of the scenario under a cold spring day, at a seed, as fast as it goes. */
+  async function startADay(): Promise<{ runId: string; epoch: number }> {
+    await page.goto("about:blank");
+    await page.goto(runsAddress(SCENARIO));
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "New run" }).click();
+    await dialog.getByLabel("Days").fill("1");
+    await dialog.getByLabel("Weather").selectOption({ label: "cold spring day" });
+    await dialog.getByLabel("Seed", { exact: true }).fill("75");
+    await dialog.getByLabel("Seconds per simulated day").fill("");
+    await dialog.getByRole("button", { name: "Start run" }).click();
+    await expect(page).toHaveURL(new RegExp(`${REPLAY_PATH}\\?run=.*&follow=1$`));
+    const target = replayTarget(new URL(page.url()).search);
+    if (target === null) {
+      throw new Error(`no run in ${page.url()}`);
+    }
+    started.push(target);
+    return target;
+  }
+  const epochOf = async ({ runId, epoch }: { runId: string; epoch: number }) =>
+    (await page.request.get(`/api/runs/${encodeURIComponent(runId)}/epochs/${epoch}`)).json();
+  try {
+    const first = await startADay();
+    await expect.poll(async () => (await epochOf(first)).status, WORKS).toBe("finished");
+    const second = await startADay();
+
+    // The same run, its next epoch, under the weather and for the day asked.
+    expect([second.runId, second.epoch]).toEqual([first.runId, first.epoch + 1]);
+    for (const each of [first, second]) {
+      expect(await epochOf(each)).toMatchObject({
+        seed: 75,
+        weather: "cold_spring_day",
+        duration_s: 86_400,
+      });
+    }
+    await expect.poll(async () => (await epochOf(second)).status, WORKS).toBe("finished");
+    await page.goto("about:blank");
+    await page.goto(runsAddress(SCENARIO));
+    const row = page
+      .getByRole("dialog")
+      .locator(".landing-run")
+      .filter({ hasText: `epoch ${second.epoch} · cold spring day` });
+    await expect(row).toContainText("1 of 1 days");
+    expect(errors).toEqual([]);
+  } finally {
+    for (const { runId, epoch } of started) {
+      await page.request.post(`/api/runs/${encodeURIComponent(runId)}/epochs/${epoch}/stop`);
+    }
+  }
+});
+
 test("a run is stopped with what it computed, resumed as the same epoch, and deleted once stopped", async ({
   page,
 }) => {
