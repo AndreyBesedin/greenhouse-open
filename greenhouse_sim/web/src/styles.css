@@ -1786,10 +1786,10 @@
 
 /* Every row shares the list's columns, so that what a row has lines up with the
  * rows above and below it, and a row leaves empty what it does not have: its
- * name, its status, how far it is computed, Replay, Follow, Stop or Resume, Delete. */
+ * name, its status, how far it is computed, Replay, Stop or Resume, Delete. */
 .landing-runs {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) max-content minmax(0, 1fr) repeat(4, max-content);
+  grid-template-columns: minmax(0, 2fr) max-content minmax(0, 1fr) repeat(3, max-content);
   column-gap: var(--space-7);
   margin: var(--space-4) 0 0;
   padding: 0;
@@ -2015,16 +2015,12 @@
   grid-column: 4;
 }
 
-.landing-run > .landing-run-follow {
+.landing-run > .landing-run-control {
   grid-column: 5;
 }
 
-.landing-run > .landing-run-control {
-  grid-column: 6;
-}
-
 .landing-run > .landing-run-delete {
-  grid-column: 7;
+  grid-column: 6;
 }
 
 /* What is said of a row, or asked of it, on a line of its own under it. */
