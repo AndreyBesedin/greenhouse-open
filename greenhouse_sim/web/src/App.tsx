@@ -581,51 +581,53 @@ export function App({
                 onPlayingClimate={setPlayingClimate}
                 onOwnRange={() => setFieldRange(null)}
               >
-                {steeredEpoch !== null && (
+                {/* One child or none: a card is drawn only with something in it. */}
+                {steeredEpoch !== null ? (
                   <EpochSteering
                     waiting={steering.waiting > 0}
                     taken={steering.taken}
                     refusal={steering.refusal}
                   />
-                )}
-                {followed !== null && (
-                  <>
-                    <PlaybackPanel
-                      load={playback}
-                      days={summary?.duration_days ?? null}
-                      changed={anotherRun}
-                      refusal={steering.refusal}
-                      onCommand={(command) =>
-                        void commandPlayback(followed, command).then(setPlayback)
-                      }
-                      onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
-                      onOwnRun={() =>
-                        setSource((current) =>
-                          withoutRunChanges(
-                            current,
-                            playedLayout,
-                            playback.status === "loaded" ? playback.state.commands : [],
-                            playback.status === "loaded" ? playback.state.crop : [],
-                          ),
-                        )
-                      }
-                      onStop={() =>
-                        setSource((current) => {
-                          if (current.kind !== "scenario") {
-                            return current;
-                          }
-                          const { follow: _, ...rest } = current;
-                          return rest;
-                        })
-                      }
-                    />
-                    <PlantActions
-                      entity={selected}
-                      day={0}
-                      scheduled={0}
-                      onAct={(action) => steering.act([cropAction(action)])}
-                    />
-                  </>
+                ) : (
+                  followed !== null && (
+                    <>
+                      <PlaybackPanel
+                        load={playback}
+                        days={summary?.duration_days ?? null}
+                        changed={anotherRun}
+                        refusal={steering.refusal}
+                        onCommand={(command) =>
+                          void commandPlayback(followed, command).then(setPlayback)
+                        }
+                        onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
+                        onOwnRun={() =>
+                          setSource((current) =>
+                            withoutRunChanges(
+                              current,
+                              playedLayout,
+                              playback.status === "loaded" ? playback.state.commands : [],
+                              playback.status === "loaded" ? playback.state.crop : [],
+                            ),
+                          )
+                        }
+                        onStop={() =>
+                          setSource((current) => {
+                            if (current.kind !== "scenario") {
+                              return current;
+                            }
+                            const { follow: _, ...rest } = current;
+                            return rest;
+                          })
+                        }
+                      />
+                      <PlantActions
+                        entity={selected}
+                        day={0}
+                        scheduled={0}
+                        onAct={(action) => steering.act([cropAction(action)])}
+                      />
+                    </>
+                  )
                 )}
               </ScenarioPanels>
             )}
