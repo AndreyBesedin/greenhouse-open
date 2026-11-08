@@ -1,5 +1,6 @@
 import { type FormEvent, useId, useState } from "react";
 
+import { Button } from "../design/Button";
 /**
  * A draft's identifier and name, changed as an edit is, undone in one step
  * (P12.2): a draft started from a file or a scenario under an identifier
@@ -48,12 +49,13 @@ export function HouseIdentity({
           onChange={(event) => setTyped({ ...shown, name: event.target.value })}
         />
       </div>
-      <button
+      <Button
         type="submit"
+        size="compact"
         disabled={typed === null || (typed.draftId === draftId && typed.name === name)}
       >
         Rename
-      </button>
+      </Button>
     </form>
   );
 }

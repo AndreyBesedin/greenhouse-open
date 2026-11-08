@@ -14,6 +14,10 @@ import { lowContrast } from "./contrast.ts";
 const ARRIVES = { timeout: 60_000 };
 
 const PHONE = { width: 390, height: 844 };
+// A compact button's least height and width (`--target-compact`, P19.9), and a
+// target's, which the ways out of the builder keep.
+const COMPACT_TARGET_PX = 24;
+const TARGET_PX = 44;
 
 function field(page: Page, label: string) {
   return page.locator(".builder-form").getByLabel(label, { exact: true });
@@ -473,6 +477,41 @@ async function houseDrawn(page: Page, scenario: string): Promise<unknown[]> {
     .filter(({ entity_id }) => !/^x_plant_\d+/.test(entity_id))
     .sort((a, b) => a.entity_id.localeCompare(b.entity_id));
 }
+
+/** Each button on the builder's side smaller than the size it is drawn at. */
+async function targetsTooSmall(page: Page): Promise<string[]> {
+  const small: string[] = [];
+  for (const control of await page.locator(".builder-side").locator("button").all()) {
+    const box = await control.boundingBox();
+    const [name, isTarget] = await control.evaluate((element) => [
+      element.textContent?.trim() ?? "",
+      element.matches(".ds-button:not(.ds-button-compact), .home-button"),
+    ]);
+    const least = isTarget ? TARGET_PX : COMPACT_TARGET_PX;
+    if ((box?.height ?? 0) < least || (box?.width ?? 0) < least) {
+      small.push(`${name}: ${box?.width} by ${box?.height}`);
+    }
+  }
+  return small;
+}
+
+test("builder: every button is a target of the size it is drawn at, at least compact", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.goto("/builder");
+  await expect(page.getByRole("button", { name: "Copy its house" })).toBeVisible(ARRIVES);
+  expect(await targetsTooSmall(page)).toEqual([]);
+
+  await field(page, "Identifier").fill(`e2e_targets_${Date.now()}`);
+  await page.getByRole("button", { name: "Draft this house" }).click();
+  await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+  await page.locator(".builder-palette").getByLabel("What").selectOption("heater");
+  await page.locator(".builder-palette").getByRole("button", { name: "Place" }).click();
+  await page.getByLabel("Choose heater_1").check(ARRIVES);
+  await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+  expect(await targetsTooSmall(page)).toEqual([]);
+});
 
 test("builder: at a phone's width the page fits its window, with the house under the forms", async ({
   page,

@@ -1,5 +1,6 @@
 import { type FormEvent, useId } from "react";
 
+import { Button } from "../design/Button";
 import type { RunSettings } from "./api";
 
 /** A draft's first run's days, unless another number is entered. */
@@ -117,9 +118,9 @@ export function RunStep({
         />
       </label>
       {disabled && <p className="builder-note">{why}</p>}
-      <button type="submit" disabled={disabled}>
+      <Button type="submit" size="compact" disabled={disabled}>
         Run this revision
-      </button>
+      </Button>
     </form>
   );
 }

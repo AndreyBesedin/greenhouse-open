@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 
+import { Button } from "../design/Button";
 import { sizeText } from "../landing/storedRuns";
 import { bytesOf, downloadScenarioFile, offerFile } from "./scenarioFile";
 
@@ -86,9 +87,9 @@ export function ShareScenario({ scenarioId }: { scenarioId: string }) {
           Include the recorded weather ({sizeText(recording)})
         </label>
       )}
-      <button type="button" disabled={offer === null} onClick={download}>
+      <Button disabled={offer === null} onClick={download}>
         Download scenario file
-      </button>
+      </Button>
     </section>
   );
 }

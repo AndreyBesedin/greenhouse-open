@@ -159,7 +159,6 @@
 
 .builder-share button,
 .builder-finish button {
-  min-height: var(--target);
   margin-top: var(--space-4);
 }
 

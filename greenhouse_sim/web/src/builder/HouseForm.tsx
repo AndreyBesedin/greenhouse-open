@@ -1,4 +1,5 @@
 import { type FormEvent, useId, useMemo, useState } from "react";
+import { Button } from "../design/Button";
 import { BASIC_SETUP_SCHEMA } from "./generated/basicSchema";
 import type { BasicSetup } from "./generated/basicTypes";
 import { formFields, formValues, startingValues } from "./schemaForm";
@@ -61,9 +62,9 @@ export function HouseForm({
           )}
         </div>
       ))}
-      <button type="submit" disabled={busy}>
+      <Button type="submit" size="compact" disabled={busy}>
         Draft this house
-      </button>
+      </Button>
     </form>
   );
 }

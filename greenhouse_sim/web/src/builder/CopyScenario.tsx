@@ -1,5 +1,6 @@
 import { type FormEvent, useId, useState } from "react";
 
+import { Button } from "../design/Button";
 import type { ScenarioSummary } from "../scenarios";
 import { BASIC_SETUP_SCHEMA } from "./generated/basicSchema";
 
@@ -74,9 +75,9 @@ export function CopyScenario({
           </p>
         )}
       </div>
-      <button type="submit" disabled={busy || !valid}>
+      <Button type="submit" size="compact" disabled={busy || !valid}>
         Copy its house
-      </button>
+      </Button>
     </form>
   );
 }

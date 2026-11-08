@@ -1,5 +1,6 @@
 import { type FormEvent, useId, useState } from "react";
 
+import { Button } from "../design/Button";
 import { type Crop, rowNumbers } from "./edits";
 import { ASSESSED_SCHEMA } from "./generated/assessedSchema";
 import type { CropModel, Installation } from "./generated/assessedTypes";
@@ -101,9 +102,9 @@ export function RowCrops({
           <span>Variety</span>
           <input value={variety} onChange={(event) => setVariety(event.target.value)} />
         </label>
-        <button type="submit" disabled={chosen.size === 0}>
+        <Button type="submit" size="compact" disabled={chosen.size === 0}>
           Give the chosen rows this crop
-        </button>
+        </Button>
       </form>
     </section>
   );
