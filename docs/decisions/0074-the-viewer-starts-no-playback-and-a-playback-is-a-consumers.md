@@ -78,14 +78,24 @@ What a playback is made of, and who uses it:
   each of its uses becomes:
   - **watching a run as it computes:** its replay, following the newest day
     (P22.2). The scenario list's *Follow* goes. `?live=<id>` and a scenario's
-    address with `&follow=1` open the start page with that scenario's runs
-    (`/#runs=<id>`), where a run is watched or started;
+    `&follow=1` are read no more, and lead nowhere: a page opens as if its
+    address did not have them. A replay's own `&follow=1` (P22.2) stays;
   - **play, pause and pace:** the replay's transport. *Start over*, a new epoch
     from the run's start, is a new run at the same seed, from the scenario's
     dialog;
   - **a level or a target set:** the replay's steering of a running epoch
     (decision 0073), and a fork once it has ended;
   - **moves applied:** a fork in the moved layout, from the replay (P17.8);
+  - **a plant's work** (a leaf removed, a fruit or a truss harvested, the
+    stem lowered): offered in the replay for the selected organ's plant, as
+    a plan of the viewer's own, its action as soon as the run can carry it
+    out, as the viewer's play gave it. While the epoch takes changes the plan
+    is asked of it through its changes, and once it has ended it is a fork's
+    change from the moment shown; both take a plan already (`PlanGiven`). The
+    replay cannot read a plan's revision in force from the store, so each
+    action is a plan of its own, at its first revision, named by the
+    request. What became of it is said as for a level or a target (decision
+    0073), and in the plan lane;
   - **the plan lane:** drawn in the replay, from the outcomes its epoch
     delivered by the moment shown (`GET /api/positions/{id}/outcomes`), in
     place of the consumer interface's and the gateway's;
@@ -108,6 +118,10 @@ What a playback is made of, and who uses it:
 - **`playback.schema.json` stays published,** as the answer of a route that
   stays, and leaves the viewer's generated contracts
   (`src/scene/generated/playback*.ts`), which nothing reads then.
+- **The viewer's own climate play stays** (`ClimateTime`, at
+  `/view?scenario=`): it starts no playback, draws moments on demand and
+  keeps nothing. Whether `/view` keeps a play of its own once P22.4 takes
+  *Open in the viewer* away is P22.4's.
 
 ## Consequences
 
@@ -116,18 +130,16 @@ What a playback is made of, and who uses it:
     worker's epoch, or one kept from before a restart (future work, as
     P17 left it), and with it the playbacks' going;
   - limits on a playback in the API's process (P18.3's item);
-  - a plant's work in a scenario's run, which only the viewer's play offered:
-    in a replay it would be a plan of the viewer's own given through the
-    epoch's changes, or a fork's, which both take (decision 0073, "worth
-    revisiting"). The plant lab keeps it;
+  - a plant's work taken back in a replay, as the plant lab takes it back:
+    a plan given is cancelled through the epoch's changes, which take that
+    too, but the replay offers no control for it;
   - the plan lane's actions still to come, which the gateway listed and the
     store does not keep;
   - a replay that starts its run over: a new run at the seed, or a fork at
     its start.
 - **What breaks,** for the release's changelog: the `targets` alias; the
-  viewer's `&follow=1` and `?live=` addresses, which open a list of runs in
-  place of a run followed (decision 0059's "a `?live=<id>` address opens that
-  scenario's run instead"). No `greenhouse_protocol` record or contract
+  viewer's `?live=<id>` and a scenario's `&follow=1`, which open the page as
+  if they were not there, and no longer a run followed. No `greenhouse_protocol` record or contract
   changes, so the protocol's range is as the release sets it, and no
   published schema is removed. As for the live mode (decision 0059), each
   pull request that breaks marks it (`!` and a `BREAKING CHANGE:` footer)
@@ -137,10 +149,12 @@ What a playback is made of, and who uses it:
   playback, so the playbacks' later going touches the server alone.
 - **Harder:** two ways to compute a run stay in the server, the scheduler's
   workers and a playback in the API's process, the second with no limits.
-- **Supersedes** decision 0059's `?live=<id>` opening a scenario's run
-  followed, and what was left of decision 0041's run for the viewer and a
+- **Supersedes** decision 0059's "a `?live=<id>` address opens that
+  scenario's run instead", since the address is read no more, and what was left of decision 0041's run for the viewer and a
   consumer against one clock: a consumer's playback is watched in a replay,
-  a position over its epoch, not followed.
+  a position over its epoch, not followed. Decision 0073's "worth
+  revisiting", a change other than a level or a target offered in a replay,
+  is met by a plant's work, under the same rules.
 - **Worth revisiting** when the consumer interface and the gateway read a
   stored epoch: then the playbacks, their routes and `--play` go, by a
   decision that says how a consumer starts the run it reads.
@@ -149,15 +163,4 @@ What a playback is made of, and who uses it:
 
 1. **Whether the playbacks stay** for consumers, as proposed, or go in P22
    with the consumer interface and the gateway reading stored epochs, which
-   makes P22.3 a project of its own.
-2. **Whether the plan lane moves to the replay** (proposed, one pull
-   request), or goes with the viewer's play, P13.10's browser spec with it and
-   `test_plan_final_qa.py` holding the gateway alone.
-3. **Whether a plant's work comes to the replay** in P22, as a plan given
-   through the epoch's changes, or stays not delivered, as proposed.
-4. **Where `?live=` and `&follow=1` lead:** the scenario's runs, as
-   proposed, or the scenario in the viewer at its start.
-5. **The viewer's own climate play** (`ClimateTime`, at `/view?scenario=`)
-   starts no playback, draws moments on demand and keeps nothing, so it
-   stays in P22.3. Whether `/view` keeps a play of its own once P22.4 takes
-   *Open in the viewer* away is P22.4's.
+   would make P22.3 a project of its own. This may yet be revisited.

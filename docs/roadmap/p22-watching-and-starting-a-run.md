@@ -85,21 +85,29 @@ before the code it watched goes:
    outcomes, in place of the consumer interface's and the gateway's;
    `plan-qa.spec.ts` gives its plans to a running epoch through its changes
    and reads them in its replay.
-4. **Moves and a plant's work leave the followed view** (`refactor(viewer)`):
-   `useMoveSession` and `MovePanel` without a playback to start over,
-   `PlantActions` beside the playback's panel, and `moving.spec.ts`'s #271
-   test of a followed run.
-5. **No *Follow*, and the old addresses lead to a scenario's runs**
-   (`feat(viewer)!`): `SourceChooser` and `ScenarioList` without *Follow*;
-   `?live=<id>` and `&follow=1` open `/#runs=<id>`, as a test of
-   `landing.spec.ts` says, and `follow.spec.ts` goes, what of it the replay
-   needs held by step 2. After it, nothing sets a scenario's `follow`.
-6. **The followed view's code goes** (`refactor(viewer)`): `PlaybackPanel`,
+4. **A plant's work in the replay** (`feat(viewer)`): `PlantActions` for the
+   selected organ's plant, each action a plan of its own asked of a running
+   epoch through its changes (`changesFor` taking crop actions), or a fork's
+   change from the moment shown once the epoch has ended; what became of it
+   said beside the panels, as for a level, and in the plan lane; a test of
+   `replay.spec.ts` for each.
+5. **Moves leave the followed view** (`refactor(viewer)`): `useMoveSession`
+   and `MovePanel` without a playback to start over, `PlantActions` no longer
+   beside the playback's panel, and `moving.spec.ts`'s #271 test of a
+   followed run.
+6. **No *Follow*, and the old addresses mean nothing** (`feat(viewer)!`):
+   `SourceChooser` and `ScenarioList` without *Follow*; the address no longer
+   reads `?live=` or a scenario's `&follow=1`, so that a page opens as it
+   would without them (`/?live=<id>` the start page, as `/` is), which a unit
+   test of the addresses holds; `follow.spec.ts` goes, what of it the replay
+   needs held by step 2. A replay's `&follow=1` stays. After it, nothing sets
+   a scenario's `follow`.
+7. **The followed view's code goes** (`refactor(viewer)`): `PlaybackPanel`,
    `useFollow`, `scene/playback.ts` and its generated contracts,
    `useFollowFraming`, `useGiveToPlayback` and what of `plan/plan.ts` only it
    used, the playback's words in `ClimateTime`, their unit tests, and the
-   viewer's README. Nothing reaches them after step 5.
-7. **The `targets` alias goes, and the playbacks say they are a consumer's**
+   viewer's README. Nothing reaches them after step 6.
+8. **The `targets` alias goes, and the playbacks say they are a consumer's**
    (`feat(api)!`): the route and its test, the words of `routes/playback.py`,
    `services/playback.py` and `--play`, the simulator's README, the items of
    [future work](future-work.md) P17 and P18 left to P22.3, this step done,
@@ -127,6 +135,6 @@ In the browser, on the reference greenhouse:
   playback routes, and P15's port reads live playbacks. Whether they stay for
   consumers, or a run's epochs take their place, is P22.3's decision:
   [decision 0074](../decisions/0074-the-viewer-starts-no-playback-and-a-playback-is-a-consumers.md),
-  proposed, keeps them a consumer's, and lists what is open for its review.
+  proposed, keeps them a consumer's.
 - **Duration and weather as a start's inputs:** whether they make another scenario
   or stay a run's, as its seed is.
