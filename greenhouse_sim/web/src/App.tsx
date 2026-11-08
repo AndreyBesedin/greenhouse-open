@@ -32,7 +32,7 @@ import { PanelSide } from "./PanelSide";
 import { PlaybackPanel } from "./PlaybackPanel";
 import { usePanelFolds } from "./panelFolds";
 import { cropAction } from "./plan/plan";
-import { useSteering } from "./plan/useSteering";
+import { type Give, useGiveToPlayback, useSteering } from "./plan/useSteering";
 import { LabPanels } from "./plants/LabPanels";
 import { type LabRun, PLANT_LAB_POSE } from "./plants/lab";
 import { PlantActions } from "./plants/PlantActions";
@@ -44,6 +44,7 @@ import { useQaMode } from "./qaMode/mode";
 import { QaPanel } from "./qaMode/QaPanel";
 import { useQaLoads } from "./qaMode/useQaLoads";
 import type { ViewSample } from "./readouts";
+import { EpochSteering } from "./replay/EpochSteering";
 import type { ForkChange } from "./replay/fork";
 import { forkMoment, forkMomentNamed, withPlanOf } from "./replay/replaySource";
 import { ScenarioPanels } from "./ScenarioPanels";
@@ -105,6 +106,10 @@ export function App({
     forkInLayout: (layout: string, timeS: number) => Promise<string | null>;
     /** Why no fork can be made at the moment shown, if none can. */
     noFork: string | null;
+    /** While the epoch replayed is being computed (P22.1): the epoch, by a
+     * name of its own, and how a target or a level set in the panels is given
+     * to it, which steers it in place of a fork. Null once it has ended. */
+    steer: { epoch: string; give: Give } | null;
   };
 }) {
   const [addressed, setAddressed] = useSource(replay?.source);
@@ -247,14 +252,25 @@ export function App({
     onClockMoved: stopClimatePlay,
   });
   // A run followed as it plays is steered from the panels through its plan
-  // (P13.8): its levels shown as it has them at its clock.
+  // (P13.8): its levels shown as it has them at its clock. So is an epoch
+  // replayed while it is computed, through its changes (P22.1): its levels
+  // shown as it has them at the moment the replay shows.
   const clockS = playback.status === "loaded" ? playback.state.timeS : null;
-  const shownAtClock = useMemo(
+  const steeredEpoch = replay?.steer ?? null;
+  const steeredAt = replay === undefined ? clockS : (replay.momentS ?? 0);
+  const shownWhenSteered = useMemo(
     () =>
-      source.kind === "scenario" && clockS !== null ? levelsAt({ ...source, time: clockS }) : {},
-    [source, clockS],
+      source.kind === "scenario" && steeredAt !== null
+        ? levelsAt({ ...source, time: steeredAt })
+        : {},
+    [source, steeredAt],
   );
-  const steering = useSteering(followed, shownAtClock, setPlayback);
+  const giveToPlayback = useGiveToPlayback(followed, setPlayback);
+  const steering = useSteering(
+    replay === undefined ? followed : (steeredEpoch?.epoch ?? null),
+    shownWhenSteered,
+    steeredEpoch?.give ?? giveToPlayback,
+  );
   // What of the moment asked for failed to arrive, while something else of
   // it is drawn in its place: the scene and the field each say why when
   // nothing of them is drawn; the crop never says so itself; nor does a
@@ -503,11 +519,11 @@ export function App({
                     : undefined
                 }
                 onTargets={(targets) => {
-                  if (replay !== undefined) {
+                  if (replay !== undefined && steeredEpoch === null) {
                     replay.forkWith({ kind: "targets", targets }, forkFrom);
                     return;
                   }
-                  if (followed !== null) {
+                  if (followed !== null || steeredEpoch !== null) {
                     steering.setTargets(targets);
                     return;
                   }
@@ -516,17 +532,18 @@ export function App({
                   );
                 }}
                 steering={
-                  replay !== undefined
+                  replay !== undefined && steeredEpoch === null
                     ? {
                         at: replay.momentS ?? 0,
                         asked: replayLevels,
                         onLevels: (levels) => setReplayLevels((was) => ({ ...was, ...levels })),
                       }
-                    : followed !== null && clockS !== null
-                      ? { at: clockS, asked: steering.asked, onLevels: steering.steer }
+                    : (followed !== null || steeredEpoch !== null) && steeredAt !== null
+                      ? { at: steeredAt, asked: steering.asked, onLevels: steering.steer }
                       : undefined
                 }
-                {...(replay === undefined
+                steersReplayed={steeredEpoch !== null}
+                {...(replay === undefined || steeredEpoch !== null
                   ? {}
                   : {
                       forkLevels: {
@@ -564,6 +581,13 @@ export function App({
                 onPlayingClimate={setPlayingClimate}
                 onOwnRange={() => setFieldRange(null)}
               >
+                {steeredEpoch !== null && (
+                  <EpochSteering
+                    waiting={steering.waiting > 0}
+                    taken={steering.taken}
+                    refusal={steering.refusal}
+                  />
+                )}
                 {followed !== null && (
                   <>
                     <PlaybackPanel

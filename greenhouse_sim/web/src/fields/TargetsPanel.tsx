@@ -37,7 +37,8 @@ export function settingMoment(time: number): number {
  * following, a change is a target change in the address at the moment drawn,
  * the next minute if it lies between two; following, the run played back is
  * given it through its plan (P13.8), from its clock's next minute (decision
- * 0043), and the view follows it.
+ * 0043), and the view follows it; so is an epoch a replay shows while it is
+ * computed, through its changes (P22.1, decision 0073).
  */
 export function TargetsPanel({
   thermostat,
@@ -53,7 +54,9 @@ export function TargetsPanel({
   thermostat: ThermostatAt | null;
   /** The moment drawn, in seconds into the run. */
   time: number;
-  /** Whether the view follows the run played back. */
+  /** Whether a change steers the run as it is computed, from its clock's
+   * next minute: the run played back that the view follows, or the epoch a
+   * replay shows while it is computed. */
   followed: boolean;
   /** Whether setting them makes a fork of a stored run, which stays as it was. */
   forking?: boolean;

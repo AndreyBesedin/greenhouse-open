@@ -46,6 +46,7 @@ from greenhouse_sim.services.climate_readings import EquipmentAt
 from greenhouse_sim.services.crop import CropPlant, PlantsLight
 from greenhouse_sim.services.drafts import DraftListed
 from greenhouse_sim.services.fields import FieldNames
+from greenhouse_sim.services.interventions import ChangeAsked, EpochChanges
 from greenhouse_sim.services.plants import LabChecks
 from greenhouse_sim.services.playback import PlaybackState
 from greenhouse_sim.services.run_state import RunState
@@ -85,6 +86,10 @@ ANSWERS: Final[dict[Path, type[object]]] = {
     # (P17.4).
     SERVICES / "stored_run.schema.json": StoredRun,
     SERVICES / "position.schema.json": PositionState,
+    # A change asked of a running epoch, and what became of those asked, as a
+    # replay steers one (P22.1).
+    SERVICES / "change_asked.schema.json": ChangeAsked,
+    SERVICES / "epoch_changes.schema.json": EpochChanges,
     # What a run asked for has room for, as the start page shows it (P18.5).
     SERVICES / "room.schema.json": Room,
     # A scenario's file as a download (P17.11).

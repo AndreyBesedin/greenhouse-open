@@ -6,6 +6,7 @@ import { replayTarget, runsAddress } from "../landing/paths";
 import { loadScenarios, SCENARIOS_URL } from "../scenarios";
 import { replayedMoment } from "../scene/useReplayMoment";
 import { useLoad } from "../useLoad";
+import { takesChanges, useGiveToEpoch } from "./changes";
 import { loadFailure } from "./failure";
 import { whyNoFork } from "./fork";
 import { epochUrl } from "./position";
@@ -20,9 +21,11 @@ import { useReplay } from "./useReplay";
  * names the run and its epoch. A position is opened over the epoch, the
  * viewer draws the scene at its moment, and the transport and the timeline
  * move the position through what the epoch has computed, while a worker
- * may still be computing it. A change made here is a fork from the moment
- * shown (P17.8): the epoch replayed is never changed, and the page goes to the
- * fork.
+ * may still be computing it. A target or a level set in the panels while the
+ * epoch is being computed steers it, from the moment its worker has reached
+ * (P22.1, decision 0073); once it has ended, a change made here is a fork from
+ * the moment shown (P17.8), the epoch replayed is never changed, and the page
+ * goes to the fork. A layout rearranged is always a fork.
  */
 export function Replay({ search = location.search }: { search?: string }) {
   const target = replayTarget(search);
@@ -76,6 +79,14 @@ function ReplayOf({
     refused: forkRefused,
     fork,
   } = useFork(useMemo(() => ({ runId, epoch }), [runId, epoch]));
+  // While the epoch is being computed, as the position last said, the panels
+  // steer it: the simulator's answer decides, should it have ended since.
+  const steers = position !== null && takesChanges(position.status);
+  const give = useGiveToEpoch(runId, epoch);
+  const steer = useMemo(
+    () => (steers ? { epoch: `${runId}#${epoch}`, give } : null),
+    [steers, runId, epoch, give],
+  );
 
   if (position === null || source === null) {
     return (
@@ -112,6 +123,7 @@ function ReplayOf({
             forkWith: (change, timeS) => void fork({ timeS, changes: [change] }),
             forkInLayout: (forkLayout, timeS) => fork({ timeS, layout: forkLayout }),
             noFork: whyNoFork(position),
+            steer,
           }}
         />
       </div>
