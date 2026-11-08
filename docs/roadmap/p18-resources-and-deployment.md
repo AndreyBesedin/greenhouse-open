@@ -441,7 +441,9 @@ Run 20 times as
 `pytest greenhouse_sim/tests/test_limits_final_qa.py greenhouse_sim/tests/test_limits.py
 greenhouse_sim/tests/test_queue_restart.py -n 8`, those three files failed twice; the
 failure caught was that test, on its last line:
-`{'disk_free_bytes': 120897261568} != {'disk_free_bytes': 120897257472}`. The simulator is
+`{'disk_free_bytes': 120897261568} != {'disk_free_bytes': 120897257472}`. It also failed
+the first push of this record, in the pre-push hook's `uv run check --fast`, and passed the
+second. The simulator is
 not at fault: the test is, and the other tests of the room fix the free bytes they compare.
 It is left for a change of its own.
 
