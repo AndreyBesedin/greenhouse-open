@@ -4,7 +4,7 @@
 on 2026-11-05 and its last clause held on 2026-11-06 (#594). The design is
 decision 0046's, its questions [decided](#decided); what the steps left open is
 [future work](../future-work.md#actions-and-plans-after-p13) or a note in
-[P18](../p18-resources-and-deployment.md#steps). Part of the
+[P18](p18-resources-and-deployment.md#steps). Part of the
 [simulator roadmap](../README.md).
 
 ## Goal
@@ -782,7 +782,7 @@ on the same state had it, and it did not happen in the later crossings of a day'
 cause is unknown; not reproduced, it has no follow-up. A plan given to a paused run by another
 client shows in the lane once the clock moves (P13.8). Under load the view's moment was up to 9
 hours behind a paused clock, "Loading day 30, 8 h 55 min... 61 s", after a plan had the day worked
-again: a note in [P18](../p18-resources-and-deployment.md#steps). The lane's "cancelled: cancelled"
+again: a note in [P18](p18-resources-and-deployment.md#steps). The lane's "cancelled: cancelled"
 in step 9, which does not say who, is [future work](../future-work.md#actions-and-plans-after-p13).
 
 A followed run at its end reads "paused", with *Play* offered. A replay has no plan lane, and a run
@@ -1133,7 +1133,7 @@ which changes no run, then the run carrying out a plan's crop actions.
   (`climate_runs.checked_actions`); that check had cost 6 ms an action.
 - **Not yet:** the number of plans is not bounded, only each plan. No
   route serves a gateway's limits. Both are a note in
-  [P18](../p18-resources-and-deployment.md#steps). The viewer's development
+  [P18](p18-resources-and-deployment.md#steps). The viewer's development
   server did not pass `/actuation` on to the API: P13.8 does.
 
 ## Settled in P13.8
