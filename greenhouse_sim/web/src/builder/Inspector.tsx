@@ -1,5 +1,6 @@
 import { type KeyboardEvent, useId } from "react";
 
+import { Field } from "../design/Field";
 import { isObject } from "../loadJson";
 import { ASSESSED_SCHEMA } from "./generated/assessedSchema";
 import type { Installation } from "./generated/assessedTypes";
@@ -94,7 +95,7 @@ function typed(field: ModelField, text: string): Given {
     : text;
 }
 
-function Field({
+function ItemField({
   field,
   value,
   busy,
@@ -119,7 +120,7 @@ function Field({
   }
   if (field.kind === "flag") {
     return (
-      <label className="builder-give-field">
+      <label className="builder-check">
         <input
           type="checkbox"
           disabled={busy}
@@ -130,37 +131,40 @@ function Field({
       </label>
     );
   }
-  if (field.kind === "choice") {
-    return (
-      <label className="builder-give-field">
-        <span>{field.title}</span>
-        <select disabled={busy} value={value} onChange={(event) => commit(event.target.value)}>
-          {field.choices.map((choice) => (
-            <option key={choice} value={choice}>
-              {choice.replaceAll("_", " ")}
-            </option>
-          ))}
-        </select>
-      </label>
-    );
-  }
-  // Typed into freely, and sent once left or entered: the field's own value
-  // again when the installation changes.
   return (
-    <label className="builder-give-field">
-      <span>{field.title}</span>
-      <input
-        key={value}
-        type={field.kind === "text" ? "text" : "number"}
-        step="any"
-        disabled={busy}
-        defaultValue={value}
-        min={field.minimum}
-        max={field.maximum}
-        onBlur={(event) => commit(event.target.value)}
-        onKeyDown={onKey}
-      />
-    </label>
+    <Field label={field.title} size="compact" className="builder-give-field">
+      {(control) =>
+        field.kind === "choice" ? (
+          <select
+            {...control}
+            disabled={busy}
+            value={value}
+            onChange={(event) => commit(event.target.value)}
+          >
+            {field.choices.map((choice) => (
+              <option key={choice} value={choice}>
+                {choice.replaceAll("_", " ")}
+              </option>
+            ))}
+          </select>
+        ) : (
+          // Typed into freely, and sent once left or entered: the field's own
+          // value again when the installation changes.
+          <input
+            {...control}
+            key={value}
+            type={field.kind === "text" ? "text" : "number"}
+            step="any"
+            disabled={busy}
+            defaultValue={value}
+            min={field.minimum}
+            max={field.maximum}
+            onBlur={(event) => commit(event.target.value)}
+            onKeyDown={onKey}
+          />
+        )
+      }
+    </Field>
   );
 }
 
@@ -193,7 +197,7 @@ export function Inspector({
         <h2 id={heading}>{item.id}</h2>
         <div className="builder-give">
           {modelFields(schema, item.model).map((field) => (
-            <Field
+            <ItemField
               key={field.path}
               field={field}
               value={shown(item.values, field.path)}
@@ -219,7 +223,7 @@ export function Inspector({
       <h2 id={heading}>Envelope and rows</h2>
       <div className="builder-give">
         {house.map((field) => (
-          <Field
+          <ItemField
             key={field.path}
             field={field}
             value={shown(installation, field.path)}

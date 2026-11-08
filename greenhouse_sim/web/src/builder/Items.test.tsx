@@ -9,6 +9,7 @@ import {
   choose,
   click,
   enter,
+  labelledBy,
   type Rendered,
   render,
   select,
@@ -83,10 +84,10 @@ const SCENE = {
   ],
 } as unknown as SceneSnapshot;
 
-/** The number field labelled `name`, by the label around it. */
+/** The number field labelled `name`. */
 function field(within: ParentNode, name: string): HTMLInputElement {
-  const found = [...within.querySelectorAll<HTMLInputElement>("input")].filter(
-    (input) => input.closest("label")?.firstChild?.textContent?.trim() === name,
+  const found = [...within.querySelectorAll<HTMLInputElement>("input")].filter((input) =>
+    labelledBy(input, name),
   );
   if (found.length !== 1 || found[0] === undefined) {
     throw new Error(`no one field labelled "${name}"`);

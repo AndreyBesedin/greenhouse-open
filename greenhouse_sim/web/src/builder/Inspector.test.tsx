@@ -2,7 +2,7 @@
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { choose, type Rendered, render } from "../testing/render";
+import { choose, labelledBy, type Rendered, render } from "../testing/render";
 import type { Installation } from "./generated/assessedTypes";
 import { Inspector } from "./Inspector";
 
@@ -72,11 +72,11 @@ const HOUSE = {
   row_crops: [],
 } as unknown as Installation;
 
-/** The input or select labelled `name`, by the label around it. */
+/** The input or select labelled `name`. */
 function control(within: ParentNode, name: string): HTMLInputElement | HTMLSelectElement {
   const found = [
     ...within.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input, select"),
-  ].filter((each) => each.closest("label")?.firstChild?.textContent?.trim() === name);
+  ].filter((each) => labelledBy(each, name));
   if (found.length !== 1 || found[0] === undefined) {
     throw new Error(`no one control labelled "${name}"`);
   }

@@ -1,6 +1,7 @@
 import { type FormEvent, type ReactNode, useId, useState } from "react";
 
 import { Button } from "../design/Button";
+import { Field } from "../design/Field";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import type { Installation } from "./generated/assessedTypes";
 import type { Axis, Edit } from "./generated/editTypes";
@@ -43,17 +44,19 @@ function NumberField({
   min?: number | undefined;
 }) {
   return (
-    <label className="builder-give-field">
-      <span>{label}</span>
-      <input
-        type="number"
-        step="any"
-        required
-        min={min}
-        value={typed[name] ?? ""}
-        onChange={(event) => onType(name, event.target.value)}
-      />
-    </label>
+    <Field label={label} size="compact" className="builder-give-field">
+      {(control) => (
+        <input
+          {...control}
+          type="number"
+          step="any"
+          required
+          min={min}
+          value={typed[name] ?? ""}
+          onChange={(event) => onType(name, event.target.value)}
+        />
+      )}
+    </Field>
   );
 }
 
@@ -315,16 +318,21 @@ export function Items({
               </div>
               <div className="builder-give">
                 {inHouse && (
-                  <label className="builder-give-field">
-                    <span>Axis</span>
-                    <select value={axis} onChange={(event) => setAxis(event.target.value as Axis)}>
-                      {AXES.map((each) => (
-                        <option key={each} value={each}>
-                          {each}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <Field label="Axis" size="compact" className="builder-give-field">
+                    {(control) => (
+                      <select
+                        {...control}
+                        value={axis}
+                        onChange={(event) => setAxis(event.target.value as Axis)}
+                      >
+                        {AXES.map((each) => (
+                          <option key={each} value={each}>
+                            {each}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </Field>
                 )}
                 <Button
                   size="compact"
@@ -344,19 +352,27 @@ export function Items({
             </>
           )}
           <form className="builder-give" onSubmit={changed}>
-            <label className="builder-give-field">
-              <span>Field</span>
-              <input
-                required
-                placeholder="power_w, base.z"
-                value={path}
-                onChange={(event) => setPath(event.target.value)}
-              />
-            </label>
-            <label className="builder-give-field">
-              <span>Value</span>
-              <input required value={value} onChange={(event) => setValue(event.target.value)} />
-            </label>
+            <Field label="Field" size="compact" className="builder-give-field">
+              {(control) => (
+                <input
+                  {...control}
+                  required
+                  placeholder="power_w, base.z"
+                  value={path}
+                  onChange={(event) => setPath(event.target.value)}
+                />
+              )}
+            </Field>
+            <Field label="Value" size="compact" className="builder-give-field">
+              {(control) => (
+                <input
+                  {...control}
+                  required
+                  value={value}
+                  onChange={(event) => setValue(event.target.value)}
+                />
+              )}
+            </Field>
             <Button type="submit" size="compact" disabled={busy}>
               Set it on each
             </Button>
@@ -373,35 +389,37 @@ export function Items({
 
       <form className="builder-palette" aria-label="Place" onSubmit={place}>
         <h3>Place</h3>
-        <label className="builder-give-field">
-          <span>What</span>
-          <select
-            value={kind}
-            onChange={(event) => chooseKind(event.target.value as ItemKind | OpeningKind)}
-          >
-            <optgroup label="In the house">
-              {ITEM_KINDS.map((each) => (
-                <option key={each} value={each}>
-                  {each.replaceAll("_", " ")}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Zones and fixtures">
-              {FIXTURE_KINDS.map((each) => (
-                <option key={each} value={each}>
-                  {each.replaceAll("_", " ")}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="On a surface">
-              {OPENING_KINDS.map((each) => (
-                <option key={each} value={each}>
-                  {each.replaceAll("_", " ")}
-                </option>
-              ))}
-            </optgroup>
-          </select>
-        </label>
+        <Field label="What" size="compact" className="builder-give-field">
+          {(control) => (
+            <select
+              {...control}
+              value={kind}
+              onChange={(event) => chooseKind(event.target.value as ItemKind | OpeningKind)}
+            >
+              <optgroup label="In the house">
+                {ITEM_KINDS.map((each) => (
+                  <option key={each} value={each}>
+                    {each.replaceAll("_", " ")}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Zones and fixtures">
+                {FIXTURE_KINDS.map((each) => (
+                  <option key={each} value={each}>
+                    {each.replaceAll("_", " ")}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="On a surface">
+                {OPENING_KINDS.map((each) => (
+                  <option key={each} value={each}>
+                    {each.replaceAll("_", " ")}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          )}
+        </Field>
         {isOpening ? (
           <>
             <fieldset className="builder-surfaces">
@@ -420,7 +438,7 @@ export function Items({
             {field("Width (m)", "width")}
             {field("Height (m)", "height")}
             {field("How many on each", "count", 1)}
-            <label className="builder-give-field">
+            <label className="builder-check">
               <input
                 type="checkbox"
                 checked={spread}

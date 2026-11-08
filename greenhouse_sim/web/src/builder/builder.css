@@ -40,8 +40,8 @@
   color: var(--action);
 }
 
+/* A field's label beside its control, its problem under them. */
 .builder-field {
-  display: grid;
   grid-template-columns: 1fr 9em;
   gap: var(--space-4);
   align-items: center;
@@ -115,7 +115,8 @@
   border: 1px solid var(--border);
 }
 
-.builder-give-field:has(> input[type="checkbox"]) {
+/* A box to tick, its words after it. */
+.builder-check {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -129,8 +130,8 @@
   margin-top: var(--space-4);
 }
 
+/* A field's label over its control. */
 .builder-give-field {
-  display: grid;
   gap: var(--space-1);
 }
 
