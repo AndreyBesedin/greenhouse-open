@@ -1,6 +1,7 @@
 import { expect, type Request, test } from "@playwright/test";
 import { DAY_S } from "../src/clock.ts";
 import { unfold } from "./folds";
+import { askForRun, computedTo, openReplay } from "./replays";
 import { clickAt, clickSky, onScreen, selectAt } from "./view";
 
 // The climate box's first plant stands on its gutter's slab, 0.675 m up.
@@ -8,15 +9,12 @@ import { clickAt, clickSky, onScreen, selectAt } from "./view";
 const EXAMPLE_PLANT = { x: 2.25, y: 2.4, z: 0.83 };
 // A plant of the solar lab's row, on its gutter's slab too, low on its stem,
 // where its young plants are shorter: the sixth, which its crates hide from
-// none of the camera's presets, as they hide the first. No other test of
-// this stage plays the solar lab's run back, which this file follows:
-// follow.spec.ts and others pause and start over the climate box's.
-const FOLLOWED_SCENARIO = "solar_lab";
-const FOLLOWED_PLANT_ID = "solar_lab_plant_006";
-const FOLLOWED_PLANT = { x: 4.75, y: 3.2, z: 0.775 };
-const FOLLOWED_PLAYBACK = `/api/scenarios/${FOLLOWED_SCENARIO}/playback`;
-// The solar lab's run: 10 days, each played in 10 s.
-const FOLLOWED_RUN_END_S = 10 * DAY_S;
+// none of the camera's presets, as they hide the first. Its run is replayed.
+const REPLAYED_SCENARIO = "solar_lab";
+const REPLAYED_PLANT_ID = "solar_lab_plant_006";
+const REPLAYED_PLANT = { x: 4.75, y: 3.2, z: 0.775 };
+// The days of its run computed before it is played: enough to see a day pass.
+const DAYS_COMPUTED = 3;
 const ARRIVES = { timeout: 60_000 };
 // The compartment's first plant, low on its stem above its gutter's slab.
 const STILL_PLANT = { x: 2.75, y: 2.4, z: 0.775 };
@@ -61,35 +59,33 @@ test("clicking an entity selects it, and the inspector shows what it is and wher
   await expect(page.getByTestId("debug-label")).toHaveCount(0);
 });
 
-test("a selection stays on its entity while the run followed moves on", async ({ page }) => {
-  test.slow();
-  // Played back and playing, started over if its clock is too near the
-  // run's end for a day to pass, as on a retry.
-  const started = (await (await page.request.post(`${FOLLOWED_PLAYBACK}/start`)).json()) as {
-    time_s: number;
-  };
-  if (started.time_s > FOLLOWED_RUN_END_S - 3 * DAY_S) {
-    expect((await page.request.post(`${FOLLOWED_PLAYBACK}/restart`)).ok()).toBe(true);
-  }
-  await page.goto(`/?scenario=${FOLLOWED_SCENARIO}&follow=1`);
-  const panel = page.getByRole("region", { name: "Run played back" });
-  await expect(panel.getByTestId("playback-status")).toContainText("playing a day in", ARRIVES);
+test("a selection stays on its entity while the replay plays its run on", async ({ page }) => {
+  test.setTimeout(240_000);
+  const run = await askForRun(page, REPLAYED_SCENARIO, { seed: 64 });
+  await computedTo(page, run, DAYS_COMPUTED * DAY_S, 120_000);
+  await openReplay(page, run);
 
-  // A followed view frames the whole house; the plant is aimed at from the
-  // default preset.
+  // A replay frames the whole house; the plant is aimed at from the default
+  // preset. Between the replay's header and its transport the view is short,
+  // and the plant stands where the View panel is drawn: folded once its preset
+  // is chosen, the plant is clear of it.
   await page.getByRole("button", { name: "Isometric" }).click();
-  await selectAt(page, FOLLOWED_PLANT, FOLLOWED_PLANT_ID);
+  await page.getByRole("button", { name: "Fold the View panel" }).click();
+  await selectAt(page, REPLAYED_PLANT, REPLAYED_PLANT_ID);
   const selected = page.getByTestId("selected-entity");
   const age = page.getByTestId("property-age_days");
   const firstAge = await age.textContent();
 
-  // Each new day of the crop is a new scene; the selection and its label
-  // follow the plant.
+  // Played at its quickest, each new day of the crop is a new scene; the
+  // selection and its label follow the plant.
+  const transport = page.locator(".replay-transport");
+  await transport.getByLabel("Pace").selectOption("2");
+  await transport.getByRole("button", { name: "Play" }).click();
   await expect(age).not.toHaveText(firstAge ?? "", ARRIVES);
-  await expect(selected).toHaveText(FOLLOWED_PLANT_ID);
+  await expect(selected).toHaveText(REPLAYED_PLANT_ID);
   await expect(page.getByTestId("selected-position")).toHaveText("x 4.75, y 3.20, z 0.67");
   // A scenario's view labels its weather too, such as the sun.
-  await expect(page.getByTestId("debug-label").filter({ hasText: FOLLOWED_PLANT_ID })).toHaveCount(
+  await expect(page.getByTestId("debug-label").filter({ hasText: REPLAYED_PLANT_ID })).toHaveCount(
     1,
   );
 });

@@ -21,8 +21,34 @@ const TARGET_PX = 44;
 // What a pointer is to hit: a box to tick is the browser's, and left out.
 const CONTROLS = 'button, select, input:not([type="checkbox"]):not([type="file"])';
 
+/** One of the builder's forms, by its heading. */
+function form(page: Page, name: string): Locator {
+  return page.getByRole("form", { name, exact: true });
+}
+
+/** One of the builder's sections, by its heading. */
+function region(page: Page, name: string): Locator {
+  return page.getByRole("region", { name, exact: true });
+}
+
+/** The rows of a section's table, its header left out. */
+function bodyRows(page: Page, section: string): Locator {
+  return region(page, section)
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell") });
+}
+
+/** What the draft needs, each finding a line. */
+function findings(page: Page): Locator {
+  return region(page, "What it needs").getByRole("listitem");
+}
+
+function errors(page: Page): Locator {
+  return findings(page).filter({ hasText: /^Error:/ });
+}
+
 function field(page: Page, label: string) {
-  return page.locator(".builder-form").getByLabel(label, { exact: true });
+  return form(page, "A new house").getByLabel(label, { exact: true });
 }
 
 /** How wide the page is, with whatever overflows its window. */
@@ -53,23 +79,23 @@ test("builder: a house drafted, edited, saved, exported, run, reopened and impor
   await expect(status).toHaveText("Drafted The test house; not saved yet.", ARRIVES);
   await expect(page.getByTestId("builder-draft")).toHaveText(`The test house (${id}), not saved`);
   await expect(runnable).toHaveText("It can run.", ARRIVES);
-  await expect(page.locator(".builder-findings li")).toHaveText([
+  await expect(findings(page)).toHaveText([
     "Warning: No door.",
     "Warning: No vent.",
     "Warning: No heater.",
     "Warning: No circulation fan.",
   ]);
   await expect(page.getByTestId("builder-view").locator("canvas")).toBeVisible(ARRIVES);
-  await expect(page.locator(".builder-rows tbody tr")).toHaveCount(3);
+  await expect(bodyRows(page, "Rows")).toHaveCount(3);
 
   // Row 2 given another variety: a run grows one crop, so it cannot run;
   // undone and redone in one step each, by button and by keyboard.
   await page.getByLabel("Choose row 2").check();
-  await page.locator(".builder-give").getByLabel("Variety").fill("beefsteak");
+  await region(page, "Rows").getByLabel("Variety").fill("beefsteak");
   await page.getByRole("button", { name: "Give the chosen rows this crop" }).click();
   await expect(status).toHaveText("Rows 2 grow simple beefsteak.");
   await expect(runnable).toHaveText("One error stops it running.", ARRIVES);
-  await expect(page.locator(".builder-finding-error")).toContainText("Rows grow different crops");
+  await expect(errors(page)).toContainText("Rows grow different crops");
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(runnable).toHaveText("It can run.", ARRIVES);
   await page.getByRole("button", { name: "Redo" }).click();
@@ -99,7 +125,7 @@ test("builder: a house drafted, edited, saved, exported, run, reopened and impor
   expect(typeof file.schema_version).toBe("number");
 
   // Run as a scenario of its own, which the viewer opens.
-  await page.locator(".builder-run").getByLabel("Days").fill("3");
+  await form(page, "Run it").getByLabel("Days").fill("3");
   await page.getByRole("button", { name: "Run this revision" }).click();
   await expect(status).toContainText(`Its run is registered as ${id}_r1.`, ARRIVES);
   // Where to go from there: to a run of it, or back to the page that chooses.
@@ -129,15 +155,17 @@ test("builder: a house drafted, edited, saved, exported, run, reopened and impor
   await page.goto("/builder");
   await page.getByRole("button", { name: "The test house" }).click();
   await expect(status).toHaveText("Opened The test house, revision 1.", ARRIVES);
-  await expect(page.locator(".builder-rows tbody tr")).toHaveCount(3);
+  await expect(bodyRows(page, "Rows")).toHaveCount(3);
 
   // Imported again from its file: a draft not saved yet.
   await page.getByRole("button", { name: "Start again" }).click();
-  await page.locator(".builder-start input[type=file]").setInputFiles({
-    name: download.suggestedFilename(),
-    mimeType: "application/json",
-    buffer: readFileSync(exported),
-  });
+  await region(page, "Drafts kept")
+    .locator('input[type="file"]')
+    .setInputFiles({
+      name: download.suggestedFilename(),
+      mimeType: "application/json",
+      buffer: readFileSync(exported),
+    });
   // A draft of that identifier is kept: renamed, it is saved as another.
   await expect(status).toHaveText(
     `Imported The test house from ${download.suggestedFilename()}, a house file: it holds no run settings; not saved yet. ` +
@@ -145,7 +173,7 @@ test("builder: a house drafted, edited, saved, exported, run, reopened and impor
     ARRIVES,
   );
   await expect(page.getByTestId("builder-draft")).toHaveText(`The test house (${id}), not saved`);
-  const identity = page.locator(".builder-identity");
+  const identity = form(page, "The house");
   await identity.getByLabel("Identifier").fill(`${id}_b`);
   await identity.getByRole("button", { name: "Rename" }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -169,7 +197,7 @@ test("builder: a draft saved and a run of it started in one step, on a worker, i
   await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
 
   // The run step's days are kept for the run the one step makes.
-  await page.locator(".builder-run").getByLabel("Days").fill("2");
+  await form(page, "Run it").getByLabel("Days").fill("2");
   await page.getByRole("button", { name: "Save and start a run" }).click();
 
   await expect(page).toHaveURL(new RegExp(`/replay\\?run=${id}_r1.*follow=1`), ARRIVES);
@@ -197,7 +225,7 @@ test("builder: a draft saved and a run of it started in one step, on a worker, i
 test("builder: a draft saved and the start page reached in one step", async ({ page }) => {
   const id = `leave_${Date.now()}`;
   await page.goto("/builder");
-  await page.locator(".builder-form").getByLabel("Identifier").fill(id);
+  await form(page, "A new house").getByLabel("Identifier").fill(id);
   await page.getByRole("button", { name: "Draft this house" }).click();
   await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
 
@@ -214,7 +242,7 @@ test("builder: a draft saved and the start page reached in one step", async ({ p
 
 test("builder: values no greenhouse can have are refused by field", async ({ page }) => {
   await page.goto("/builder");
-  await page.locator(".builder-form").getByLabel("Height to the ridge (m)").fill("3");
+  await form(page, "A new house").getByLabel("Height to the ridge (m)").fill("3");
   await page.getByRole("button", { name: "Draft this house" }).click();
 
   await expect(page.getByTestId("builder-status")).toContainText(
@@ -230,7 +258,7 @@ test("builder: a scenario's house copied under an identifier of its own, and sav
   const id = `climate_copy_${Date.now()}`;
   const status = page.getByTestId("builder-status");
   await page.goto("/builder");
-  const copy = page.locator(".builder-copy");
+  const copy = form(page, "Or copy a scenario's house");
   await copy.getByLabel("Scenario").selectOption({ label: "Climate box" });
   await expect(copy.getByLabel("The copy's identifier")).toHaveValue("climate_box_copy");
   await copy.getByLabel("The copy's identifier").fill(id);
@@ -242,8 +270,8 @@ test("builder: a scenario's house copied under an identifier of its own, and sav
   );
   // Its door, vents, heater and fans come with it: nothing it lacks.
   await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
-  await expect(page.locator(".builder-findings li")).toHaveCount(0);
-  await expect(page.locator(".builder-rows tbody tr")).toHaveCount(2);
+  await expect(findings(page)).toHaveCount(0);
+  await expect(bodyRows(page, "Rows")).toHaveCount(2);
   await expect(page.getByTestId("builder-view").locator("canvas")).toBeVisible(ARRIVES);
 
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -255,11 +283,11 @@ test("builder: vents spread along the roof and heaters placed at a step, each un
 }) => {
   test.setTimeout(120_000);
   const status = page.getByTestId("builder-status");
-  const items = page.locator(".builder-items");
-  const palette = page.locator(".builder-palette");
+  const items = region(page, "Items of the house");
+  const palette = form(page, "Place");
 
   await page.goto("/builder");
-  await page.locator(".builder-form").getByLabel("Identifier").fill(`items_${Date.now()}`);
+  await form(page, "A new house").getByLabel("Identifier").fill(`items_${Date.now()}`);
   await page.getByRole("button", { name: "Draft this house" }).click();
   await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
   await expect(page.getByTestId("builder-view").locator("canvas")).toBeVisible(ARRIVES);
@@ -271,7 +299,7 @@ test("builder: vents spread along the roof and heaters placed at a step, each un
   await palette.getByRole("button", { name: "Place" }).click();
   await expect(status).toHaveText("Placed 4 roof vents on 2 surfaces.", ARRIVES);
   await expect(items.locator("tbody tr")).toHaveCount(8);
-  await expect(page.locator(".builder-findings li")).not.toContainText(["Warning: No vent."]);
+  await expect(findings(page)).not.toContainText(["Warning: No vent."]);
 
   // Three heaters along the house, two metres apart, by the right wall.
   await palette.getByLabel("What").selectOption("heater");
@@ -293,12 +321,14 @@ test("builder: the inspector sets a field of the item chosen, and of the house",
 }) => {
   test.setTimeout(120_000);
   const status = page.getByTestId("builder-status");
-  const house = page.locator(".builder-inspector").first();
-  const inspector = page.locator(".builder-items .builder-inspector");
-  const palette = page.locator(".builder-palette");
+  const house = region(page, "Envelope and rows");
+  // The inspector of the one item chosen, under the items.
+  const inspector = (item: string) =>
+    region(page, "Items of the house").getByRole("region", { name: item, exact: true });
+  const palette = form(page, "Place");
 
   await page.goto("/builder");
-  await page.locator(".builder-form").getByLabel("Identifier").fill(`inspect_${Date.now()}`);
+  await form(page, "A new house").getByLabel("Identifier").fill(`inspect_${Date.now()}`);
   await page.getByRole("button", { name: "Draft this house" }).click();
   await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
 
@@ -315,9 +345,9 @@ test("builder: the inspector sets a field of the item chosen, and of the house",
   await palette.getByRole("button", { name: "Place" }).click();
   await expect(status).toHaveText("Placed 1 heater.", ARRIVES);
   await page.getByLabel("Choose heater_1").check();
-  await expect(inspector.getByRole("heading", { name: "heater_1" })).toBeVisible();
-  await inspector.getByLabel("Power W").fill("20000");
-  await inspector.getByLabel("Power W").press("Enter");
+  await expect(inspector("heater_1").getByRole("heading", { name: "heater_1" })).toBeVisible();
+  await inspector("heater_1").getByLabel("Power W").fill("20000");
+  await inspector("heater_1").getByLabel("Power W").press("Enter");
   await expect(status).toHaveText("Set power w of heater_1.", ARRIVES);
   await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
 
@@ -325,7 +355,7 @@ test("builder: the inspector sets a field of the item chosen, and of the house",
   // the heaters outlined on the house.
   await palette.getByRole("button", { name: "Place" }).click();
   await expect(status).toHaveText("Placed 1 heater.", ARRIVES);
-  await expect(page.locator(".builder-finding-error")).toContainText(
+  await expect(errors(page)).toContainText(
     "Equipment through another item: heater_1 with heater_2.",
     ARRIVES,
   );
@@ -336,12 +366,14 @@ test("builder: heating pipes and a service zone placed, and changed in the inspe
 }) => {
   test.setTimeout(120_000);
   const status = page.getByTestId("builder-status");
-  const items = page.locator(".builder-items");
-  const inspector = page.locator(".builder-items .builder-inspector");
-  const palette = page.locator(".builder-palette");
+  const items = region(page, "Items of the house");
+  // The inspector of the one item chosen, under the items.
+  const inspector = (item: string) =>
+    region(page, "Items of the house").getByRole("region", { name: item, exact: true });
+  const palette = form(page, "Place");
 
   await page.goto("/builder");
-  await page.locator(".builder-form").getByLabel("Identifier").fill(`fixtures_${Date.now()}`);
+  await form(page, "A new house").getByLabel("Identifier").fill(`fixtures_${Date.now()}`);
   await page.getByRole("button", { name: "Draft this house" }).click();
   await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
 
@@ -351,9 +383,9 @@ test("builder: heating pipes and a service zone placed, and changed in the inspe
   await expect(status).toHaveText("Placed 1 pipe run.", ARRIVES);
   await expect(items.getByRole("cell", { name: "pipe run", exact: true })).toBeVisible();
   await page.getByLabel("Choose pipes_1").check();
-  await expect(inspector.getByRole("heading", { name: "pipes_1" })).toBeVisible();
-  await inspector.getByLabel("Count").fill("3");
-  await inspector.getByLabel("Count").press("Enter");
+  await expect(inspector("pipes_1").getByRole("heading", { name: "pipes_1" })).toBeVisible();
+  await inspector("pipes_1").getByLabel("Count").fill("3");
+  await inspector("pipes_1").getByLabel("Count").press("Enter");
   await expect(status).toHaveText("Set count of pipes_1.", ARRIVES);
 
   // A service zone, widened by its area's width.
@@ -362,10 +394,10 @@ test("builder: heating pipes and a service zone placed, and changed in the inspe
   await palette.getByRole("button", { name: "Place" }).click();
   await expect(status).toHaveText("Placed 1 service zone.", ARRIVES);
   await page.getByLabel("Choose service_zone_1").check();
-  await inspector.getByLabel("Area Width").fill("1.5");
-  await inspector.getByLabel("Area Width").press("Enter");
+  await inspector("service_zone_1").getByLabel("Area Width").fill("1.5");
+  await inspector("service_zone_1").getByLabel("Area Width").press("Enter");
   await expect(status).toHaveText("Set area width of service_zone_1.", ARRIVES);
-  await expect(inspector.getByLabel("Area Width")).toHaveValue("1.5");
+  await expect(inspector("service_zone_1").getByLabel("Area Width")).toHaveValue("1.5");
   await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
 });
 
@@ -376,13 +408,13 @@ test("builder: the reference greenhouse's house edited, put back, through its fi
   const id = `reference_copy_${Date.now()}`;
   const status = page.getByTestId("builder-status");
   const runnable = page.getByTestId("builder-runnable");
-  const items = page.locator(".builder-items tbody tr");
-  const palette = page.locator(".builder-palette");
-  const give = page.locator(".builder-give");
+  const items = bodyRows(page, "Items of the house");
+  const palette = form(page, "Place");
+  const give = region(page, "Rows");
   page.on("dialog", (dialog) => dialog.accept());
 
   await page.goto("/builder");
-  const copy = page.locator(".builder-copy");
+  const copy = form(page, "Or copy a scenario's house");
   await copy.getByLabel("Scenario").selectOption({ label: "Reference greenhouse" });
   await copy.getByLabel("The copy's identifier").fill(id);
   await copy.getByRole("button", { name: "Copy its house" }).click();
@@ -407,9 +439,7 @@ test("builder: the reference greenhouse's house edited, put back, through its fi
     await palette.getByLabel("roof 1 right").check();
     await palette.getByRole("button", { name: "Place" }).click();
     await expect(runnable).toHaveText("One error stops it running.", ARRIVES);
-    await expect(page.locator(".builder-finding-error")).toContainText(
-      "Doors or vents overlap: roof_vent_1 with",
-    );
+    await expect(errors(page)).toContainText("Doors or vents overlap: roof_vent_1 with");
     await page.getByRole("button", { name: "Undo" }).click();
     await expect(runnable).toHaveText("It can run.", ARRIVES);
   });
@@ -421,7 +451,7 @@ test("builder: the reference greenhouse's house edited, put back, through its fi
     await give.getByLabel("Variety").fill("beefsteak");
     await page.getByRole("button", { name: "Give the chosen rows this crop" }).click();
     await expect(runnable).toHaveText("One error stops it running.", ARRIVES);
-    await expect(page.locator(".builder-finding-error")).toContainText("Rows grow different crops");
+    await expect(errors(page)).toContainText("Rows grow different crops");
     await give.getByLabel("Variety").fill("cherry_tomato");
     await page.getByRole("button", { name: "Give the chosen rows this crop" }).click();
     await expect(runnable).toHaveText("It can run.", ARRIVES);
@@ -434,19 +464,21 @@ test("builder: the reference greenhouse's house edited, put back, through its fi
 
   await test.step("its file, imported into an empty builder, is the house it was", async () => {
     await page.getByRole("button", { name: "Start again" }).click();
-    await page.locator(".builder-start input[type=file]").setInputFiles({
-      name: download.suggestedFilename(),
-      mimeType: "application/json",
-      buffer: readFileSync(exported),
-    });
+    await region(page, "Drafts kept")
+      .locator('input[type="file"]')
+      .setInputFiles({
+        name: download.suggestedFilename(),
+        mimeType: "application/json",
+        buffer: readFileSync(exported),
+      });
     await expect(status).toContainText("Imported Reference greenhouse (copy)", ARRIVES);
     await expect(runnable).toHaveText("It can run.", ARRIVES);
     await expect(items).toHaveCount(23);
-    await expect(page.locator(".builder-findings li")).toHaveCount(0);
+    await expect(findings(page)).toHaveCount(0);
   });
 
   await test.step("run on a worker, its scene draws the reference greenhouse's house", async () => {
-    const run = page.locator(".builder-run");
+    const run = form(page, "Run it");
     await run.getByLabel("Starting on").fill("2026-03-01");
     await run.getByLabel("Days").fill("1");
     await run.getByLabel("Seed").fill("42");
@@ -508,14 +540,80 @@ test("builder: every control is a target of the size it is drawn at, at least co
   await field(page, "Identifier").fill(`e2e_targets_${Date.now()}`);
   await page.getByRole("button", { name: "Draft this house" }).click();
   await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
-  await page.locator(".builder-palette").getByLabel("What").selectOption("heater");
-  await page.locator(".builder-palette").getByRole("button", { name: "Place" }).click();
+  await form(page, "Place").getByLabel("What").selectOption("heater");
+  await form(page, "Place").getByRole("button", { name: "Place" }).click();
   await page.getByLabel("Choose heater_1").check(ARRIVES);
   await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
-  expect(await targetsTooSmall(page.locator(".builder-side button"))).toEqual([]);
-  // The items' fields and the inspector's are the browser's still, until they move.
-  const moved = page.locator(".builder-identity, .builder-rows, .builder-run");
-  expect(await targetsTooSmall(moved.locator(CONTROLS))).toEqual([]);
+  expect(await targetsTooSmall(page.locator(".builder-side").locator(CONTROLS))).toEqual([]);
+});
+
+/** Presses Tab through `controls`, each focused in its turn from the one before. */
+async function tabsThrough(page: Page, controls: Locator): Promise<void> {
+  const all = await controls.all();
+  await expect(all[0] as Locator).toBeFocused();
+  for (const control of all.slice(1)) {
+    await page.keyboard.press("Tab");
+    await expect(control).toBeFocused();
+  }
+}
+
+test("builder: the house form and the palette, by keyboard alone (P12's QA)", async ({ page }) => {
+  test.setTimeout(120_000);
+  const house = form(page, "A new house");
+  await page.goto("/builder");
+  await expect(form(page, "Or copy a scenario's house")).toBeVisible(ARRIVES);
+
+  // The page's first control is the way home; the house form's come next, in order.
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Home" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type(`e2e_keys_${Date.now()}`);
+  await tabsThrough(page, house.locator(CONTROLS));
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+
+  // The palette: a kind chosen by its name, its fields in order, and placed.
+  const palette = form(page, "Place");
+  await palette.getByLabel("What").focus();
+  await page.keyboard.type("heater");
+  await expect(palette.getByLabel("What")).toHaveValue("heater");
+  await tabsThrough(page, palette.locator(CONTROLS));
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("builder-status")).toHaveText("Placed 1 heater.", ARRIVES);
+});
+
+test("builder: the run step shows each value whole in a window 720 px high (QA of 2026-11-04)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/builder");
+  await field(page, "Identifier").fill(`e2e_run_step_${Date.now()}`);
+  await page.getByRole("button", { name: "Draft this house" }).click();
+  const run = form(page, "Run it");
+  await expect(run.getByLabel("Weather")).toBeVisible(ARRIVES);
+  await run.scrollIntoViewIfNeeded();
+
+  // Each control at least as wide as the browser draws it when nothing squeezes it:
+  // a date, a number or a weather's name whole.
+  const squeezed = await run.locator(CONTROLS).evaluateAll((controls: HTMLElement[]) =>
+    controls.flatMap((control) => {
+      const free = control.cloneNode(true) as HTMLElement;
+      free.style.position = "absolute";
+      control.parentElement?.append(free);
+      const [own, needed] = [control.offsetWidth, free.offsetWidth];
+      free.remove();
+      return own < needed
+        ? [
+            `${(control as HTMLInputElement).labels?.[0]?.textContent || control.textContent}: ${own} of ${needed} px`,
+          ]
+        : [];
+    }),
+  );
+  expect(squeezed).toEqual([]);
+  // Weathers in words, as the viewer's weather panel names them.
+  await expect(run.getByLabel("Weather").locator("option").first()).toHaveText("its own");
+  expect((await run.boundingBox())?.height ?? Infinity).toBeLessThan(720);
 });
 
 test("builder: at a phone's width the page fits its window, with the house under the forms", async ({
@@ -552,8 +650,8 @@ for (const theme of ["dark", "light"] as const) {
       key: THEME_KEY,
       chosen: theme,
     });
-    const builder = page.locator("main.builder");
-    const palette = page.locator(".builder-palette");
+    const builder = page.getByRole("main");
+    const palette = form(page, "Place");
 
     // The first step: the forms, and the note where the house is to be drawn, on a
     // pane with no ground of its own but the browser's.
@@ -572,7 +670,7 @@ for (const theme of ["dark", "light"] as const) {
     await palette.getByRole("button", { name: "Place" }).click();
     await expect(page.getByLabel("Choose heater_1")).toBeVisible(ARRIVES);
     await palette.getByRole("button", { name: "Place" }).click();
-    await expect(page.locator(".builder-finding-error")).toBeVisible(ARRIVES);
+    await expect(errors(page)).toBeVisible(ARRIVES);
     await page.getByLabel("Choose heater_1").check();
     await page.getByLabel("Choose heater_2").check();
     await expect(page.getByPlaceholder("power_w, base.z")).toHaveValue("");

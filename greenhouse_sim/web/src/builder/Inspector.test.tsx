@@ -2,7 +2,7 @@
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { choose, type Rendered, render } from "../testing/render";
+import { choose, labelledBy, type Rendered, render } from "../testing/render";
 import type { Installation } from "./generated/assessedTypes";
 import { Inspector } from "./Inspector";
 
@@ -72,11 +72,11 @@ const HOUSE = {
   row_crops: [],
 } as unknown as Installation;
 
-/** The input or select labelled `name`, by the label around it. */
+/** The input or select labelled `name`. */
 function control(within: ParentNode, name: string): HTMLInputElement | HTMLSelectElement {
   const found = [
     ...within.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input, select"),
-  ].filter((each) => each.closest("label")?.firstChild?.textContent?.trim() === name);
+  ].filter((each) => labelledBy(each, name));
   if (found.length !== 1 || found[0] === undefined) {
     throw new Error(`no one control labelled "${name}"`);
   }
@@ -175,13 +175,28 @@ describe("the builder's inspector (P12.3)", () => {
   it("shows a number to twelve digits, and sends nothing for one left as it was", () => {
     const { within, onEdit } = show(null);
 
-    expect(control(within, "Origin Y").value).toBe("2.4");
-    typeAndEnter(control(within, "Origin Y"), "2.4");
-    typeAndEnter(control(within, "Origin X"), "1.5");
+    expect(control(within, "First row's first plant, y").value).toBe("2.4");
+    typeAndEnter(control(within, "First row's first plant, y"), "2.4");
+    typeAndEnter(control(within, "First row's first plant, x"), "1.5");
 
     expect(onEdit.mock.calls.map(([edit]) => edit)).toEqual([
       { edit: "set_value", path: "layout.crop_rows.origin.x", value: 1.5 },
     ]);
+  });
+
+  it("says the house's origin and its rows' apart, and titles no two fields alike", () => {
+    const { within, onEdit } = show(null);
+    const labels = [...within.querySelectorAll("label")].map((label) => label.textContent);
+
+    expect(labels).toEqual(expect.arrayContaining(["House's corner in the world, x"]));
+    expect(labels.filter((label) => /origin/i.test(label ?? ""))).toEqual([]);
+    expect(new Set(labels).size).toBe(labels.length);
+    typeAndEnter(control(within, "House's corner in the world, x"), "5");
+    expect(onEdit.mock.calls[0]?.[0]).toEqual({
+      edit: "set_value",
+      path: "envelope.origin.position.x",
+      value: 5,
+    });
   });
 
   it("shows the house's fields when no one item is chosen, each set by its path", () => {

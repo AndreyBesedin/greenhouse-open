@@ -3,7 +3,16 @@ import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ScenarioSummary } from "../scenarios";
-import { button, click, enter, type Rendered, render, said } from "../testing/render";
+import {
+  button,
+  choose,
+  click,
+  enter,
+  type Rendered,
+  render,
+  said,
+  select,
+} from "../testing/render";
 import { CopyScenario } from "./CopyScenario";
 import { Findings } from "./Findings";
 import type { Installation } from "./generated/assessedTypes";
@@ -47,6 +56,27 @@ describe("the builder's parts (P12.2)", () => {
 
     // The browser says what is missing, at the field, and sends nothing.
     expect(form?.checkValidity()).toBe(false);
+  });
+
+  it("name each weather in words, and send it by its name", () => {
+    const onFields = vi.fn();
+    shown = render(
+      <RunStep
+        weathers={["default", "cold_spring_day"]}
+        disabled={false}
+        why=""
+        fields={FIRST_RUN}
+        onFields={onFields}
+        onRun={vi.fn()}
+      />,
+    );
+    const weather = select(shown.container, "Weather");
+    expect([...weather.options].map((option) => [option.value, option.text])).toEqual([
+      ["default", "its own"],
+      ["cold_spring_day", "cold spring day"],
+    ]);
+    choose(weather, "cold_spring_day");
+    expect(onFields).toHaveBeenCalledWith({ ...FIRST_RUN, weather: "cold_spring_day" });
   });
 
   it("draft a house from the first form, its fields labelled as the schema titles them", () => {

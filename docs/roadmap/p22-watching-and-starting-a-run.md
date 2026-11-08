@@ -52,7 +52,7 @@ The walk of 2026-11-04 found the viewer working, and hard to find one's way in:
 | --- | --- | --- | --- |
 | P22.1 | **Steer a running epoch from the replay:** a target or a command changed in a replay's panels, while its epoch runs, posts to the epoch's changes and reads them back, in place of a fork | A change made in a replay steers the running epoch, from its moment, and a finished epoch still forks | Done ([decision 0073](../decisions/0073-a-change-in-a-replay-steers-a-running-epoch-at-its-own-clock.md)): while the replay's position says its epoch is `queued` or `running`, a heating target set in its panels, or a level of a piece of equipment, a door or a vent, is asked of the epoch (`POST /api/runs/{run}/epochs/{n}/changes`) and nothing forks; once it says the epoch has ended, a change is a fork from the moment shown, as before, and moves applied are a fork either way. The change takes at the epoch's own clock as its worker takes it (a target from the next minute, a level from that moment), not at the moment shown, which is at or before the frontier while the worker is past it; the panels say so before it is made. The replay reads the epoch's changes (`GET …/changes`) every second until the worker is done with the request (`done`, which a worker writes after its answer, since it logs a change before it acts on it and may refuse it then), and then names the moment it took effect from, or says in words why it was refused, by the route (an epoch that ended before it was asked) or by the worker, or that the epoch ended before its worker took it; none of these is made a fork, and what became of a change is still said once the epoch has ended. A level set waits beside the reading, "set to 100%", until the replay reaches the moment it takes; the panels show a change from its moment once a commit passes it, from the plan the position reads (P17.8). One steering path for the panels (`plan/useSteering.ts`), given how actions reach the run: the viewer's own play through its plan, or a running epoch through its changes (`replay/changes.ts`). The answers of `…/changes` are published (`change_asked.schema.json`, `epoch_changes.schema.json`) and the viewer's side generated from them. Not delivered: a change at a past moment of a running epoch, which is a fork from the header and then a change in it, at the fork's own clock; a plant's work, which only the viewer's own play offers; the browser specs that set a level in a replay now stop its run first, to fork it |
 | P22.2 | **One *Play*:** *Follow* goes; the replay follows a run that is computing | Every list of runs offers one way to watch each | Done: the start page's list of runs and a scenario's dialog have one link to watch each run, *Replay* (`ReplayLink`, `src/landing/RunParts.tsx`), and *Follow* is gone with its column. The link of a run queued or running opens its replay following the newest day computed (`&follow=1`, as a run just started from the dialog or the builder already did), and says so on hover; that of a run computed no longer opens at its start, as before. Followed, the replay stands at the frontier as it moves; *Play* from there, or from an earlier day, plays at the replay's pace and waits at the frontier while the run computes, moving on as days arrive (the position's own behaviour since P17.4, now held by a browser spec from the list). A replay that followed its epoch to the end no longer asks where its position stands every second after it, since the frontier of a finished epoch does not move; one that follows an epoch interrupted or failed still asks, since it may be resumed from elsewhere. Not delivered: the viewer's own play and its *Follow* of a scenario's run in the scenario list (`SourceChooser`), which are P22.3's; a fork still being computed opens following its frontier from a list too, not held at the moment it was made from as *Fork from here* opens it; the replay's *Follow the newest day* stays beside *Play*, as a way back to the frontier |
-| P22.3 | **The viewer's own play goes,** with a decision on the playback routes and the policy's port | No control starts a playback in the viewer; the browser tests that used it watch in the replay | Proposed |
+| P22.3 | **The viewer's own play goes,** with a decision on the playback routes and the policy's port | No control starts a playback in the viewer; the browser tests that used it watch in the replay | Proposed: [decision 0074](../decisions/0074-the-viewers-play-and-the-playbacks-http-surfaces-go.md) (proposed), in the [pull requests below](#p223s-pull-requests) |
 | P22.4 | **A new run's form:** the dialog leads with starting a run and lists the runs under it; *Open in the viewer* goes. The form: what the scenario is, its duration, its weather, the crops to read, with a way to make a new scenario from this one (`src/builder/CopyScenario.tsx`), and how fast to compute it; the seed small and optional, as it is now. The start route takes the duration and the weather | A run is started with a duration and a weather of the form's, and repeated by its seed | Proposed |
 | P22.5 | **The pace, said once:** a replay's "s a day" is how fast it shows; the form's is how fast the run computes, and each says so | Neither reads as the other | Proposed |
 | P22.6 | **The scene keeps up** (D3): measured first, server cost per moment against the viewer's loads; then the replay skips moments or loads ahead (`useReplayMoment.ts`, `src/fields/useClimateLoads.ts`) | At 10 s a day, the panels and the timeline show the same day | Done ([measured](#the-scenes-lag-measured-p226)): the panels trailed the timeline by one moment's latency, 0.5 days on average, and read the same day as it 54 to 59% of the time, since a moment costs its climate field's grid run, 1 to 5 s, however far it skips. While a replay plays over the climate field, it now asks for the field ahead, one moment at a time, with the field drawn kept on show (`momentAhead`, `src/scene/useReplayMoment.ts`): the moment the position will stand at when the answer arrives, at the pace and the last field's time, on the whole hour, and, before a day ends, the next day's first minute, in time for the timeline to find it there. Each is drawn once the simulator has answered and the position has reached it, with its glazing and openings, which wait on the same grid run and are then answered at once. At 10 s a day the panels read the same day as the timeline 96 to 97% of the time, 0.2 days behind on average. A position that goes back, or stops playing, draws its own moment as before. Not delivered: the first 0.25 to 0.9 s of each day, while the moment drawn is asked for again rather than taken from the answer ahead, the two read different days; the panels hold the day's last moment, around noon by day, until midnight; a browser spec, as the pace a machine keeps decides the figures, which are measured instead |
@@ -64,6 +64,72 @@ The walk of 2026-11-04 found the viewer working, and hard to find one's way in:
 P22.1 comes first: P22.2 and P22.3 take away the steering the viewer's play has,
 and P22.4's *Open in the viewer* goes with P22.3. P22.5 to P22.9 are independent
 of them and of each other, but for P22.7 to P22.9 lining up with P19's steps.
+
+## P22.3's pull requests
+
+As [decision 0074](../decisions/0074-the-viewers-play-and-the-playbacks-http-surfaces-go.md)
+proposes them, each under about 500 lines but for generated files and files
+deleted whole, in this order, so that no browser spec loses what it watches
+before the code it watched goes:
+
+1. **The decision and this plan** (`docs`).
+2. **The specs that only needed a moving run watch a replay** (`test(viewer)`):
+   `selection.spec.ts`, `info-panel.spec.ts`, `panels.spec.ts`'s #304,
+   `renderer-smoke.spec.ts` and `p09-final-qa.spec.ts`'s 0.5.0 step, on a run
+   asked of a worker and opened in its replay; and those of `follow.spec.ts`
+   the replay does not hold yet (a moment whose field fails, a house without
+   equipment) in `replay.spec.ts`. No code of the viewer changes.
+3. **The plan lane in the replay** (`feat(viewer)`): read from the position's
+   outcomes, in place of the consumer interface's and the gateway's;
+   `plan-qa.spec.ts` gives its plans to a running epoch through its changes
+   and reads them in its replay.
+4. **A plant's work in the replay** (`feat(viewer)`): `PlantActions` for the
+   selected organ's plant, each action a plan of its own asked of a running
+   epoch through its changes (`changesFor` taking crop actions), or a fork's
+   change from the moment shown once the epoch has ended; what became of it
+   said beside the panels, as for a level, and in the plan lane; a test of
+   `replay.spec.ts` for each.
+5. **Moves leave the followed view** (`refactor(viewer)`): `useMoveSession`
+   and `MovePanel` without a playback to start over, `PlantActions` no longer
+   beside the playback's panel, and `moving.spec.ts`'s #271 test of a
+   followed run.
+6. **No *Follow*, and the old addresses mean nothing** (`feat(viewer)!`):
+   `SourceChooser` and `ScenarioList` without *Follow*; the address no longer
+   reads `?live=` or a scenario's `&follow=1`, so that a page opens as it
+   would without them (`/?live=<id>` the start page, as `/` is), which a unit
+   test of the addresses holds; `follow.spec.ts` goes, what of it the replay
+   needs held by step 2. A replay's `&follow=1` stays. After it, nothing sets
+   a scenario's `follow`.
+7. **The followed view's code goes** (`refactor(viewer)`): `PlaybackPanel`,
+   `useFollow`, `scene/playback.ts` and its generated contracts,
+   `useFollowFraming`, `useGiveToPlayback` and what of `plan/plan.ts` only it
+   used, the playback's words in `ClimateTime`, their unit tests, and the
+   viewer's README. Nothing reaches them after step 6.
+8. **The playbacks' HTTP surfaces go** (`feat(api)!`). First, a search for
+   every use over HTTP of `/api/scenarios/{id}/playback`, `/consumer/v1`,
+   `/actuation/v1` and `--play`, in the code, the tests, the examples, the
+   documents and CI, each moved or gone. Then `api/routes/playback.py`,
+   `api/consumer.py`, `api/actuation.py` and `services/actuation.py` go, with
+   the `targets` alias, the server's `--play`, `--hold` and
+   `--play-seconds-per-day`, `playback.schema.json`, `test_consumer_api.py`,
+   `test_actuation_api.py` and the HTTP parts of `test_playback.py`,
+   `test_plan_final_qa.py`, `test_failed_playback.py`, `test_route_table.py`
+   and the others; the READMEs, the protocol's included, no longer say the
+   simulator serves `/consumer/v1` or `/actuation/v1`.
+9. **The simulator's book of its playbacks goes** (`refactor(sim)!`):
+   `Playbacks`, `Simulator.playbacks` and the module's functions that read it
+   (`playback.start`, `command` and their like), with what reads it: a
+   position held behind a playback's clock, the epochs a playback holds, a stop
+   or an authorisation reaching an epoch through its playback, and the
+   consumer reads by a run's identifier. The port's server and examples 01 and
+   02 make their own `Playback`, as the experiment's runner does; the tests
+   that drove the book drive a `Playback`. `test_run_policy_port.py`,
+   `test_policy_in_its_own_process.py`, `test_run_gateway.py`,
+   `test_experiment.py` and the examples' tests still pass. With it, the items
+   of [future work](future-work.md) P17 and P18 left to P22.3 are settled
+   there, this step is done and the decision accepted.
+
+*Open in the viewer*, in `src/landing/RunsDialog.tsx`, is P22.4's.
 
 ## The scene's lag, measured (P22.6)
 
@@ -177,6 +243,8 @@ In the browser, on the reference greenhouse:
 
 - **The playback routes and the policy's port.** The viewer's own play uses the
   playback routes, and P15's port reads live playbacks. Whether they stay for
-  consumers, or a run's epochs take their place, is P22.3's decision.
+  consumers, or a run's epochs take their place, is P22.3's decision:
+  [decision 0074](../decisions/0074-the-viewers-play-and-the-playbacks-http-surfaces-go.md),
+  proposed, takes the playbacks' HTTP surfaces away and keeps the port.
 - **Duration and weather as a start's inputs:** whether they make another scenario
   or stay a run's, as its seed is.

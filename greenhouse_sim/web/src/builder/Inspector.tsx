@@ -1,5 +1,6 @@
 import { type KeyboardEvent, useId } from "react";
 
+import { Field } from "../design/Field";
 import { isObject } from "../loadJson";
 import { ASSESSED_SCHEMA } from "./generated/assessedSchema";
 import type { Installation } from "./generated/assessedTypes";
@@ -54,6 +55,22 @@ function inspected(installation: Installation, id: string): Inspected | null {
   return opening === undefined ? null : { id, model: "Opening", values: opening };
 }
 
+// The house and its rows each have an origin, which the schema titles alike,
+// "Origin Position X" and "Origin X": each is said by what it places
+// (`world/envelope.py`, `world/rows.py`).
+const ORIGINS: readonly (readonly [path: string, title: string])[] = [
+  ["envelope.origin.position.", "House's corner in the world"],
+  ["layout.crop_rows.origin.", "First row's first plant"],
+];
+
+/** `field`, titled by what it places if it is one of the origins. */
+function saidApart(field: ModelField): ModelField {
+  const origin = ORIGINS.find(([path]) => field.path.startsWith(path));
+  return origin === undefined
+    ? field
+    : { ...field, title: `${origin[1]}, ${field.path.slice(origin[0].length)}` };
+}
+
 // How many significant digits a number is shown to: more than any size a
 // greenhouse is measured to, fewer than a float's rounding shows, as in
 // (6.4 - 1.6) / 2, 2.4000000000000004.
@@ -94,7 +111,7 @@ function typed(field: ModelField, text: string): Given {
     : text;
 }
 
-function Field({
+function ItemField({
   field,
   value,
   busy,
@@ -119,7 +136,7 @@ function Field({
   }
   if (field.kind === "flag") {
     return (
-      <label className="builder-give-field">
+      <label className="builder-check">
         <input
           type="checkbox"
           disabled={busy}
@@ -130,37 +147,40 @@ function Field({
       </label>
     );
   }
-  if (field.kind === "choice") {
-    return (
-      <label className="builder-give-field">
-        <span>{field.title}</span>
-        <select disabled={busy} value={value} onChange={(event) => commit(event.target.value)}>
-          {field.choices.map((choice) => (
-            <option key={choice} value={choice}>
-              {choice.replaceAll("_", " ")}
-            </option>
-          ))}
-        </select>
-      </label>
-    );
-  }
-  // Typed into freely, and sent once left or entered: the field's own value
-  // again when the installation changes.
   return (
-    <label className="builder-give-field">
-      <span>{field.title}</span>
-      <input
-        key={value}
-        type={field.kind === "text" ? "text" : "number"}
-        step="any"
-        disabled={busy}
-        defaultValue={value}
-        min={field.minimum}
-        max={field.maximum}
-        onBlur={(event) => commit(event.target.value)}
-        onKeyDown={onKey}
-      />
-    </label>
+    <Field label={field.title} size="compact" className="builder-give-field">
+      {(control) =>
+        field.kind === "choice" ? (
+          <select
+            {...control}
+            disabled={busy}
+            value={value}
+            onChange={(event) => commit(event.target.value)}
+          >
+            {field.choices.map((choice) => (
+              <option key={choice} value={choice}>
+                {choice.replaceAll("_", " ")}
+              </option>
+            ))}
+          </select>
+        ) : (
+          // Typed into freely, and sent once left or entered: the field's own
+          // value again when the installation changes.
+          <input
+            {...control}
+            key={value}
+            type={field.kind === "text" ? "text" : "number"}
+            step="any"
+            disabled={busy}
+            defaultValue={value}
+            min={field.minimum}
+            max={field.maximum}
+            onBlur={(event) => commit(event.target.value)}
+            onKeyDown={onKey}
+          />
+        )
+      }
+    </Field>
   );
 }
 
@@ -193,7 +213,7 @@ export function Inspector({
         <h2 id={heading}>{item.id}</h2>
         <div className="builder-give">
           {modelFields(schema, item.model).map((field) => (
-            <Field
+            <ItemField
               key={field.path}
               field={field}
               value={shown(item.values, field.path)}
@@ -213,13 +233,13 @@ export function Inspector({
   const house = [
     ...modelFields(schema, "Envelope", "envelope."),
     ...(installation.layout.crop_rows ? modelFields(schema, "CropRows", "layout.crop_rows.") : []),
-  ];
+  ].map(saidApart);
   return (
     <section className="builder-inspector" aria-labelledby={heading}>
       <h2 id={heading}>Envelope and rows</h2>
       <div className="builder-give">
         {house.map((field) => (
-          <Field
+          <ItemField
             key={field.path}
             field={field}
             value={shown(installation, field.path)}
