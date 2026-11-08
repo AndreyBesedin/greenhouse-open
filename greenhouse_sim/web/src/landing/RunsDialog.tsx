@@ -5,7 +5,7 @@ import type { ScenarioSummary } from "../scenarios";
 import { replayAddress, viewerAddress } from "./paths";
 import { RunControls } from "./RunControls";
 import { RunDelete, useRunDeletion } from "./RunDelete";
-import { FollowLink, ReplayLink, RunFailure, RunProgress, RunUsage, StatusChip } from "./RunParts";
+import { FollowLink, ReplayLink, RunFailure, RunProgress, RunStatus, RunUsage } from "./RunParts";
 import { notDoneText } from "./runActions";
 import { DEFAULT_PACE_S, startRun } from "./startRun";
 import { type StoredRun, startedText, whoIs } from "./storedRuns";
@@ -181,7 +181,7 @@ export function RunsDialog({
                     {when === "" ? "" : ` · ${when}`}
                   </span>
                 </div>
-                <StatusChip run={run} />
+                <RunStatus run={run} />
                 <RunProgress run={run} name={`the run with ${who}`} />
                 <ReplayLink run={run} label={`Replay the run with ${who}`} />
                 <FollowLink run={run} />

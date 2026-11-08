@@ -1,3 +1,4 @@
+import { StatusChip, type StatusTone } from "../design/StatusChip";
 import { failedText, NO_REASON_KEPT } from "../replay/failure";
 import { replayAddress } from "./paths";
 import {
@@ -6,6 +7,7 @@ import {
   progressShare,
   progressText,
   STATUS_LABEL,
+  type Status,
   type StoredRun,
 } from "./storedRuns";
 import { NOT_MEASURED_NOTE, usageFigures } from "./usage";
@@ -17,29 +19,33 @@ export const DAMAGED_NOTE = "Files of this run are missing, so it cannot be read
 export const STOPPING_NOTE =
   "Its worker stops at its next look, with what it has committed. The run then reads Interrupted, and can be resumed or deleted.";
 
+// The tone a run's status is drawn in: under way or waiting, or stopped short.
+const STATUS_TONE: Record<Status, StatusTone> = {
+  queued: "active",
+  running: "active",
+  finished: "plain",
+  failed: "problem",
+  interrupted: "problem",
+};
+
 /** A run's status, in words: never a colour alone. One with files missing is
- * called so whatever else it is, since its status says it is whole. */
-export function StatusChip({ run }: { run: StoredRun }) {
-  if (run.damaged) {
-    return (
-      <span className="landing-status landing-status-failed" title={DAMAGED_NOTE}>
-        Damaged
-        <span className="visually-hidden"> {DAMAGED_NOTE}</span>
-      </span>
-    );
-  }
-  if (run.stopping) {
-    return (
-      <span className={`landing-status landing-status-${run.status}`} title={STOPPING_NOTE}>
-        Stopping
-        <span className="visually-hidden"> {STOPPING_NOTE}</span>
-      </span>
-    );
-  }
+ * called so whatever else it is, since its status says it is whole. The page's
+ * classes beside the chip's draw it until the landing page's rules move (P19.8). */
+export function RunStatus({ run }: { run: StoredRun }) {
+  const status = run.damaged ? "failed" : run.status;
+  const [words, note] = run.damaged
+    ? ["Damaged", DAMAGED_NOTE]
+    : run.stopping
+      ? ["Stopping", STOPPING_NOTE]
+      : [run.paused ? PAUSED_LABEL : STATUS_LABEL[run.status], undefined];
   return (
-    <span className={`landing-status landing-status-${run.status}`}>
-      {run.paused ? PAUSED_LABEL : STATUS_LABEL[run.status]}
-    </span>
+    <StatusChip
+      tone={STATUS_TONE[status]}
+      note={note}
+      className={`landing-status landing-status-${status}`}
+    >
+      {words}
+    </StatusChip>
   );
 }
 

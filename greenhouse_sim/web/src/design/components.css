@@ -50,3 +50,22 @@
 .ds-icon-button {
   padding: 0;
 }
+
+/* A status in words, its tone beside them. */
+.ds-status-chip {
+  padding: var(--space-1) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.ds-status-chip-active {
+  border-color: var(--action);
+  color: var(--action);
+}
+
+.ds-status-chip-problem {
+  border-color: var(--warn);
+  color: var(--warn);
+}
