@@ -11,26 +11,27 @@ import {
 } from "../src/qa/stressScene.ts";
 import { formatPoint } from "../src/readouts.ts";
 import { chooser } from "./chooser";
+import { askForRun, computedTo, openReplay, stopRun } from "./replays";
 import { selectAt } from "./view";
 
 /**
  * P00's final QA, `renderer-smoke`: one walk through everything the renderer
- * does, as a person would use it. It runs as its own project once every other
- * browser test has passed (playwright.config.ts), so it can drive a scenario's
- * run played back, which every viewer shares, without disturbing them. The
- * screenshot itself is compared in CI's visual checks job, in its pinned
- * container.
+ * does, as a person would use it, on a run a worker computes and its replay
+ * plays. It runs as its own project once every other browser test has passed
+ * (playwright.config.ts). The screenshot itself is compared in CI's visual
+ * checks job, in its pinned container.
  */
 
 const SCENARIO = "climate_box";
-const PLAYBACK = `/api/scenarios/${SCENARIO}/playback`;
 const PLANT = "climate_box_plant_001";
 // Low on the plant's stem, which is at least 20 cm tall on any day, above its
 // gutter's slab.
 const PLANT_POINT = { x: 2.25, y: 2.4, z: 0.775 };
-// The climate box's run: 14 days, each played in 10 s.
+// The climate box's run: 14 days, computed before the replay plays them.
 const RUN_END_S = 14 * DAY_S;
 const ARRIVES = { timeout: 60_000 };
+// The replay's quickest pace, in seconds a day.
+const QUICK = "2";
 const PRESET_LABELS: Record<PresetName, string> = {
   top: "Top",
   front: "Front",
@@ -41,18 +42,18 @@ const PRESET_LABELS: Record<PresetName, string> = {
 const STRESS_ROWS = DEFAULT_STRESS_PLANTS / PLANTS_PER_ROW;
 const STRESS_COLUMN = PLANTS_PER_ROW / 2;
 const STRESS_ROW = STRESS_ROWS / 2;
-// A walk through every feature, with a run played back a day in 10 s.
-const WALKTHROUGH_TIMEOUT_MS = 180_000;
+// A walk through every feature, the run computed first.
+const WALKTHROUGH_TIMEOUT_MS = 240_000;
 const DRAG_PX = { x: 160, y: 40 };
 
 async function objectCount(page: Page): Promise<number> {
   return Number(await page.getByTestId("object-count").textContent());
 }
 
-/** Where the run's clock stands, as the playback panel's progress says. */
+/** Where the replay stands, in seconds into the run, as its timeline says. */
 async function reached(page: Page): Promise<number> {
-  const progress = page.getByRole("progressbar", { name: "The run's progress" });
-  return Number(await progress.getAttribute("value"));
+  const handle = page.getByRole("slider", { name: "Position in the run" });
+  return Number(await handle.getAttribute("aria-valuenow"));
 }
 
 /** What the inspector says of the selected plant. */
@@ -62,47 +63,36 @@ function properties(page: Page): Promise<string[]> {
 
 test("renderer-smoke: the renderer, end to end", async ({ page }) => {
   test.setTimeout(WALKTHROUGH_TIMEOUT_MS);
-  const panel = page.getByRole("region", { name: "Run played back" });
-  const status = panel.getByTestId("playback-status");
+  const transport = page.locator(".replay-transport");
+  const handle = page.getByRole("slider", { name: "Position in the run" });
   const camera = page.getByTestId("camera-position");
+  const run = await askForRun(page, SCENARIO, { seed: 65 });
 
-  await test.step("Python plays a scenario's run back, and the view follows its clock", async () => {
-    // Played back and playing, started over if its clock is too near the
-    // run's end to be seen moving on, as after the other browser tests.
-    const started = (await (await page.request.post(`${PLAYBACK}/start`)).json()) as {
-      time_s: number;
-      playing: boolean;
-    };
-    if (started.time_s > RUN_END_S - 4 * DAY_S) {
-      expect((await page.request.post(`${PLAYBACK}/restart`)).ok()).toBe(true);
-    } else if (!started.playing) {
-      expect((await page.request.post(`${PLAYBACK}/play`)).ok()).toBe(true);
-    }
-    await page.goto(`/?scenario=${SCENARIO}&follow=1`);
-    await expect(status).toContainText("playing a day in", ARRIVES);
-    const first = await reached(page);
-    await expect.poll(() => reached(page), ARRIVES).toBeGreaterThan(first);
+  await test.step("Python computes a scenario's run, and its replay plays it", async () => {
+    await computedTo(page, run, RUN_END_S, WALKTHROUGH_TIMEOUT_MS / 2);
+    await openReplay(page, run);
+    await transport.getByLabel("Pace").selectOption(QUICK);
+    await transport.getByRole("button", { name: "Play" }).click();
+    await expect(transport.getByRole("button", { name: "Pause" })).toBeVisible();
+    await expect.poll(() => reached(page), ARRIVES).toBeGreaterThan(0);
   });
 
   await test.step("each camera preset moves the camera to its pose", async () => {
     for (const preset of PRESET_ORDER) {
-      // Exactly: a followed view has "Stop following" beside "Top".
       await page.getByRole("button", { name: PRESET_LABELS[preset], exact: true }).click();
       await expect(camera).toHaveText(formatPoint(CAMERA_PRESETS[preset].position));
     }
   });
 
-  await test.step("started over, the run's clock goes back to its start; paused, it holds", async () => {
-    const before = await reached(page);
-    await panel.getByRole("button", { name: "Start over" }).click();
-    await expect.poll(() => reached(page), ARRIVES).toBeLessThan(before);
-    await panel.getByRole("button", { name: "Pause" }).click();
-    await expect(status).toContainText("paused");
-    await expect(panel.getByRole("button", { name: "Play" })).toBeVisible();
-    const held = await reached(page);
-    // Long enough for the view to have asked where the clock stands twice.
+  await test.step("paused, the replay holds; moved to its start, it is there", async () => {
+    await transport.getByRole("button", { name: "Pause" }).click();
+    await expect(transport.getByRole("button", { name: "Play" })).toBeVisible();
+    await handle.focus();
+    await page.keyboard.press("Home");
+    await expect(handle).toHaveAttribute("aria-valuetext", "Day 1, 00:00");
+    // Long enough for the replay to have asked where its position stands twice.
     await page.waitForTimeout(2500);
-    expect(await reached(page)).toBe(held);
+    expect(await reached(page)).toBe(0);
   });
 
   let shownPaused: string[] = [];
@@ -133,19 +123,19 @@ test("renderer-smoke: the renderer, end to end", async ({ page }) => {
 
   await test.step("drawn again at the moment it holds, the run shows the same plant", async () => {
     await page.reload();
-    await expect(status).toContainText("paused", ARRIVES);
-    // Reloaded, the followed view frames the house again.
+    await expect(handle).toHaveAttribute("aria-valuetext", "Day 1, 00:00", ARRIVES);
+    // Reloaded, the replay frames the house again.
     await page.getByRole("button", { name: "Isometric" }).click();
     await selectAt(page, PLANT_POINT, PLANT);
     expect(await properties(page)).toEqual(shownPaused);
   });
 
-  await test.step("playing again, Python moves it on, and the selection stays", async () => {
-    const held = await reached(page);
-    await panel.getByRole("button", { name: "Play" }).click();
-    await expect(status).toContainText("playing a day in");
-    await expect.poll(() => reached(page), ARRIVES).toBeGreaterThan(held);
+  await test.step("playing again, the replay moves it on, and the selection stays", async () => {
+    await transport.getByLabel("Pace").selectOption(QUICK);
+    await transport.getByRole("button", { name: "Play" }).click();
+    await expect.poll(() => reached(page), ARRIVES).toBeGreaterThan(0);
     await expect(page.getByTestId("selected-entity")).toHaveText(PLANT);
+    await stopRun(page, run);
   });
 
   await test.step("the screenshot baseline's page draws its seeded scene", async () => {
