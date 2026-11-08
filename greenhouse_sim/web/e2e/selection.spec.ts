@@ -60,14 +60,17 @@ test("clicking an entity selects it, and the inspector shows what it is and wher
 });
 
 test("a selection stays on its entity while the replay plays its run on", async ({ page }) => {
-  test.slow();
+  test.setTimeout(240_000);
   const run = await askForRun(page, REPLAYED_SCENARIO, { seed: 64 });
   await computedTo(page, run, DAYS_COMPUTED * DAY_S, 120_000);
   await openReplay(page, run);
 
   // A replay frames the whole house; the plant is aimed at from the default
-  // preset.
+  // preset. Between the replay's header and its transport the view is short,
+  // and the plant stands where the View panel is drawn: folded once its preset
+  // is chosen, the plant is clear of it.
   await page.getByRole("button", { name: "Isometric" }).click();
+  await page.getByRole("button", { name: "Fold the View panel" }).click();
   await selectAt(page, REPLAYED_PLANT, REPLAYED_PLANT_ID);
   const selected = page.getByTestId("selected-entity");
   const age = page.getByTestId("property-age_days");
