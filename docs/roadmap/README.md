@@ -127,7 +127,7 @@ links there.
 | [P19](p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | In progress: P19.1 to P19.7 done |
 | [P20](p20-crop-parameter-assets.md) | Crop parameters as versioned assets, edited by forms and reproduced from their versions | Proposed |
 | [P21](p21-rows-of-different-crops.md) | Rows of different crops in one house | Proposed |
-| [P22](p22-watching-and-starting-a-run.md) | Watching and starting a run: one *Play*, steering from the replay, a new run's form | In progress: P22.1 and P22.2 done |
+| [P22](p22-watching-and-starting-a-run.md) | Watching and starting a run: one *Play*, steering from the replay, a new run's form | In progress: P22.1, P22.2 and P22.6 done |
 
 ## After a QA
 
