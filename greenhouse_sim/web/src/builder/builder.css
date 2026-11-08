@@ -1,0 +1,200 @@
+/* The setup builder (P12.2): its forms and findings in a column beside the
+ * house it draws. */
+.builder {
+  display: grid;
+  grid-template-columns: minmax(320px, 440px) 1fr;
+  height: 100vh;
+}
+
+.builder-side {
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-6);
+  background: var(--surface-panel);
+  color: var(--text);
+  border-right: 1px solid var(--border);
+  font-size: var(--font-md);
+}
+
+.builder-side h1 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-2xl);
+}
+
+.builder-side h2 {
+  margin: var(--space-6) 0 var(--space-3);
+  font-size: var(--font-lg);
+}
+
+.builder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.builder-status {
+  min-height: 1.4em;
+  color: var(--text-soft);
+}
+
+.builder-status a {
+  color: var(--action);
+}
+
+.builder-field {
+  display: grid;
+  grid-template-columns: 1fr 9em;
+  gap: var(--space-4);
+  align-items: center;
+  margin: var(--space-2) 0;
+}
+
+.builder-form button,
+.builder-copy button,
+.builder-identity button,
+.builder-run button {
+  margin-top: var(--space-4);
+}
+
+.builder-findings ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.builder-finding-error {
+  color: var(--warn);
+}
+
+.builder-finding-warning {
+  color: var(--text-muted);
+}
+
+.builder-rows table,
+.builder-items table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.builder-rows th,
+.builder-rows td,
+.builder-items th,
+.builder-items td {
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+/* The items chosen, and the palette: what is done with the one, and what
+ * the other places (P12.3). */
+.builder-chosen,
+.builder-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: end;
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.builder-chosen > legend,
+.builder-palette > h3 {
+  width: 100%;
+  margin: 0;
+  font-size: inherit;
+  font-weight: 600;
+}
+
+.builder-surfaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  width: 100%;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border);
+}
+
+.builder-give-field:has(> input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.builder-give {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: end;
+  margin-top: var(--space-4);
+}
+
+.builder-give-field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.builder-chosen > .builder-give {
+  width: 100%;
+  margin-top: 0;
+}
+
+.builder-note {
+  color: var(--text-muted);
+}
+
+/* What stands in for a value left empty, as a note is written. The browser's own
+ * is #757575 in both themes: 2.43:1 on its dark field. `e2e/builder.spec.ts`
+ * holds the builder's words to 4.5:1 on what they are drawn on. */
+.builder-side ::placeholder {
+  color: var(--text-muted);
+}
+
+/* A scenario handed on as a file, and the two ways out of the builder
+ * (P17.11). */
+.builder-share,
+.builder-finish {
+  margin-top: var(--space-5);
+}
+
+.builder-share button,
+.builder-finish button {
+  min-height: var(--target);
+  margin-top: var(--space-4);
+}
+
+.builder-share-recording {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: var(--target);
+}
+
+.builder-finish-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.builder-view {
+  position: relative;
+  min-width: 0;
+}
+
+.builder-view > .builder-note {
+  padding: var(--space-6);
+}
+
+/* Too narrow for a column beside the house: the forms over it, each scrolled or
+ * drawn in its own half. */
+@media (max-width: 840px) {
+  .builder {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .builder-side {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}

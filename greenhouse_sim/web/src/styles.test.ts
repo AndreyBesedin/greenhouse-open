@@ -647,13 +647,15 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
 // components' rules stand outside it: the reference page's baselines hold those, and
 // adding them moves nothing a page draws.
 //
-// It goes when selectors start to move (P19.8). Until then it holds what nothing else
-// does: at `c0262394`, 206 of the stylesheet's 370 rules match nothing on the pages the
-// no-tolerance baselines draw, and the guards below read how a value is written, not
-// which it is.
+// A page's rules cut into a stylesheet of their own come before the viewer's, which
+// changes their order, and so these digests: the pull request says what shows that
+// the order changes nothing (the builder's, P19.9). It goes in P19.8. Until then it
+// holds what nothing else does: at `c0262394`, 206 of the stylesheet's 370 rules
+// match nothing on the pages the no-tolerance baselines draw, and the guards below
+// read how a value is written, not which it is.
 const RESOLVED_DIGESTS = {
-  dark: "29eef28af8afa2bfc4896b9867217bdaed3660714e1e957ca30887a1545f2231",
-  light: "4d09a1c1fe7190ece942ca37bf99d0b2141ee16f11b76bc9e30066c14122997e",
+  dark: "93f4b37844708b836f636854b440ad2f4e4e15a1351869eaed0996f32239c126",
+  light: "053df4ad8b1d79c7f4443dcc4abecc8541d46e109826f9cef6e37bd03ab91dae",
 };
 type ThemeName = keyof typeof RESOLVED_DIGESTS;
 const STYLES_OF_THE_PAGES = withImports(ENTRY, (file) =>
@@ -1175,5 +1177,57 @@ describe("the stylesheet's focus rings (P19.6)", () => {
         ".a:focus-visible { gap: 0; } .b:focus { gap: 0; } :is(.c, .d:focus-visible) { gap: 0; }",
       ),
     ).toEqual([".a:focus-visible", ":is(.c, .d:focus-visible)"]);
+  });
+});
+
+// Each page's rules stand in its own stylesheet, beside its sources (P19.9): its
+// classes there alone, and no other's there.
+const PAGE_STYLESHEETS: Readonly<Record<string, string>> = {
+  builder: "/src/builder/builder.css",
+};
+
+/** The selector lists in `stylesheets` that name a page's class outside its own
+ * stylesheet, or, in a page's stylesheet, a class of something else. */
+function pageRulesMisplaced(stylesheets: readonly { path: string; text: string }[]): string[] {
+  return stylesheets.flatMap(({ path, text }) => {
+    const page = Object.keys(PAGE_STYLESHEETS).find((word) =>
+      path.endsWith(PAGE_STYLESHEETS[word] ?? ""),
+    );
+    return selectorLists(text).filter((list) => {
+      if (list.startsWith("@")) {
+        return false;
+      }
+      const words = [...list.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)].map(
+        ([, name]) => (name ?? "").split("-")[0] ?? "",
+      );
+      return page === undefined
+        ? words.some((word) => word in PAGE_STYLESHEETS)
+        : words.some((word) => word !== page);
+    });
+  });
+}
+
+describe("a page's stylesheet (P19.9)", () => {
+  it("holds its rules, and only its own", () => {
+    const stylesheets = importedStylesheets(ENTRY);
+    for (const file of Object.values(PAGE_STYLESHEETS)) {
+      expect(stylesheets.map(({ path }) => path)).toContainEqual(expect.stringContaining(file));
+    }
+    expect(pageRulesMisplaced(stylesheets)).toEqual([]);
+  });
+
+  it("refuses a page's rule written elsewhere, and another's written in it", () => {
+    expect(
+      pageRulesMisplaced([
+        {
+          path: "/web/src/styles.css",
+          text: ".builder-side h1 { gap: 0; } .info-panel, .builder { gap: 0; } .panel { gap: 0; }",
+        },
+        {
+          path: "/web/src/builder/builder.css",
+          text: "@media (max-width: 840px) { .builder { gap: 0; } } .builder .hud { gap: 0; }",
+        },
+      ]),
+    ).toEqual([".builder-side h1", ".info-panel, .builder", ".builder .hud"]);
   });
 });
