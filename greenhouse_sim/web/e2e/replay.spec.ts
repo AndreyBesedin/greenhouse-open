@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import { LANDING_PATH, REPLAY_PATH, runsAddress } from "../src/landing/paths";
 import { unfold } from "./folds";
+import { askForRun, computedTo, openReplay } from "./replays";
 
 const DAY_S = 86_400;
 // How long a first day of a run may take to be computed, with the other
@@ -380,6 +381,51 @@ test("a level set in the replay of a finished run forks it", async ({ page }) =>
     /forked from epoch \d+ at Day 1, 00:00/,
   );
   expect(asked).toEqual(["forks"]);
+});
+
+test("a moment whose field fails does not stop the replay playing on", async ({ page }) => {
+  test.setTimeout(WAITS_FOR_A_DAY * 2);
+  const run = await askForRun(page, "climate_box", { seed: 67 });
+  await computedTo(page, run, 3 * DAY_S, WAITS_FOR_A_DAY);
+  // Every climate field asked for after the first fails; the moments asked, by
+  // the seconds into the run each names.
+  const moments = new Set<string>();
+  await page.route("**/api/scenarios/climate_box/fields/climate*", (route) => {
+    const first = moments.size === 0;
+    moments.add(new URL(route.request().url()).searchParams.get("t") ?? "0");
+    return first
+      ? route.continue()
+      : route.fulfill({ status: 500, json: { error: "a failure for the test" } });
+  });
+  await openReplay(page, run);
+
+  // Played, the moment drawn moves on past each that fails, and again.
+  const transport = page.locator(".replay-transport");
+  await transport.getByLabel("Pace").selectOption("2");
+  await transport.getByRole("button", { name: "Play" }).click();
+  await expect.poll(() => moments.size, { timeout: COMPUTES }).toBeGreaterThan(3);
+  await expect(page.getByTestId("climate-failed")).toContainText("cannot be drawn");
+});
+
+test("the replay of a house without equipment draws its climate, nothing refused", async ({
+  page,
+}) => {
+  test.setTimeout(WAITS_FOR_A_DAY);
+  const refused: string[] = [];
+  page.on("response", (response) => {
+    if (response.status() === 404 && /\/(fields\/climate|climate\/)/.test(response.url())) {
+      refused.push(response.url());
+    }
+  });
+  const run = await askForRun(page, "airflow_box", { seed: 68 });
+  await openReplay(page, run);
+
+  await expect(page.getByTestId("field-status")).toContainText("airflow_box_climate", {
+    timeout: COMPUTES,
+  });
+  await expect(page.getByTestId("main-view")).not.toHaveAttribute("data-light", "fixed");
+  await expect(page.getByTestId("climate-failed")).toHaveCount(0);
+  expect(refused).toEqual([]);
 });
 
 test("an address that names no run, or a run that is not kept, says so and offers the way home", async ({
