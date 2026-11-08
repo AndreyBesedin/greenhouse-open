@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { framing } from "../camera";
 import { entityBounds, type OverlayPrimitive } from "../debug/overlays";
+import { Button } from "../design/Button";
 import { HomeButton } from "../landing/HomeButton";
 import {
   BUILDER_PATH,
@@ -795,29 +796,29 @@ export function Builder({
           )}
           {editing !== null && (
             <div className="builder-actions">
-              <button type="button" onClick={startAgain}>
+              <Button size="compact" onClick={startAgain}>
                 Start again
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                size="compact"
                 disabled={editing.history.past.length === 0}
                 onClick={() => step(undone)}
               >
                 Undo
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                size="compact"
                 disabled={editing.history.future.length === 0}
                 onClick={() => step(redone)}
               >
                 Redo
-              </button>
-              <button type="button" disabled={!changed || busy} onClick={() => void save()}>
+              </Button>
+              <Button size="compact" disabled={!changed || busy} onClick={() => void save()}>
                 Save
-              </button>
-              <button type="button" disabled={busy} onClick={exportFile}>
+              </Button>
+              <Button size="compact" disabled={busy} onClick={exportFile}>
                 Download house file
-              </button>
+              </Button>
             </div>
           )}
         </header>
@@ -843,9 +844,9 @@ export function Builder({
                 <p className="builder-note" data-testid="builder-scenarios">
                   The scenarios cannot be listed: {scenarios.reason}
                 </p>
-                <button type="button" disabled={busy} onClick={() => void listScenarios()}>
+                <Button size="compact" disabled={busy} onClick={() => void listScenarios()}>
                   List the scenarios again
-                </button>
+                </Button>
               </section>
             ) : (
               <CopyScenario
@@ -864,17 +865,17 @@ export function Builder({
                 <ul>
                   {drafts.map((draft) => (
                     <li key={draft.draft_id}>
-                      <button type="button" onClick={() => void open(draft.draft_id)}>
+                      <Button size="compact" onClick={() => void open(draft.draft_id)}>
                         {draft.name}
-                      </button>{" "}
+                      </Button>{" "}
                       ({draft.draft_id}, revision {draft.revision})
                     </li>
                   ))}
                 </ul>
               )}
-              <button type="button" onClick={() => importer.current?.click()}>
+              <Button size="compact" onClick={() => importer.current?.click()}>
                 Import a file
-              </button>
+              </Button>
               <input
                 ref={importer}
                 type="file"

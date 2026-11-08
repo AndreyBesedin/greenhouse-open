@@ -1,5 +1,6 @@
 import { type FormEvent, type ReactNode, useId, useState } from "react";
 
+import { Button } from "../design/Button";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import type { Installation } from "./generated/assessedTypes";
 import type { Axis, Edit } from "./generated/editTypes";
@@ -308,9 +309,9 @@ export function Items({
                 {field(inHouse ? "Step along x (m)" : "Step along (m)", "copyX")}
                 {field(inHouse ? "Step along y (m)" : "Step up (m)", "copyY")}
                 {inHouse && field("Step along z (m)", "copyZ")}
-                <button type="button" disabled={busy} onClick={copy}>
+                <Button size="compact" disabled={busy} onClick={copy}>
                   Copy
-                </button>
+                </Button>
               </div>
               <div className="builder-give">
                 {inHouse && (
@@ -325,8 +326,8 @@ export function Items({
                     </select>
                   </label>
                 )}
-                <button
-                  type="button"
+                <Button
+                  size="compact"
                   disabled={busy || ids.length < FEWEST_TO_SPACE}
                   onClick={() =>
                     onEdit(
@@ -338,7 +339,7 @@ export function Items({
                   }
                 >
                   Space evenly
-                </button>
+                </Button>
               </div>
             </>
           )}
@@ -356,17 +357,17 @@ export function Items({
               <span>Value</span>
               <input required value={value} onChange={(event) => setValue(event.target.value)} />
             </label>
-            <button type="submit" disabled={busy}>
+            <Button type="submit" size="compact" disabled={busy}>
               Set it on each
-            </button>
+            </Button>
           </form>
-          <button
-            type="button"
+          <Button
+            size="compact"
             disabled={busy}
             onClick={() => onEdit({ edit: "remove_items", items: ids }, `Removed ${named}.`)}
           >
             Remove
-          </button>
+          </Button>
         </fieldset>
       )}
 
@@ -446,9 +447,13 @@ export function Items({
             {field("Step along z (m)", "stepZ")}
           </>
         )}
-        <button type="submit" disabled={busy || (isOpening && onSurfaces.size === 0)}>
+        <Button
+          type="submit"
+          size="compact"
+          disabled={busy || (isOpening && onSurfaces.size === 0)}
+        >
           Place
-        </button>
+        </Button>
       </form>
     </section>
   );
