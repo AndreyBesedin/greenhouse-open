@@ -1,5 +1,5 @@
 """P18's final scenario, what of it holds without a person looking
-(`docs/roadmap/p18-resources-and-deployment.md`), at a small scale: a batch asked for
+(`docs/roadmap/archive/p18-resources-and-deployment.md`), at a small scale: a batch asked for
 past the room for runs waiting, the rest refused in words; a disk at its floor, which
 refuses the next run; and a server closed mid-batch, after which what waited still
 waits and what was computed is `interrupted`, and is let in again when resumed. Each
