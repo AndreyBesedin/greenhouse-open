@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { loadPlayback, type PlaybackLoad } from "../scene/playback";
 import type { Action } from "./generated/planTypes";
-import { giveToPlan, setLevel, setTarget } from "./plan";
+import { type Given, giveToPlan, setLevel, setTarget } from "./plan";
 
 // How long a slider rests before the levels it set go to the run: one
 // revision for a drag, not one for each step of it.
@@ -11,61 +11,100 @@ export const STEER_PAUSE_MS = 300;
 // text the address writes it in.
 const SAME_LEVEL = 1e-9;
 
-/**
- * A run followed as it plays, steered from the viewer's panels (P13.8): the
- * levels set wait until no more are set for `STEER_PAUSE_MS`, then go to the
- * run's gateway together, as the next revision of the viewer's plan
- * (`giveToPlan`); targets, and what is asked of a plant, go at once. Each level asked for is `asked` until
- * the panels show it (`shown`, the levels the run has at its clock), or it
- * is refused; a refusal is `refusal`, in the gateway's words, until the next
- * change is given; and `given` counts the plans given, for what reads them.
- * Once given, the playback is read again (`onPlayback`), so that the view
- * draws the run with what it was given.
- */
-export function useSteering(
+/** How actions reach the run steered: given, from the moment it says if it
+ * says one, or refused and why. */
+export type Give = (actions: Action[]) => Promise<Given>;
+
+/** How the panels give actions to the run a playback plays, through its plan
+ * (P13.8): once given, the playback is read again (`onPlayback`), so that the
+ * view draws the run with what it was given. */
+export function useGiveToPlayback(
   scenarioId: string | null,
-  shown: Readonly<Record<string, number>>,
   onPlayback: (load: PlaybackLoad) => void,
   fetchFn: typeof fetch = fetch,
+): Give {
+  return useCallback(
+    async (actions: Action[]) => {
+      if (scenarioId === null) {
+        return { status: "refused", reason: "no run is played back" };
+      }
+      const answer = await giveToPlan(scenarioId, actions, fetchFn);
+      onPlayback(await loadPlayback(scenarioId, fetchFn));
+      return answer;
+    },
+    [scenarioId, onPlayback, fetchFn],
+  );
+}
+
+/**
+ * A run steered from the viewer's panels as it is computed: one a playback
+ * plays and the view follows (P13.8, `useGiveToPlayback`), or an epoch a
+ * worker computes, from its replay (P22.1, `useGiveToEpoch`). `steered` names
+ * it, null if none is; `give` is how actions reach it. The levels set wait
+ * until no more are set for `STEER_PAUSE_MS`, then go to the run together;
+ * targets, and what is asked of a plant, go at once. Each level asked for is
+ * `asked` until the panels show it (`shown`, the levels the run has at the
+ * moment they show), or it is refused; a refusal is `refusal`, in the run's
+ * words, until the next change is given; `waiting` counts the changes on
+ * their way and not yet answered; `taken` is the moment the latest change
+ * given took effect from, where the run says it; and `given` counts the
+ * changes given, for what reads them.
+ */
+export function useSteering(
+  steered: string | null,
+  shown: Readonly<Record<string, number>>,
+  give: Give,
 ) {
   const [asked, setAsked] = useState<Readonly<Record<string, number>>>({});
   const [refusal, setRefusal] = useState<string | null>(null);
-  // How many times the run has been given a plan, accepted or refused: what
-  // reads the plan reads it again after each.
+  // How many times the run has been given a change, accepted or refused:
+  // what reads its plan reads it again after each.
   const [given, setGiven] = useState(0);
-  const waiting = useRef<Record<string, number>>({});
+  const [waiting, setWaiting] = useState(0);
+  const [taken, setTaken] = useState<number | null>(null);
+  const resting = useRef<Record<string, number>>({});
+  // The run steered as the latest render named it.
+  const was = useRef(steered);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const give = useCallback(
+  const send = useCallback(
     async (actions: Action[]): Promise<boolean> => {
-      if (scenarioId === null || actions.length === 0) {
+      if (steered === null || actions.length === 0) {
         return false;
       }
-      const answer = await giveToPlan(scenarioId, actions, fetchFn);
+      setWaiting((count) => count + 1);
+      const answer = await give(actions);
+      setWaiting((count) => count - 1);
+      // What another run, steered since, says nothing of the one steered now.
+      if (was.current !== steered) {
+        return false;
+      }
       setRefusal(answer.status === "refused" ? answer.reason : null);
+      if (answer.status === "given" && answer.atS !== undefined) {
+        setTaken(answer.atS);
+      }
       setGiven((count) => count + 1);
-      onPlayback(await loadPlayback(scenarioId, fetchFn));
       return answer.status === "given";
     },
-    [scenarioId, onPlayback, fetchFn],
+    [steered, give],
   );
 
   const flush = useCallback(async () => {
     timer.current = null;
-    const levels = waiting.current;
-    waiting.current = {};
-    const given = await give(
+    const levels = resting.current;
+    resting.current = {};
+    const given = await send(
       Object.entries(levels).map(([deviceId, level]) => setLevel(deviceId, level)),
     );
     if (!given) {
       setAsked((current) => without(current, levels));
     }
-  }, [give]);
+  }, [send]);
 
   /** Sets devices' levels, from the run's clock on. */
   const steer = useCallback(
     (levels: Readonly<Record<string, number>>) => {
-      waiting.current = { ...waiting.current, ...levels };
+      resting.current = { ...resting.current, ...levels };
       setAsked((current) => ({ ...current, ...levels }));
       stopWaiting(timer);
       timer.current = setTimeout(() => void flush(), STEER_PAUSE_MS);
@@ -74,13 +113,13 @@ export function useSteering(
   );
 
   /** Gives actions at once, as a plant's work is. */
-  const act = useCallback((actions: Action[]) => void give(actions), [give]);
+  const act = useCallback((actions: Action[]) => void send(actions), [send]);
 
   /** Sets heating targets, from the run's next minute on. */
   const setTargets = useCallback(
     (targets: Readonly<Record<string, number>>) =>
-      void give(Object.entries(targets).map(([target, valueC]) => setTarget(target, valueC))),
-    [give],
+      void send(Object.entries(targets).map(([target, valueC]) => setTarget(target, valueC))),
+    [send],
   );
 
   // A level asked for stops being one once it is shown.
@@ -96,22 +135,22 @@ export function useSteering(
     });
   }, [shown]);
 
-  // Another run followed, or none: nothing asked of the one before, nor
+  // Another run steered, or none: nothing asked of the one before, nor
   // waiting to be given it.
-  const steered = useRef(scenarioId);
   useEffect(() => {
-    if (steered.current === scenarioId) {
+    if (was.current === steered) {
       return;
     }
-    steered.current = scenarioId;
+    was.current = steered;
     stopWaiting(timer);
-    waiting.current = {};
+    resting.current = {};
     setAsked({});
     setRefusal(null);
-  }, [scenarioId]);
+    setTaken(null);
+  }, [steered]);
   useEffect(() => () => stopWaiting(timer), []);
 
-  return { asked, refusal, given, steer, setTargets, act };
+  return { asked, refusal, waiting, taken, given, steer, setTargets, act };
 }
 
 /** `levels` without the devices `gone` names, as long as they are asked for

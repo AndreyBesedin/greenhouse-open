@@ -131,6 +131,7 @@ export function ScenarioPanels({
   probeHeight,
   playingClimate,
   replayed = false,
+  steersReplayed = false,
   onSeek,
   thermostat = null,
   setpoints,
@@ -166,6 +167,9 @@ export function ScenarioPanels({
   playingClimate: boolean;
   /** Whether a replay of a stored run moves the moment, and not this panel. */
   replayed?: boolean;
+  /** In a replay: whether its epoch is being computed, so that a target or a
+   * level set here steers it (`steering`) rather than forking it (P22.1). */
+  steersReplayed?: boolean;
   /** In a replay: moves the position, which is what moves the moment. */
   onSeek?: (timeS: number) => void;
   /** The thermostat that runs its heater at the moment drawn, if one does. */
@@ -264,7 +268,9 @@ export function ScenarioPanels({
   const openings = snapshot === null ? [] : openingsIn(snapshot);
   // What the Equipment and Openings panels show: the run as it stands at the
   // moment drawn, or at its clock while it is steered as it plays, with the
-  // levels set and not yet shown.
+  // levels set and not yet shown. Those set in a replay are not drawn until
+  // the replay reaches the moment they take, if they are ever to be.
+  const notDrawn = forkLevels?.asked ?? (steersReplayed ? steering?.asked : undefined);
   const steered = steering === undefined ? source : { ...source, time: steering.at };
   const openingIds = openings.map((opening) => opening.openingId);
   const levelsShown = { ...levelsAt(steered), ...steering?.asked };
@@ -372,8 +378,8 @@ export function ScenarioPanels({
           <TargetsPanel
             thermostat={setpoints}
             time={time}
-            followed={source.follow === true}
-            forking={replayed}
+            followed={source.follow === true || steersReplayed}
+            forking={replayed && !steersReplayed}
             noFork={forkLevels?.noFork ?? null}
             forkFrom={forkLevels?.from ?? null}
             onSet={onTargets}
@@ -424,7 +430,7 @@ export function ScenarioPanels({
             <OpeningControls
               snapshot={snapshot}
               requested={openingsShown}
-              notDrawn={forkLevels?.asked}
+              notDrawn={notDrawn}
               fold={fold("openings")}
               onChange={(asked) =>
                 steering === undefined
@@ -437,7 +443,7 @@ export function ScenarioPanels({
             <EquipmentControls
               snapshot={snapshot}
               requested={levelsShown}
-              notDrawn={forkLevels?.asked}
+              notDrawn={notDrawn}
               thermostat={thermostat}
               fold={fold("equipment")}
               onChange={(asked) =>

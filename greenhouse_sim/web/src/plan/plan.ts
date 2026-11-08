@@ -34,9 +34,9 @@ const ATTEMPTS = 2;
 // The identifiers the viewer gives its actions: `change_1`, `change_2`...
 const CHANGE = "change_";
 
-/** What became of actions given: taken into the run's plan, or refused,
- * and why, in the gateway's words. */
-export type Given = { status: "given" } | { status: "refused"; reason: string };
+/** What became of actions given: taken into the run's plan, from the moment
+ * it says if the run says one, or refused, and why, in the gateway's words. */
+export type Given = { status: "given"; atS?: number } | { status: "refused"; reason: string };
 
 /** The run a playback plays, as the gateway names it. */
 export interface PlayedRun {

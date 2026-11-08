@@ -6,7 +6,7 @@ import { CLIMATE_FIELD } from "./fields/source";
 import { WHAT_A_FORK_DOES } from "./replay/useForkQuestion";
 import { ScenarioPanels } from "./ScenarioPanels";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
-import { button, click, type Rendered, render, said } from "./testing/render";
+import { button, click, enter, type Rendered, render, said } from "./testing/render";
 
 // What the weather offers is said by what it is given to do.
 vi.mock("./weather/WeatherPanel", () => ({
@@ -232,6 +232,29 @@ describe("a stored run's panels", () => {
       steering: { at: 0, asked: set, onLevels: vi.fn() },
     });
     expect(said(rendered.container, "equipment-heater")).toBe("off");
+  });
+
+  it("steers a running epoch with what is set in them, and offers no fork of it", () => {
+    const set = { heater: 1 };
+    const onTargets = vi.fn();
+    rendered = panels({
+      replayed: true,
+      steersReplayed: true,
+      snapshot: EQUIPPED,
+      setpoints: { actuatorId: "heater", setpointC: 18, dayC: 18, nightC: 16, runs: true },
+      onTargets,
+      steering: { at: 0, asked: set, onLevels: vi.fn() },
+    });
+    const { container } = rendered;
+
+    expect(container.querySelector('[data-testid="fork-levels"]')).toBeNull();
+    // The replay reaches the moment the level takes only later, if it does.
+    expect(said(container, "equipment-heater")).toBe("off, set to 100%");
+    const day = container.querySelector<HTMLInputElement>('input[type="number"]');
+    enter(day as HTMLInputElement, "24");
+    click(button(container, "Set from the run's next minute"));
+    expect(container.querySelector('[data-testid="fork-question"]')).toBeNull();
+    expect(onTargets).toHaveBeenCalledWith({ heating_day: 24 });
   });
 
   it("names the levels set as the panels do, not by their identifiers", () => {

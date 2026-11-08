@@ -4,8 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { PlaybackLoad } from "../scene/playback";
 import { render } from "../testing/render";
+import type { Given } from "./plan";
 import { plansUrl, VIEWER_PLAN } from "./plan";
-import { STEER_PAUSE_MS, useSteering } from "./useSteering";
+import { type Give, STEER_PAUSE_MS, useGiveToPlayback, useSteering } from "./useSteering";
 
 const RUN_ID = "climate_box-climate-0f00ba11";
 const PLAYBACK = {
@@ -38,8 +39,37 @@ function Steered({
   shown: Readonly<Record<string, number>>;
   fetchFn: typeof fetch;
 }) {
-  steering = useSteering("climate_box", shown, (load) => played.push(load), fetchFn);
+  const give = useGiveToPlayback("climate_box", (load) => played.push(load), fetchFn);
+  steering = useSteering("climate_box", shown, give);
   return null;
+}
+
+/** Steered through `give`, whatever reaches the run, under the name `steered`. */
+function SteeredBy({
+  steered,
+  give,
+  shown = {},
+}: {
+  steered: string | null;
+  give: Give;
+  shown?: Readonly<Record<string, number>>;
+}) {
+  steering = useSteering(steered, shown, give);
+  return null;
+}
+
+/** A run that answers each change once `answer` is called, as an epoch's
+ * worker answers once it has taken it. */
+function answeredLater() {
+  const asked: unknown[] = [];
+  let answer: (given: Given) => void = () => undefined;
+  const give: Give = (actions) => {
+    asked.push(actions);
+    return new Promise((resolve) => {
+      answer = resolve;
+    });
+  };
+  return { give, asked, answer: (given: Given) => answer(given) };
 }
 
 /** A gateway that takes every plan given, and records what was asked of it. */
@@ -150,5 +180,71 @@ describe("a followed run steered from the panels", () => {
     expect(given[0]).toMatchObject({
       actions: [{ action: { kind: "lower", plant_id: "p30" }, timing: { kind: "asap" } }],
     });
+  });
+});
+
+describe("a run steered through whatever gives it its changes", () => {
+  afterEach(() => {
+    steering = null;
+  });
+
+  it("says a change is waiting until the run answers, then the moment it took effect from", async () => {
+    const run = answeredLater();
+    render(<SteeredBy steered="epoch#0" give={run.give} />);
+
+    act(() => steering?.setTargets({ heating_day: 24 }));
+    expect(steering?.waiting).toBe(1);
+    expect(steering?.taken).toBeNull();
+    expect(run.asked).toEqual([[{ kind: "set_target", target: "heating_day", value_c: 24 }]]);
+
+    await act(async () => run.answer({ status: "given", atS: 86_460 }));
+    expect(steering?.waiting).toBe(0);
+    expect(steering?.taken).toBe(86_460);
+    expect(steering?.refusal).toBeNull();
+  });
+
+  it("says why the run refused a change, and keeps the moment of none", async () => {
+    const run = answeredLater();
+    render(<SteeredBy steered="epoch#0" give={run.give} />);
+
+    act(() => steering?.setTargets({ heating_day: 24 }));
+    await act(async () => run.answer({ status: "refused", reason: "it takes no more changes" }));
+
+    expect(steering?.refusal).toBe("it takes no more changes");
+    expect(steering?.taken).toBeNull();
+  });
+
+  it("drops what a run steered before says, once another is steered", async () => {
+    const run = answeredLater();
+    const shown = render(<SteeredBy steered="epoch#0" give={run.give} />);
+    act(() => steering?.setTargets({ heating_day: 24 }));
+
+    shown.rerender(<SteeredBy steered={null} give={run.give} />);
+    await act(async () => run.answer({ status: "refused", reason: "too late" }));
+
+    expect(steering?.refusal).toBeNull();
+    expect(steering?.waiting).toBe(0);
+  });
+
+  it("keeps what became of a change while the same run is steered", async () => {
+    // A replay's epoch is the run steered whether or not it is still computed.
+    const run = answeredLater();
+    const shown = render(<SteeredBy steered="epoch#0" give={run.give} />);
+    act(() => steering?.setTargets({ heating_day: 24 }));
+
+    shown.rerender(<SteeredBy steered="epoch#0" give={run.give} />);
+    await act(async () => run.answer({ status: "refused", reason: "it ended first" }));
+
+    expect(steering?.refusal).toBe("it ended first");
+  });
+
+  it("gives nothing while no run is steered", () => {
+    const run = answeredLater();
+    render(<SteeredBy steered={null} give={run.give} />);
+
+    act(() => steering?.setTargets({ heating_day: 24 }));
+
+    expect(run.asked).toEqual([]);
+    expect(steering?.waiting).toBe(0);
   });
 });

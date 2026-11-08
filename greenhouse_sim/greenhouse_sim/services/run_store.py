@@ -22,9 +22,11 @@ state folder is its first backend (`FolderStore`). An epoch's objects, under
   written before it is acted on (P17.8);
 - `requests/{id}.json`: a change asked of the epoch by someone other than its
   worker, the only way one reaches it (the store is the only channel between
-  a worker and the API), and `answers/{id}.json`, why its worker did not take
-  it. Each is written once, by the one side, so that no two writers share an
-  object;
+  a worker and the API), `answers/{id}.json`, why its worker did not take
+  it, and `done/{id}.json`, that its worker has finished with it, after it
+  logged it and acted on it or refused it: a reader that sees a request logged
+  knows it was acted on only once it is done. Each is written once, by the one
+  side, so that no two writers share an object;
 - `stop.json`: that the epoch's worker is asked to stop, for a worker no process
   that asks can signal (the one of a server that was killed, or on another
   machine). The worker reads it between its moments and ends `interrupted`; it
@@ -1098,6 +1100,19 @@ class EpochStore:
         found = (self.objects.get(n) for n in self.objects.names(f"{self._home}/answers/"))
         return [Answer.model_validate_json(data) for data in found if data is not None]
 
+    def done(self, request: str) -> None:
+        """Says its worker has finished with a request: logged and acted on, or
+        refused, as its answer then says. Written last, so that what reads it
+        reads the request's whole outcome."""
+        self.objects.put(f"{self._home}/done/{request}.json", b"{}")
+
+    def done_requests(self) -> list[str]:
+        """The requests its worker has finished with, in the order they were asked."""
+        prefix = f"{self._home}/done/"
+        return [
+            name.removeprefix(prefix).removesuffix(".json") for name in self.objects.names(prefix)
+        ]
+
     def _log_bytes(self, position: int) -> bytes:
         """The log's first `position` entries as a trajectory's digest takes
         them: what each is, and not the name of the request that brought it,
@@ -1311,6 +1326,7 @@ class EpochStore:
         spared = (
             f"{self._home}/requests/",
             f"{self._home}/answers/",
+            f"{self._home}/done/",
             f"{self._home}/{_STOP_ASKED}",
         )
         removed = []
