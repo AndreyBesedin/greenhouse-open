@@ -79,7 +79,7 @@ describe("the runs of a scenario, in a dialog", () => {
     vi.unstubAllGlobals();
   });
 
-  function shown(runs: StoredRun[], newRun = false) {
+  function shown(runs: StoredRun[]) {
     const onClose = vi.fn();
     const onChanged = vi.fn();
     const navigate = vi.fn();
@@ -87,7 +87,6 @@ describe("the runs of a scenario, in a dialog", () => {
       <RunsDialog
         scenario={SCENARIO}
         runs={runs}
-        newRun={newRun}
         navigate={navigate}
         onClose={onClose}
         onChanged={onChanged}
@@ -184,12 +183,21 @@ describe("the runs of a scenario, in a dialog", () => {
     ]);
   });
 
-  it("says so when there is no run yet, and offers the form for one", () => {
+  it("leads with the form for a new run, and lists the runs under it", () => {
     const { container, field, choice } = shown([]);
+    const headings = [...container.querySelectorAll("h3")].map((each) => each.textContent);
+    expect(headings).toEqual(["New run", "Its runs"]);
+    const form = container.querySelector("form");
+    expect(form?.getAttribute("aria-labelledby")).toBe(container.querySelector("h3")?.id);
+    expect(form?.compareDocumentPosition(container.querySelector(".landing-empty") as Node)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
     expect(container.textContent).toContain("No runs of this scenario yet.");
-    expect(container.querySelector("form")).toBeNull();
-
-    click(button(container, "New run"));
+    // No button opens or folds it: it is there from the start (P22.4).
+    expect([...container.querySelectorAll("button")].map((each) => each.textContent)).toEqual([
+      "Close",
+      "Start run",
+    ]);
 
     expect(field("Seed").placeholder).toBe("The scenario's own");
     expect(field("Seconds per simulated day").value).toBe("10");
@@ -203,7 +211,7 @@ describe("the runs of a scenario, in a dialog", () => {
   });
 
   it("says what the scenario's crop is, and offers a new scenario made from it", () => {
-    const { container } = shown([], true);
+    const { container } = shown([]);
 
     expect(container.querySelector(".landing-crop")?.textContent).toContain(
       "Its crop: 32 plants, grown by the organ crop model.",
@@ -222,7 +230,7 @@ describe("the runs of a scenario, in a dialog", () => {
       const asked = simulator({
         [`POST ${RUNS_URL}?seed=75&seconds_per_day=4`]: { status: 200, body: STARTED },
       });
-      const { container, field, navigate } = shown([], true);
+      const { container, field, navigate } = shown([]);
 
       enter(field("Seed"), "7x5");
       enter(field("Seconds per simulated day"), "4");
@@ -236,27 +244,24 @@ describe("the runs of a scenario, in a dialog", () => {
 
     it("asks for it under the weather and for the days chosen, and repeats it by its seed", async () => {
       const asked = simulator({}, { status: 200, body: STARTED });
-      const { container, field, choice, navigate } = shown([], true);
+      async function startedOnce(): Promise<void> {
+        const { container, field, choice, navigate } = shown([]);
+        enter(field("Days"), "10");
+        act(() => {
+          const weather = choice("Weather");
+          weather.value = "cold_spring_day";
+          weather.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+        enter(field("Seed"), "7");
+        click(button(container, "Start run"));
+        await vi.waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
+        // Still starting as the page goes: no second press on the way.
+        expect(button(container, "Start run").disabled).toBe(true);
+        drawn?.unmount();
+      }
 
-      enter(field("Days"), "10");
-      act(() => {
-        const weather = choice("Weather");
-        weather.value = "cold_spring_day";
-        weather.dispatchEvent(new Event("change", { bubbles: true }));
-      });
-      enter(field("Seed"), "7");
-      click(button(container, "Start run"));
-      await vi.waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
-      click(button(container, "New run"));
-      enter(field("Days"), "10");
-      act(() => {
-        const weather = choice("Weather");
-        weather.value = "cold_spring_day";
-        weather.dispatchEvent(new Event("change", { bubbles: true }));
-      });
-      enter(field("Seed"), "7");
-      click(button(container, "Start run"));
-      await vi.waitFor(() => expect(navigate).toHaveBeenCalledTimes(2));
+      await startedOnce();
+      await startedOnce();
 
       const once = `${RUNS_URL}?seed=7&seconds_per_day=10&weather=cold_spring_day&duration_days=10`;
       expect(asked.filter((each) => each.method === "POST").map((each) => each.url)).toEqual([
@@ -267,7 +272,7 @@ describe("the runs of a scenario, in a dialog", () => {
 
     it("asks for its own days as none, as for its own weather", async () => {
       const asked = simulator({}, { status: 200, body: STARTED });
-      const { container, navigate } = shown([], true);
+      const { container, navigate } = shown([]);
 
       click(button(container, "Start run"));
 
@@ -279,7 +284,7 @@ describe("the runs of a scenario, in a dialog", () => {
       "refuses %j days before asking: from 1 to the scenario's own",
       (days) => {
         const asked = simulator();
-        const { container, field } = shown([], true);
+        const { container, field } = shown([]);
 
         enter(field("Days"), days);
 
@@ -299,7 +304,7 @@ describe("the runs of a scenario, in a dialog", () => {
     );
 
     it("says what the seed's default is and means, as a placeholder and not a value", () => {
-      const { container, field } = shown([], true);
+      const { container, field } = shown([]);
       const seed = field("Seed");
 
       expect(seed.value).toBe("");
@@ -312,7 +317,7 @@ describe("the runs of a scenario, in a dialog", () => {
 
     it("leaves out a seed and a pace not entered: the scenario's own, as fast as it computes", async () => {
       const asked = simulator({ [`POST ${RUNS_URL}?`]: { status: 200, body: STARTED } });
-      const { container, field, navigate } = shown([], true);
+      const { container, field, navigate } = shown([]);
 
       enter(field("Seconds per simulated day"), "");
       click(button(container, "Start run"));
@@ -330,7 +335,7 @@ describe("the runs of a scenario, in a dialog", () => {
           }),
       );
       vi.stubGlobal("fetch", fetchFn);
-      const { container, navigate } = shown([], true);
+      const { container, navigate } = shown([]);
 
       click(button(container, "Start run"));
       click(button(container, "Start run"));
@@ -345,7 +350,7 @@ describe("the runs of a scenario, in a dialog", () => {
         {},
         { status: 400, body: { error: "a day takes some time to play" } },
       );
-      const { container, navigate } = shown([], true);
+      const { container, navigate } = shown([]);
 
       click(button(container, "Start run"));
 
@@ -366,7 +371,7 @@ describe("the runs of a scenario, in a dialog", () => {
       const limit =
         "2 runs waiting for a worker, and this simulator lets 2 runs wait: ask again once some have begun, or raise that limit";
       simulator({}, { status: 409, body: { error: limit } });
-      const { container, navigate } = shown([], true);
+      const { container, navigate } = shown([]);
 
       click(button(container, "Start run"));
 
@@ -385,7 +390,7 @@ describe("the runs of a scenario, in a dialog", () => {
 
     it("says when the answer is not a run", async () => {
       simulator({}, { status: 200, body: { not: "a run" } });
-      const { container, navigate } = shown([], true);
+      const { container, navigate } = shown([]);
 
       click(button(container, "Start run"));
 

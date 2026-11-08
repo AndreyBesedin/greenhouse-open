@@ -1957,6 +1957,19 @@
   opacity: 0.85;
 }
 
+/* The form's heading and the list's, each over what it names. */
+.landing-form-heading {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--font-xl);
+}
+
+.landing-runs-heading {
+  margin: 0;
+  padding: var(--space-6) var(--space-7) var(--space-3);
+  font-size: var(--font-xl);
+}
+
 /* The scenario's crop, and the way to another, on the form's first line; the seed,
  * small, on a line of its own over what leaving it empty means. */
 .landing-crop {

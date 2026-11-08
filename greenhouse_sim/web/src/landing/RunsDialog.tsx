@@ -45,13 +45,13 @@ export function daysProblem(days: string, most: number): string | undefined {
  * to stop, resume and remove one (P17.5, decision 0065). A run is started for
  * its days and under its weather, its scenario's own unless others are chosen,
  * and its crop is the scenario's, which a new scenario made from it changes
- * (P22.4, decision 0075). A run started is a worker's, beside any others, and
- * the page goes to its replay. A modal dialog: the browser keeps the keyboard in
- * it and closes it on Escape. */
+ * (P22.4, decision 0075). It leads with the form for a new run, and lists the
+ * runs under it. A run started is a worker's, beside any others, and the page
+ * goes to its replay. A modal dialog: the browser keeps the keyboard in it and
+ * closes it on Escape. */
 export function RunsDialog({
   scenario,
   runs,
-  newRun = false,
   navigate,
   onClose,
   onChanged,
@@ -59,8 +59,6 @@ export function RunsDialog({
   scenario: ScenarioSummary;
   /** The scenario's runs, the newest first. */
   runs: readonly StoredRun[];
-  /** Whether the form for a new run is open as the dialog opens. */
-  newRun?: boolean;
   /** Goes to another page. */
   navigate: (address: string) => void;
   onClose: () => void;
@@ -68,9 +66,10 @@ export function RunsDialog({
   onChanged: () => void;
 }) {
   const heading = useId();
+  const newHeading = useId();
+  const runsHeading = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
-  const [formOpen, setFormOpen] = useState(newRun);
   const [days, setDays] = useState(String(scenario.duration_days));
   const [weather, setWeather] = useState(DEFAULT_WEATHER);
   const [seed, setSeed] = useState("");
@@ -119,16 +118,13 @@ export function RunsDialog({
       weather,
       days: fewer,
     });
-    setStarting(false);
     if (!answer.ok) {
+      setStarting(false);
       deletion.setProblem(notDoneText("started", answer.problem));
       return;
     }
+    // Still starting as the page goes, so that no second press is on the way.
     deletion.setProblem(null);
-    // The form goes as the page does: no second press on the way, and none
-    // left open on the page a person comes back to.
-    setFormOpen(false);
-    setSeed("");
     onChanged();
     navigate(replayAddress(answer.value.run_id, answer.value.epoch, true));
   }
@@ -145,106 +141,111 @@ export function RunsDialog({
           </p>
         </div>
         <div className="landing-dialog-actions">
-          <button type="button" className="landing-button" onClick={() => setFormOpen(!formOpen)}>
-            New run
-          </button>
           <button type="button" className="landing-button" onClick={close}>
             Close
           </button>
         </div>
       </header>
 
-      {formOpen && (
-        <form className="landing-form" onSubmit={(event) => void submit(event)}>
-          <p className="landing-crop">
-            <span>Its crop: {cropText(scenario)}.</span>
-            <LinkButton href={copyAddress(scenario.id)} size="compact">
-              Make a new scenario from this one
-            </LinkButton>
-          </p>
-          <Field
-            label="Days"
-            hint={`Up to its own ${scenario.duration_days}; a longer run is a scenario of its own.`}
-            problem={refusedDays}
-          >
-            {(control) => (
-              <input
-                {...control}
-                className={landed(control.className)}
-                type="number"
-                min={1}
-                max={scenario.duration_days}
-                step={1}
-                required
-                value={days}
-                onChange={(event) => setDays(event.target.value)}
-              />
-            )}
-          </Field>
-          <Field label="Weather">
-            {(control) => (
-              <select
-                {...control}
-                className={landed(control.className)}
-                value={weather}
-                onChange={(event) => setWeather(event.target.value)}
-              >
-                {weathers.map((each) => (
-                  <option key={each} value={each}>
-                    {weatherName(each)}
-                  </option>
-                ))}
-              </select>
-            )}
-          </Field>
-          <Field label="Seconds per simulated day">
-            {(control) => (
-              <input
-                {...control}
-                className={landed(control.className)}
-                type="number"
-                min={1}
-                step={1}
-                placeholder="As fast as it computes"
-                value={pace}
-                onChange={(event) => setPace(event.target.value)}
-              />
-            )}
-          </Field>
-          <Field
-            label="Seed"
-            hint="The default. With no seed, the run uses the scenario's own, so the same choices give the same run."
-            size="compact"
-            className="landing-seed"
-          >
-            {(control) => (
-              <input
-                {...control}
-                className={landed(control.className)}
-                type="text"
-                inputMode="numeric"
-                placeholder="The scenario's own"
-                value={seed}
-                onChange={(event) => setSeed(event.target.value.replace(/\D/g, ""))}
-              />
-            )}
-          </Field>
-          <Button type="submit" tone="primary" disabled={starting || refusedDays !== undefined}>
-            Start run
-          </Button>
-          <p className="landing-note">
-            A worker computes it beside the runs already going, or it waits for one. Its replay
-            opens at the newest day.
-          </p>
-        </form>
-      )}
+      <form
+        className="landing-form"
+        aria-labelledby={newHeading}
+        onSubmit={(event) => void submit(event)}
+      >
+        <h3 id={newHeading} className="landing-form-heading">
+          New run
+        </h3>
+        <p className="landing-crop">
+          <span>Its crop: {cropText(scenario)}.</span>
+          <LinkButton href={copyAddress(scenario.id)} size="compact">
+            Make a new scenario from this one
+          </LinkButton>
+        </p>
+        <Field
+          label="Days"
+          hint={`Up to its own ${scenario.duration_days}; a longer run is a scenario of its own.`}
+          problem={refusedDays}
+        >
+          {(control) => (
+            <input
+              {...control}
+              className={landed(control.className)}
+              type="number"
+              min={1}
+              max={scenario.duration_days}
+              step={1}
+              required
+              value={days}
+              onChange={(event) => setDays(event.target.value)}
+            />
+          )}
+        </Field>
+        <Field label="Weather">
+          {(control) => (
+            <select
+              {...control}
+              className={landed(control.className)}
+              value={weather}
+              onChange={(event) => setWeather(event.target.value)}
+            >
+              {weathers.map((each) => (
+                <option key={each} value={each}>
+                  {weatherName(each)}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <Field label="Seconds per simulated day">
+          {(control) => (
+            <input
+              {...control}
+              className={landed(control.className)}
+              type="number"
+              min={1}
+              step={1}
+              placeholder="As fast as it computes"
+              value={pace}
+              onChange={(event) => setPace(event.target.value)}
+            />
+          )}
+        </Field>
+        <Field
+          label="Seed"
+          hint="The default. With no seed, the run uses the scenario's own, so the same choices give the same run."
+          size="compact"
+          className="landing-seed"
+        >
+          {(control) => (
+            <input
+              {...control}
+              className={landed(control.className)}
+              type="text"
+              inputMode="numeric"
+              placeholder="The scenario's own"
+              value={seed}
+              onChange={(event) => setSeed(event.target.value.replace(/\D/g, ""))}
+            />
+          )}
+        </Field>
+        <Button type="submit" tone="primary" disabled={starting || refusedDays !== undefined}>
+          Start run
+        </Button>
+        <p className="landing-note">
+          A worker computes it beside the runs already going, or it waits for one. Its replay opens
+          at the newest day.
+        </p>
+      </form>
 
       {deletion.problem !== null && <Notice kind="problem">{deletion.problem}</Notice>}
       {deletion.notOver !== null && <Notice kind="problem">{deletion.notOver}</Notice>}
+      <h3 id={runsHeading} className="landing-runs-heading">
+        Its runs
+      </h3>
       {runs.length === 0 ? (
-        <p className="landing-empty">No runs of this scenario yet. Start one with New run.</p>
+        <p className="landing-empty">No runs of this scenario yet.</p>
       ) : (
-        <ul className="landing-runs">
+        <ul className="landing-runs" aria-labelledby={runsHeading}>
           {runs.map((run) => {
             const key = `${run.run_id}/${run.epoch}`;
             const who = whoIs(run);
