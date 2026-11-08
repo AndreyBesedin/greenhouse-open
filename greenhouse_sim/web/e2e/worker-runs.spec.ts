@@ -106,10 +106,11 @@ test("two runs of one scenario are computed at once, from the dialog, each follo
     await expect(inDialog).toContainText("Running", WORKS);
     const dialogDays = await daysIn(inDialog);
     await expect.poll(() => daysIn(inDialog), WORKS).toBeGreaterThan(dialogDays);
-    await expect(inDialog.getByRole("link", { name: "Follow" })).toHaveAttribute(
-      "href",
-      /\/replay\?.*&follow=1$/,
-    );
+    // Its one way to watch it, its replay, follows its newest day (P22.2).
+    await expect(inDialog.getByRole("link")).toHaveCount(1);
+    await expect(
+      inDialog.getByRole("link", { name: /^Replay the run with seed 72,/ }),
+    ).toHaveAttribute("href", /\/replay\?.*&follow=1$/);
     // No playback was asked after: a worker's scenario has none, and asking
     // would be a 404 each time the runs are.
     expect(errors).toEqual([]);

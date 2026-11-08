@@ -457,7 +457,7 @@ describe("the page where a person decides what to do", () => {
     expect(container.querySelector("dialog form")).not.toBeNull();
   });
 
-  it("lists the latest runs in words, and follows only one being computed", async () => {
+  it("lists the latest runs in words, with one way to watch each", async () => {
     const running = run({
       epoch: 1,
       seed: 2,
@@ -495,10 +495,17 @@ describe("the page where a person decides what to do", () => {
     expect(rows[1]).toContain("Interrupted");
     expect(rows[2]).toContain("Failed");
     expect(rows[2]).not.toContain("Oct");
-    const follows = () =>
-      [...container.querySelectorAll("a")].filter((each) => each.textContent === "Follow");
-    expect(follows().map((each) => each.getAttribute("href"))).toEqual([
-      replayAddress(running.run_id, 1, true),
+    // One way to watch each (P22.2): its replay, following the newest day of the
+    // one being computed.
+    const watches = [...container.querySelectorAll(".landing-run")].map((row) =>
+      [...row.querySelectorAll("a")]
+        .filter((each) => each.textContent === "Replay" || each.textContent === "Follow")
+        .map((each) => each.getAttribute("href")),
+    );
+    expect(watches).toEqual([
+      [replayAddress(running.run_id, 1, true)],
+      [replayAddress(running.run_id, 0)],
+      [replayAddress(running.run_id, 3)],
     ]);
   });
 
