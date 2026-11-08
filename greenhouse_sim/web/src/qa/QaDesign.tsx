@@ -2,8 +2,13 @@ import { type CSSProperties, useEffect, useRef } from "react";
 
 import { Button } from "../design/Button";
 import type { ButtonSize, ButtonTone } from "../design/buttonClass";
+import { Field } from "../design/Field";
+import { Fold } from "../design/Fold";
 import { IconButton } from "../design/IconButton";
 import { LinkButton } from "../design/LinkButton";
+import { Notice } from "../design/Notice";
+import { StatusChip, type StatusTone } from "../design/StatusChip";
+import { useFolds } from "../folds";
 import { HomeIcon } from "../icons";
 
 // Every token of `tokens.css`, which a browser test holds against that file.
@@ -55,18 +60,11 @@ const LENGTHS = [
 
 const TONES: readonly ButtonTone[] = ["plain", "primary", "danger"];
 const SIZES: readonly ButtonSize[] = ["target", "compact"];
+const STATUS_TONES: readonly StatusTone[] = ["plain", "active", "problem"];
 
 // Written here, not in a stylesheet, so that no page of the viewer's carries this
-// one's rules in the styles' budget.
-const PAGE: CSSProperties = {
-  boxSizing: "border-box",
-  minHeight: "100%",
-  padding: "var(--space-5)",
-  background: "var(--surface-page)",
-  color: "var(--text)",
-  colorScheme: "var(--scheme)",
-  fontSize: "var(--font-sm)",
-};
+// one's rules in the styles' budget; its ground and text are `.ds-page`'s.
+const PAGE: CSSProperties = { padding: "var(--space-5)", fontSize: "var(--font-sm)" };
 const ROW: CSSProperties = {
   display: "flex",
   flexWrap: "wrap",
@@ -123,8 +121,9 @@ function ButtonsOf({ tone, size }: { tone: ButtonTone; size: ButtonSize }) {
 export function QaDesign() {
   const focused = useRef<HTMLButtonElement>(null);
   useEffect(() => focused.current?.focus(), []);
+  const fold = useFolds<"open" | "folded">(["open"]);
   return (
-    <main style={PAGE}>
+    <main className="ds-page" style={PAGE}>
       <h1 style={HEADING}>Design system</h1>
       <h2 style={HEADING}>Colours</h2>
       <ul style={ROW}>
@@ -167,6 +166,47 @@ export function QaDesign() {
       {SIZES.flatMap((size) =>
         TONES.map((tone) => <ButtonsOf key={`${tone}-${size}`} tone={tone} size={size} />),
       )}
+      <h2 style={HEADING}>Fields</h2>
+      <div style={ROW}>
+        <Field label="a field">{(control) => <input {...control} />}</Field>
+        <Field label="a field, with a hint" hint="what it takes">
+          {(control) => <input {...control} defaultValue="a value" />}
+        </Field>
+        <Field label="a field, with a problem" hint="what it takes" problem="why it is refused">
+          {(control) => <input {...control} defaultValue="a value refused" />}
+        </Field>
+        <Field label="a field, disabled">
+          {(control) => <input {...control} defaultValue="a value" disabled />}
+        </Field>
+        <Field label="a choice">
+          {(control) => (
+            <select {...control}>
+              <option>an option</option>
+            </select>
+          )}
+        </Field>
+      </div>
+      <h2 style={HEADING}>Status chips</h2>
+      <div style={ROW}>
+        {STATUS_TONES.map((tone) => (
+          <StatusChip key={tone} tone={tone}>
+            {tone}
+          </StatusChip>
+        ))}
+        <StatusChip tone="problem" note="what it means">
+          problem, with a note
+        </StatusChip>
+      </div>
+      <h2 style={HEADING}>Notices</h2>
+      <Notice kind="status">a status</Notice>
+      <Notice kind="problem">a problem</Notice>
+      <h2 style={HEADING}>Folds</h2>
+      <Fold summary="open" {...fold("open")}>
+        <p>what it holds</p>
+      </Fold>
+      <Fold summary="folded" {...fold("folded")}>
+        <p>what it holds, folded</p>
+      </Fold>
     </main>
   );
 }
