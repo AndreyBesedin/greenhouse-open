@@ -1,9 +1,9 @@
 # P18: Resources counted and limited, and a run that can move
 
-**Status:** accepted, in progress (P18.1 to P18.6 are done, its final QA recorded): the design below, with decision
-[0067](../decisions/0067-a-runs-resources-are-counted-and-limited-and-all-it-needs-is-in-the-store.md).
+**Status:** done (P18.1 to P18.6, its final QA recorded): the design below, with decision
+[0067](../../decisions/0067-a-runs-resources-are-counted-and-limited-and-all-it-needs-is-in-the-store.md).
 Part of the
-[simulator roadmap](README.md).
+[simulator roadmap](../README.md).
 
 ## Goal
 
@@ -148,8 +148,8 @@ can follow in any order.
 
 From P13, for its open steps to weigh: a playback's gateway bounds each plan, at 1,000
 occurrences, but not how many plans a run holds, and no route serves its limits
-([P13.7](archive/p13-actions.md#settled-in-p137)); and under load a followed run's view fell up
-to 9 hours behind a paused clock ([P13's final QA](archive/p13-actions.md#recorded-at-88f35bae)).
+([P13.7](p13-actions.md#settled-in-p137)); and under load a followed run's view fell up
+to 9 hours behind a paused clock ([P13's final QA](p13-actions.md#recorded-at-88f35bae)).
 
 ### What P18.2 counts
 
@@ -445,7 +445,7 @@ failure caught was that test, on its last line:
 the first push of this record, in the pre-push hook's `uv run check --fast`, and passed the
 second. The simulator is
 not at fault: the test is, and the other tests of the room fix the free bytes they compare.
-It is left for a change of its own.
+It is left for a change of its own, and that test fixes the free bytes since (#634).
 
 ## Out of scope
 
@@ -453,6 +453,8 @@ Everything in 0067's *Not built now*: accounts, an object-store backend, workers
 other machines, a catalogue, retention, fairness between parties.
 
 ## Open questions
+
+Carried to [future work](../future-work.md#resources-and-limits-after-p18) as P18 closed.
 
 1. **The defaults.** 200 waiting runs and a 2 GB floor are judgements, not
    measurements. A training batch would raise the first; a small disk, the second.
