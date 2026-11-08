@@ -118,6 +118,18 @@
       "title": "Layout",
       "type": "string"
     },
+    "weather": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Weather"
+    },
     "status": {
       "$ref": "#/$defs/Status"
     },
@@ -259,6 +271,7 @@
     "scenario_id",
     "seed",
     "layout",
+    "weather",
     "status",
     "paused",
     "frontier_s",

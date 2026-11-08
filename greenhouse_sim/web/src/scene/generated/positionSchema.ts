@@ -122,6 +122,18 @@ export const POSITION_SCHEMA = {
       ],
       "title": "Seed"
     },
+    "weather": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Weather"
+    },
     "status": {
       "$ref": "#/$defs/Status"
     },
@@ -270,6 +282,7 @@ export const POSITION_SCHEMA = {
     "epoch",
     "layout",
     "seed",
+    "weather",
     "status",
     "paused",
     "started_at",

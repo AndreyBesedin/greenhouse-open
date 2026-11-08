@@ -13,7 +13,7 @@ import pytest
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import playback
-from greenhouse_sim.services.errors import Conflict
+from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.run_store import EpochManifest, EpochStore, FolderStore, Status
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.sensors import delivered_between
@@ -27,6 +27,7 @@ import short_runs
 
 SHORT: Final = "climate_box_short"
 DAYS: Final = 2
+COLD: Final = "cold_spring_day"
 WAIT_S: Final = 180.0
 
 
@@ -102,6 +103,70 @@ def test_the_three_drivers_write_the_same_epoch(simulator: Simulator, tmp_path: 
     assert execute(simulator, stepped, Stepped(hourly)) == Status.FINISHED
 
     assert _trajectory(free) == _trajectory(paced) == _trajectory(stepped)
+
+
+def _values(epoch: EpochStore) -> dict[str, object]:
+    """What its sensors read, by observation: not the run they are of."""
+    return {o.observation_id: o.value for o in epoch.observations().records}
+
+
+def test_a_run_under_another_weather_is_another_run_its_worker_computes_under_it(
+    simulator: Simulator, tmp_path: Path
+) -> None:
+    """Decision 0075: a weather is a run's, as its seed is; its own, named or not,
+    is the run it always was, and another is repeated by its seed."""
+    objects = FolderStore(tmp_path)
+    own = queued(simulator, objects, SHORT)
+    named_own = queued(simulator, objects, SHORT, weather="default")
+    cold = queued(simulator, objects, SHORT, weather=COLD)
+    seeded = queued(simulator, objects, SHORT, weather=COLD, seed=5)
+    again = queued(simulator, objects, SHORT, weather=COLD, seed=5)
+
+    assert named_own.run_id == own.run_id and named_own.manifest().weather is None
+    assert cold.run_id != own.run_id and cold.manifest().weather == COLD
+    assert seeded.run_id not in (own.run_id, cold.run_id) and again.run_id == seeded.run_id
+    for epoch in (own, cold, seeded, again):
+        assert execute(simulator, epoch, Free()) == Status.FINISHED
+
+    assert _values(cold).keys() == _values(own).keys()
+    assert _values(cold) != _values(own)
+    assert _trajectory(again) == _trajectory(seeded)
+
+
+def test_a_run_for_fewer_days_is_the_same_run_ended_sooner(
+    simulator: Simulator, tmp_path: Path
+) -> None:
+    objects = FolderStore(tmp_path)
+    whole = queued(simulator, objects, SHORT)
+    short = queued(simulator, objects, SHORT, duration_days=1)
+
+    assert short.run_id == whole.run_id and short.manifest().duration_s == DAY_S
+    assert execute(simulator, whole, Free()) == Status.FINISHED
+    assert execute(simulator, short, Free()) == Status.FINISHED
+
+    assert [(c.start_s, c.end_s) for c in short.commits()] == [(0.0, DAY_S)]
+    assert short.checkpoint_at(DAY_S) == whole.checkpoint_at(DAY_S)
+    read = [o.model_dump_json() for o in short.observations().records]
+    assert read == [o.model_dump_json() for o in whole.observations().records][: len(read)]
+
+
+@pytest.mark.parametrize(
+    ("asked", "refused"),
+    [
+        ({"weather": "no_such_weather"}, NotFound),
+        ({"weather": f"{COLD}@80"}, InvalidRequest),
+        ({"weather": "default#7"}, InvalidRequest),
+        ({"duration_days": 0}, InvalidRequest),
+        ({"duration_days": DAYS + 1}, InvalidRequest),
+    ],
+)
+def test_a_weather_or_a_duration_refused_starts_nothing(
+    simulator: Simulator, tmp_path: Path, asked: dict[str, Any], refused: type[Exception]
+) -> None:
+    objects = FolderStore(tmp_path)
+    with pytest.raises(refused):
+        queued(simulator, objects, SHORT, **asked)
+    assert objects.children() == []
 
 
 def test_an_epoch_is_read_as_far_as_it_is_committed_while_it_goes_on(

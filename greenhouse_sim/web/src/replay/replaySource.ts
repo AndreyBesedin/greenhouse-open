@@ -10,25 +10,29 @@ const SEED_MARK = "#";
 
 /**
  * The scene a replay draws, before any moment: the stored epoch's own run, its
- * scenario in its layout, under its seed (P17.6, decision 0065). The viewer
- * asks for the scene by the same parts the epoch was started with, so a run
- * of another seed is drawn with its weather and its crop's walk; and under the
- * plan the changes given to it make (P17.8), each shown from its moment.
+ * scenario in its layout, under its weather and its seed (P17.6, decision 0065,
+ * decision 0075). The viewer asks for the scene by the same parts the epoch was
+ * started with, so a run of another seed is drawn with its weather and its
+ * crop's walk; and under the plan the changes given to it make (P17.8), each
+ * shown from its moment.
  */
 export function replaySource(
   position: Pick<
     PositionState,
-    "scenario_id" | "layout" | "seed" | "targets" | "commands" | "crop"
+    "scenario_id" | "layout" | "seed" | "weather" | "targets" | "commands" | "crop"
   >,
 ): SceneSource {
   const { targets, commands, crop } = position;
+  const weather = position.weather ?? DEFAULT_WEATHER;
   return {
     kind: "scenario",
     scenarioId: position.scenario_id,
     ...(position.layout === DEFAULT_LAYOUT ? {} : { layout: position.layout }),
-    ...(position.seed === null
-      ? {}
-      : { weather: `${DEFAULT_WEATHER}${SEED_MARK}${position.seed}` }),
+    ...(position.seed !== null
+      ? { weather: `${weather}${SEED_MARK}${position.seed}` }
+      : position.weather !== null
+        ? { weather }
+        : {}),
     field: CLIMATE_FIELD,
     ...(targets.length === 0
       ? {}

@@ -14,6 +14,7 @@ function run(more: Partial<StoredRun>): StoredRun {
     scenario_id: "reference_greenhouse",
     seed: 1,
     layout: "default",
+    weather: null,
     status: "finished",
     paused: false,
     frontier_s: 120 * DAY_S,

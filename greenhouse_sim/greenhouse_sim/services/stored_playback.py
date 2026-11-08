@@ -83,6 +83,9 @@ class PositionState(BaseModel):
     epoch: int
     layout: str
     seed: int | None
+    # The weather its run is under, by name: none for its scenario's own
+    # (decision 0075). The viewer draws the scene under it.
+    weather: str | None = None
     status: Status
     # Its status is running, and a playback holds its clock: the frontier stands
     # still until that plays on, however this position plays.
@@ -127,10 +130,11 @@ class StoredEpoch:
         self.store = EpochStore(objects, run_id, epoch)
         manifest = self.store.manifest()
         self.run_id, self.epoch = run_id, epoch
-        self.scenario_id, self.layout, self.seed = (
+        self.scenario_id, self.layout, self.seed, self.weather = (
             manifest.scenario_id,
             manifest.layout,
             manifest.seed,
+            manifest.weather,
         )
         self.duration_s = manifest.duration_s
         self.fork = manifest.fork
@@ -161,7 +165,13 @@ class StoredEpoch:
 
     def run(self) -> RunRequest:
         """The run the epoch is of, as the by-moment services take it."""
-        return RunRequest(self.scenario_id, layout=self.layout, plan=self.plan(), seed=self.seed)
+        return RunRequest(
+            self.scenario_id,
+            layout=self.layout,
+            weather=self.weather,
+            plan=self.plan(),
+            seed=self.seed,
+        )
 
     def status(self) -> Status:
         return self.store.manifest().status
@@ -359,6 +369,7 @@ class Position:
             epoch=epoch.epoch,
             layout=epoch.layout,
             seed=epoch.seed,
+            weather=epoch.weather,
             status=self._status,
             paused=self._status == Status.RUNNING and epoch.held(),
             started_at=epoch.start,

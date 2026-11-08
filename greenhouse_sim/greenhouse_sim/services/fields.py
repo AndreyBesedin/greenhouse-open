@@ -57,6 +57,8 @@ from greenhouse_sim.services.runs import (
     checked_moment,
 )
 from greenhouse_sim.services.scenarios import (
+    DEFAULT_WEATHER,
+    SEED_MARK,
     SceneChanges,
     changed,
     equipment_levels,
@@ -266,10 +268,15 @@ def air_through_a_run(
             f"{scenario_id}-climate-{digest}"
         )
     # Its airflow is the same under any weather, so the weather named is not
-    # applied (nor does it make another run), but the seed is: it draws the
-    # sensors' readings and the crop's, which another seed makes another run.
+    # applied to it, but the seed is: it draws the sensors' readings and the
+    # crop's, which another seed makes another run. So does another weather
+    # (decision 0075), which the rest of the run is under: a run under its own,
+    # at any seed, is named as it always was.
+    weather = (run.weather or DEFAULT_WEATHER).partition(SEED_MARK)[0]
     config = changed(
-        simulator.catalogue, scenario(simulator.catalogue, scenario_id), SceneChanges(layout=name)
+        simulator.catalogue,
+        scenario(simulator.catalogue, scenario_id),
+        SceneChanges(layout=name, weather=weather),
     ).model_copy(
         update={
             "random_seed": with_weather(

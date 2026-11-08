@@ -117,6 +117,24 @@ def test_a_fork_names_its_parent_the_instant_and_what_it_inherits(
     assert made.commits() == []
 
 
+def test_a_fork_keeps_its_parents_weather_and_days_and_is_its_run_until_it_changes(
+    tmp_path: Path,
+) -> None:
+    """Decision 0075: a fork goes on under the weather and to the end its parent
+    was started with, and given no change it is that run."""
+    with _simulator() as made:
+        objects = FolderStore(tmp_path)
+        parent = queued(made, objects, SHORT, weather="cold_spring_day", duration_days=DAYS - 1)
+        assert execute(made, parent, Free()) == Status.FINISHED
+        fork = forks.fork(made, objects, parent.run_id, parent.epoch, DAY_S)
+        assert _worked(made, fork) == Status.FINISHED
+
+    assert (fork.run_id, fork.manifest().weather) == (parent.run_id, "cold_spring_day")
+    assert fork.manifest().duration_s == parent.manifest().duration_s == (DAYS - 1) * DAY_S
+    assert [c.end_s for c in fork.commits()] == [(DAYS - 1) * DAY_S]
+    assert fork.checkpoint_at(fork.frontier_s()) == parent.checkpoint_at(parent.frontier_s())
+
+
 def test_a_fork_computes_nothing_before_its_state_and_is_its_parent_until_it_changes(
     simulator: Simulator, whole: EpochStore, monkeypatch: pytest.MonkeyPatch
 ) -> None:

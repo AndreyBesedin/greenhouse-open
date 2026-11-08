@@ -145,7 +145,9 @@ def _forked(
         check_allowed(simulator, change)
     chosen = layout_name(layout or manifest.layout)
     moved = chosen != manifest.layout
-    request = RunRequest(manifest.scenario_id, layout=chosen, seed=manifest.seed)
+    request = RunRequest(
+        manifest.scenario_id, layout=chosen, weather=manifest.weather, seed=manifest.seed
+    )
     _, new_run = air_through_a_run(simulator, request)
     inherited = parent.inherited_at(at_s)
     branch_s = inherited.start_s if moved else at_s
@@ -180,6 +182,7 @@ def _forked(
             seed=manifest.seed,
             layout=chosen,
             duration_s=manifest.duration_s,
+            weather=manifest.weather,
             created_at=datetime.now(UTC),
             queued_at=queued_at,
             fork=ForkOf(
@@ -331,4 +334,10 @@ def asked(body: bytes) -> tuple[Asked, ...]:
 
 
 def _with_plan(request: RunRequest, plan: RunPlan) -> RunRequest:
-    return RunRequest(request.scenario_id, layout=request.layout, plan=plan, seed=request.seed)
+    return RunRequest(
+        request.scenario_id,
+        layout=request.layout,
+        weather=request.weather,
+        plan=plan,
+        seed=request.seed,
+    )

@@ -17,10 +17,14 @@ them (P17.4, decision 0065).
                                           delivered by t seconds into the run,
                                           by default its frontier
     POST /api/scenarios/{id}/runs?seed=7&layout=default&seconds_per_day=10
+                                  &weather=cold_spring_day&duration_days=10
                                           a run asked for: an epoch started in
                                           the store, queued, and executed by a
                                           worker when one is free, as fast as it
-                                          goes or at that pace; the epoch as the
+                                          goes or at that pace, under one of the
+                                          scenario's weathers and for up to its
+                                          days, each its own if not given
+                                          (decision 0075); the epoch as the
                                           list shows it. Several at once, of one
                                           scenario or of many
     POST /api/runs/{run}/epochs/{n}/stop  an epoch waiting for a worker or being
@@ -120,6 +124,8 @@ def post(simulator: Simulator, segments: list[str], query: Query, body: bytes) -
                     scenario_id,
                     layout=last(query, "layout"),
                     seed=seed(query),
+                    weather=last(query, "weather"),
+                    duration_days=_count(query, "duration_days"),
                     seconds_per_day=pace(query),
                 )
             )

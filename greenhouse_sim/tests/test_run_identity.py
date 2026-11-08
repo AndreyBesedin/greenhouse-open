@@ -73,11 +73,13 @@ PINNED_RUNS = [
     ("climate_box", "open=roof_vent:0.5&schedule=120:roof_vent:1", "climate_box-climate-13e8d67f"),
     ("climate_box", "weather=cold_spring_day&set=heater:0.5", "climate_box-climate-82d3cf49"),
     # A layout that places no equipment names its run by its own airflow, not
-    # by the climate it also has, under any weather or doors asked for.
+    # by the climate it also has, under any doors asked for; but another weather,
+    # under which its crop grows, is another run, as a seed is (decision 0075).
     ("tomato_compartment", "", "tomato_compartment-buoyancy-ff1e01dd"),
     ("tomato_compartment", "layout=propagation", "tomato_compartment-buoyancy-d777fe8b"),
     ("tomato_compartment", "seed=7", "tomato_compartment-buoyancy-4233e032"),
-    ("tomato_compartment", "weather=cold_spring_day", "tomato_compartment-buoyancy-ff1e01dd"),
+    ("tomato_compartment", "weather=cold_spring_day", "tomato_compartment-buoyancy-26a055b1"),
+    ("tomato_compartment", "weather=default", "tomato_compartment-buoyancy-ff1e01dd"),
     ("tomato_compartment", "open=door_front:1", "tomato_compartment-buoyancy-ff1e01dd"),
     ("airflow_box", "", "airflow_box-uniform-d42cfee2"),
     ("airflow_box", "layout=open", "airflow_box-uniform-4acacb3e"),

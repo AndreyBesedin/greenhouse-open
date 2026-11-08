@@ -23,8 +23,15 @@ from greenhouse_sim.core.crop_actions import CropAction
 from greenhouse_sim.scenarios.catalogue import Scenarios
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.services.crop_models import registration
-from greenhouse_sim.services.errors import InvalidRequest
-from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, SEED_MARK, plant_ids, scenario
+from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.services.scenarios import (
+    DEFAULT_WEATHER,
+    SEED_MARK,
+    plant_ids,
+    scenario,
+    weather_base,
+    weather_names,
+)
 
 # A command as a request writes it: its moment, its actuator and its level.
 # A daily command's moment is its time of day; a target change's actuator is
@@ -403,6 +410,37 @@ class RunRequest:
         if self.seed is None or self.seed == scenario(catalogue, self.scenario_id).random_seed:
             return name
         return f"{name}{SEED_MARK}{self.seed}"
+
+
+def started_weather(name: str | None) -> str | None:
+    """The weather a run is started under (decision 0075): one the simulator
+    has, by its name, or none for its scenario's own, which `default` names
+    too, so that a run under its own weather is the run it always was. A name
+    with an override's or a seed's mark is refused: a run's seed is asked for
+    as its seed, and the overrides are QA's."""
+    if name is None or name == DEFAULT_WEATHER:
+        return None
+    if weather_base(name) != name:
+        raise InvalidRequest(f"a run is started under a weather by its name alone, not {name!r}")
+    if name not in weather_names():
+        known = ", ".join(weather_names())
+        raise NotFound(f"there is no weather {name!r}; there are {known}")
+    return name
+
+
+def started_duration_s(config: ScenarioConfig, days: int | None) -> float:
+    """How long a run started of a scenario lasts, in seconds (decision 0075):
+    its scenario's days, or as many whole days as asked, from one to those. A
+    run of fewer is the scenario's run cut short, its first days those of the
+    whole run; a longer season is a scenario of its own."""
+    if days is None:
+        return config.run_length_s()
+    if not 1 <= days <= config.duration_days:
+        raise InvalidRequest(
+            f"a run of {config.greenhouse_id} lasts from 1 to its {config.duration_days} "
+            f"days, not {days}: a longer one is a scenario of its own"
+        )
+    return days * DAY_S
 
 
 def checked_moment(config: ScenarioConfig, time_s: float) -> float:

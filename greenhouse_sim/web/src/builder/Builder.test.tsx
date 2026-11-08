@@ -152,6 +152,7 @@ const STARTED = {
   scenario_id: "my_greenhouse_run",
   seed: null,
   layout: "default",
+  weather: null,
   status: "queued",
   paused: false,
   frontier_s: 0,

@@ -242,10 +242,38 @@ def test_a_run_is_asked_for_over_the_api_and_stopped_there(
     assert again.status == HTTPStatus.CONFLICT
 
 
+def test_a_run_is_asked_for_over_the_api_under_a_weather_for_fewer_days(
+    simulator: Simulator, objects: FolderStore
+) -> None:
+    """Decision 0075: the list and a position over it say both, and the same
+    asked again, at its seed, is the same run."""
+    path = f"/api/scenarios/{SHORT}/runs?seed=4&weather=cold_spring_day&duration_days=1"
+    asked = respond(simulator, "POST", path)
+    assert asked.status == HTTPStatus.OK and isinstance(asked.body, dict)
+    shown = StoredRun.model_validate(asked.body)
+    assert (shown.weather, shown.duration_s, shown.seed) == ("cold_spring_day", DAY_S, 4)
+    _until(lambda: _status(objects, shown) == Status.FINISHED, "the epoch to finish")
+    assert _frontier(objects, shown) == DAY_S
+
+    opened = respond(simulator, "POST", f"/api/runs/{shown.run_id}/epochs/0/positions")
+    assert isinstance(opened.body, dict)
+    assert (opened.body["weather"], opened.body["duration_s"]) == ("cold_spring_day", DAY_S)
+    again = StoredRun.model_validate(respond(simulator, "POST", path).body)
+    assert (again.run_id, again.epoch) == (shown.run_id, 1)
+    own = StoredRun.model_validate(respond(simulator, "POST", f"/api/scenarios/{SHORT}/runs").body)
+    assert own.run_id != shown.run_id and own.weather is None
+    assert own.duration_s == workers_support.SHORT_DAYS * DAY_S
+
+
 @pytest.mark.parametrize(
     ("path", "status"),
     [
         (f"/api/scenarios/{SHORT}/runs?seed=x", HTTPStatus.BAD_REQUEST),
+        (f"/api/scenarios/{SHORT}/runs?weather=no_such_weather", HTTPStatus.NOT_FOUND),
+        (f"/api/scenarios/{SHORT}/runs?weather=default%237", HTTPStatus.BAD_REQUEST),
+        (f"/api/scenarios/{SHORT}/runs?duration_days=x", HTTPStatus.BAD_REQUEST),
+        (f"/api/scenarios/{SHORT}/runs?duration_days=0", HTTPStatus.BAD_REQUEST),
+        (f"/api/scenarios/{SHORT}/runs?duration_days=3", HTTPStatus.BAD_REQUEST),
         (f"/api/scenarios/{SHORT}/runs?seconds_per_day=0", HTTPStatus.BAD_REQUEST),
         (f"/api/scenarios/{SHORT}/runs?layout=no_such_layout", HTTPStatus.NOT_FOUND),
         ("/api/scenarios/no_such_scenario/runs", HTTPStatus.NOT_FOUND),

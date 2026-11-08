@@ -119,6 +119,18 @@ export const STORED_RUN_SCHEMA = {
       "title": "Layout",
       "type": "string"
     },
+    "weather": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Weather"
+    },
     "status": {
       "$ref": "#/$defs/Status"
     },
@@ -260,6 +272,7 @@ export const STORED_RUN_SCHEMA = {
     "scenario_id",
     "seed",
     "layout",
+    "weather",
     "status",
     "paused",
     "frontier_s",

@@ -13,6 +13,7 @@ export interface StoredRun {
   scenario_id: string;
   seed: number | null;
   layout: string;
+  weather: string | null;
   status: Status;
   paused: boolean;
   frontier_s: number;
