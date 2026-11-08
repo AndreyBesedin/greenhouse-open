@@ -106,10 +106,17 @@ def _believed(objects: ObjectStore, home: str, number: int | None, at: float) ->
     return number is not None and _fresh(objects.get(_name(home, number)), at)
 
 
-def alive(objects: ObjectStore, home: str, *, now: float | None = None) -> bool:
-    """Whether the epoch under `home` has a claim written lately."""
+def alive(
+    objects: ObjectStore, home: str, *, now: float | None = None, other_than: int | None = None
+) -> bool:
+    """Whether the epoch under `home` has a claim written lately: one other than the
+    claim `other_than`, if it is given. The newest is read once, so that a claim let go
+    as this looks, which makes a newer number, is never taken for another's."""
     at = time.time() if now is None else now
-    return _believed(objects, home, newest(objects, home), at)
+    number = newest(objects, home)
+    if other_than is not None and number == other_than:
+        return False
+    return _believed(objects, home, number, at)
 
 
 def claim(objects: ObjectStore, home: str, *, now: float | None = None) -> int | None:
