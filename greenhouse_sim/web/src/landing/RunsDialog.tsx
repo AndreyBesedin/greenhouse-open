@@ -5,9 +5,10 @@ import type { ScenarioSummary } from "../scenarios";
 import { replayAddress, viewerAddress } from "./paths";
 import { RunControls } from "./RunControls";
 import { RunDelete, useRunDeletion } from "./RunDelete";
-import { FollowLink, ReplayLink, RunProgress, StatusChip } from "./RunParts";
+import { FollowLink, ReplayLink, RunFailure, RunProgress, RunUsage, StatusChip } from "./RunParts";
+import { notDoneText } from "./runActions";
 import { DEFAULT_PACE_S, startRun } from "./startRun";
-import { type StoredRun, sizeText, startedText, whoIs } from "./storedRuns";
+import { type StoredRun, startedText, whoIs } from "./storedRuns";
 
 /** A run, as a list of one scenario's calls it. */
 function nameOf(run: StoredRun): string {
@@ -78,7 +79,7 @@ export function RunsDialog({
     const answer = await startRun(scenario.id, { seed, secondsPerDay: pace });
     setStarting(false);
     if (!answer.ok) {
-      deletion.setProblem(answer.problem);
+      deletion.setProblem(notDoneText("started", answer.problem));
       return;
     }
     deletion.setProblem(null);
@@ -177,7 +178,7 @@ export function RunsDialog({
                   <span>
                     epoch {run.epoch}
                     {run.fork === null ? "" : ` · ${forkedText(run.fork)}`}
-                    {when === "" ? "" : ` · ${when}`} · {sizeText(run.size_bytes)}
+                    {when === "" ? "" : ` · ${when}`}
                   </span>
                 </div>
                 <StatusChip run={run} />
@@ -198,6 +199,8 @@ export function RunsDialog({
                   onDelete={() => deletion.remove(run)}
                   whenGone={title}
                 />
+                <RunUsage run={run} />
+                <RunFailure run={run} />
               </li>
             );
           })}

@@ -155,6 +155,7 @@ export const CONTRACTS: readonly Contract[] = [
     ["src/scene", "storedRun"],
     "STORED_RUN_SCHEMA",
   ),
+  contract(`${SERVICES}/room.schema.json`, "Room", ["src/landing", "room"], "ROOM_SCHEMA"),
   contract(
     `${SERVICES}/scenario_download.schema.json`,
     "ScenarioDownload",

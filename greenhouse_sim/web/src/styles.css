@@ -2237,6 +2237,50 @@
   justify-content: flex-end;
 }
 
+/* What a run used, and why one failed, on lines of their own under its row; and
+ * the room for runs above the list, figure by figure in the same way (P18.5). */
+.landing-run-usage,
+.landing-room {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--text-soft);
+}
+
+.landing-run-usage div,
+.landing-room div {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.landing-run-usage dt,
+.landing-room dt {
+  font-weight: 600;
+}
+
+.landing-run-usage dd,
+.landing-room dd {
+  margin: 0;
+}
+
+.landing-run-reason,
+.landing-room-refusal {
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--warn);
+}
+
+.landing-room-refusal {
+  margin-top: var(--space-2);
+}
+
+.landing-run > .landing-run-usage,
+.landing-run > .landing-run-reason {
+  grid-column: 1 / -1;
+}
+
 /* Room for a run's controls on one line, at a dialog's width. */
 .landing-dialog .landing-run-name {
   flex-basis: 150px;

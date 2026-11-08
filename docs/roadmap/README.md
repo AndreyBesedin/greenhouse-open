@@ -123,7 +123,7 @@ links there.
 | [P15](archive/p15-policy-port.md) | A policy's port, and an experiment that steps a run | Done: final QA passed on 2026-11-01 |
 | [P16](archive/p16-crop-at-its-models-step.md) | A run's crop at its model's step, not the run's day | Done, but for P16.4, deferred until a model takes crop work within its day |
 | [P17](archive/p17-runs-and-playbacks.md) | Runs kept in a store, playbacks as positions, and a place to choose | Done: P17.1 to P17.11, its QA run for what is delivered and its clean-up closed; steering a running epoch moved to P22.1, the rest to [future work](future-work.md#runs-and-playbacks-after-p17) |
-| [P18](p18-resources-and-deployment.md) | Resources counted and limited, and a run that can move | In progress: P18.1 to P18.4 done |
+| [P18](p18-resources-and-deployment.md) | Resources counted and limited, and a run that can move | In progress: P18.1 to P18.5 done |
 | [P19](p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | In progress: P19.1 to P19.6 done |
 | [P20](p20-crop-parameter-assets.md) | Crop parameters as versioned assets, edited by forms and reproduced from their versions | Proposed |
 | [P21](p21-rows-of-different-crops.md) | Rows of different crops in one house | Proposed |
@@ -145,8 +145,7 @@ report says.
 
 ## Order of work
 
-1. **P18:** what a run used and why it failed, in the viewer (P18.5), then its QA
-   (P18.6).
+1. **P18:** its QA (P18.6), runs within their limits.
 2. **P19:** the design system's remaining steps (P19.7 on), and beside it
    [P22](p22-watching-and-starting-a-run.md), what the QA of 2026-11-04 planned, whose
    start page and panels line up with P19.8, P19.10 and P19.11.
@@ -163,10 +162,10 @@ report says.
 
 - **[Future work](future-work.md):** the plans with no project of their own yet.
   Camera imperfections, climate setpoints beyond heating (P11's rest), crop work within
-  the day, actions and plans after P13, models and devices after P14, runs and playbacks
-  after P17, CO₂ and light targets,
-  intelligence components, crop models from plant research, a Modelica comparison, the
-  test suite and CI time, a second repository audit, and an assistant in the viewer.
+  the day, actions and plans after P13, CO₂ and light targets, intelligence components
+  beyond control policies, crop models from plant research beyond the tomato's two, models
+  and devices after P14, runs and playbacks after P17, a Modelica comparison, the test
+  suite and CI time, a second repository audit, and an assistant in the viewer.
 - **[QA of 2026-11-04](qa-2026-11-04.md):** what a manual walk of the viewer found, and what follows from it.
 - **[The archive](archive/README.md):** the documents of finished projects, read
   when a task cites their steps: P-1 to P17, the clean-ups of

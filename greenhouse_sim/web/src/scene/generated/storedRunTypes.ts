@@ -27,7 +27,9 @@ export interface StoredRun {
   days_computed: number;
   cpu_s: number | null;
   peak_memory_bytes: number | null;
+  wall_s: number | null;
   reason: string | null;
+  past_limit: boolean;
 }
 /**
  * Where a fork comes from (decision 0065): its parent, the exact instant
