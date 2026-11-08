@@ -70,6 +70,20 @@ describe("Field", () => {
     expect((pace as HTMLSelectElement).labels?.[0]?.textContent).toBe("Pace");
   });
 
+  it("gives its control a target's height, or a compact one's when asked", () => {
+    shown = render(
+      <>
+        <Field label="Seed">{(control) => <input {...control} />}</Field>
+        <Field label="Pace" size="compact">
+          {(control) => <select {...control} />}
+        </Field>
+      </>,
+    );
+    const [seed, pace] = [...shown.container.querySelectorAll("input, select")];
+    expect(seed?.className).toBe("ds-field-control");
+    expect(pace?.className).toBe("ds-field-control ds-field-control-compact");
+  });
+
   it("needs its label", () => {
     shown = render(
       // @ts-expect-error a control with no label has no name

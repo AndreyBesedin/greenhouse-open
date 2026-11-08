@@ -31,9 +31,10 @@ export interface BundleWeight {
  * so that with them the styles weigh 34.67 kB. Its styles again by what a run used
  * and the room for runs on the start page (P18.5), 35.16 kB. Its styles again by
  * `StatusChip`'s rules (P19.7), 35.45 kB, with room for the step's others, `Field`,
- * `Notice`, `Fold` and `.ds-page`: with them, on a copy, 35.93 kB.
+ * `Notice`, `Fold` and `.ds-page`: with them, on a copy, 35.93 kB. Its styles again by
+ * the height of `Field`'s control (P19.9), 36.03 kB, the least that holds them.
  */
-export const BUNDLE_BUDGET_KB: BundleWeight = { js: 1765, css: 36 };
+export const BUNDLE_BUDGET_KB: BundleWeight = { js: 1765, css: 36.1 };
 
 const BYTES_PER_KB = 1000;
 

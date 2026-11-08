@@ -1,6 +1,7 @@
 import { type FormEvent, useId, useState } from "react";
 
 import { Button } from "../design/Button";
+import { Field } from "../design/Field";
 import type { ScenarioSummary } from "../scenarios";
 import { BASIC_SETUP_SCHEMA } from "./generated/basicSchema";
 
@@ -42,39 +43,39 @@ export function CopyScenario({
   return (
     <form className="builder-copy" aria-labelledby={heading} onSubmit={copy}>
       <h2 id={heading}>Or copy a scenario's house</h2>
-      <div className="builder-field">
-        <label htmlFor={`${heading}-scenario`}>Scenario</label>
-        <select
-          id={`${heading}-scenario`}
-          value={scenario.id}
-          onChange={(event) => {
-            setChosen(event.target.value);
-            setDraftId("");
-          }}
-        >
-          {scenarios.map((each) => (
-            <option key={each.id} value={each.id}>
-              {each.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="builder-field">
-        <label htmlFor={`${heading}-draft`}>The copy's identifier</label>
-        <input
-          id={`${heading}-draft`}
-          required
-          value={named}
-          aria-invalid={!valid}
-          aria-describedby={valid ? undefined : `${heading}-draft-hint`}
-          onChange={(event) => setDraftId(event.target.value)}
-        />
-        {valid ? null : (
-          <p id={`${heading}-draft-hint`} className="builder-note">
-            An identifier holds letters, digits, '_', '.' and '-' only.
-          </p>
+      <Field label="Scenario" size="compact" className="builder-field">
+        {(control) => (
+          <select
+            {...control}
+            value={scenario.id}
+            onChange={(event) => {
+              setChosen(event.target.value);
+              setDraftId("");
+            }}
+          >
+            {scenarios.map((each) => (
+              <option key={each.id} value={each.id}>
+                {each.name}
+              </option>
+            ))}
+          </select>
         )}
-      </div>
+      </Field>
+      <Field
+        label="The copy's identifier"
+        problem={valid ? undefined : "An identifier holds letters, digits, '_', '.' and '-' only."}
+        size="compact"
+        className="builder-field"
+      >
+        {(control) => (
+          <input
+            {...control}
+            required
+            value={named}
+            onChange={(event) => setDraftId(event.target.value)}
+          />
+        )}
+      </Field>
       <Button type="submit" size="compact" disabled={busy || !valid}>
         Copy its house
       </Button>

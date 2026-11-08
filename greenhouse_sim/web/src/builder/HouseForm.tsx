@@ -1,5 +1,7 @@
 import { type FormEvent, useId, useMemo, useState } from "react";
+
 import { Button } from "../design/Button";
+import { Field } from "../design/Field";
 import { BASIC_SETUP_SCHEMA } from "./generated/basicSchema";
 import type { BasicSetup } from "./generated/basicTypes";
 import { formFields, formValues, startingValues } from "./schemaForm";
@@ -32,35 +34,36 @@ export function HouseForm({
     <form className="builder-form" aria-labelledby={heading} onSubmit={submit}>
       <h2 id={heading}>A new house</h2>
       {fields.map((field) => (
-        <div key={field.name} className="builder-field">
-          <label htmlFor={`${heading}-${field.name}`}>{field.title}</label>
-          {field.kind === "choice" ? (
-            <select
-              id={`${heading}-${field.name}`}
-              name={field.name}
-              value={entered[field.name] ?? ""}
-              onChange={(event) => setEntered({ ...entered, [field.name]: event.target.value })}
-            >
-              {field.choices.map((choice) => (
-                <option key={choice} value={choice}>
-                  {choice}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              id={`${heading}-${field.name}`}
-              name={field.name}
-              type={field.kind === "text" ? "text" : "number"}
-              step={field.kind === "integer" ? 1 : "any"}
-              min={field.minimum}
-              max={field.maximum}
-              required={field.required}
-              value={entered[field.name] ?? ""}
-              onChange={(event) => setEntered({ ...entered, [field.name]: event.target.value })}
-            />
-          )}
-        </div>
+        <Field key={field.name} label={field.title} size="compact" className="builder-field">
+          {(control) =>
+            field.kind === "choice" ? (
+              <select
+                {...control}
+                name={field.name}
+                value={entered[field.name] ?? ""}
+                onChange={(event) => setEntered({ ...entered, [field.name]: event.target.value })}
+              >
+                {field.choices.map((choice) => (
+                  <option key={choice} value={choice}>
+                    {choice}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                {...control}
+                name={field.name}
+                type={field.kind === "text" ? "text" : "number"}
+                step={field.kind === "integer" ? 1 : "any"}
+                min={field.minimum}
+                max={field.maximum}
+                required={field.required}
+                value={entered[field.name] ?? ""}
+                onChange={(event) => setEntered({ ...entered, [field.name]: event.target.value })}
+              />
+            )
+          }
+        </Field>
       ))}
       <Button type="submit" size="compact" disabled={busy}>
         Draft this house

@@ -41,12 +41,17 @@ export function button(within: ParentNode, name: string): HTMLButtonElement {
   return only(found, `a button named "${name}"`);
 }
 
+/** Whether one of `control`'s labels, beside it or around it, starts with `name`. */
+export function labelledBy(control: HTMLInputElement | HTMLSelectElement, name: string): boolean {
+  return [...(control.labels ?? [])].some(
+    (label) => label.firstChild?.textContent?.trim() === name,
+  );
+}
+
 /** The select labelled `name`, by its label or the label around it. */
 export function select(within: ParentNode, name: string): HTMLSelectElement {
   const found = [...within.querySelectorAll("select")].filter(
-    (candidate) =>
-      candidate.getAttribute("aria-label") === name ||
-      candidate.closest("label")?.firstChild?.textContent?.trim() === name,
+    (candidate) => candidate.getAttribute("aria-label") === name || labelledBy(candidate, name),
   );
   return only(found, `a select labelled "${name}"`);
 }

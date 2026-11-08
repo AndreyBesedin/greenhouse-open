@@ -575,6 +575,9 @@ const BUILT = new Set([
   // `Notice` by its kind (P19.7).
   "ds-notice",
   "ds-notice-problem",
+  // `Field`'s control by its size (P19.9).
+  "ds-field-control",
+  "ds-field-control-compact",
 ]);
 
 describe("the stylesheet's classes (AUDIT.20)", () => {

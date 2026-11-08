@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 
 import { lowContrast } from "./contrast.ts";
 
@@ -14,10 +14,12 @@ import { lowContrast } from "./contrast.ts";
 const ARRIVES = { timeout: 60_000 };
 
 const PHONE = { width: 390, height: 844 };
-// A compact button's least height and width (`--target-compact`, P19.9), and a
+// A compact control's least height and width (`--target-compact`, P19.9), and a
 // target's, which the ways out of the builder keep.
 const COMPACT_TARGET_PX = 24;
 const TARGET_PX = 44;
+// What a pointer is to hit: a box to tick is the browser's, and left out.
+const CONTROLS = 'button, select, input:not([type="checkbox"]):not([type="file"])';
 
 function field(page: Page, label: string) {
   return page.locator(".builder-form").getByLabel(label, { exact: true });
@@ -478,13 +480,13 @@ async function houseDrawn(page: Page, scenario: string): Promise<unknown[]> {
     .sort((a, b) => a.entity_id.localeCompare(b.entity_id));
 }
 
-/** Each button on the builder's side smaller than the size it is drawn at. */
-async function targetsTooSmall(page: Page): Promise<string[]> {
+/** Each of `controls` smaller than the size it is drawn at. */
+async function targetsTooSmall(controls: Locator): Promise<string[]> {
   const small: string[] = [];
-  for (const control of await page.locator(".builder-side").locator("button").all()) {
+  for (const control of await controls.all()) {
     const box = await control.boundingBox();
     const [name, isTarget] = await control.evaluate((element) => [
-      element.textContent?.trim() ?? "",
+      element.textContent?.trim() || element.id,
       element.matches(".ds-button:not(.ds-button-compact), .home-button"),
     ]);
     const least = isTarget ? TARGET_PX : COMPACT_TARGET_PX;
@@ -495,13 +497,13 @@ async function targetsTooSmall(page: Page): Promise<string[]> {
   return small;
 }
 
-test("builder: every button is a target of the size it is drawn at, at least compact", async ({
+test("builder: every control is a target of the size it is drawn at, at least compact", async ({
   page,
 }) => {
   test.setTimeout(120_000);
   await page.goto("/builder");
   await expect(page.getByRole("button", { name: "Copy its house" })).toBeVisible(ARRIVES);
-  expect(await targetsTooSmall(page)).toEqual([]);
+  expect(await targetsTooSmall(page.locator(".builder-side").locator(CONTROLS))).toEqual([]);
 
   await field(page, "Identifier").fill(`e2e_targets_${Date.now()}`);
   await page.getByRole("button", { name: "Draft this house" }).click();
@@ -510,7 +512,10 @@ test("builder: every button is a target of the size it is drawn at, at least com
   await page.locator(".builder-palette").getByRole("button", { name: "Place" }).click();
   await page.getByLabel("Choose heater_1").check(ARRIVES);
   await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
-  expect(await targetsTooSmall(page)).toEqual([]);
+  expect(await targetsTooSmall(page.locator(".builder-side button"))).toEqual([]);
+  // The items' fields and the inspector's are the browser's still, until they move.
+  const moved = page.locator(".builder-identity, .builder-rows, .builder-run");
+  expect(await targetsTooSmall(moved.locator(CONTROLS))).toEqual([]);
 });
 
 test("builder: at a phone's width the page fits its window, with the house under the forms", async ({
