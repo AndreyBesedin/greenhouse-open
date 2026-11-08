@@ -568,10 +568,11 @@ const BUILT = new Set([
   "ds-button-primary",
   "ds-button-danger",
   "ds-button-compact",
-  // `StatusChip` by its tone, and `Notice` by its kind (P19.7).
+  // `StatusChip` by its tone (P19.7).
   "ds-status-chip",
   "ds-status-chip-active",
   "ds-status-chip-problem",
+  // `Notice` by its kind (P19.7).
   "ds-notice",
   "ds-notice-problem",
 ]);
