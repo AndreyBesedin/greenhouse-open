@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { DAY_S } from "../clock";
 import { type Rendered, render } from "../testing/render";
-import { DAMAGED_NOTE, RunStatus, STOPPING_NOTE } from "./RunParts";
+import { replayAddress } from "./paths";
+import { DAMAGED_NOTE, FOLLOWS_NOTE, ReplayLink, RunStatus, STOPPING_NOTE } from "./RunParts";
 import type { StoredRun } from "./storedRuns";
 
 function run(more: Partial<StoredRun>): StoredRun {
@@ -90,5 +91,40 @@ describe("a run's status", () => {
       words: `Damaged ${DAMAGED_NOTE}`,
       title: DAMAGED_NOTE,
     });
+  });
+});
+
+describe("a run's replay, the one way to watch it", () => {
+  let shown: Rendered | undefined;
+  afterEach(() => shown?.unmount());
+
+  /** Where the link drawn for `stored` goes and what it says on hover, or null without one. */
+  function link(stored: StoredRun) {
+    shown?.unmount();
+    shown = render(<ReplayLink run={stored} />);
+    const found = shown.container.querySelector("a");
+    return found === null ? null : { href: found.getAttribute("href"), title: found.title };
+  }
+
+  it("follows the newest day of a run being computed, and says so", () => {
+    for (const status of ["queued", "running"] as const) {
+      expect(link(run({ status, epoch: 2 }))).toEqual({
+        href: replayAddress("reference_greenhouse-climate-abc", 2, true),
+        title: FOLLOWS_NOTE,
+      });
+    }
+  });
+
+  it("opens a run computed no longer at its start", () => {
+    for (const status of ["finished", "interrupted", "failed"] as const) {
+      expect(link(run({ status }))).toEqual({
+        href: replayAddress("reference_greenhouse-climate-abc", 0),
+        title: "",
+      });
+    }
+  });
+
+  it("is not there for a run with files missing", () => {
+    expect(link(run({ status: "running", damaged: true }))).toBeNull();
   });
 });
