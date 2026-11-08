@@ -169,6 +169,10 @@ describe("the builder's parts (P12.2)", () => {
     expect(identifier.getAttribute("aria-invalid")).toBe("true");
     expect(copy.disabled).toBe(true);
     expect(shown.container.textContent).toContain("letters, digits, '_', '.' and '-' only");
+    // The problem describes its field, and is drawn as one (`Field`, P19.9).
+    const problem = document.getElementById(identifier.getAttribute("aria-describedby") ?? "");
+    expect(problem?.textContent).toContain("letters, digits");
+    expect(problem?.className).toBe("ds-field-problem");
     act(() => {
       shown?.container
         .querySelector("form")
@@ -177,6 +181,8 @@ describe("the builder's parts (P12.2)", () => {
     expect(onCopy).not.toHaveBeenCalled();
 
     enter(identifier, "my_copy");
+    expect(identifier.hasAttribute("aria-invalid")).toBe(false);
+    expect(identifier.hasAttribute("aria-describedby")).toBe(false);
     click(copy);
     expect(onCopy).toHaveBeenCalledExactlyOnceWith(scenario, "my_copy");
   });

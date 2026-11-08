@@ -15,9 +15,11 @@ const COMPACT_TARGET_PX = 24;
 const COMPACT_CONTROLS = 3 * 5;
 const CONTROLS = 2 * COMPACT_CONTROLS + 1;
 const ENABLED = 2 * 3 * 3 + 1;
-// Each field's control, one of them disabled, and each fold's line (P19.7): drawn by
-// the browser, as on the pages that will use them.
-const FIELDS = 5;
+// Each field's control, one of them disabled, two compact (P19.9), and each fold's
+// line (P19.7): drawn by the browser, as on the pages that use them, and a field's
+// control as tall as its size asks.
+const FIELDS = 7;
+const COMPACT_FIELDS = 2;
 const FOLDS = 2;
 // A radius this large is cut down to half its box, so that a pixel moves nothing:
 // what shows is that it is drawn at all.
@@ -36,6 +38,10 @@ function controls(page: Page): Locator {
 
 function fieldsAndFolds(page: Page): Locator {
   return page.locator("main").locator("input, select, summary");
+}
+
+function fieldControls(page: Page): Locator {
+  return page.locator("main").locator("input, select");
 }
 
 /** `written`, the value of a token, changed by the least that can show. */
@@ -123,6 +129,23 @@ for (const theme of THEMES) {
         expect(box?.width ?? 0, name ?? "").toBeGreaterThanOrEqual(least);
       }
       expect(compact).toBe(COMPACT_CONTROLS);
+    });
+
+    test("gives every field's control its height, measured", async ({ page }) => {
+      await expect(fieldControls(page)).toHaveCount(FIELDS);
+      let compact = 0;
+      for (const control of await fieldControls(page).all()) {
+        const box = await control.boundingBox();
+        const isCompact = await control.evaluate((element) =>
+          element.classList.contains("ds-field-control-compact"),
+        );
+        compact += isCompact ? 1 : 0;
+        const name = (await control.getAttribute("id")) ?? "";
+        expect(box?.height ?? 0, name).toBeGreaterThanOrEqual(
+          isCompact ? COMPACT_TARGET_PX : TARGET_PX,
+        );
+      }
+      expect(compact).toBe(COMPACT_FIELDS);
     });
 
     test("draws every component in the weight its words are read in", async ({ page }) => {

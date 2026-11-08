@@ -1,11 +1,15 @@
 import { type ReactNode, useId } from "react";
 
+import type { ButtonSize } from "./buttonClass";
+
 /** What a field's control is given, so that its label names it and its hint and
  * problem describe it. */
 export interface FieldControl {
   id: string;
   "aria-describedby": string | undefined;
   "aria-invalid": true | undefined;
+  /** Its height: a target's, or a compact one's. */
+  className: string;
 }
 
 export interface FieldProps {
@@ -17,6 +21,9 @@ export interface FieldProps {
   problem?: string | undefined;
   /** Draws its control, which takes what it is given. */
   children: (control: FieldControl) => ReactNode;
+  /** Its control's least height, as a button's: `target` by default, `compact` in
+   * a dense form. */
+  size?: ButtonSize | undefined;
   /** The class a page places it by. */
   className?: string | undefined;
 }
@@ -26,7 +33,7 @@ export interface FieldProps {
  * control, not around it, so that the hint and the problem describe the control
  * and are not part of its name.
  */
-export function Field({ label, hint, problem, children, className }: FieldProps) {
+export function Field({ label, hint, problem, children, size = "target", className }: FieldProps) {
   const id = useId();
   const hintId = `${id}-hint`;
   const problemId = `${id}-problem`;
@@ -40,6 +47,8 @@ export function Field({ label, hint, problem, children, className }: FieldProps)
         id,
         "aria-describedby": describedBy === "" ? undefined : describedBy,
         "aria-invalid": problem === undefined ? undefined : true,
+        className:
+          size === "target" ? "ds-field-control" : `ds-field-control ds-field-control-${size}`,
       })}
       {hint !== undefined && (
         <p id={hintId} className="ds-field-hint">

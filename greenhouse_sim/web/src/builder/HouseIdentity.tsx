@@ -1,6 +1,8 @@
 import { type FormEvent, useId, useState } from "react";
 
 import { Button } from "../design/Button";
+import { Field } from "../design/Field";
+
 /**
  * A draft's identifier and name, changed as an edit is, undone in one step
  * (P12.2): a draft started from a file or a scenario under an identifier
@@ -31,24 +33,26 @@ export function HouseIdentity({
   return (
     <form className="builder-identity" aria-labelledby={heading} onSubmit={rename}>
       <h2 id={heading}>The house</h2>
-      <div className="builder-field">
-        <label htmlFor={`${heading}-id`}>Identifier</label>
-        <input
-          id={`${heading}-id`}
-          required
-          value={shown.draftId}
-          onChange={(event) => setTyped({ ...shown, draftId: event.target.value })}
-        />
-      </div>
-      <div className="builder-field">
-        <label htmlFor={`${heading}-name`}>Name</label>
-        <input
-          id={`${heading}-name`}
-          required
-          value={shown.name}
-          onChange={(event) => setTyped({ ...shown, name: event.target.value })}
-        />
-      </div>
+      <Field label="Identifier" size="compact" className="builder-field">
+        {(control) => (
+          <input
+            {...control}
+            required
+            value={shown.draftId}
+            onChange={(event) => setTyped({ ...shown, draftId: event.target.value })}
+          />
+        )}
+      </Field>
+      <Field label="Name" size="compact" className="builder-field">
+        {(control) => (
+          <input
+            {...control}
+            required
+            value={shown.name}
+            onChange={(event) => setTyped({ ...shown, name: event.target.value })}
+          />
+        )}
+      </Field>
       <Button
         type="submit"
         size="compact"

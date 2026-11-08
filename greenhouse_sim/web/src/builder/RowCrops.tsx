@@ -1,6 +1,7 @@
 import { type FormEvent, useId, useState } from "react";
 
 import { Button } from "../design/Button";
+import { Field } from "../design/Field";
 import { type Crop, rowNumbers } from "./edits";
 import { ASSESSED_SCHEMA } from "./generated/assessedSchema";
 import type { CropModel, Installation } from "./generated/assessedTypes";
@@ -88,20 +89,30 @@ export function RowCrops({
         </tbody>
       </table>
       <form className="builder-give" onSubmit={give}>
-        <label className="builder-give-field">
-          <span>Crop model</span>
-          <select value={model} onChange={(event) => setModel(event.target.value as CropModel)}>
-            {MODELS.map((each) => (
-              <option key={each} value={each}>
-                {each}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="builder-give-field">
-          <span>Variety</span>
-          <input value={variety} onChange={(event) => setVariety(event.target.value)} />
-        </label>
+        <Field label="Crop model" size="compact" className="builder-give-field">
+          {(control) => (
+            <select
+              {...control}
+              value={model}
+              onChange={(event) => setModel(event.target.value as CropModel)}
+            >
+              {MODELS.map((each) => (
+                <option key={each} value={each}>
+                  {each}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <Field label="Variety" size="compact" className="builder-give-field">
+          {(control) => (
+            <input
+              {...control}
+              value={variety}
+              onChange={(event) => setVariety(event.target.value)}
+            />
+          )}
+        </Field>
         <Button type="submit" size="compact" disabled={chosen.size === 0}>
           Give the chosen rows this crop
         </Button>

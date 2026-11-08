@@ -188,6 +188,18 @@ export function QaDesign() {
           )}
         </Field>
       </div>
+      <div style={FIELD_ROW}>
+        <Field label="a compact field" size="compact">
+          {(control) => <input {...control} />}
+        </Field>
+        <Field label="a compact choice" size="compact">
+          {(control) => (
+            <select {...control}>
+              <option>an option</option>
+            </select>
+          )}
+        </Field>
+      </div>
       <h2 style={HEADING}>Status chips</h2>
       <div style={ROW}>
         {STATUS_TONES.map((tone) => (

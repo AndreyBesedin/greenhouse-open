@@ -1,6 +1,7 @@
 import { type FormEvent, useId } from "react";
 
 import { Button } from "../design/Button";
+import { Field } from "../design/Field";
 import type { RunSettings } from "./api";
 
 /** A draft's first run's days, unless another number is entered. */
@@ -76,47 +77,58 @@ export function RunStep({
   return (
     <form className="builder-run" aria-labelledby={heading} onSubmit={run}>
       <h2 id={heading}>Run it</h2>
-      <label className="builder-field">
-        <span>Starting on</span>
-        <input
-          type="date"
-          required
-          value={fields.start}
-          onChange={(event) => set({ start: event.target.value })}
-        />
-      </label>
-      <label className="builder-field">
-        <span>Days</span>
-        <input
-          type="number"
-          step={1}
-          min={1}
-          required
-          value={fields.days}
-          onChange={(event) => set({ days: event.target.value })}
-        />
-      </label>
-      <label className="builder-field">
-        <span>Weather</span>
-        <select value={fields.weather} onChange={(event) => set({ weather: event.target.value })}>
-          {(weathers.length > 0 ? weathers : ["default"]).map((each) => (
-            <option key={each} value={each}>
-              {each}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="builder-field">
-        <span>Seed</span>
-        <input
-          type="number"
-          step={1}
-          min={0}
-          required
-          value={fields.seed}
-          onChange={(event) => set({ seed: event.target.value })}
-        />
-      </label>
+      <Field label="Starting on" size="compact" className="builder-field">
+        {(control) => (
+          <input
+            {...control}
+            type="date"
+            required
+            value={fields.start}
+            onChange={(event) => set({ start: event.target.value })}
+          />
+        )}
+      </Field>
+      <Field label="Days" size="compact" className="builder-field">
+        {(control) => (
+          <input
+            {...control}
+            type="number"
+            step={1}
+            min={1}
+            required
+            value={fields.days}
+            onChange={(event) => set({ days: event.target.value })}
+          />
+        )}
+      </Field>
+      <Field label="Weather" size="compact" className="builder-field">
+        {(control) => (
+          <select
+            {...control}
+            value={fields.weather}
+            onChange={(event) => set({ weather: event.target.value })}
+          >
+            {(weathers.length > 0 ? weathers : ["default"]).map((each) => (
+              <option key={each} value={each}>
+                {each}
+              </option>
+            ))}
+          </select>
+        )}
+      </Field>
+      <Field label="Seed" size="compact" className="builder-field">
+        {(control) => (
+          <input
+            {...control}
+            type="number"
+            step={1}
+            min={0}
+            required
+            value={fields.seed}
+            onChange={(event) => set({ seed: event.target.value })}
+          />
+        )}
+      </Field>
       {disabled && <p className="builder-note">{why}</p>}
       <Button type="submit" size="compact" disabled={disabled}>
         Run this revision

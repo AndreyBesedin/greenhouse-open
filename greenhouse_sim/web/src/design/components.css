@@ -110,6 +110,16 @@
   color: var(--warn);
 }
 
+/* A field's control, the browser's own, at least a target's height. */
+.ds-field-control {
+  box-sizing: border-box;
+  min-height: var(--target);
+}
+
+.ds-field-control-compact {
+  min-height: var(--target-compact);
+}
+
 /* A fold's line opens it, and stands apart from what it holds once open. */
 .ds-fold > summary {
   cursor: pointer;
