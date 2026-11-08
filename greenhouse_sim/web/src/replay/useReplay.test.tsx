@@ -281,6 +281,18 @@ describe("a stored epoch replayed", () => {
     expect(done.calls.filter((c) => c.method === "GET")).toHaveLength(0);
   });
 
+  it("stops asking once an epoch it followed is done, though it still says it follows", async () => {
+    const followed = simulator({ status: "finished", following: true, time_s: 3 * DAY_S });
+    rendered = render(<Probe fetchFn={followed.fetchFn} following />);
+    await settle();
+    await settle();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(shownTime(rendered.container)).toBe(String(3 * DAY_S));
+    expect(followed.calls.filter((c) => c.method === "GET")).toHaveLength(0);
+  });
+
   it("says so and stops asking once the simulator has let the position go", async () => {
     let restarted = false;
     const answers = simulator({ status: "running" });
