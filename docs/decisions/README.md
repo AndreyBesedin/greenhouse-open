@@ -87,6 +87,7 @@ decision that changes course is a new record that supersedes the old one.
 | [0071](0071-cut-the-browser-tests-last-lane-in-three.md) | Cut the browser tests' last lane in three | Accepted |
 | [0072](0072-an-epoch-keeps-its-authorisation-in-its-log.md) | An epoch keeps its authorisation in its log | Accepted |
 | [0073](0073-a-change-in-a-replay-steers-a-running-epoch-at-its-own-clock.md) | A change in a replay steers a running epoch at its own clock | Accepted |
+| [0074](0074-the-viewer-starts-no-playback-and-a-playback-is-a-consumers.md) | The viewer starts no playback; a playback is a consumer's | Proposed |
 
 ## Template
 
