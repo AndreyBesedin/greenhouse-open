@@ -85,7 +85,7 @@
       "type": "string"
     }
   },
-  "description": "What has become of the changes asked of an epoch: those logged, in\norder, those refused, and those no worker has taken yet. An epoch that has\nended takes no more: whatever is still waiting then is never taken.",
+  "description": "What has become of the changes asked of an epoch: those logged, in\norder, those refused, those no worker has taken yet, and those its worker\nis done with. A worker logs a change before it acts on it, and may refuse\nit then: a request logged is acted on once it is done and not refused. An\nepoch that has ended takes no more: whatever is still waiting then is never\ntaken.",
   "properties": {
     "status": {
       "$ref": "#/$defs/Status"
@@ -110,13 +110,21 @@
       },
       "title": "Waiting",
       "type": "array"
+    },
+    "done": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Done",
+      "type": "array"
     }
   },
   "required": [
     "status",
     "log",
     "refused",
-    "waiting"
+    "waiting",
+    "done"
   ],
   "title": "EpochChanges",
   "type": "object"

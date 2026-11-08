@@ -3,6 +3,9 @@ import { dayLabel } from "./timeline";
 /** What steering a running epoch from its replay does, said before a change. */
 export const WHAT_STEERING_DOES =
   "This run is being computed: a target or a level set here is given to it, from the moment its worker has reached, not the one shown, and nothing forks.";
+/** What a change does once the epoch steered has ended. */
+export const ENDED_STEERING =
+  "This run is no longer computed: a target or a level set here now makes a fork of it.";
 
 /** Where the latest change given to a running epoch stands, in words. */
 export function steeringText({
@@ -24,10 +27,13 @@ export function steeringText({
  * epoch's worker refused it, why, in their words.
  */
 export function EpochSteering({
+  computing = true,
   waiting,
   taken,
   refusal,
 }: {
+  /** Whether the epoch is still being computed, and takes changes. */
+  computing?: boolean;
   /** Whether a change is on its way to the epoch's worker. */
   waiting: boolean;
   /** The moment the latest change taken took effect from, in seconds into the run. */
@@ -40,7 +46,7 @@ export function EpochSteering({
   const refused = waiting ? null : refusal;
   return (
     <div data-testid="epoch-steering">
-      <p className="targets-note">{WHAT_STEERING_DOES}</p>
+      <p className="targets-note">{computing ? WHAT_STEERING_DOES : ENDED_STEERING}</p>
       <p className="targets-note" role="status" data-testid="epoch-steering-status">
         {refused === null ? standing : null}
       </p>

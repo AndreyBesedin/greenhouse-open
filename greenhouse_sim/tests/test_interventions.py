@@ -212,6 +212,67 @@ def test_a_plan_refused_whole_is_logged_as_given_and_answered(
     assert "epoch" in answer.reason
 
 
+class Recording(FolderStore):
+    """A folder store that keeps the names it is given to write, in order."""
+
+    def __init__(self, root: Path) -> None:
+        super().__init__(root)
+        self.written: list[str] = []
+
+    def put(self, name: str, data: bytes) -> None:
+        self.written.append(name)
+        super().put(name, data)
+
+
+def _order(store: Recording, request: str) -> list[str]:
+    """What the worker wrote of a request, in order: its log entry and the
+    request's own objects, by their folders."""
+    return [
+        "log" if name.endswith("interventions.jsonl") else name.rsplit("/", 2)[-2]
+        for name in store.written
+        if request in name or name.endswith("interventions.jsonl")
+    ]
+
+
+def test_a_request_logged_then_refused_is_done_with_only_once_its_answer_is_written(
+    tmp_path: Path, simulator: Simulator
+) -> None:
+    """A reader that sees the entry logged, before the refusal that follows it, does
+    not see the request done: what it acted on is known once it is (P22.1)."""
+    store = Recording(tmp_path)
+    epoch = queued(simulator, store, SHORT)
+    request = epoch.ask(_given(_plan(epoch, simulator, MINUTE_S, number=epoch.epoch + 7)))
+    assert execute(simulator, epoch, Free()) == Status.FINISHED
+
+    assert _order(store, request) == ["requests", "log", "answers", "done"]
+    assert epoch.done_requests() == [request]
+    assert [answer.request for answer in epoch.answers()] == [request]
+
+
+def test_a_request_acted_on_is_done_with_after_its_entry_and_answered_by_none(
+    steered: EpochStore,
+) -> None:
+    (entry,) = steered.log()
+    assert entry.request is not None
+    assert steered.done_requests() == [entry.request]
+    assert steered.answers() == []
+
+
+def test_a_plan_accepted_whose_actions_are_refused_at_once_is_answered(
+    tmp_path: Path, simulator: Simulator
+) -> None:
+    epoch = queued(simulator, FolderStore(tmp_path), SHORT)
+    # A level the box has no device for: the plan is accepted, its action refused.
+    plan = _plan(epoch, simulator, MINUTE_S, action=SetLevel(device_id="no_such_fan", level=1.0))
+    request = epoch.ask(_given(plan))
+    assert execute(simulator, epoch, Free()) == Status.FINISHED
+
+    (answer,) = epoch.answers()
+    assert answer.request == request
+    assert answer.reason
+    assert epoch.done_requests() == [request]
+
+
 def test_an_epoch_with_a_log_resumes_to_the_digests_of_one_never_interrupted(
     tmp_path: Path, steered: EpochStore
 ) -> None:
@@ -288,6 +349,26 @@ def test_a_crash_after_a_commit_that_names_the_entry_and_before_the_next_segment
     with _simulator() as after:
         assert resume(after, epoch, Free()) == Status.FINISHED
 
+    assert len(epoch.logged()) == 1
+    assert _digests(epoch) == _digests(steered)
+
+
+def test_a_request_taken_before_a_crash_is_done_with_once_the_epoch_is_resumed(
+    tmp_path: Path, steered: EpochStore
+) -> None:
+    store = CrashingStore(tmp_path, "done/")
+    with _simulator() as before:
+        epoch = queued(before, store, SHORT)
+        with pytest.raises(Crash):
+            execute(before, epoch, Stepped(_barriers(epoch, before)))
+    (entry,) = epoch.logged()
+    assert epoch.done_requests() == []
+    epoch.set_status(Status.INTERRUPTED)
+
+    with _simulator() as after:
+        assert resume(after, epoch, Free()) == Status.FINISHED
+
+    assert epoch.done_requests() == [entry.request]
     assert len(epoch.logged()) == 1
     assert _digests(epoch) == _digests(steered)
 
@@ -477,12 +558,14 @@ def test_a_change_is_asked_of_a_queued_epoch_over_the_api_and_taken_by_its_worke
     before = _read(respond(served, "GET", url))
     assert before["waiting"] == [asked]
     assert before["log"] == []
+    assert before["done"] == []
 
     assert execute(served, epoch, Free()) == Status.FINISHED
 
     after = _read(respond(served, "GET", url))
     assert after["waiting"] == []
     assert [entry["request"] for entry in after["log"]] == [asked]
+    assert after["done"] == [asked]
     assert epoch.log()[0].what["plan"] == plan.model_dump(mode="json")
 
 

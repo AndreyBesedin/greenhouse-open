@@ -234,8 +234,11 @@ class ChangeAsked(BaseModel):
 
 class EpochChanges(BaseModel):
     """What has become of the changes asked of an epoch: those logged, in
-    order, those refused, and those no worker has taken yet. An epoch that has
-    ended takes no more: whatever is still waiting then is never taken."""
+    order, those refused, those no worker has taken yet, and those its worker
+    is done with. A worker logs a change before it acts on it, and may refuse
+    it then: a request logged is acted on once it is done and not refused. An
+    epoch that has ended takes no more: whatever is still waiting then is never
+    taken."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -243,6 +246,7 @@ class EpochChanges(BaseModel):
     log: list[LogEntry]
     refused: list[Answer]
     waiting: list[str]
+    done: list[str]
 
 
 def _epoch(simulator: Simulator, run_id: str, epoch: int) -> EpochStore:
@@ -317,6 +321,7 @@ def changes(simulator: Simulator, run_id: str, epoch: int) -> EpochChanges:
         log=log,
         refused=refused,
         waiting=[each for each in kept.requests() if each not in logged | answered],
+        done=kept.done_requests(),
     )
 
 

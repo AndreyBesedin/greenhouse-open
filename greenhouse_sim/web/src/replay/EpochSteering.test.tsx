@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { DAY_S } from "../clock";
 import { type Rendered, render, said } from "../testing/render";
-import { EpochSteering, steeringText, WHAT_STEERING_DOES } from "./EpochSteering";
+import { ENDED_STEERING, EpochSteering, steeringText, WHAT_STEERING_DOES } from "./EpochSteering";
 
 describe("a running epoch steered from its replay", () => {
   let rendered: Rendered | undefined;
@@ -15,6 +15,15 @@ describe("a running epoch steered from its replay", () => {
     expect(said(rendered.container, "epoch-steering")).toContain(WHAT_STEERING_DOES);
     expect(WHAT_STEERING_DOES).toMatch(/not the one shown, and nothing forks/);
     expect(said(rendered.container, "epoch-steering-status")).toBe("");
+  });
+
+  it("says, once the run has ended, that a change now forks it", () => {
+    rendered = render(
+      <EpochSteering computing={false} waiting={false} taken={null} refusal="it ended first" />,
+    );
+
+    expect(said(rendered.container, "epoch-steering")).toContain(ENDED_STEERING);
+    expect(said(rendered.container, "epoch-steering-refused")).toBe("Not changed: it ended first.");
   });
 
   it("says a change waits for the worker, then the moment the run took it from", () => {

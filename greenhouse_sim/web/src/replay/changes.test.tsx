@@ -1,11 +1,18 @@
+// @vitest-environment jsdom
+import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { setLevel, setTarget } from "../plan/plan";
+import { useSteering } from "../plan/useSteering";
+import { render } from "../testing/render";
 import {
   changesFor,
   type EpochChanges,
   giveToEpoch,
   LOOK_MS,
+  type SteeredEpoch,
+  saysSteering,
+  steeredEpoch,
   takesChanges,
   whatBecameOf,
 } from "./changes";
@@ -14,7 +21,7 @@ const REQUEST = "01794130623610413709-76b35bf1";
 const CHANGES_URL = "/api/runs/run%201/epochs/2/changes";
 
 function changes(over: Partial<EpochChanges> = {}): EpochChanges {
-  return { status: "running", log: [], refused: [], waiting: [], ...over };
+  return { status: "running", log: [], refused: [], waiting: [], done: [], ...over };
 }
 
 function logged(request: string, atS: number) {
@@ -56,17 +63,36 @@ describe("which epochs take changes", () => {
 });
 
 describe("what became of a change asked of an epoch", () => {
-  it("is the moment its worker logged it to take effect from", () => {
+  it("is the moment its worker logged it to take effect from, once it is done with it", () => {
     expect(
-      whatBecameOf(changes({ log: [logged("other", 60), logged(REQUEST, 86_460)] }), REQUEST),
+      whatBecameOf(
+        changes({ log: [logged("other", 60), logged(REQUEST, 86_460)], done: ["other", REQUEST] }),
+        REQUEST,
+      ),
     ).toEqual({ status: "taken", atS: 86_460 });
+  });
+
+  it("is waiting while it is logged and its worker is not yet done with it", () => {
+    // Logged before it is acted on, and maybe refused then (P17.8).
+    expect(whatBecameOf(changes({ log: [logged(REQUEST, 60)] }), REQUEST)).toEqual({
+      status: "waiting",
+    });
+  });
+
+  it("is taken if the epoch ended with it logged and never done with, as a crash leaves it", () => {
+    expect(
+      whatBecameOf(changes({ status: "interrupted", log: [logged(REQUEST, 60)] }), REQUEST),
+    ).toEqual({ status: "taken", atS: 60 });
   });
 
   it("is a refusal in the worker's words, also of one it logged and then refused", () => {
     const refused = { request: REQUEST, reason: "no heating loop whose target to change" };
 
     expect(
-      whatBecameOf(changes({ log: [logged(REQUEST, 60)], refused: [refused] }), REQUEST),
+      whatBecameOf(
+        changes({ log: [logged(REQUEST, 60)], refused: [refused], done: [REQUEST] }),
+        REQUEST,
+      ),
     ).toEqual({ status: "refused", reason: "no heating loop whose target to change" });
   });
 
@@ -112,7 +138,7 @@ describe("giving a running epoch what its replay's panels set", () => {
     vi.useFakeTimers();
     const run = simulator({ status: 200, body: { request: REQUEST } }, [
       changes({ waiting: [REQUEST] }),
-      changes({ log: [logged(REQUEST, 86_460)] }),
+      changes({ log: [logged(REQUEST, 86_460)], done: [REQUEST] }),
     ]);
 
     const given = giveToEpoch("run 1", 2, [setTarget("heating_day", 24)], run.fetchFn);
@@ -141,6 +167,21 @@ describe("giving a running epoch what its replay's panels set", () => {
       reason: "epoch 2 of run 1 is finished: it takes no more changes",
     });
     expect(run.reads()).toBe(0);
+  });
+
+  it("waits past a change logged and not yet done with, and says the refusal that follows", async () => {
+    vi.useFakeTimers();
+    const refused = { request: REQUEST, reason: "local_operator may not change heating_day" };
+    const run = simulator({ status: 200, body: { request: REQUEST } }, [
+      changes({ log: [logged(REQUEST, 60)] }),
+      changes({ log: [logged(REQUEST, 60)], refused: [refused], done: [REQUEST] }),
+    ]);
+
+    const given = giveToEpoch("run 1", 2, [setTarget("heating_day", 24)], run.fetchFn);
+    await vi.advanceTimersByTimeAsync(LOOK_MS);
+
+    expect(await given).toEqual({ status: "refused", reason: refused.reason });
+    expect(run.reads()).toBe(2);
   });
 
   it("says the worker's refusal", async () => {
@@ -180,5 +221,60 @@ describe("giving a running epoch what its replay's panels set", () => {
 
     expect(given.status).toBe("refused");
     expect(run.asked).toEqual([]);
+  });
+});
+
+describe("the epoch a replay steers, as it ends", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  let steering: ReturnType<typeof useSteering> | null = null;
+  function Steered({ steer }: { steer: SteeredEpoch }) {
+    steering = useSteering(steer.epoch, {}, steer.give);
+    return null;
+  }
+
+  it("is the same epoch, so that a change left untaken as it ends is still said", async () => {
+    vi.useFakeTimers();
+    // The worker has not taken the change by the time the epoch ends.
+    const run = simulator({ status: 200, body: { request: REQUEST } }, [
+      changes({ waiting: [REQUEST] }),
+      changes({ status: "finished", waiting: [REQUEST] }),
+    ]);
+    const give = (actions: Parameters<typeof giveToEpoch>[2]) =>
+      giveToEpoch("run 1", 2, actions, run.fetchFn);
+    const running = steeredEpoch("run 1", 2, give, "running");
+    const shown = render(<Steered steer={running} />);
+    act(() => steering?.setTargets({ heating_day: 24 }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // The position says it has ended before the worker's answer is read.
+    const ended = steeredEpoch("run 1", 2, give, "finished");
+    shown.rerender(<Steered steer={ended} />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(LOOK_MS);
+    });
+
+    expect(ended.epoch).toBe(running.epoch);
+    expect(ended.computing).toBe(false);
+    expect(steering?.refusal).toBe(
+      "the run was finished before it took the change; a fork acts from a moment of it",
+    );
+    expect(
+      saysSteering(ended.computing, steering ?? { waiting: 0, taken: null, refusal: null }),
+    ).toBe(true);
+    shown.unmount();
+  });
+
+  it("is said while it is computed, and after only while something of a change is", () => {
+    const none = { waiting: 0, taken: null, refusal: null };
+    expect(saysSteering(true, none)).toBe(true);
+    expect(saysSteering(false, none)).toBe(false);
+    expect(saysSteering(false, { ...none, waiting: 1 })).toBe(true);
+    expect(saysSteering(false, { ...none, taken: 60 })).toBe(true);
+    expect(saysSteering(false, { ...none, refusal: "no" })).toBe(true);
   });
 });

@@ -41,19 +41,24 @@ export type Taken =
   | { status: "refused"; reason: string }
   | { status: "waiting" };
 
-/** What the epoch's changes say of `request`: logged, at the instant it takes
- * effect; refused, in the worker's words, which a plan logged and then refused
- * is too; waiting; or never to be taken, its epoch having ended first. */
+/** What the epoch's changes say of `request`: taken, at the instant it takes
+ * effect, once its worker has logged it and is done with it; refused, in the
+ * worker's words, which a change logged and then refused is too; waiting, also
+ * while it is logged and not yet done with, since a worker logs a change before
+ * it acts on it and may refuse it then; or never to be taken, its epoch having
+ * ended first. An epoch that ended with it logged and never done with, as a
+ * crash leaves one, took it, as far as anything says. */
 export function whatBecameOf(changes: EpochChanges, request: string): Taken {
   const refused = changes.refused.find((answer) => answer.request === request);
   if (refused !== undefined) {
     return { status: "refused", reason: refused.reason };
   }
   const logged = changes.log.find((entry) => entry.request === request);
-  if (logged !== undefined) {
+  const running = takesChanges(changes.status);
+  if (logged !== undefined && (changes.done.includes(request) || !running)) {
     return { status: "taken", atS: logged.at_s };
   }
-  return takesChanges(changes.status)
+  return running
     ? { status: "waiting" }
     : {
         status: "refused",
@@ -196,6 +201,34 @@ export async function giveToEpoch(
     atS = Math.max(atS ?? became.atS, became.atS);
   }
   return atS === undefined ? { status: "given" } : { status: "given", atS };
+}
+
+/** The epoch a replay steers, for `useSteering` and the panels: named by its
+ * run and number alone, whether or not it is still computed, so that what
+ * became of a change given it before it ended is still said after; and whether
+ * it is computed, which decides whether a change made now steers it or forks it. */
+export interface SteeredEpoch {
+  epoch: string;
+  give: (actions: Action[]) => Promise<Given>;
+  computing: boolean;
+}
+
+export function steeredEpoch(
+  runId: string,
+  epoch: number,
+  give: (actions: Action[]) => Promise<Given>,
+  status: Status,
+): SteeredEpoch {
+  return { epoch: `${runId}#${epoch}`, give, computing: takesChanges(status) };
+}
+
+/** Whether a replay says how the changes given its epoch stand: while it is
+ * computed, and after, while one is on its way or what became of one is said. */
+export function saysSteering(
+  computing: boolean,
+  { waiting, taken, refusal }: { waiting: number; taken: number | null; refusal: string | null },
+): boolean {
+  return computing || waiting > 0 || taken !== null || refusal !== null;
 }
 
 /** How a replay's panels give actions to the epoch it shows, for `useSteering`. */

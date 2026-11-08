@@ -32,7 +32,7 @@ import { PanelSide } from "./PanelSide";
 import { PlaybackPanel } from "./PlaybackPanel";
 import { usePanelFolds } from "./panelFolds";
 import { cropAction } from "./plan/plan";
-import { type Give, useGiveToPlayback, useSteering } from "./plan/useSteering";
+import { useGiveToPlayback, useSteering } from "./plan/useSteering";
 import { LabPanels } from "./plants/LabPanels";
 import { type LabRun, PLANT_LAB_POSE } from "./plants/lab";
 import { PlantActions } from "./plants/PlantActions";
@@ -44,6 +44,7 @@ import { useQaMode } from "./qaMode/mode";
 import { QaPanel } from "./qaMode/QaPanel";
 import { useQaLoads } from "./qaMode/useQaLoads";
 import type { ViewSample } from "./readouts";
+import { type SteeredEpoch, saysSteering } from "./replay/changes";
 import { EpochSteering } from "./replay/EpochSteering";
 import type { ForkChange } from "./replay/fork";
 import { forkMoment, forkMomentNamed, withPlanOf } from "./replay/replaySource";
@@ -106,10 +107,11 @@ export function App({
     forkInLayout: (layout: string, timeS: number) => Promise<string | null>;
     /** Why no fork can be made at the moment shown, if none can. */
     noFork: string | null;
-    /** While the epoch replayed is being computed (P22.1): the epoch, by a
-     * name of its own, and how a target or a level set in the panels is given
-     * to it, which steers it in place of a fork. Null once it has ended. */
-    steer: { epoch: string; give: Give } | null;
+    /** The epoch replayed, by a name of its own, how a target or a level set
+     * in the panels is given to it, and whether it is being computed (P22.1):
+     * while it is, a change steers it in place of a fork. What was given it
+     * stays said once it has ended, and the changes after that fork it. */
+    steer: SteeredEpoch;
   };
 }) {
   const [addressed, setAddressed] = useSource(replay?.source);
@@ -257,6 +259,8 @@ export function App({
   // shown as it has them at the moment the replay shows.
   const clockS = playback.status === "loaded" ? playback.state.timeS : null;
   const steeredEpoch = replay?.steer ?? null;
+  // Whether a change made now steers the epoch replayed, rather than forking it.
+  const steersNow = steeredEpoch?.computing === true;
   const steeredAt = replay === undefined ? clockS : (replay.momentS ?? 0);
   const shownWhenSteered = useMemo(
     () =>
@@ -519,11 +523,11 @@ export function App({
                     : undefined
                 }
                 onTargets={(targets) => {
-                  if (replay !== undefined && steeredEpoch === null) {
+                  if (replay !== undefined && !steersNow) {
                     replay.forkWith({ kind: "targets", targets }, forkFrom);
                     return;
                   }
-                  if (followed !== null || steeredEpoch !== null) {
+                  if (followed !== null || steersNow) {
                     steering.setTargets(targets);
                     return;
                   }
@@ -532,18 +536,18 @@ export function App({
                   );
                 }}
                 steering={
-                  replay !== undefined && steeredEpoch === null
+                  replay !== undefined && !steersNow
                     ? {
                         at: replay.momentS ?? 0,
                         asked: replayLevels,
                         onLevels: (levels) => setReplayLevels((was) => ({ ...was, ...levels })),
                       }
-                    : (followed !== null || steeredEpoch !== null) && steeredAt !== null
+                    : (followed !== null || steersNow) && steeredAt !== null
                       ? { at: steeredAt, asked: steering.asked, onLevels: steering.steer }
                       : undefined
                 }
-                steersReplayed={steeredEpoch !== null}
-                {...(replay === undefined || steeredEpoch !== null
+                steersReplayed={steersNow}
+                {...(replay === undefined || steersNow
                   ? {}
                   : {
                       forkLevels: {
@@ -582,8 +586,9 @@ export function App({
                 onOwnRange={() => setFieldRange(null)}
               >
                 {/* One child or none: a card is drawn only with something in it. */}
-                {steeredEpoch !== null ? (
+                {steeredEpoch !== null && saysSteering(steersNow, steering) ? (
                   <EpochSteering
+                    computing={steersNow}
                     waiting={steering.waiting > 0}
                     taken={steering.taken}
                     refusal={steering.refusal}

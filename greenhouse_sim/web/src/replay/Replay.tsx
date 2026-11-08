@@ -6,7 +6,7 @@ import { replayTarget, runsAddress } from "../landing/paths";
 import { loadScenarios, SCENARIOS_URL } from "../scenarios";
 import { replayedMoment } from "../scene/useReplayMoment";
 import { useLoad } from "../useLoad";
-import { takesChanges, useGiveToEpoch } from "./changes";
+import { steeredEpoch, useGiveToEpoch } from "./changes";
 import { loadFailure } from "./failure";
 import { whyNoFork } from "./fork";
 import { epochUrl } from "./position";
@@ -80,12 +80,14 @@ function ReplayOf({
     fork,
   } = useFork(useMemo(() => ({ runId, epoch }), [runId, epoch]));
   // While the epoch is being computed, as the position last said, the panels
-  // steer it: the simulator's answer decides, should it have ended since.
-  const steers = position !== null && takesChanges(position.status);
+  // steer it: the simulator's answer decides, should it have ended since. The
+  // epoch steered is the same once it has ended, so that what became of the
+  // changes given it is still said.
+  const status = position?.status ?? "queued";
   const give = useGiveToEpoch(runId, epoch);
   const steer = useMemo(
-    () => (steers ? { epoch: `${runId}#${epoch}`, give } : null),
-    [steers, runId, epoch, give],
+    () => steeredEpoch(runId, epoch, give, status),
+    [status, runId, epoch, give],
   );
 
   if (position === null || source === null) {

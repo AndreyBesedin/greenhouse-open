@@ -708,13 +708,25 @@ class Playback:
             if self._taken is None:
                 self._taken = {entry.request for entry in store.logged() if entry.request}
                 self._taken |= {answer.request for answer in store.answers()}
+                # Taken before a crash, which left it logged or answered and
+                # not said to be done with: it is not taken again.
+                for request in sorted(self._taken - set(store.done_requests())):
+                    store.done(request)
             for request in asked:
                 if request not in self._taken:
                     self._taken.add(request)
                     self._take(store, request)
 
     def _take(self, store: EpochStore, request: str) -> None:
+        """Takes one request: logs it and acts on it, or answers why not, and
+        then says it is done with it, so that a reader never takes an entry
+        logged for a change made before a refusal that follows it is written."""
+        self._take_one(store, request)
+        store.done(request)
+
+    def _take_one(self, store: EpochStore, request: str) -> None:
         refused: Receipt | None = None
+        plan_id: str | None = None
         try:
             match REQUESTED.validate_json(store.request(request) or b""):
                 case AuthorisationChanged(authorisation=authorisation):
@@ -731,8 +743,10 @@ class Playback:
                         at_s=moment,
                         plan_id=f"levels_{request}",
                     )
+                    plan_id = plan.plan_id
                     refused = self.submit(plan, request=request)
                 case PlanGiven(plan=plan):
+                    plan_id = plan.plan_id
                     refused = self.submit(plan, request=request)
                 case ActionsCancelled(keys=keys):
                     refused = self.cancel(keys, request=request)
@@ -747,8 +761,25 @@ class Playback:
                 Answer(request=request, reason=f"not a change: {error.errors()[0]['msg']}")
             )
         else:
-            if refused is not None and not refused.accepted:
-                store.answer(Answer(request=request, reason="; ".join(refused.errors)))
+            reason = None if refused is None else self._not_acted_on(refused, plan_id)
+            if reason is not None:
+                store.answer(Answer(request=request, reason=reason))
+
+    def _not_acted_on(self, receipt: Receipt, plan_id: str | None) -> str | None:
+        """Why a write was not acted on, in the gateway's words: refused whole,
+        or a plan accepted whose actions were refused at once, as one its
+        authorisation forbids; None if it was acted on."""
+        if not receipt.accepted:
+            return "; ".join(receipt.errors)
+        if not receipt.refused or plan_id is None:
+            return None
+        refused = {ref.action_id for ref in receipt.refused}
+        said = [
+            outcome.reason or "refused"
+            for outcome in self.plan(plan_id).outcomes
+            if outcome.ref.action_id in refused
+        ]
+        return "; ".join(dict.fromkeys(said)) or "refused"
 
     def _log(
         self,

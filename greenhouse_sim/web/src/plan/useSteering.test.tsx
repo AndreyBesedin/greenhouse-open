@@ -226,6 +226,18 @@ describe("a run steered through whatever gives it its changes", () => {
     expect(steering?.waiting).toBe(0);
   });
 
+  it("keeps what became of a change while the same run is steered", async () => {
+    // A replay's epoch is the run steered whether or not it is still computed.
+    const run = answeredLater();
+    const shown = render(<SteeredBy steered="epoch#0" give={run.give} />);
+    act(() => steering?.setTargets({ heating_day: 24 }));
+
+    shown.rerender(<SteeredBy steered="epoch#0" give={run.give} />);
+    await act(async () => run.answer({ status: "refused", reason: "it ended first" }));
+
+    expect(steering?.refusal).toBe("it ended first");
+  });
+
   it("gives nothing while no run is steered", () => {
     const run = answeredLater();
     render(<SteeredBy steered={null} give={run.give} />);

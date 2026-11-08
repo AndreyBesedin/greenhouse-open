@@ -110,13 +110,21 @@ export const EPOCH_CHANGES_SCHEMA = {
       },
       "title": "Waiting",
       "type": "array"
+    },
+    "done": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Done",
+      "type": "array"
     }
   },
   "required": [
     "status",
     "log",
     "refused",
-    "waiting"
+    "waiting",
+    "done"
   ],
   "title": "EpochChanges",
   "type": "object"

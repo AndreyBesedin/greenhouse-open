@@ -6,14 +6,18 @@ export type JsonValue = unknown;
 
 /**
  * What has become of the changes asked of an epoch: those logged, in
- * order, those refused, and those no worker has taken yet. An epoch that has
- * ended takes no more: whatever is still waiting then is never taken.
+ * order, those refused, those no worker has taken yet, and those its worker
+ * is done with. A worker logs a change before it acts on it, and may refuse
+ * it then: a request logged is acted on once it is done and not refused. An
+ * epoch that has ended takes no more: whatever is still waiting then is never
+ * taken.
  */
 export interface EpochChanges {
   status: Status;
   log: LogEntry[];
   refused: Answer[];
   waiting: string[];
+  done: string[];
 }
 /**
  * A change given to an epoch while it ran: its number in the log, the

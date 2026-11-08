@@ -55,15 +55,21 @@ moment a change takes, and how the replay learns what became of it.
   and one that ended before its worker took a request leaves it waiting, never
   taken. Either is said in words, beside the panels, and is not made a fork in
   its place; the next change, the page knowing the epoch has ended, forks.
+  The epoch steered stays the same once it has ended, so that what became of
+  a change given before is still said after.
 - **A change takes at the epoch's own clock,** as its worker takes it: a target
   from the next minute, a level from the moment it is taken, as P17.8's route
   gives them. The panels say so before the change is made ("from the run's next
   minute"), and the replay says where the epoch is computing, not the moment it
   shows.
 - **The replay reads back what became of it** from the epoch's changes
-  (`GET …/changes`), until the worker has logged the request, at the moment it
-  takes effect, which the page then names, or refused it, which the page says in
-  the worker's words. What the panels show at a moment is the plan the epoch was
+  (`GET …/changes`), until the worker is done with the request: logged, at the
+  moment it takes effect, which the page then names, or refused, which the page
+  says in the worker's words. A worker logs a change before it acts on it, and
+  may refuse it then, so an entry logged is not yet a change made: the worker
+  says it is done with a request (`done/{id}.json`, listed as `done`) after its
+  answer, if it has one, is written. A plan it accepts whose actions it refuses
+  at once is answered too, in the gateway's words. What the panels show at a moment is the plan the epoch was
   worked out under, read from its position (P17.8), so a change appears there
   once the replay reaches its moment, which a commit past it allows.
 
@@ -80,7 +86,12 @@ moment a change takes, and how the replay learns what became of it.
 - A change waits for the worker: a paced worker looks every 50 ms, a free one
   once a day of its own, and the replay reads the changes every second.
 - The answers of `…/changes` are published as schemas for the viewer to read
-  (`change_asked.schema.json`, `epoch_changes.schema.json`).
+  (`change_asked.schema.json`, `epoch_changes.schema.json`). The epoch's folder
+  holds one more kind of object, `done/`, outside every commit and digest, as
+  `requests/` and `answers/` are; an epoch carried on after a crash marks done
+  the requests its log or its answers name, which it does not take again. An
+  epoch that ended with a request logged and not done with, as such a crash
+  leaves one, is read as having taken it, since nothing else is known.
 - Worth revisiting if the replay is given a way to change a running epoch at a
   past moment, which would be a fork made with its changes, or if a change other
   than a level or a target (a plant's work) is offered in a replay.
