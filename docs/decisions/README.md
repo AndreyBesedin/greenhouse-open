@@ -86,6 +86,7 @@ decision that changes course is a new record that supersedes the old one.
 | [0069](0069-setup-installs-node-when-the-machines-is-missing-or-too-old.md) | `uv run setup` installs Node when the machine's is missing or too old | Accepted |
 | [0071](0071-cut-the-browser-tests-last-lane-in-three.md) | Cut the browser tests' last lane in three | Accepted |
 | [0072](0072-an-epoch-keeps-its-authorisation-in-its-log.md) | An epoch keeps its authorisation in its log | Accepted |
+| [0073](0073-a-change-in-a-replay-steers-a-running-epoch-at-its-own-clock.md) | A change in a replay steers a running epoch at its own clock | Accepted |
 
 ## Template
 

@@ -28,20 +28,55 @@ function collectErrors(page: Page): string[] {
 // computed while it is replayed.
 const SCENARIO = "solar_lab";
 
-/** Starts a run of the scenario at a seed, through the landing page, which
- * opens its replay at the newest day, and opens that again from its start. */
-async function replayOfANewRun(page: Page, seed: string): Promise<void> {
+/** Starts a run of a scenario at a seed and a pace, through the landing page,
+ * which opens its replay at the newest day, and opens that again from its
+ * start. By default a run of `SCENARIO` at a second a day; an empty pace is as
+ * fast as it computes. */
+async function replayOfANewRun(
+  page: Page,
+  seed: string,
+  { scenario = SCENARIO, pace = "1" }: { scenario?: string; pace?: string } = {},
+): Promise<void> {
   await page.goto(LANDING_PATH);
   const search = page.getByRole("combobox", { name: "Scenario" });
-  await search.fill(SCENARIO);
+  await search.fill(scenario);
   await search.press("Enter");
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "New run" }).click();
   await dialog.getByLabel("Seed", { exact: true }).fill(seed);
-  await dialog.getByLabel("Seconds per simulated day").fill("1");
+  await dialog.getByLabel("Seconds per simulated day").fill(pace);
   await dialog.getByRole("button", { name: "Start run" }).click();
   await expect(page).toHaveURL(new RegExp(`${REPLAY_PATH}\\?run=.*&follow=1$`));
   await page.goto(page.url().replace("&follow=1", ""));
+}
+
+/** Stops the run the page replays, through the simulator's API, as the start
+ * page's Stop does: it is interrupted with what it committed, and its replay
+ * says so. A run that is computed no longer is changed by a fork (P22.1). */
+async function stopReplayed(page: Page): Promise<void> {
+  const replayed = new URL(page.url()).searchParams;
+  const run = encodeURIComponent(replayed.get("run") ?? "");
+  const stopped = await page.request.post(`/api/runs/${run}/epochs/${replayed.get("epoch")}/stop`);
+  expect(stopped.ok()).toBe(true);
+  await expect(page.getByTestId("replay-status")).toHaveText("Interrupted", { timeout: COMPUTES });
+}
+
+/** The moment a replay says the run took a change from, in seconds into it. */
+function momentTaken(said: string): number {
+  const [, day, hours, minutes] = /from Day (\d+), (\d\d):(\d\d)\.$/.exec(said) ?? [];
+  return (Number(day) - 1) * DAY_S + Number(hours) * 3600 + Number(minutes) * 60;
+}
+
+/** The changes and forks the page asks of the simulator, as it asks them. */
+function changesAndForks(page: Page): string[] {
+  const asked: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (request.method() === "POST" && /\/epochs\/\d+\/(changes|forks)$/.test(path)) {
+      asked.push(path.replace(/.*\//, ""));
+    }
+  });
+  return asked;
 }
 
 test("a stored run is replayed: its header, its scene and a timeline over what is computed", async ({
@@ -154,6 +189,8 @@ test("a panel's fork names the moment it takes while the climate field is on its
   await expect
     .poll(async () => Number(await handle.getAttribute("aria-valuemax")), { timeout: COMPUTES })
     .toBeGreaterThanOrEqual(DAY_S);
+  // A run still computed is steered from its panels, not forked (P22.1).
+  await stopReplayed(page);
   const fork = page.getByTestId("fork-levels").getByRole("button").first();
   await expect(fork).toHaveText("Fork from here with these levels", { timeout: COMPUTES });
 
@@ -212,6 +249,7 @@ test("a level set in a replay is read beside what the run has, until it is put b
   page,
 }) => {
   await replayOfANewRun(page, "47");
+  await stopReplayed(page);
   await unfold(page, "Equipment");
   const reading = page.getByTestId("equipment-heater");
   const slider = page.getByRole("slider", { name: "heater level" });
@@ -226,6 +264,79 @@ test("a level set in a replay is read beside what the run has, until it is put b
   await page.getByRole("button", { name: "Put them back" }).click();
   await expect(slider).toHaveValue("0");
   await expect(reading).toHaveText("off");
+});
+
+test("a target set in the replay of a run being computed steers it from its moment, and nothing forks", async ({
+  page,
+}) => {
+  test.setTimeout(WAITS_FOR_A_DAY * 2);
+  // Paced, so that it is still computed when the change is asked.
+  await replayOfANewRun(page, "51", { scenario: "reference_greenhouse", pace: "20" });
+  const replayed = page.url();
+  const asked = changesAndForks(page);
+  await expect(page.getByTestId("replay-status")).toHaveText(/Queued|Running/);
+  const steering = page.getByTestId("epoch-steering");
+  await expect(steering).toContainText("nothing forks");
+  await expect(page.getByTestId("fork-levels")).toHaveCount(0);
+  const summary = page.getByTestId("targets-summary");
+  await expect(summary).toHaveText("Heating targets: 18 °C by day, 16 °C by night", {
+    timeout: COMPUTES,
+  });
+
+  await unfold(page, "Heating targets");
+  const targets = page.locator("details.targets-fold");
+  await targets.getByLabel("By day, °C").fill("24");
+  await targets.getByRole("button", { name: "Set from the run's next minute" }).click();
+
+  // Asked of the epoch, taken by its worker at its own clock, and no fork.
+  const status = page.getByTestId("epoch-steering-status");
+  await expect(status).toHaveText(/^The run took the latest change from Day \d+, \d\d:\d\d\.$/, {
+    timeout: COMPUTES,
+  });
+  const takenS = momentTaken((await status.textContent()) ?? "");
+  expect(asked).toEqual(["changes"]);
+  await expect(page.getByTestId("fork-question")).toHaveCount(0);
+  await expect(page).toHaveURL(replayed);
+  // The moment shown is before it: the run had 18 °C by day then.
+  await expect(summary).toHaveText("Heating targets: 18 °C by day, 16 °C by night");
+
+  // Once the run is computed past the moment, the replay shows it there.
+  const handle = page.getByRole("slider", { name: "Position in the run" });
+  await expect
+    .poll(async () => Number(await handle.getAttribute("aria-valuemax")), {
+      timeout: WAITS_FOR_A_DAY,
+    })
+    .toBeGreaterThan(takenS);
+  await handle.focus();
+  await page.keyboard.press("End");
+  await expect(summary).toHaveText("Heating targets: 24 °C by day, 16 °C by night", {
+    timeout: COMPUTES,
+  });
+  expect(asked).toEqual(["changes"]);
+  await stopReplayed(page);
+});
+
+test("a level set in the replay of a finished run forks it", async ({ page }) => {
+  test.setTimeout(WAITS_FOR_A_DAY * 2);
+  // As fast as it computes, so that it has finished when the level is set.
+  await replayOfANewRun(page, "52", { scenario: "climate_box", pace: "" });
+  const parent = page.url();
+  const asked = changesAndForks(page);
+  await expect(page.getByTestId("replay-status")).toHaveText("Finished", {
+    timeout: WAITS_FOR_A_DAY,
+  });
+  await expect(page.getByTestId("epoch-steering")).toHaveCount(0);
+
+  await unfold(page, "Equipment");
+  await page.getByRole("slider", { name: "heater level" }).fill("100");
+  await page.getByRole("button", { name: "Fork from here with these levels" }).click();
+  await page.getByRole("button", { name: "Make the fork" }).click();
+
+  await expect(page).not.toHaveURL(parent);
+  await expect(page.getByTestId("replay-subtitle")).toContainText(
+    /forked from epoch \d+ at Day 1, 00:00/,
+  );
+  expect(asked).toEqual(["forks"]);
 });
 
 test("an address that names no run, or a run that is not kept, says so and offers the way home", async ({

@@ -1,6 +1,14 @@
 /* Every `.ds-` rule (decision 0068): no other stylesheet writes one, so that no page
  * restyles a component; a page places one through a class of its own beside it. */
 
+/* A page's ground and its text; the browser's own controls follow `html`'s scheme. */
+.ds-page {
+  box-sizing: border-box;
+  min-height: 100%;
+  background: var(--surface-page);
+  color: var(--text);
+}
+
 .ds-button {
   display: inline-flex;
   align-items: center;
@@ -49,4 +57,64 @@
 /* After the sizes: the icon alone, centred in its target. */
 .ds-icon-button {
   padding: 0;
+}
+
+/* A status in words, its tone beside them. */
+.ds-status-chip {
+  padding: var(--space-1) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.ds-status-chip-active {
+  border-color: var(--action);
+  color: var(--action);
+}
+
+.ds-status-chip-problem {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+/* A notice's words; a page places it. */
+.ds-notice {
+  margin: 0;
+}
+
+.ds-notice-problem {
+  color: var(--warn);
+}
+
+/* A label over its control, and below them what it takes and why it is refused. */
+.ds-field {
+  display: grid;
+  gap: var(--space-3);
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.ds-field-hint,
+.ds-field-problem {
+  margin: 0;
+}
+
+.ds-field-hint {
+  color: var(--text-muted);
+  font-weight: normal;
+}
+
+.ds-field-problem {
+  color: var(--warn);
+}
+
+/* A fold's line opens it, and stands apart from what it holds once open. */
+.ds-fold > summary {
+  cursor: pointer;
+}
+
+.ds-fold[open] > summary {
+  margin-bottom: var(--space-2);
 }

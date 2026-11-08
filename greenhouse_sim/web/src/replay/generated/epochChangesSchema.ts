@@ -1,0 +1,131 @@
+// Generated from greenhouse_sim/services/epoch_changes.schema.json by `npm run generate`.
+// Do not edit: change the simulator's types and regenerate.
+
+export const EPOCH_CHANGES_SCHEMA = {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Answer": {
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "title": "Request",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request",
+        "reason"
+      ],
+      "title": "Answer",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "LogEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "seq": {
+          "title": "Seq",
+          "type": "integer"
+        },
+        "at_s": {
+          "title": "At S",
+          "type": "number"
+        },
+        "given_s": {
+          "title": "Given S",
+          "type": "number"
+        },
+        "by": {
+          "title": "By",
+          "type": "string"
+        },
+        "what": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "What",
+          "type": "object"
+        },
+        "request": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request"
+        }
+      },
+      "required": [
+        "seq",
+        "at_s",
+        "given_s",
+        "by",
+        "what",
+        "request"
+      ],
+      "title": "LogEntry",
+      "type": "object"
+    },
+    "Status": {
+      "enum": [
+        "queued",
+        "running",
+        "finished",
+        "failed",
+        "interrupted"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "status": {
+      "$ref": "#/$defs/Status"
+    },
+    "log": {
+      "items": {
+        "$ref": "#/$defs/LogEntry"
+      },
+      "title": "Log",
+      "type": "array"
+    },
+    "refused": {
+      "items": {
+        "$ref": "#/$defs/Answer"
+      },
+      "title": "Refused",
+      "type": "array"
+    },
+    "waiting": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Waiting",
+      "type": "array"
+    },
+    "done": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Done",
+      "type": "array"
+    }
+  },
+  "required": [
+    "status",
+    "log",
+    "refused",
+    "waiting",
+    "done"
+  ],
+  "title": "EpochChanges",
+  "type": "object"
+};

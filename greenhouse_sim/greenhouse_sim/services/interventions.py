@@ -234,8 +234,11 @@ class ChangeAsked(BaseModel):
 
 class EpochChanges(BaseModel):
     """What has become of the changes asked of an epoch: those logged, in
-    order, those refused, and those no worker has taken yet. An epoch that has
-    ended takes no more: whatever is still waiting then is never taken."""
+    order, those refused, those no worker has taken yet, and those its worker
+    is done with. A worker logs a change before it acts on it, and may refuse
+    it then: a request logged is acted on once it is done and not refused. An
+    epoch that has ended takes no more: whatever is still waiting then is never
+    taken."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -243,6 +246,7 @@ class EpochChanges(BaseModel):
     log: list[LogEntry]
     refused: list[Answer]
     waiting: list[str]
+    done: list[str]
 
 
 def _epoch(simulator: Simulator, run_id: str, epoch: int) -> EpochStore:
@@ -308,15 +312,24 @@ def _set_target(name: str, value: float) -> SetTarget:
 def changes(simulator: Simulator, run_id: str, epoch: int) -> EpochChanges:
     """What has become of the changes asked of an epoch."""
     kept = _epoch(simulator, run_id, epoch)
+    # Read in the order opposite to the one the worker writes in (log, answer,
+    # done; an epoch's status as it ends, after all it took): a request read as
+    # done then has its entry and any answer already there to be read, and an
+    # epoch read as ended has every answer it gave. Read the other way, an
+    # answer written between the reads of the answers and of those done would
+    # leave a refused change read as taken.
+    done = kept.done_requests()
+    status = kept.manifest().status
     log = kept.logged()
     refused = kept.answers()
     logged = {entry.request for entry in log}
     answered = {answer.request for answer in refused}
     return EpochChanges(
-        status=kept.manifest().status,
+        status=status,
         log=log,
         refused=refused,
         waiting=[each for each in kept.requests() if each not in logged | answered],
+        done=done,
     )
 
 

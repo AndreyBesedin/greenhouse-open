@@ -382,8 +382,11 @@ def test_the_room_before_any_run_is_asked_for_is_every_worker_free_and_the_disk_
 
 
 def test_the_room_counts_the_workers_busy_and_the_runs_waiting_and_says_the_refusal_to_come(
-    tmp_path: Path, held_workers: None
+    tmp_path: Path, held_workers: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # The disk's free bytes are fixed, so that the two rooms compared whole below are not
+    # told apart by another process writing to the disk between them.
+    monkeypatch.setattr(FolderStore, "free_bytes", lambda _: 5 * GIGABYTE)
     with _simulator(tmp_path, Limits(workers=1, waiting_runs=1)) as simulator:
         scheduler.start(simulator, LONG, seed=1)
         room = scheduler.room(simulator)

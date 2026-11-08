@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "A change asked of an epoch: the name its worker will know it by.",
+  "properties": {
+    "request": {
+      "title": "Request",
+      "type": "string"
+    }
+  },
+  "required": [
+    "request"
+  ],
+  "title": "ChangeAsked",
+  "type": "object"
+}

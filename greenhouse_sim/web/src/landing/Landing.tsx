@@ -7,7 +7,7 @@ import { useLoad } from "../useLoad";
 import { newRunScenario, REPOSITORY_URL, runsScenario } from "./paths";
 import { RunControls } from "./RunControls";
 import { RunDelete, useRunDeletion } from "./RunDelete";
-import { FollowLink, ReplayLink, RunFailure, RunProgress, RunUsage, StatusChip } from "./RunParts";
+import { FollowLink, ReplayLink, RunFailure, RunProgress, RunStatus, RunUsage } from "./RunParts";
 import { RunsDialog } from "./RunsDialog";
 import { loadRoom, type RoomState, roomFigures, roomRefusalText } from "./room";
 import { SavedDrafts } from "./SavedDrafts";
@@ -301,7 +301,7 @@ function RunRow({
           {started === "" ? "" : ` · ${started}`}
         </span>
       </div>
-      <StatusChip run={run} />
+      <RunStatus run={run} />
       <RunProgress run={run} name={`the run of ${whose}`} />
       <ReplayLink run={run} />
       <FollowLink run={run} />
