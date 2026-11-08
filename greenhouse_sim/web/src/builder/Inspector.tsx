@@ -55,6 +55,22 @@ function inspected(installation: Installation, id: string): Inspected | null {
   return opening === undefined ? null : { id, model: "Opening", values: opening };
 }
 
+// The house and its rows each have an origin, which the schema titles alike,
+// "Origin Position X" and "Origin X": each is said by what it places
+// (`world/envelope.py`, `world/rows.py`).
+const ORIGINS: readonly (readonly [path: string, title: string])[] = [
+  ["envelope.origin.position.", "House's corner in the world"],
+  ["layout.crop_rows.origin.", "First row's first plant"],
+];
+
+/** `field`, titled by what it places if it is one of the origins. */
+function saidApart(field: ModelField): ModelField {
+  const origin = ORIGINS.find(([path]) => field.path.startsWith(path));
+  return origin === undefined
+    ? field
+    : { ...field, title: `${origin[1]}, ${field.path.slice(origin[0].length)}` };
+}
+
 // How many significant digits a number is shown to: more than any size a
 // greenhouse is measured to, fewer than a float's rounding shows, as in
 // (6.4 - 1.6) / 2, 2.4000000000000004.
@@ -217,7 +233,7 @@ export function Inspector({
   const house = [
     ...modelFields(schema, "Envelope", "envelope."),
     ...(installation.layout.crop_rows ? modelFields(schema, "CropRows", "layout.crop_rows.") : []),
-  ];
+  ].map(saidApart);
   return (
     <section className="builder-inspector" aria-labelledby={heading}>
       <h2 id={heading}>Envelope and rows</h2>
