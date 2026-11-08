@@ -2,6 +2,7 @@ import { type FormEvent, useId } from "react";
 
 import { Button } from "../design/Button";
 import { Field } from "../design/Field";
+import { weatherName } from "../weather/WeatherPanel";
 import type { RunSettings } from "./api";
 
 /** A draft's first run's days, unless another number is entered. */
@@ -77,58 +78,62 @@ export function RunStep({
   return (
     <form className="builder-run" aria-labelledby={heading} onSubmit={run}>
       <h2 id={heading}>Run it</h2>
-      <Field label="Starting on" size="compact" className="builder-field">
-        {(control) => (
-          <input
-            {...control}
-            type="date"
-            required
-            value={fields.start}
-            onChange={(event) => set({ start: event.target.value })}
-          />
-        )}
-      </Field>
-      <Field label="Days" size="compact" className="builder-field">
-        {(control) => (
-          <input
-            {...control}
-            type="number"
-            step={1}
-            min={1}
-            required
-            value={fields.days}
-            onChange={(event) => set({ days: event.target.value })}
-          />
-        )}
-      </Field>
-      <Field label="Weather" size="compact" className="builder-field">
-        {(control) => (
-          <select
-            {...control}
-            value={fields.weather}
-            onChange={(event) => set({ weather: event.target.value })}
-          >
-            {(weathers.length > 0 ? weathers : ["default"]).map((each) => (
-              <option key={each} value={each}>
-                {each}
-              </option>
-            ))}
-          </select>
-        )}
-      </Field>
-      <Field label="Seed" size="compact" className="builder-field">
-        {(control) => (
-          <input
-            {...control}
-            type="number"
-            step={1}
-            min={0}
-            required
-            value={fields.seed}
-            onChange={(event) => set({ seed: event.target.value })}
-          />
-        )}
-      </Field>
+      {/* Each label over its control, a row of them wrapped to the column's width, so
+          that a date shows whole (the QA of 2026-11-04). */}
+      <div className="builder-give">
+        <Field label="Starting on" size="compact" className="builder-give-field">
+          {(control) => (
+            <input
+              {...control}
+              type="date"
+              required
+              value={fields.start}
+              onChange={(event) => set({ start: event.target.value })}
+            />
+          )}
+        </Field>
+        <Field label="Days" size="compact" className="builder-give-field">
+          {(control) => (
+            <input
+              {...control}
+              type="number"
+              step={1}
+              min={1}
+              required
+              value={fields.days}
+              onChange={(event) => set({ days: event.target.value })}
+            />
+          )}
+        </Field>
+        <Field label="Weather" size="compact" className="builder-give-field">
+          {(control) => (
+            <select
+              {...control}
+              value={fields.weather}
+              onChange={(event) => set({ weather: event.target.value })}
+            >
+              {(weathers.length > 0 ? weathers : ["default"]).map((each) => (
+                <option key={each} value={each}>
+                  {weatherName(each)}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <Field label="Seed" size="compact" className="builder-give-field">
+          {(control) => (
+            <input
+              {...control}
+              type="number"
+              step={1}
+              min={0}
+              required
+              value={fields.seed}
+              onChange={(event) => set({ seed: event.target.value })}
+            />
+          )}
+        </Field>
+      </div>
       {disabled && <p className="builder-note">{why}</p>}
       <Button type="submit" size="compact" disabled={disabled}>
         Run this revision

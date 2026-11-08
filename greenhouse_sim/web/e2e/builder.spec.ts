@@ -547,6 +547,75 @@ test("builder: every control is a target of the size it is drawn at, at least co
   expect(await targetsTooSmall(page.locator(".builder-side").locator(CONTROLS))).toEqual([]);
 });
 
+/** Presses Tab through `controls`, each focused in its turn from the one before. */
+async function tabsThrough(page: Page, controls: Locator): Promise<void> {
+  const all = await controls.all();
+  await expect(all[0] as Locator).toBeFocused();
+  for (const control of all.slice(1)) {
+    await page.keyboard.press("Tab");
+    await expect(control).toBeFocused();
+  }
+}
+
+test("builder: the house form and the palette, by keyboard alone (P12's QA)", async ({ page }) => {
+  test.setTimeout(120_000);
+  const house = form(page, "A new house");
+  await page.goto("/builder");
+  await expect(form(page, "Or copy a scenario's house")).toBeVisible(ARRIVES);
+
+  // The page's first control is the way home; the house form's come next, in order.
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Home" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type(`e2e_keys_${Date.now()}`);
+  await tabsThrough(page, house.locator(CONTROLS));
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
+
+  // The palette: a kind chosen by its name, its fields in order, and placed.
+  const palette = form(page, "Place");
+  await palette.getByLabel("What").focus();
+  await page.keyboard.type("heater");
+  await expect(palette.getByLabel("What")).toHaveValue("heater");
+  await tabsThrough(page, palette.locator(CONTROLS));
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("builder-status")).toHaveText("Placed 1 heater.", ARRIVES);
+});
+
+test("builder: the run step shows each value whole in a window 720 px high (QA of 2026-11-04)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/builder");
+  await field(page, "Identifier").fill(`e2e_run_step_${Date.now()}`);
+  await page.getByRole("button", { name: "Draft this house" }).click();
+  const run = form(page, "Run it");
+  await expect(run.getByLabel("Weather")).toBeVisible(ARRIVES);
+  await run.scrollIntoViewIfNeeded();
+
+  // Each control at least as wide as the browser draws it when nothing squeezes it:
+  // a date, a number or a weather's name whole.
+  const squeezed = await run.locator(CONTROLS).evaluateAll((controls: HTMLElement[]) =>
+    controls.flatMap((control) => {
+      const free = control.cloneNode(true) as HTMLElement;
+      free.style.position = "absolute";
+      control.parentElement?.append(free);
+      const [own, needed] = [control.offsetWidth, free.offsetWidth];
+      free.remove();
+      return own < needed
+        ? [
+            `${(control as HTMLInputElement).labels?.[0]?.textContent || control.textContent}: ${own} of ${needed} px`,
+          ]
+        : [];
+    }),
+  );
+  expect(squeezed).toEqual([]);
+  // Weathers in words, as the viewer's weather panel names them.
+  await expect(run.getByLabel("Weather").locator("option").first()).toHaveText("its own");
+  expect((await run.boundingBox())?.height ?? Infinity).toBeLessThan(720);
+});
+
 test("builder: at a phone's width the page fits its window, with the house under the forms", async ({
   page,
 }) => {
