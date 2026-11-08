@@ -24,7 +24,14 @@ from greenhouse_sim.services import interventions
 from greenhouse_sim.services.errors import Conflict
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR
 from greenhouse_sim.services.playback import Epochs, Playback
-from greenhouse_sim.services.run_store import EpochStore, FolderStore, Kind, Status
+from greenhouse_sim.services.run_store import (
+    Answer,
+    EpochStore,
+    FolderStore,
+    Kind,
+    LogEntry,
+    Status,
+)
 from greenhouse_sim.services.runs import RunPlan
 from greenhouse_sim.services.scenarios import plant_ids, scenario
 from greenhouse_sim.services.scheduler import Scheduler
@@ -567,6 +574,52 @@ def test_a_change_is_asked_of_a_queued_epoch_over_the_api_and_taken_by_its_worke
     assert [entry["request"] for entry in after["log"]] == [asked]
     assert after["done"] == [asked]
     assert epoch.log()[0].what["plan"] == plan.model_dump(mode="json")
+
+
+class _AnsweredAsItIsRead(FolderStore):
+    """A store whose epoch's worker answers a request, and is done with it, just
+    after its answers have been listed: a worker in another process, between two
+    reads of the API's."""
+
+    def __init__(self, root: Path) -> None:
+        super().__init__(root)
+        self.meanwhile: Callable[[], None] | None = None
+
+    def names(self, prefix: str = "") -> list[str]:
+        found = super().names(prefix)
+        if self.meanwhile is not None and prefix.endswith("/answers/"):
+            meanwhile, self.meanwhile = self.meanwhile, None
+            meanwhile()
+        return found
+
+
+def test_a_change_refused_as_its_changes_are_read_is_never_read_as_taken(
+    tmp_path: Path,
+) -> None:
+    """Logged, then refused and done with while the API reads: it reads the request
+    done only with its answer, so a change refused is never one made (P22.1)."""
+    store = _AnsweredAsItIsRead(tmp_path)
+    with Simulator(runs=store) as made:
+        made.catalogue.register(short_runs.one_plant_box(SHORT, DAYS))
+        epoch = queued(made, store, SHORT)
+        request = epoch.ask({"kind": "targets", "targets": {"heating_day": 24.0}})
+        # The worker has logged it, as it does before it checks it.
+        epoch.append_log(
+            LogEntry(seq=0, at_s=MINUTE_S, given_s=0.0, by="person:x", what={}, request=request)
+        )
+
+        def refuses() -> None:
+            epoch.answer(Answer(request=request, reason="x may not change heating_day"))
+            epoch.done(request)
+
+        store.meanwhile = refuses
+        read = interventions.changes(made, epoch.run_id, epoch.epoch)
+
+    refused = {answer.request for answer in read.refused}
+    assert [entry.request for entry in read.log] == [request]
+    assert request not in read.done or request in refused
+    # Read again, the worker's answer is there.
+    assert request in {answer.request for answer in epoch.answers()}
 
 
 def test_a_change_is_refused_by_an_epoch_that_is_not_being_worked(
