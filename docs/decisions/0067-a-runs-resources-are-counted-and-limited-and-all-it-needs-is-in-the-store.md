@@ -11,7 +11,7 @@ store. Nothing else about their cost is watched. A simulator runs two workers
 worker has no budget of memory, time or disk; nothing says what a run used; and
 an epoch that fails says so without saying why, though 0065 gives it a reason.
 
-[P18](../roadmap/p18-resources-and-deployment.md) measured what a run costs on
+[P18](../roadmap/archive/p18-resources-and-deployment.md) measured what a run costs on
 one machine: a 120-day run of the reference greenhouse keeps 20.6 MB in 601
 objects, 84% of it checkpoints, in a worker that peaks at about 330 MB. A
 thousand seeds of it, as training a policy asks for, is about 21 GB and 190
