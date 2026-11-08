@@ -172,6 +172,36 @@ and 0066). Left, from P17, each designed in its document:
 - **An epoch stepped by a caller** (P17.9) is carried on only by that caller, as an
   experiment steps it; a worker does not take it up.
 
+## Resources and limits, after P18
+
+Recorded 2026-11-08, as [P18](archive/p18-resources-and-deployment.md) closed (decision
+0067). Left, from P18, each in its step's row or its final QA:
+
+- **A playback in the API's process has no limits** (P18.3): it opens an epoch with no
+  budget, and `--play` is not refused. Whether such playbacks stay at all is
+  [P22.3](p22-watching-and-starting-a-run.md#steps)'s decision.
+- **One store, several servers** (P18.4): each server keeps its own limit on workers and
+  its own count of what waits, so that two on one folder can pass the limit between them.
+  A worker that a killed server started is not counted until it claims its epoch.
+- **A holder stalled past its claim** (P18.4): one stopped for over 30 s, as on a machine
+  asleep, whose epoch is taken over, is not stopped, and its writes still reach the store.
+- **A worker's look at its memory is a thread** (P18.3), which a long call holding the
+  interpreter delays, and the leases' thread with it.
+- **The room leaves out the store's bytes** against their limit (P18.5); only the refusal
+  names them.
+- **What is kept after a run goes** (P18.1, P18.4): a scenario's file stays when the last
+  epoch naming it is deleted, and an epoch keeps the two small objects of each working
+  until it is deleted.
+- **The defaults,** from P18's open questions: 200 runs waiting and a 2 GB floor are
+  judgements, not measurements. A training batch would raise the first, and a small disk
+  the second.
+- **A budget in days or in time,** also an open question there: P18 limits an epoch by
+  wall time, which ties its end to the machine; a limit in days is smaller and
+  reproducible.
+- **Not measured** (P18.6): a disk filled for real, and one that fills while a worker
+  writes; memory past a limit on macOS; the viewer drawing in software beside the
+  workers, on a machine without a graphics card; the list of 1,000 runs on the M2 again.
+
 ## Greenhouse R&D workflows and Modelica comparison
 
 Recorded 2026-10-24, exploratory work after P14, alongside the crop-model
