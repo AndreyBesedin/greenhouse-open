@@ -33,8 +33,9 @@ function isComputing(status: string): boolean {
 
 /**
  * A stored epoch replayed (P17.6, decision 0065): a position opened over it
- * when the page is, kept in step with the simulator while it plays or its
- * epoch is computed, and closed when the page is left. A position is
+ * when the page is, kept in step with the simulator while it plays, follows
+ * an epoch not finished or its epoch is computed, and closed when the page is
+ * left. A position is
  * the viewer's place and not the epoch's clock, so what the viewer does
  * here changes nothing a consumer reads.
  *
@@ -77,12 +78,15 @@ export function useReplay(
   const waiting = useRef(0);
   const seeks = useRef<Seeks>({ onItsWay: false, next: null });
   const positionId = load.status === "loaded" ? load.position.position_id : null;
-  // A position that follows moves only while its epoch is computed: one that
-  // followed an epoch to its end stays following, at a frontier that moves no more.
+  // A position that follows an epoch to its end stays following, at a frontier
+  // that moves no more. One interrupted, or failed, may be resumed from elsewhere,
+  // and the position follows it on: it is asked on.
   const moving =
     !lost &&
     load.status === "loaded" &&
-    (load.position.playing || isComputing(load.position.status));
+    (load.position.playing ||
+      isComputing(load.position.status) ||
+      (load.position.following && load.position.status !== "finished"));
 
   useEffect(() => {
     let left = false;

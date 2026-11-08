@@ -293,6 +293,21 @@ describe("a stored epoch replayed", () => {
     expect(followed.calls.filter((c) => c.method === "GET")).toHaveLength(0);
   });
 
+  it("asks on while it follows an epoch interrupted, which may be resumed from elsewhere", async () => {
+    for (const status of ["interrupted", "failed"] as const) {
+      const followed = simulator({ status, following: true, time_s: DAY_S });
+      rendered = render(<Probe fetchFn={followed.fetchFn} following />);
+      await settle();
+      await settle();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2500);
+      });
+      expect(followed.calls.filter((c) => c.method === "GET").length).toBeGreaterThanOrEqual(2);
+      rendered.unmount();
+      rendered = undefined;
+    }
+  });
+
   it("says so and stops asking once the simulator has let the position go", async () => {
     let restarted = false;
     const answers = simulator({ status: "running" });
