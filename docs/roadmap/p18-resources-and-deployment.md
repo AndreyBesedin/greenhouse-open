@@ -1,6 +1,6 @@
 # P18: Resources counted and limited, and a run that can move
 
-**Status:** accepted, in progress (P18.1 to P18.5 are done): the design below, with decision
+**Status:** accepted, in progress (P18.1 to P18.6 are done, its final QA recorded): the design below, with decision
 [0067](../decisions/0067-a-runs-resources-are-counted-and-limited-and-all-it-needs-is-in-the-store.md).
 Part of the
 [simulator roadmap](README.md).
@@ -141,7 +141,7 @@ limit, and `RLIMIT_AS` on macOS, are in "What P18.3 limits" below.
 | P18.3 | Limited: `Limits` from a file and the server's options; refusals for waiting runs and free disk; epochs ended by bytes, memory or time, keeping what they committed; workers at a lower priority. | `feat(sim): a simulator's runs have limits` | Done, in two pull requests: see "What P18.3 limits" below. Not delivered: a playback in the API's process has no limits; a worker's look at its memory is a thread, which a long call that holds the interpreter delays; the viewer shows neither a refusal nor a limit (P18.5) |
 | P18.4 | The store's *create unless it exists*, for a folder; leases and claims use it, which closes the window above; the queue rebuilt from `queued` manifests after a restart, so that a waiting run survives one. | `feat(sim): a claim on an epoch needs no lock`; `feat(sim): a run waiting survives a restart` | Done, in two pull requests. **Claims:** `ObjectStore.create` makes an object unless one exists, and of any callers at once tells exactly one that it did: a promise of the store's interface, which a store of objects gives as a conditional write and a folder as a hard link of a whole file. A worker claims an epoch before it does anything to it, by creating `leases/{number}.json`, the number after a newest claim that is not fresh, so that of all who read one claim one makes the next, and a number already passed is refused to one who comes late. A holder writes only its own number, and letting go creates the next, so that a thread stopped between reading and writing takes nothing from a later holder: that closes the window above. Telling an epoch `interrupted` is a claim too, so that it and a worker taking the epoch up are told apart. A worker that finds its epoch another's, or no longer waiting, exits saying so and nothing is told of the epoch. A crash costs 30 s: its claim expires, and the next number is free. An epoch's `lease.json` from before claims is believed until it expires. Measured, at load 11 to 26 on the machine above: 8 processes racing, each of 2,000 `create` rounds had one winner and each of 200 claimed epochs one holder; a `create` takes 0.47 ms against a `put`'s 0.21 ms, a claim and its letting go 2.9 ms. Not delivered: a holder stalled past 30 s, as on a machine asleep, whose epoch is taken over is not stopped, and its writes still reach the store; a folder must be on a file system with hard links, and any other refuses its epochs with the file system's error (not run on one); the two small objects a working of an epoch leaves stay until it is deleted, and count in its size; epochs are still given their numbers by whoever starts them, one at a time. **The queue:** a scheduler stamps a manifest as it puts an epoch in line (`queued_at`, which no digest holds), and a simulator starting on a folder makes the queue again from those it finds, in that order (`scheduler.restore`), so that a run waiting survives a restart, a server closed included, which leaves what waits waiting; what a worker was computing is told `interrupted` if it is ended, as before. Its pace and its scenario's file are read from the store by its worker, as ever. An epoch whose worker lives, by its claim, whether `queued` or `running`, is left to it and counts against the limit on workers until its claim is no longer believed, when it is told `interrupted` if it had not ended. Of two workers given one epoch, as when a killed server's worker has not yet claimed it, one leaves, and the run is counted the same way. An epoch whose scenario this simulator cannot run, its file gone or its name unknown and no file kept, is told `interrupted`, and a request to carry it on says why. An epoch with no stamp, from before this or one that a process of its own was to take up, is found by `interrupted` as it was. One deleted from the store while it waits is passed over; the route still refuses to delete one that waits. A stop asked of one that waits takes it out of the queue, and one asked of a run counted so writes the request its worker reads; a request left in the store of one found waiting ends its worker at its first look. Measured: finding the queue over 1,000 epochs that ended takes 0.09 s. Not delivered: a worker a killed server had started and that has not yet claimed its epoch is not counted, so that the limit can be passed by it for the seconds until it claims or leaves; each server on one store keeps its own limit; a deleted epoch stays in `Scheduler.waiting` until its turn; the order is that of the machine's clock |
 | P18.5 | The viewer: what a run used and why it failed in the runs dialog; workers busy, runs waiting and free disk on the landing page; a refusal in words. | `feat(viewer): what the runs use, and why one was refused` | Done: under each row of the runs dialog and of the start page's *Recent runs*, what the epoch used, from its report: the bytes it keeps, the days it computed, and its workers' CPU, peak memory and wall time, each "not measured" where none is, which is not zero; a failed run's reason, in the simulator's words; and Resume on one a limit ended, which `past_limit`, now in `StoredRun` with `wall_s`, tells apart. Sizes are written in decimal units, as the simulator's refusals give theirs, so that a floor of 2 GB reads 2.0 GB in both. **The room for runs:** `GET /api/room` (`scheduler.room`, `room.schema.json`) answers the workers busy, a server's left elsewhere counted, the runs waiting and the disk free, each beside its limit, and the refusal a run asked for then would be given, from the same check that refuses one; it makes no scheduler and writes nothing. The start page shows it above its runs, asked for with them. **A refusal in words:** a run refused from the dialog says "Not started:" and a resume refused "Not resumed:" with the simulator's words after it, beside what was pressed; a fork's and a built scenario's run already did. Not delivered: the room's figures leave out the bytes of the store against its limit, which only its refusal names; they move on only while a run is being computed, as the runs do; the browser specs of a refusal answer the request themselves with the simulator's words, since no limit can be lowered on the simulator the specs share; a fork refused is said as before, in the replay |
-| P18.6 | The QA scenario below, run and recorded. | `test: runs within their limits` | Planned |
+| P18.6 | The QA scenario below, run and recorded. | `test: runs within their limits` | Done: run on one machine with no change but the limits file, and recorded under "Final QA scenario". Of 300 runs asked for with room for 200 waiting, 98 were refused in words, since two free workers took two at once. A replay's frame rate and the API's answers held beside the batch. A floor raised just above the free disk refused the next run. A worker past its memory was `failed` with the limit as its reason, and finished once the limit was raised, with the digests of a run never ended. A server stopped mid-batch left what waited waiting, and what ran `interrupted` and resumable. On a machine 32 workers fill, their niceness of 10 is worth about two-thirds more frame rate than 0, and two-fifths off the list's time, at no cost to the batch that was measured. A list of 1,002 runs took 64 to 80 ms on this machine. `test_limits_final_qa.py` holds the refusals and the restart at a small scale. Not delivered: a disk filled for real; the M2's list measured again |
 
 P18.1 comes first, because the viewer's moving to workers needs it. P18.2 to P18.4
 can follow in any order.
@@ -313,7 +313,7 @@ So neither is told from the noise between two runs. A look is 2.5 us, 10 us a se
 is 32 ms with a budget and with none, the median of 100 on one store, since its bytes are in
 the report it writes anyway. A list of 1,002 epochs takes 179 to 180 ms with `past_limit` in
 each manifest and without it, and reads no budget. A worker reads its budget once. What the
-priority buys on a machine it fills has not been measured: P18.6 records it.
+priority buys on a machine it fills was measured by P18.6: see its record, under "Final QA scenario".
 
 Not delivered: a playback in the API's process has no budget and opens an epoch with none of
 these checks, and its `--play` is not refused; each server on one store keeps its own count of
@@ -339,6 +339,113 @@ Fill the disk to the floor, and see the next run refused. Give a worker a memory
 limit it passes, and see its epoch `failed` with the reason, readable, then resumed
 after raising the limit. Restart the server mid-batch, and see the waiting runs still
 waiting and the running ones `interrupted`, resumable.
+
+### Recorded at `0b542c61`
+
+Run on 8 November 2026 on `0b542c61`, on another machine than the one above: an Intel Core
+i9-14900K, 32 threads, 31 GB, Linux, the store on its NVMe disk with about 122 GB free. The API
+ran from the workspace's Python, with a state folder and a port of its own. The viewer was its
+production build, served by `vite preview`, in headless Chromium drawing on the machine's
+integrated graphics (ANGLE on Vulkan, Intel RPL-S), at 1280 by 720, with vsync and the frame-rate
+cap off, so that a frame rate measures the work and not the display. The machine was shared with
+other work, another checkout's tests among it: load 1 to 44 with none of this QA's work running,
+and 37 to 59 while 32 workers ran. Nothing changed between steps but the limits file, given with
+`--limits`. A server reads it as it starts, so each change was a restart, by Ctrl-C.
+
+The short scenario is `sensor_lab`, 10 days, which a worker computes in 1.4 s of wall time and 4.7 s
+of CPU, holding 150 MB at its peak and keeping 107 kB. Parts 4 and 6 use `climate_box`, 14 days, which
+holds more and takes longer.
+
+**How it was measured.** The frame rate is measured two ways, in windows of 30 s, while the camera
+orbits a replay that plays at a day a second. The first is the HUD's frame rate and frame time,
+read four times a second as the benchmarks read them (`e2e/bench/measuring.ts`). The second is the
+page's own `requestAnimationFrame` intervals, whose 99th percentile and count over 50 ms say how
+long the page was kept waiting. The API was timed from a client on the same machine:
+`GET /api/runs`, `/api/room` and `/api/health`, one after another, every half second. Each
+"after" is the same measure once the batch had ended, on the same store.
+
+| Part | Result | What was seen |
+| --- | --- | --- |
+| 1. 300 runs, room for 200 | Passed, with 98 refused, not 100 | Limits `{"workers": 2, "waiting_runs": 200}`. The 300 runs, asked for 16 at a time, were answered in 0.7 s in all. 202 were let in, `queued`, and 98 refused with a 409, each "200 runs waiting for a worker, and this simulator lets 200 runs wait: ask again once some have begun, or raise that limit". The two free workers took two runs at once, which therefore never waited, as "What P18.3 limits" says; the scenario's 100 counts them as waiting. Nothing of a refused run was kept: the list held 202. |
+| 2. Run them beside a replay | Passed | The 202 took 237 s, two at a time. A finished one was replayed in five windows: the HUD's median frame rate was 1,941 to 1,990 fps, against 1,982 and 2,025 after the batch; its 5th percentile 1,284 to 1,548, against 1,296 and 1,326. The `requestAnimationFrame` 99th percentile was 6.7 to 10.5 ms, against 9.1 and 10. Frames over 50 ms numbered 7 to 10 a window, against 6 and 11: as many with the batch ended, so they are not the workers'. `GET /api/runs` of the 202 took a median of 34 ms (95th percentile 65 ms, at most 121 ms), against 23, 40 and 68 ms after. `/api/room` took a median of 0.8 ms during and after, with a 95th percentile of 1.3 ms against 1.1 ms. Of the 475 requests of each, none failed. Two workers on 32 threads leave this machine mostly free: part 6 measures it filled. |
+| 3. The disk at its floor | Passed, with the floor raised rather than the disk filled | This machine's disk was not filled. Instead the limits file raised the floor to 1 GB above what was free: `"free_disk_bytes": 122830920192`, with 121.8 GB free. The next run was refused with a 409: "the disk of the run store has 121.8 GB free, and a run begins only with 122.8 GB free: free some space, or lower that limit". `GET /api/room` gave the same words as its `refusal`. The start page said "A run asked for now is refused: …" under its figures, and the runs dialog "Not started: …". Nothing was written: 302 epochs before and after. |
+| 4. A worker past its memory | Passed | `climate_box` peaks at about 200 MB; it ran under `"worker_memory_bytes": 180000000`. It was `failed` at day 3 of 14: "its worker held 180.5 MB of memory, past the limit of 180.0 MB on one worker: what it committed can be read, and it can be carried on once that limit is raised". `past_limit` was true. The start page showed the reason under the run, with *Resume* beside it. What it committed was read (`…/observations`). Resumed under the same limit, which a limit on memory lets in since the next worker may hold less, it went on to day 7 and ended again, at 187.0 MB. The limit was raised to 400 MB and the server restarted, and *Resume* finished it, at a peak of 197 MB. Its 14 commits' digests equal those of the same seed worked whole in a store of its own, ending `44c06b43dd53`. |
+| 5. Restart mid-batch | Passed | 100 more runs were asked for, all let in. The server was stopped by Ctrl-C 20 s later, with 222 finished, 2 running and 78 queued. It was gone in 0.11 s and left no worker. The store, read with no server running, held the 78 `queued` and the 2 `interrupted`, at 20% and 30%. Started again, `/api/room` said at once 2 workers busy and 76 waiting, and the list 78 queued until their workers began. Both interrupted runs were resumed through the route and finished. Each one's 10 digests equal those of its seed worked whole, uninterrupted, in a store of its own. All 302 finished. |
+| 6. What the priority buys | Measured | Below. |
+
+**What the priority buys on a machine the workers fill.** The limits file was
+`{"workers": 32, "waiting_runs": 200}`: a worker for each of the 32 threads, each computing
+`climate_box`. `vmstat`, every 5 s while they ran, gave 85 to 86% user, 13 to 14% system and
+1% idle, at either niceness. The workers ran
+at niceness 10, as built, and then at 0. No limit gives 0, so a `sitecustomize.py` on the
+API's `PYTHONPATH` made `os.nice` do nothing for that measure; `ps` showed all 32 at the
+niceness meant. Each run of the measure had a store of its own, holding the replayed run and
+the batch, 161 runs or 97. Each was done twice, in turn: 10, 0, 0, 10. The figures below are
+the range over the six windows of each niceness, three in each run.
+
+| | Before the batch | Workers at niceness 10 | Workers at niceness 0 |
+| --- | --- | --- | --- |
+| HUD frame rate, median of a window | 1,831 to 2,014 fps | 144 to 239 fps | 92 to 140 fps |
+| HUD frame rate, 5th percentile | 1,387 to 1,430 fps | 79 to 140 fps | 48 to 79 fps |
+| HUD frame time, median | 0.5 ms | 4.2 to 7.0 ms | 7.1 to 10.9 ms |
+| `requestAnimationFrame`, 99th percentile | 7.8 to 10.3 ms | 17.6 to 29.9 ms | 31.7 to 40.4 ms |
+| Frames over 50 ms in 30 s | 1 to 3 | 2 to 8 | 3 to 11 |
+| `GET /api/runs`, median and 95th percentile | 1.5 to 1.6 and 2.1 to 3.4 ms, one run | 42 to 59, 107 to 148 ms | 68 to 102, 153 to 206 ms |
+| `GET /api/room`, median and 95th percentile | 0.9 and 1.2 to 1.3 ms | 3.6 to 3.7, 7.3 to 7.9 ms | 4.6, 9.7 to 10.5 ms |
+| The batch's wall time, 160 runs and 96 | | 586 s and 359 s | 579 s and 383 s |
+
+On a machine the workers fill, the priority is worth about two-thirds more frame rate: the
+windows' medians average 186 fps against 111. It takes about two-fifths off the page's
+99th-percentile frame interval (21 ms against 37, averaged) and off the list's median time
+(59 against 102 ms, and 42 against 68). It costs the batch nothing that this measure tells from
+the noise: 586 s against 579 s, and 359 s against 383 s. Neither way did the viewer fall below
+43 fps in any quarter-second the HUD reported, with this graphics card and this scene. The
+priority does not keep the machine as it was with the workers idle. The frame rate falls
+from about 1,900 fps to 92 to 239 either way, since the browser and its graphics process
+share the cores with the workers, and `GET /api/room` takes four times as long. The load from
+other work differed between the runs, 17 to 44 before each batch, and the scene is a small one.
+
+**The acceptance criteria.** Checked here:
+
+- **A list of 1,000 runs:** 1,002 runs of `sensor_lab` were computed by 32 workers, each with its
+  report, in 157 s, under `"waiting_runs": 1000`; the 1,002 asked for were all let in.
+  `GET /api/runs` then answered its 501 kB in 64 to 80 ms in ten reads, at load 111 to 121
+  just after the batch. That is under 1 s on this machine. The criterion names the M2 above,
+  which P18.2 measured at 0.47 to 0.55 s; this QA does not measure it again there.
+- **A run past each limit ends or is refused as 0067's table says:** walked for runs waiting,
+  free disk and a worker's memory, above. Bytes of an epoch and of the store, CPU and wall
+  time were not walked; `test_limits.py` and `test_limits_ended.py` hold them.
+
+Not walked, and held by tests that pass on this commit: a built and an uploaded scenario
+killed and resumed in a worker (`test_epoch_carries.py`), and every existing id, digest and
+golden file unchanged (`test_run_identity.py`, and the golden files' tests in
+`uv run check --fast`, which passed). The tests of the limits, the queue, epochs and
+identity, 129 in all, passed on this commit.
+
+`greenhouse_sim/tests/test_limits_final_qa.py` holds what of parts 1, 3 and 5 holds without a
+person looking, at a small scale and through the routes alone. With room for 20 runs waiting, 30
+asked for are 22 let in and 8 refused in the same words, which the room says too. A floor above the
+free disk refuses the next run, writing nothing. A server closed mid-batch leaves 20 queued and 2
+interrupted, the next finds the 20 again, and the 2 are let in when resumed.
+
+Not measured: a disk that fills while a worker writes, which part 3 does not do; memory past a
+limit on macOS, since this machine is Linux; a playback in the API's process, which has no
+budget (P18.3); the viewer on a machine without a graphics card, where it draws in software and
+its frame rate would share the cores with the workers.
+
+No defect was found in what the scenario walks. One was found beside it, in a test:
+`test_limits.py`'s `test_the_room_counts_the_workers_busy_and_the_runs_waiting_and_says_the_refusal_to_come`
+compares two answers of the room whole, `disk_free_bytes` included, and the disk is read
+afresh for each, so that a write by anything else on the machine between the two fails it.
+Run 20 times as
+`pytest greenhouse_sim/tests/test_limits_final_qa.py greenhouse_sim/tests/test_limits.py
+greenhouse_sim/tests/test_queue_restart.py -n 8`, those three files failed twice; the
+failure caught was that test, on its last line:
+`{'disk_free_bytes': 120897261568} != {'disk_free_bytes': 120897257472}`. It also failed
+the first push of this record, in the pre-push hook's `uv run check --fast`, and passed the
+second. The simulator is
+not at fault: the test is, and the other tests of the room fix the free bytes they compare.
+It is left for a change of its own.
 
 ## Out of scope
 
