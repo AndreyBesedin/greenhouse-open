@@ -4,6 +4,7 @@ import { QA_REFERENCE_PATH } from "../src/qa/referencePage.ts";
 import { chooser } from "./chooser";
 import { markOpening, say } from "./demoSteps";
 import { unfold } from "./folds";
+import { askForRun, openReplay, stopRun } from "./replays";
 
 // P09.9: the final QA of P09 (docs/demo.md), walked through as one scripted
 // tour of the reference greenhouse: the long video recorded from 0.5.0. As a
@@ -13,10 +14,9 @@ import { unfold } from "./folds";
 
 const ARRIVES = { timeout: 180_000 };
 const HOUR_S = 3_600;
-const DAY_S = 24 * HOUR_S;
-const CLIMATE_BOX_PLAYBACK = "/api/scenarios/climate_box/playback";
-// The climate box's run lasts 14 days.
-const CLIMATE_BOX_RUN_S = 14 * DAY_S;
+// A run of the climate box's computed at this pace, in seconds a day, is still
+// being computed when the panels steer it.
+const STEERED_PACE = 20;
 // The camera on the whole reference house, from south-west of it and above:
 // at 1280 × 720 the house stands between the info panel and the HUD,
 // rather than its corner at the world's origin, where the default camera
@@ -274,35 +274,22 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   await expect(page.getByTestId("builder-status")).toHaveText("Set power w of heater_1.", ARRIVES);
   await say(page, "New in 0.4.0: a heater placed, and its power set in the inspector");
 
-  // New in 0.5.0 (P13.8): a scenario's run followed as it is played back,
-  // the run a consumer reads. A level set in the Equipment panel is given
-  // to it as the viewer's plan, and the timeline's plan lane says what
-  // became of it. The playback is held, so that the level is given before
-  // its clock moves on, and started over if a test before left it near its
-  // end, when it would take no more.
-  const started = (await (await page.request.post(`${CLIMATE_BOX_PLAYBACK}/start`)).json()) as {
-    time_s: number;
-  };
-  if (started.time_s > CLIMATE_BOX_RUN_S - 4 * DAY_S) {
-    expect((await page.request.post(`${CLIMATE_BOX_PLAYBACK}/restart`)).ok()).toBe(true);
-  }
-  expect((await page.request.post(`${CLIMATE_BOX_PLAYBACK}/pause`)).ok()).toBe(true);
-  await page.goto("/?scenario=climate_box&field=climate&follow=1");
-  const played = page.getByRole("region", { name: "Run played back" });
-  await expect(played.getByTestId("playback-status")).toContainText("paused", ARRIVES);
-  await say(page, "New in 0.5.0: a scenario's run, followed as it is played back");
+  // New in 0.5.0 (P13.8), steered from the replay since P22.1: a run of the
+  // climate box's, still being computed, given a level from the Equipment
+  // panel, which its worker takes at the run's own clock (decision 0073).
+  const steered = await askForRun(page, "climate_box", { seed: 66, secondsPerDay: STEERED_PACE });
+  await openReplay(page, steered);
+  await expect(page.getByTestId("replay-status")).toHaveText(/Queued|Running/, ARRIVES);
+  await say(page, "New in 0.5.0: a run steered from its replay while it is computed");
   await unfold(page, "Equipment");
   await page
     .getByRole("group", { name: "Equipment" })
     .getByRole("checkbox", { name: "fan" })
     .check();
-  await expect(page).toHaveURL(/schedule=[0-9.]+:fan:1(&|$)/, ARRIVES);
-  await page.locator("details.timeline").getByText("Timeline").click();
-  await page.getByRole("combobox", { name: "Timeline zoom" }).selectOption({ label: "a day" });
-  await expect(
-    page
-      .getByTestId("timeline-plan-entry")
-      .filter({ hasText: /fan to 100% \(viewer\/change_\d+\): executed$/ }),
-  ).not.toHaveCount(0, ARRIVES);
-  await say(page, "New in 0.5.0: the fan on, as the viewer's plan, and the timeline says it was");
+  await expect(page.getByTestId("epoch-steering-status")).toHaveText(
+    /^The run took the latest change from Day \d+, \d\d:\d\d\.$/,
+    ARRIVES,
+  );
+  await say(page, "New in 0.5.0: the fan on, and the replay says from when the run took it");
+  await stopRun(page, steered);
 });
