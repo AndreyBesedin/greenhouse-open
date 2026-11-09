@@ -148,8 +148,7 @@ test("the README's demo shows the simulator's main features, each under its capt
   await option.click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("heading", { name: "Reference greenhouse" })).toBeVisible(ARRIVES);
-  await say(page, "Its dialog: the runs kept of it, and a way to start another", 0.6);
-  await dialog.getByRole("button", { name: "New run" }).click();
+  await say(page, "Its dialog: a new run first, and the runs kept of it under it", 0.6);
   const seed = dialog.getByLabel("Seed", { exact: true });
   await expect(seed).toHaveAttribute("placeholder", "The scenario's own", ARRIVES);
   await expect(seed).toHaveValue("");
