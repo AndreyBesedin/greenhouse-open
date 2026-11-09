@@ -223,7 +223,7 @@ test("a run is started at a seed from a scenario's dialog, listed, and not remov
   // Exactly: the runs of the scenario that other specs have started have labels that say a seed.
   await dialog.getByLabel("Seed", { exact: true }).fill("7");
   // Long enough not to end while this looks at it; it is stopped at the end.
-  await dialog.getByLabel("Seconds per simulated day").fill("10");
+  await dialog.getByLabel("Seconds to compute a day").fill("10");
   await dialog.getByRole("button", { name: "Start run" }).click();
 
   await expect(page).toHaveURL(/\/replay\?run=.*&follow=1$/);

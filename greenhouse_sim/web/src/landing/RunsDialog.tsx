@@ -212,7 +212,13 @@ export function RunsDialog({
             </select>
           )}
         </Field>
-        <Field label="Seconds per simulated day">
+        {/* How fast the run is computed, which is not how fast its replay shows
+            it: the replay chooses that (P22.5). A paced worker writes a day
+            once its clock has passed it, so a day takes no less. */}
+        <Field
+          label="Seconds to compute a day"
+          hint="The run's own clock: a day takes no less. Its replay shows the days at a speed of its own."
+        >
           {(control) => (
             <input
               {...control}

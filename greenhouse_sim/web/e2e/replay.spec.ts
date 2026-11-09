@@ -45,7 +45,7 @@ async function replayOfANewRun(
   await search.press("Enter");
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Seed", { exact: true }).fill(seed);
-  await dialog.getByLabel("Seconds per simulated day").fill(pace);
+  await dialog.getByLabel("Seconds to compute a day").fill(pace);
   await dialog.getByRole("button", { name: "Start run" }).click();
   await expect(page).toHaveURL(new RegExp(`${REPLAY_PATH}\\?run=.*&follow=1$`));
   await page.goto(page.url().replace("&follow=1", ""));
@@ -131,7 +131,7 @@ test("a replay plays on its own pace, and pauses", async ({ page }) => {
 
   // The transport's own controls: the viewer's panels have a Play and a Pace of their own.
   const transport = page.locator(".replay-transport");
-  await transport.getByLabel("Pace").selectOption("2");
+  await transport.getByLabel("Shows a day in").selectOption("2");
   await transport.getByRole("button", { name: "Play" }).click();
   await expect(transport.getByRole("button", { name: "Pause" })).toBeVisible();
   await expect
@@ -176,7 +176,7 @@ test("a run being computed is watched from its list in the replay: at its newest
 
     // Played from the frontier, it waits there, and moves on as days arrive.
     const transport = page.locator(".replay-transport");
-    await transport.getByLabel("Pace").selectOption("2");
+    await transport.getByLabel("Shows a day in").selectOption("2");
     await transport.getByRole("button", { name: "Play" }).click();
     await expect(follow).toHaveAttribute("aria-pressed", "false");
     await expect(transport.getByRole("button", { name: "Pause" })).toBeVisible();
@@ -401,7 +401,7 @@ test("a moment whose field fails does not stop the replay playing on", async ({ 
 
   // Played, the moment drawn moves on past each that fails, and again.
   const transport = page.locator(".replay-transport");
-  await transport.getByLabel("Pace").selectOption("2");
+  await transport.getByLabel("Shows a day in").selectOption("2");
   await transport.getByRole("button", { name: "Play" }).click();
   await expect.poll(() => moments.size, { timeout: COMPUTES }).toBeGreaterThan(3);
   await expect(page.getByTestId("climate-failed")).toContainText("cannot be drawn");

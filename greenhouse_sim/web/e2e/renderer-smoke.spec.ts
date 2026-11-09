@@ -82,7 +82,7 @@ test("renderer-smoke: the renderer, end to end", async ({ page }) => {
   await test.step("Python computes a scenario's run, and its replay plays it", async () => {
     await computedTo(page, run, RUN_END_S, WALKTHROUGH_TIMEOUT_MS / 2);
     await openReplay(page, run);
-    await transport.getByLabel("Pace").selectOption(QUICK);
+    await transport.getByLabel("Shows a day in").selectOption(QUICK);
     await transport.getByRole("button", { name: "Play" }).click();
     await expect(transport.getByRole("button", { name: "Pause" })).toBeVisible();
     await expect.poll(() => reached(page), ARRIVES).toBeGreaterThan(0);
@@ -165,7 +165,7 @@ test("renderer-smoke: the renderer, end to end", async ({ page }) => {
   });
 
   await test.step("playing again, the replay moves it on, and the selection stays", async () => {
-    await transport.getByLabel("Pace").selectOption(QUICK);
+    await transport.getByLabel("Shows a day in").selectOption(QUICK);
     await transport.getByRole("button", { name: "Play" }).click();
     await expect.poll(() => reached(page), ARRIVES).toBeGreaterThan(0);
     await expect(page.getByTestId("selected-entity")).toHaveText(PLANT);
