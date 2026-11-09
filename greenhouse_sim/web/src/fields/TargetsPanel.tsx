@@ -33,12 +33,10 @@ export function settingMoment(time: number): number {
 
 /**
  * The run's heating targets (#274): its thermostat's setpoints by day and by
- * night, as in force at the moment drawn, and changed from then on. Not
- * following, a change is a target change in the address at the moment drawn,
- * the next minute if it lies between two; following, the run played back is
- * given it through its plan (P13.8), from its clock's next minute (decision
- * 0043), and the view follows it; so is an epoch a replay shows while it is
- * computed, through its changes (P22.1, decision 0073).
+ * night, as in force at the moment drawn, and changed from then on. A change
+ * is a target change in the address at the moment drawn, the next minute if
+ * it lies between two; an epoch a replay shows while it is computed is given
+ * it through its changes, from its next minute (P22.1, decision 0073).
  */
 export function TargetsPanel({
   thermostat,
@@ -54,9 +52,8 @@ export function TargetsPanel({
   thermostat: ThermostatAt | null;
   /** The moment drawn, in seconds into the run. */
   time: number;
-  /** Whether a change steers the run as it is computed, from its clock's
-   * next minute: the run played back that the view follows, or the epoch a
-   * replay shows while it is computed. */
+  /** Whether a change steers the run as it is computed, from its next
+   * minute: the epoch a replay shows while it is computed. */
   followed: boolean;
   /** Whether setting them makes a fork of a stored run, which stays as it was. */
   forking?: boolean;

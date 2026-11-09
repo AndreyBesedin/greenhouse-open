@@ -144,12 +144,6 @@ export const CONTRACTS: readonly Contract[] = [
     "CHECKPOINT_SCHEMA",
   ),
   contract(
-    `${SERVICES}/playback.schema.json`,
-    "PlaybackState",
-    ["src/scene", "playback"],
-    "PLAYBACK_SCHEMA",
-  ),
-  contract(
     `${SERVICES}/stored_run.schema.json`,
     "StoredRun",
     ["src/scene", "storedRun"],

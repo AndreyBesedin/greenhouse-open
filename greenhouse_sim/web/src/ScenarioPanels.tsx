@@ -8,7 +8,7 @@ import { CheckpointsPanel } from "./checkpoints/CheckpointsPanel";
 import { type CheckpointSummary, restored } from "./checkpoints/checkpoints";
 import { EquipmentControls, equipmentIn } from "./EquipmentControls";
 import { ClimateSchedule } from "./fields/ClimateSchedule";
-import { ClimateTime, describeClimateRun, describeTime, REPLAYED_NOTE } from "./fields/ClimateTime";
+import { ClimateTime, describeClimateRun, describeTime } from "./fields/ClimateTime";
 import type { FieldView, Slice } from "./fields/display";
 import { describeAirField, FieldControls, useFieldNames } from "./fields/FieldControls";
 import { describeProbes, FieldProbes } from "./fields/FieldProbes";
@@ -146,8 +146,8 @@ export function ScenarioPanels({
   onPlayingClimate,
   onOwnRange,
 }: {
-  /** What leads the simulation's card: the run played back, while the view
-   * follows it. */
+  /** What leads the simulation's card: a replay's steering and a plant's
+   * work. */
   children?: ReactNode;
   source: ScenarioSource;
   snapshot: SceneSnapshot | null;
@@ -180,10 +180,11 @@ export function ScenarioPanels({
   setpoints?: ThermostatAt | null | undefined;
   /** Changes its heating targets from the moment drawn on (#274). */
   onTargets?: (targets: Record<string, number>) => void;
-  /** While its run is followed as it plays (P13.8): the moment its clock
-   * has reached, at which its equipment, doors and vents are shown as the
+  /** While a replayed epoch is steered or forked (P22.1): the moment the
+   * replay shows, at which its equipment, doors and vents are shown as the
    * run has them, with the levels set and not yet shown (`asked`); and
-   * where a level set goes, the run's own plan rather than the address. */
+   * where a level set goes, the epoch's changes or a fork rather than the
+   * address. */
   steering?:
     | {
         at: number;
@@ -200,8 +201,8 @@ export function ScenarioPanels({
     noFork?: string | null;
     from?: string | null;
   };
-  /** The run followed as it plays (P13.8), or the stored epoch replayed
-   * (P22.3), whose plan lane the timeline draws. */
+  /** The stored epoch replayed (P22.3), whose plan lane the timeline
+   * draws. */
   played?: PlanLaneRun | null;
   onSource: (change: SetSource) => void;
   onProbes: (probes: Point3[]) => void;
@@ -260,24 +261,24 @@ export function ScenarioPanels({
     onSource(withSlice(source, slice));
   }
 
-  // Whether the run played back leads the simulation's card: a JSX `false`
-  // when the view does not follow one.
+  // Whether anything leads the simulation's card: a JSX `false` when the
+  // view replays no run.
   const leads = children !== undefined && children !== null && children !== false;
   // A card is drawn only with a section in it: a scenario may have no
   // openings, no equipment or no weather.
   const openings = snapshot === null ? [] : openingsIn(snapshot);
   // What the Equipment and Openings panels show: the run as it stands at the
-  // moment drawn, or at its clock while it is steered as it plays, with the
-  // levels set and not yet shown. Those set in a replay are not drawn until
-  // the replay reaches the moment they take, if they are ever to be.
+  // moment drawn, with the levels set in a replay and not yet shown. Those are
+  // not drawn until the replay reaches the moment they take, if they are ever
+  // to be.
   const notDrawn = forkLevels?.asked ?? (steersReplayed ? steering?.asked : undefined);
   const steered = steering === undefined ? source : { ...source, time: steering.at };
   const openingIds = openings.map((opening) => opening.openingId);
   const levelsShown = { ...levelsAt(steered), ...steering?.asked };
   const openingsShown = { ...openingsAt(steered, openingIds), ...steering?.asked };
   const equipped = snapshot !== null && equipmentIn(snapshot).length > 0;
-  // The sections grouped in titled cards by topic (#306): the run played
-  // back and the climate run's moment and course; the house's air, its
+  // The sections grouped in titled cards by topic (#306): a replay's
+  // steering and the climate run's moment and course; the house's air, its
   // targets and its schedule; its equipment, openings and probes; and the
   // weather outside.
   return (
@@ -299,8 +300,8 @@ export function ScenarioPanels({
                 time={time}
                 shown={shownTime}
                 failed={momentFailed}
-                followed={source.follow === true || replayed}
-                {...(replayed ? { followedNote: REPLAYED_NOTE, describe: dayLabel } : {})}
+                followed={replayed}
+                {...(replayed ? { describe: dayLabel } : {})}
                 days={days}
                 playing={playingClimate}
                 onTime={setTime}
@@ -378,7 +379,7 @@ export function ScenarioPanels({
           <TargetsPanel
             thermostat={setpoints}
             time={time}
-            followed={source.follow === true || steersReplayed}
+            followed={steersReplayed}
             forking={replayed && !steersReplayed}
             noFork={forkLevels?.noFork ?? null}
             forkFrom={forkLevels?.from ?? null}

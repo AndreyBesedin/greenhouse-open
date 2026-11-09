@@ -23,7 +23,7 @@ import {
 import type { ScenarioSummary, ScenariosState } from "../scenarios";
 import { loadScenarios } from "../scenarios";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
-import { houseBox } from "../scene/useFollowFraming";
+import { houseBox } from "../scene/useOpeningFrame";
 import { Viewport } from "../Viewport";
 import {
   assess,

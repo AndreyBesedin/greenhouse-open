@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { loadPlayback, type PlaybackLoad } from "../scene/playback";
 import type { Action } from "./generated/planTypes";
-import { type Given, giveToPlan, setLevel, setTarget } from "./plan";
+import { type Given, setLevel, setTarget } from "./plan";
 
 // How long a slider rests before the levels it set go to the run: one
 // revision for a drag, not one for each step of it.
@@ -15,32 +14,13 @@ const SAME_LEVEL = 1e-9;
  * says one, or refused and why. */
 export type Give = (actions: Action[]) => Promise<Given>;
 
-/** How the panels give actions to the run a playback plays, through its plan
- * (P13.8): once given, the playback is read again (`onPlayback`), so that the
- * view draws the run with what it was given. */
-export function useGiveToPlayback(
-  scenarioId: string | null,
-  onPlayback: (load: PlaybackLoad) => void,
-  fetchFn: typeof fetch = fetch,
-): Give {
-  return useCallback(
-    async (actions: Action[]) => {
-      if (scenarioId === null) {
-        return { status: "refused", reason: "no run is played back" };
-      }
-      const answer = await giveToPlan(scenarioId, actions, fetchFn);
-      onPlayback(await loadPlayback(scenarioId, fetchFn));
-      return answer;
-    },
-    [scenarioId, onPlayback, fetchFn],
-  );
-}
+/** How actions reach no run: none is steered, so none are given. */
+export const NOT_STEERED: Give = async () => ({ status: "refused", reason: "no run is steered" });
 
 /**
- * A run steered from the viewer's panels as it is computed: one a playback
- * plays and the view follows (P13.8, `useGiveToPlayback`), or an epoch a
- * worker computes, from its replay (P22.1, `useGiveToEpoch`). `steered` names
- * it, null if none is; `give` is how actions reach it. The levels set wait
+ * A run steered from the viewer's panels as it is computed: an epoch a worker
+ * computes, from its replay (P22.1, `useGiveToEpoch`). `steered` names it,
+ * null if none is; `give` is how actions reach it. The levels set wait
  * until no more are set for `STEER_PAUSE_MS`, then go to the run together;
  * targets, and what is asked of a plant, go at once. Each level asked for is
  * `asked` until the panels show it (`shown`, the levels the run has at the

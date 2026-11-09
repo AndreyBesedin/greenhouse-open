@@ -100,8 +100,6 @@ function sentence(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-const FOLLOWED_NOTE =
-  "The run played back moves this moment on with its clock: play and pause it there. Stop following to choose the moment here, or play it.";
 /** What a replay says there: the timeline under the view moves the moment. */
 export const REPLAYED_NOTE = "The replay's timeline under the view moves this moment.";
 
@@ -115,8 +113,7 @@ export const REPLAYED_NOTE = "The replay's timeline under the view moves this mo
  * step is never taken for one that does nothing (#198, #202). A moment
  * that cannot be drawn stops play.
  *
- * Followed, the run played back moves the moment on with its clock
- * (decision 0041), and its own play and pause are the view's: the climate
+ * Followed, as a replay's timeline moves the moment on (P17.6), the climate
  * run's play, sliders, day steps and pace stand aside, and say so, so that
  * none shows a state the run is not in (#270).
  */
@@ -125,7 +122,7 @@ export function ClimateTime({
   shown,
   failed = false,
   followed = false,
-  followedNote = FOLLOWED_NOTE,
+  followedNote = REPLAYED_NOTE,
   describe = describeTime,
   days,
   playing,
@@ -139,8 +136,8 @@ export function ClimateTime({
   /** Whether the moment asked for cannot be drawn, which the scene's status
    * says why. */
   failed?: boolean;
-  /** Whether the view follows the run played back, whose clock then moves
-   * the moment on in place of this play. */
+  /** Whether something else moves the moment on in place of this play: a
+   * replay's timeline. */
   followed?: boolean;
   /** What is said in place of this moment's controls, when it is followed. */
   followedNote?: string;
@@ -157,8 +154,8 @@ export function ClimateTime({
   const arrived = shown === time;
   const waiting = !arrived && !failed;
   const waited = useSecondsWaited(time, waiting);
-  // Play stops at a moment that cannot be drawn, and once the view follows
-  // the run played back: two plays would move the moment on at once.
+  // Play stops at a moment that cannot be drawn, and once something else
+  // moves the moment on: two plays would move it at once.
   useEffect(() => {
     if (playing && (failed || followed)) {
       onPlaying(false);

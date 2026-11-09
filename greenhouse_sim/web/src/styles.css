@@ -169,12 +169,6 @@
   cursor: pointer;
 }
 
-/* The run played back, and its button to stop following it, apart from the
- * sections below (#273). */
-.playback {
-  margin: 0 0 var(--space-4);
-}
-
 .build-line {
   margin: var(--space-4) 0 0;
   color: var(--text-muted);
@@ -1539,20 +1533,6 @@
 .move-confirm > legend {
   padding: 0;
   font-weight: 600;
-}
-
-/* Where the run followed stands across all its days (#270): its bar takes
- * the row's width, beside the moment it has reached. */
-.playback-progress {
-  display: flex;
-  gap: var(--space-3);
-  align-items: center;
-  font-variant-numeric: tabular-nums;
-}
-
-.playback-progress progress {
-  flex: 1;
-  min-width: 0;
 }
 
 /* The landing page (P17.5): where a person decides what to do. */

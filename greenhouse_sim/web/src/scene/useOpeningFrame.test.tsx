@@ -5,7 +5,7 @@ import { type CameraPose, framing } from "../camera";
 import { type Rendered, render } from "../testing/render";
 import type { Pending } from "../useLoad";
 import type { SceneState } from "./sceneLoad";
-import { useOpeningFrame } from "./useFollowFraming";
+import { useOpeningFrame } from "./useOpeningFrame";
 
 const SIZE = { x: 12, y: 6.4, z: 4.8 };
 const BASE = { x: 6, y: 3.2, z: 0 };
