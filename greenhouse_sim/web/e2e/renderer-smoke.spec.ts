@@ -50,6 +50,14 @@ async function objectCount(page: Page): Promise<number> {
   return Number(await page.getByTestId("object-count").textContent());
 }
 
+/** The scene's object count once it holds still for a second, or 0 while it
+ * changes. */
+async function steadyObjectCount(page: Page): Promise<number> {
+  const before = await objectCount(page);
+  await page.waitForTimeout(1000);
+  return (await objectCount(page)) === before ? before : 0;
+}
+
 /** Where the replay stands, in seconds into the run, as its timeline says. */
 async function reached(page: Page): Promise<number> {
   const handle = page.getByRole("slider", { name: "Position in the run" });
@@ -87,12 +95,23 @@ test("renderer-smoke: the renderer, end to end", async ({ page }) => {
   await test.step("paused, the replay holds; moved to its start, it is there", async () => {
     await transport.getByRole("button", { name: "Pause" }).click();
     await expect(transport.getByRole("button", { name: "Play" })).toBeVisible();
+    // The climate field of the run's start, which the view asks for again: until
+    // it arrives, the scene keeps the moment before's, its arrows among them,
+    // and the overlays' count below would see them change under it.
+    const fieldAtStart = page.waitForResponse(
+      (response) =>
+        /\/fields\/climate\?/.test(response.url()) &&
+        !new URL(response.url()).searchParams.has("t"),
+      ARRIVES,
+    );
     await handle.focus();
     await page.keyboard.press("Home");
     await expect(handle).toHaveAttribute("aria-valuetext", "Day 1, 00:00");
     // Long enough for the replay to have asked where its position stands twice.
     await page.waitForTimeout(2500);
     expect(await reached(page)).toBe(0);
+    await fieldAtStart;
+    await expect.poll(() => steadyObjectCount(page), ARRIVES).toBeGreaterThan(0);
   });
 
   let shownPaused: string[] = [];
