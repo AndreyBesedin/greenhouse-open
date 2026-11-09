@@ -280,6 +280,23 @@ describe("the runs of a scenario, in a dialog", () => {
       expect(asked.map((each) => each.url)).toEqual([`${RUNS_URL}?seconds_per_day=10`]);
     });
 
+    it.each(["10.0", "1e1", "010"])(
+      "asks for %j days as the whole number the form accepted",
+      async (days) => {
+        const asked = simulator({}, { status: 200, body: STARTED });
+        const { container, field, navigate } = shown([]);
+
+        enter(field("Days"), days);
+        click(button(container, "Start run"));
+
+        await vi.waitFor(() => expect(navigate).toHaveBeenCalled());
+        // The API reads its days as an integer's digits (`whole`), not as a number.
+        expect(asked.map((each) => each.url)).toEqual([
+          `${RUNS_URL}?seconds_per_day=10&duration_days=10`,
+        ]);
+      },
+    );
+
     it.each(["0", "121", "2.5", ""])(
       "refuses %j days before asking: from 1 to the scenario's own",
       (days) => {

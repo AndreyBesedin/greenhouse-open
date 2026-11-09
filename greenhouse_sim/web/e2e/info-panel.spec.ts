@@ -1,39 +1,26 @@
 import { expect, type Page, test } from "@playwright/test";
 
 import { FOLDS, type FoldName, unfold } from "./folds";
+import { type AskedRun, askForRun, openReplay } from "./replays";
 
-// A scenario followed, as the scenarios table opens one (#245): the run
-// played back, its moment, and every group of the info panel beside them.
-const FOLLOWED = "/?scenario=climate_box&field=climate&follow=1";
+// The climate box, with every group of the info panel beside its moment: in
+// the viewer, at its start, where nothing moves it on; and in a run's replay
+// (P17.6), where a run is watched, of a run as fast as it computes and
+// finished, so that no panel says the run is still being computed.
+const SCENARIO = "climate_box";
+const AT_ITS_START = `/view?scenario=${SCENARIO}&field=climate`;
+const COMPUTED = 120_000;
 
-/** Its run played back, as this test's own playback says it: given nothing.
- * The simulator's is shared, and keeps what other tests give it: follow.spec's
- * level set draws a schedule in this panel, which then no longer fits, for as
- * long as the simulator runs and on any retry. */
-async function followsAPlainRun(page: Page): Promise<void> {
-  await page.route("**/api/scenarios/climate_box/playback", (route) =>
-    route.fulfill({
-      json: {
-        scenario_id: "climate_box",
-        run_id: "climate_box-climate-00000000",
-        layout: "default",
-        epoch: 0,
-        greenhouse_id: "climate_box",
-        started_at: "2026-03-01T00:00:00Z",
-        simulated_now: "2026-03-01T00:00:00Z",
-        time_s: 0,
-        day: 0,
-        playing: false,
-        seconds_per_day: 10,
-        worked_out_s: 0,
-        every_s: 300,
-        targets: [],
-        commands: [],
-        crop: [],
-      },
-    }),
-  );
+/** Opens the replay of a run of the climate box's, asked of a worker and
+ * computed to its end, at its start. */
+async function replayOfAFinishedRun(page: Page, seed: number): Promise<AskedRun> {
+  const run = await askForRun(page, SCENARIO, { seed });
+  await openReplay(page, run);
+  await expect(page.getByTestId("replay-status")).toHaveText("Finished", { timeout: COMPUTED });
+  await expect(page.getByTestId("climate-time")).toBeVisible({ timeout: 20_000 });
+  return run;
 }
+
 // The info panel's sections, by their names in `folds.ts`, folded at first
 // but the climate run's moment (#273).
 const FOLDED: readonly FoldName[] = [
@@ -70,13 +57,9 @@ test("info panel: every group a section folded to its line, the panel fitting a 
 }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1280, height: 720 });
-  await followsAPlainRun(page);
-  await page.goto(FOLLOWED);
-  const panel = page.locator(".info-panel");
-  await expect(page.getByRole("region", { name: "Run played back" })).toBeVisible({
-    timeout: 20_000,
-  });
+  await page.goto(AT_ITS_START);
   await expect(page.getByTestId("climate-time")).toBeVisible({ timeout: 20_000 });
+  const panel = page.locator(".info-panel");
 
   await test.step("folded at first but the moment, the panel fits without scrolling", async () => {
     for (const name of FOLDED) {
@@ -88,7 +71,6 @@ test("info panel: every group a section folded to its line, the panel fitting a 
     // How far it scrolls, in pixels: said, should it fail.
     const scrolls = await panel.evaluate((element) => element.scrollHeight - element.clientHeight);
     expect(scrolls).toBe(0);
-    await expect(page.getByRole("button", { name: "Stop following" })).toBeInViewport();
     await expect(page.getByRole("group", { name: "Climate run" })).toBeInViewport();
   });
 
@@ -124,10 +106,9 @@ test("info panel: every group a section folded to its line, the panel fitting a 
 });
 
 test("info panel: the sections sit in titled cards by topic (#306)", async ({ page }) => {
+  test.setTimeout(COMPUTED * 2);
   await page.setViewportSize({ width: 1280, height: 720 });
-  await followsAPlainRun(page);
-  await page.goto(FOLLOWED);
-  await expect(page.getByTestId("climate-time")).toBeVisible({ timeout: 20_000 });
+  await replayOfAFinishedRun(page, 62);
   const panel = page.locator(".info-panel");
   const card = (title: string) => panel.getByRole("region", { name: title, exact: true });
 
@@ -137,10 +118,10 @@ test("info panel: the sections sit in titled cards by topic (#306)", async ({ pa
     "Equipment",
     "Outside",
   ]);
-  await expect(card("Simulation").getByRole("region", { name: "Run played back" })).toBeVisible();
   await expect(card("Simulation").locator("details.moment-fold")).toBeVisible();
   await expect(card("Simulation").locator("details.timeline")).toBeVisible();
-  await expect(card("Simulation").locator("details.checkpoints")).toBeVisible();
+  // A stored run keeps its own checkpoints, which the card says.
+  await expect(card("Simulation").getByTestId("replayed-checkpoints")).toBeVisible();
   await expect(card("House").locator("details.field-fold")).toBeVisible();
   await expect(card("House").locator("details.house-fold")).toBeVisible();
   await expect(card("Equipment").locator("details.probes-fold")).toBeVisible();

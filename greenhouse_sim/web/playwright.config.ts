@@ -27,7 +27,8 @@ const PREVIEW_PORT = testPort(OWN_PREVIEW_PORT);
 const IN_CI = process.env.CI !== undefined;
 // Screenshot comparisons and the benchmark have their own configurations.
 const ELSEWHERE = ["visual/**", "bench/**"];
-// P00's final QA drives a shared live run, so it runs once the others pass.
+// P00's final QA walks through the renderer on a run of its own, once the
+// others pass.
 const RENDERER_SMOKE = "renderer-smoke.spec.ts";
 // The plant lab grows a row of thousands of entities on its later days, and
 // times out when the climate's runs share the simulator with it: it runs on
@@ -55,7 +56,8 @@ const ONE_BY_ONE = [
   "replay.spec.ts",
   // Two workers at once, which is all a simulator runs by default.
   "worker-runs.spec.ts",
-  // A plan through the reference greenhouse's first days, on a playback of its own.
+  // Plans given to a run of the reference greenhouse as a worker computes it,
+  // read in its replay.
   "plan-qa.spec.ts",
   // P14.7's QA: a copy of the reference greenhouse through its first four weeks.
   "models-qa.spec.ts",

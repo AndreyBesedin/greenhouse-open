@@ -57,24 +57,36 @@ from greenhouse_sim.biology.tomato.tomgro.parameters import (
     TomgroParameters,
     TomgroState,
 )
+from greenhouse_sim.biology.tomato.vanthoor.parameters import (
+    INITIAL_STATE as VANTHOOR_PLANTED,
+)
+from greenhouse_sim.biology.tomato.vanthoor.parameters import (
+    VanthoorParameters,
+    VanthoorState,
+)
 from greenhouse_sim.core.area_crop import AreaInstance
 from greenhouse_sim.core.crop import OrganRung
 from greenhouse_sim.core.drivers import DriverProfile, driver_profile
 from greenhouse_sim.core.simple_crop import SimplePlant, SimpleRung
 from greenhouse_sim.core.tomgro_crop import TomgroRung
+from greenhouse_sim.core.vanthoor_crop import VanthoorRung
 from greenhouse_sim.domain.crop import CropModel, FruitStatus
 from greenhouse_sim.domain.organs import FruitStage
 from greenhouse_sim.domain.scopes import AreaBasis
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.scenarios.crop_parameters import ReducedTomgroCrop
+from greenhouse_sim.scenarios.crop_parameters import ReducedTomgroCrop, VanthoorKatzinCrop
 from greenhouse_sim.scene.plants import crop_entities
 from greenhouse_sim.scene.snapshot import SceneEntity, canopy_entities, simple_plant_entities
+from greenhouse_sim.units import DAY_S, HOUR_S
 from greenhouse_sim.world.scopes import CropScope, converted
 
 CM_PER_M: Final = 100.0
 # How far a plant's thermal time may be from the sum of the days it lived,
 # relative to it: what adding them up in another order gives.
 THERMAL_TIME_TOLERANCE: Final = 1e-9
+# How far a canopy's temperature sum may be from the sum of the hours it
+# lived, in °C day: what adding them up in another order gives over years.
+TEMPERATURE_SUM_TOLERANCE_C_D: Final = 1e-6
 
 
 class _GrownByPlant(BaseModel):
@@ -142,11 +154,12 @@ class AreaCropState[StateT: BaseModel](BaseModel):
         return [instance.scope_id for instance in self.instances]
 
 
-# Reduced-State TOMGRO's state in a checkpoint.
+# Reduced-State TOMGRO's state in a checkpoint, and Vanthoor's model's.
 TomgroCropState = AreaCropState[TomgroState]
+VanthoorCropState = AreaCropState[VanthoorState]
 
 # A crop model's state, as a checkpoint keeps it: a member for each model.
-type CropModelState = CropState | SimpleCropState | TomgroCropState
+type CropModelState = CropState | SimpleCropState | TomgroCropState | VanthoorCropState
 
 
 @dataclass(frozen=True)
@@ -430,6 +443,106 @@ def _tomgro_sampled(state: TomgroState) -> dict[ObservationType, float]:
     }
 
 
+# Vanthoor's model's parameter sets, by the name a scenario's section gives
+# (`VanthoorKatzinCrop.parameter_set`): GreenLight 2.0.7's, as its
+# reproduction's manifest records each with its unit and source
+# (`research/reproductions/vanthoor_katzin/manifest.json`).
+VANTHOOR_PARAMETERS: Final = {"greenlight_2_0_7": VanthoorParameters()}
+
+
+def _vanthoor_crop(config: ScenarioConfig) -> VanthoorKatzinCrop:
+    """A scenario's section of Vanthoor's model, which its rows grow."""
+    crop = config.crop
+    if not isinstance(crop, VanthoorKatzinCrop):
+        raise ValueError(f"{config.greenhouse_id}'s rows grow {crop.kind}, not vanthoor_katzin")
+    return crop
+
+
+def _vanthoor_rung(config: ScenarioConfig) -> VanthoorRung:
+    """The model with its section's parameter set, its light read at its
+    section's canopy height."""
+    section = _vanthoor_crop(config)
+    return VanthoorRung(VANTHOOR_PARAMETERS[section.parameter_set], section.canopy_height_m)
+
+
+def _vanthoor_implausible(state: VanthoorCropState, day: int) -> list[str]:
+    """A canopy that is not finite; whose fruit, leaves, stems or fruit
+    harvested are less than none; whose temperature sum is not what the
+    hours it lived add up to; or, on the run's first day, that is not as the
+    model plants it. Its buffer may fall a little below none, as the smooth
+    switch that empties it allows."""
+    problems = []
+    for instance in state.instances:
+        canopy, scope = instance.state, instance.scope_id
+        summed = sum(
+            hour.temperature_c * HOUR_S / DAY_S
+            for lived in state.lived
+            for hour in lived[scope].hours
+        )
+        if not all(map(math.isfinite, canopy.model_dump().values())):
+            problems.append(f"{scope}'s canopy is not finite")
+        elif min(canopy.c_fruit, canopy.c_leaf, canopy.c_stem, canopy.harvested_fruit) < 0:
+            problems.append(f"{scope}'s fruit, leaves, stems or fruit harvested are negative")
+        elif not math.isclose(canopy.t_can_sum, summed, abs_tol=TEMPERATURE_SUM_TOLERANCE_C_D):
+            problems.append(
+                f"{scope}'s temperature sum is {canopy.t_can_sum:.6g} °C day, and the hours "
+                f"it lived add up to {summed:.6g}"
+            )
+        elif day == 0 and canopy != VANTHOOR_PLANTED:
+            problems.append(f"{scope}'s canopy is not as the model plants it")
+    return problems
+
+
+def _vanthoor_drawn(
+    instances: Sequence[AreaInstance[VanthoorState]],
+    scopes: Sequence[CropScope],
+    config: ScenarioConfig,
+) -> list[SceneEntity]:
+    """Each row's canopy, drawn as a proxy (decision 0062): as tall as its
+    section's canopy height, and as dense as the light its leaves take from
+    above over the ground it is drawn on, `1 - exp(-K1 · LAI)`, its leaf area
+    index per m² of floor converted to the row's cultivated ground
+    (`canopy_lai`). Its properties are the model's states, per m² of floor,
+    its pools in carbohydrate equivalents, never dry matter."""
+    rung = _vanthoor_rung(config)
+    by_id = {scope.scope_id: scope for scope in scopes}
+    drawn: list[SceneEntity] = []
+    for instance in instances:
+        scope, canopy = by_id[instance.scope_id], instance.state
+        lai = canopy.leaf_area_index(rung.parameters)
+        canopy_lai = converted(lai, scope, rung.basis, AreaBasis.CULTIVATED)
+        drawn += canopy_entities(
+            scope,
+            config.layout,
+            config.envelope,
+            entity_id=f"{config.greenhouse_id}_{instance.scope_id}_canopy",
+            height_m=rung.canopy_height_m,
+            density=1 - math.exp(-rung.parameters.k1_par * canopy_lai),
+            properties={
+                "model": CropModel.VANTHOOR_KATZIN.value,
+                "basis": rung.basis.value,
+                "lai": lai,
+                "canopy_lai": canopy_lai,
+                "buffer_ch2o_mg_m2": canopy.c_buf,
+                "fruit_ch2o_mg_m2": canopy.c_fruit,
+                "leaf_ch2o_mg_m2": canopy.c_leaf,
+                "stem_ch2o_mg_m2": canopy.c_stem,
+                "harvested_fruit_ch2o_mg_m2": canopy.harvested_fruit,
+                "temperature_sum_c_d": canopy.t_can_sum,
+                "canopy_temperature_24h_c": canopy.t_can_24,
+            },
+        )
+    return drawn
+
+
+def _vanthoor_sampled(state: VanthoorState) -> dict[ObservationType, float]:
+    """Its leaf area index, by its one parameter set's specific leaf area.
+    Its pools are carbohydrate equivalents, not the dry weights a sample
+    reads, and no observation is of them yet."""
+    (parameters,) = VANTHOOR_PARAMETERS.values()
+    return {ObservationType.LEAF_AREA_INDEX: state.leaf_area_index(parameters)}
+
+
 # The run's own crop actions the organ crop takes: every kind a plan may
 # ask of a plant (`greenhouse_sim.services.runs.CROP_KINDS`).
 ORGAN_CROP_ACTIONS: Final = CropActions(
@@ -482,9 +595,27 @@ REDUCED_TOMGRO: Final = CropRegistration[Any](
     # Its harvest is the model's own rule; it takes none of a plan's.
     crop_actions=None,
 )
+VANTHOOR_KATZIN: Final = CropRegistration[Any](
+    name=CropModel.VANTHOOR_KATZIN.value,
+    state=VanthoorCropState,
+    implausible=_vanthoor_implausible,
+    plants=None,
+    area=AreaAdapter(
+        rung=_vanthoor_rung,
+        profile=lambda config: driver_profile(
+            _vanthoor_crop(config).driver_profile, _vanthoor_crop(config).driver_profile_version
+        ),
+        drawn=_vanthoor_drawn,
+        sampled=_vanthoor_sampled,
+    ),
+    # Its harvest and its pruning are the model's own rules; it takes none
+    # of a plan's.
+    crop_actions=None,
+)
 # Each crop model's registration, by its registry's name.
 CROP_MODELS: Final[dict[str, CropRegistration[Any]]] = {
-    registration.name: registration for registration in (ORGAN, SIMPLE, REDUCED_TOMGRO)
+    registration.name: registration
+    for registration in (ORGAN, SIMPLE, REDUCED_TOMGRO, VANTHOOR_KATZIN)
 }
 
 

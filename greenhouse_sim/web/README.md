@@ -408,9 +408,9 @@ test quickly against ones known to be this checkout's. `TEST_PORT_OFFSET=20`
 moves every port they start a server on by 20 (8786, 4337 and so on), so that
 two checkouts can run their browser tests at once. Once every other browser
 test has passed, `e2e/renderer-smoke.spec.ts` walks through the whole renderer
-as a person would: a run followed as it is played back, camera presets,
-starting over and pausing, selection and overlays, the same plant drawn again
-at the moment held, and the stress scene. The
+as a person would: a run a worker computes, played in its replay, camera
+presets, pausing and going back to its start, selection and overlays, the same
+plant drawn again at the moment held, and the stress scene. The
 plant lab's tests, which grow thousands of entities, run on their own after
 the others too, then the checks of the sun's light (`e2e/light.spec.ts`,
 `e2e/solar-lab.spec.ts` and P08's final QA, `e2e/solar-day.spec.ts`), which

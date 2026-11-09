@@ -10,11 +10,15 @@ import type {
 import type { Action, Harvest } from "../plan/generated/planTypes";
 
 /**
- * The plan lane of a run followed as it plays (P13.8): what its plans had
- * due, what became of each and why, as its outcome log says it through the
- * consumer interface (`/consumer/v1`), and what is still to come, as its
- * gateway lists it (`/actuation/v1`). Each is placed at its moment, in
- * seconds into the run, as the timeline places its events: an outcome where
+ * The plan lane of a run (P13.8): what its plans had due, what became of each
+ * and why, as its outcome log says it, and what is still to come. A run
+ * followed as it plays is read through the consumer interface
+ * (`/consumer/v1`), and what is still to come as its gateway lists it
+ * (`/actuation/v1`). A stored epoch replayed (P22.3, decision 0074) is read
+ * through the run store, the outcomes its epoch delivered by the moment shown
+ * (`/api/runs/{run}/epochs/{n}/outcomes?t=`); the store keeps no list of the
+ * actions still to come, so its lane has none. Each is placed at its moment,
+ * in seconds into the run, as the timeline places its events: an outcome where
  * its action started, or was resolved without starting; an action still to
  * come where it falls due.
  */
@@ -42,12 +46,14 @@ export type PlanLaneState =
 /** The run whose plan lane is drawn: its identifier, its epoch, and the
  * instant its clock started at; and how many times the viewer has given it
  * a plan (`version`), so that the lane is read again after each, even at a
- * clock that does not move, as a paused run's does not. */
+ * clock that does not move, as a paused run's does not. `stored` says it is a
+ * stored epoch replayed, read through the run store. */
 export interface PlanLaneRun {
   runId: string;
   epoch: number;
   startedAt: string;
   version?: number;
+  stored?: boolean;
 }
 
 /** What carried an action out, of the outcomes. */
@@ -61,14 +67,16 @@ const checkBatch = contractCheck<OutcomeBatch>(OUTCOME_BATCH_SCHEMA, "the outcom
 const checkState = contractCheck<ActionState>(ACTION_STATE_SCHEMA, "an action");
 
 /** A run's plan lane: every outcome its log holds by its clock, and every
- * action still to come; every failure becomes a state. */
+ * action still to come; for a stored epoch, the outcomes it delivered by
+ * `atS`, seconds into the run. Every failure becomes a state. */
 export async function loadPlanLane(
   run: PlanLaneRun,
   fetchFn: typeof fetch = fetch,
+  atS = 0,
 ): Promise<PlanLaneState> {
   try {
-    const outcomes = await allOutcomes(run.runId, fetchFn);
-    const toCome = await actionsToCome(run.runId, fetchFn);
+    const outcomes = await allOutcomes(outcomesUrl(run, atS), fetchFn);
+    const toCome = run.stored === true ? [] : await actionsToCome(run.runId, fetchFn);
     return {
       status: "loaded",
       entries: [
@@ -84,14 +92,24 @@ export async function loadPlanLane(
   }
 }
 
-async function allOutcomes(runId: string, fetchFn: typeof fetch): Promise<ActionOutcome[]> {
+/** Where a run's outcomes after a cursor are read: through the consumer
+ * interface for a run followed, through the store for a stored epoch, as
+ * delivered by `atS`. */
+function outcomesUrl(run: PlanLaneRun, atS: number): (after: number) => string {
+  const runId = encodeURIComponent(run.runId);
+  return run.stored === true
+    ? (after) => `/api/runs/${runId}/epochs/${run.epoch}/outcomes?after=${after}&t=${atS}`
+    : (after) => `/consumer/v1/runs/${runId}/outcomes?after=${after}`;
+}
+
+async function allOutcomes(
+  url: (after: number) => string,
+  fetchFn: typeof fetch,
+): Promise<ActionOutcome[]> {
   const outcomes: ActionOutcome[] = [];
   let after = 0;
   for (let page = 0; page < MOST_PAGES; page += 1) {
-    const batch = checked(
-      await read(`/consumer/v1/runs/${encodeURIComponent(runId)}/outcomes?after=${after}`, fetchFn),
-      checkBatch,
-    );
+    const batch = checked(await read(url(after), fetchFn), checkBatch);
     outcomes.push(...batch.outcomes);
     if (!batch.has_more) {
       break;

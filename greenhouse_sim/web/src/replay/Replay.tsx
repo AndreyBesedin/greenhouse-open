@@ -121,11 +121,15 @@ function ReplayOf({
           replay={{
             source,
             momentS: replayedMoment(position.time_s),
+            pace: position.playing
+              ? { secondsPerDay: position.seconds_per_day, frontierS: position.frontier_s }
+              : null,
             seek,
             forkWith: (change, timeS) => void fork({ timeS, changes: [change] }),
             forkInLayout: (forkLayout, timeS) => fork({ timeS, layout: forkLayout }),
             noFork: whyNoFork(position),
             steer,
+            lane: { runId, epoch, startedAt: position.started_at, stored: true },
           }}
         />
       </div>

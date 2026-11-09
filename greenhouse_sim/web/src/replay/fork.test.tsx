@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DAY_S } from "../clock";
 import { type Rendered, render } from "../testing/render";
-import { forkEpoch, whyNoFork } from "./fork";
+import { changeAsked, forkEpoch, whyNoFork } from "./fork";
 import { useFork } from "./useFork";
 
 const RUN = {
@@ -66,6 +66,32 @@ describe("asking for a fork", () => {
     expect(url).toBe("/api/runs/run%201/epochs/0/forks?t=1234.5&layout=default~heater%3A1%3A0");
     expect(init?.method).toBe("POST");
     expect(JSON.parse(String(init?.body))).toEqual([{ kind: "levels", levels: { heater: 0.5 } }]);
+  });
+
+  it("gives a plant's work as a plan of the viewer's own, which the fork takes as its run's", async () => {
+    const fetchFn = answering(200, RUN);
+    const harvest = { kind: "harvest", plant_id: "p30", scope: "fruit", organ_id: "f1" } as const;
+
+    await forkEpoch(
+      "run 1",
+      0,
+      { timeS: 60, changes: [{ kind: "work", actions: [harvest] }] },
+      fetchFn,
+    );
+
+    const [, init] = vi.mocked(fetchFn).mock.calls[0] ?? [];
+    const [given] = JSON.parse(String(init?.body));
+    expect(given.kind).toBe("plan");
+    expect(given.plan).toMatchObject({ run_id: "run 1", epoch: 0, revision: 1 });
+    expect(given.plan.actions).toEqual([
+      expect.objectContaining({ action_id: "work_1", action: harvest, timing: { kind: "asap" } }),
+    ]);
+    // Named as asked, and a target or a level as it is.
+    expect(changeAsked({ kind: "work", actions: [harvest] }, "r", 1, "w").kind).toBe("plan");
+    expect(changeAsked({ kind: "targets", targets: { heating_day: 20 } }, "r", 1)).toEqual({
+      kind: "targets",
+      targets: { heating_day: 20 },
+    });
   });
 
   it("says why the simulator refused it, or that it could not be reached", async () => {

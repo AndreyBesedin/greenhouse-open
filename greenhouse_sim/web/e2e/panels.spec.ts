@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { chooser } from "./chooser";
 import { unfold } from "./folds";
-
+import { askForRun, openReplay, stopRun } from "./replays";
 import { selectAt } from "./view";
 
 // How far, of 255, a colour of the panel may change for a label under it: a soft
@@ -410,10 +410,14 @@ test("the View panel opens where it was, whatever changed while it was folded (#
 test("a side's stripe stands at its panel's edge, however long a line of the panel (#304)", async ({
   page,
 }) => {
+  test.setTimeout(120_000);
   await page.setViewportSize({ width: 1280, height: 720 });
-  // Followed, the climate run's note is a line far longer than the panel.
-  await page.goto("/?scenario=climate_box&field=climate&follow=1");
+  // In a replay, the notes that say what a stored run keeps are lines far
+  // longer than the panel.
+  const run = await askForRun(page, "climate_box", { seed: 63 });
+  await openReplay(page, run);
   await expect(page.getByTestId("climate-time")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("replayed-checkpoints")).toBeVisible();
   const panel = await page.locator(".info-panel").boundingBox();
   const stripe = await page.getByTestId("info-stripe").boundingBox();
   const hud = await page.locator(".hud").boundingBox();
@@ -421,4 +425,5 @@ test("a side's stripe stands at its panel's edge, however long a line of the pan
 
   expect((stripe?.x ?? 0) - ((panel?.x ?? 0) + (panel?.width ?? 0))).toBeLessThan(12);
   expect((hud?.x ?? 0) - ((viewStripe?.x ?? 0) + (viewStripe?.width ?? 0))).toBeLessThan(12);
+  await stopRun(page, run);
 });

@@ -1,6 +1,8 @@
 import { expect, type Page, test } from "@playwright/test";
 import { LANDING_PATH, REPLAY_PATH, runsAddress } from "../src/landing/paths";
 import { unfold } from "./folds";
+import { askForRun, computedTo, openReplay } from "./replays";
+import { onScreen } from "./view";
 
 const DAY_S = 86_400;
 // How long a first day of a run may take to be computed, with the other
@@ -381,6 +383,51 @@ test("a level set in the replay of a finished run forks it", async ({ page }) =>
   expect(asked).toEqual(["forks"]);
 });
 
+test("a moment whose field fails does not stop the replay playing on", async ({ page }) => {
+  test.setTimeout(WAITS_FOR_A_DAY * 2);
+  const run = await askForRun(page, "climate_box", { seed: 67 });
+  await computedTo(page, run, 3 * DAY_S, WAITS_FOR_A_DAY);
+  // Every climate field asked for after the first fails; the moments asked, by
+  // the seconds into the run each names.
+  const moments = new Set<string>();
+  await page.route("**/api/scenarios/climate_box/fields/climate*", (route) => {
+    const first = moments.size === 0;
+    moments.add(new URL(route.request().url()).searchParams.get("t") ?? "0");
+    return first
+      ? route.continue()
+      : route.fulfill({ status: 500, json: { error: "a failure for the test" } });
+  });
+  await openReplay(page, run);
+
+  // Played, the moment drawn moves on past each that fails, and again.
+  const transport = page.locator(".replay-transport");
+  await transport.getByLabel("Pace").selectOption("2");
+  await transport.getByRole("button", { name: "Play" }).click();
+  await expect.poll(() => moments.size, { timeout: COMPUTES }).toBeGreaterThan(3);
+  await expect(page.getByTestId("climate-failed")).toContainText("cannot be drawn");
+});
+
+test("the replay of a house without equipment draws its climate, nothing refused", async ({
+  page,
+}) => {
+  test.setTimeout(WAITS_FOR_A_DAY);
+  const refused: string[] = [];
+  page.on("response", (response) => {
+    if (response.status() === 404 && /\/(fields\/climate|climate\/)/.test(response.url())) {
+      refused.push(response.url());
+    }
+  });
+  const run = await askForRun(page, "airflow_box", { seed: 68 });
+  await openReplay(page, run);
+
+  await expect(page.getByTestId("field-status")).toContainText("airflow_box_climate", {
+    timeout: COMPUTES,
+  });
+  await expect(page.getByTestId("main-view")).not.toHaveAttribute("data-light", "fixed");
+  await expect(page.getByTestId("climate-failed")).toHaveCount(0);
+  expect(refused).toEqual([]);
+});
+
 test("an address that names no run, or a run that is not kept, says so and offers the way home", async ({
   page,
 }) => {
@@ -401,4 +448,89 @@ test("a replay's other runs are the scenario's, on the landing page", async ({ p
 
   await expect(page).toHaveURL(/#runs=solar_lab$/);
   await expect(page.getByRole("dialog").getByRole("heading", { level: 2 })).toContainText("Solar");
+});
+
+// The reference greenhouse's first row of plants, a stem every 0.75 m from
+// x = 3 m, at y = 2.4 m, standing on a gutter 0.675 m up: a transplant's leaves
+// are small, and a click at its stem may pass between them to the floor, so
+// each plant is clicked about its crown, a few pixels apart.
+const FIRST_ROW = [0, 1, 2, 3, 4].map((at) => ({ x: 3 + 0.75 * at, y: 2.4, z: 0.8 }));
+const ABOUT_THE_CROWN_PX = [0, -4, -8, -12, 4].flatMap((dy) =>
+  [0, -6, 6].map((dx) => ({ dx, dy })),
+);
+
+/** Clicks about the first row's plants until an organ of one is selected. */
+async function selectAnOrgan(page: Page): Promise<void> {
+  // The view is short between the replay's header and its transport: the View
+  // panel is folded once its preset is chosen, so that the row is clear of it.
+  await page.getByRole("button", { name: "Isometric" }).click();
+  await page.getByRole("button", { name: "Fold the View panel" }).click();
+  const selected = page.getByTestId("selected-entity");
+  const organ = /^reference_greenhouse_plant_\d+_/;
+  await expect(async () => {
+    for (const plant of FIRST_ROW) {
+      const { x, y } = await onScreen(page, plant, "isometric");
+      for (const { dx, dy } of ABOUT_THE_CROWN_PX) {
+        await page.mouse.click(x + dx, y + dy);
+        if (organ.test((await selected.textContent({ timeout: 1000 }).catch(() => "")) ?? "")) {
+          return;
+        }
+      }
+    }
+    throw new Error("no organ of the first row's plants was picked");
+  }).toPass({ timeout: COMPUTES });
+}
+
+test("a plant's work in the replay of a run being computed steers it, and once it has ended forks it", async ({
+  page,
+}) => {
+  test.setTimeout(WAITS_FOR_A_DAY * 2);
+  // Paced, so that it is still computed when the work is asked.
+  const run = await askForRun(page, "reference_greenhouse", { seed: 53, secondsPerDay: 60 });
+  await openReplay(page, run);
+  await expect(page.getByTestId("replay-status")).toHaveText(/Queued|Running/);
+  const parent = page.url();
+  const asked = changesAndForks(page);
+  const forksAsked: unknown[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && /\/forks\?/.test(request.url())) {
+      forksAsked.push(request.postDataJSON());
+    }
+  });
+  await selectAnOrgan(page);
+
+  await test.step("asked of the running epoch, its worker takes it, and nothing forks", async () => {
+    await page.getByRole("button", { name: "Lower the stem" }).click();
+    await expect(page.getByTestId("epoch-steering-status")).toHaveText(
+      /^The run took the latest change from Day \d+, \d\d:\d\d\.$/,
+      { timeout: COMPUTES },
+    );
+    expect(asked).toEqual(["changes"]);
+    await expect(page.getByTestId("fork-question")).toHaveCount(0);
+    await expect(page).toHaveURL(parent);
+  });
+
+  await test.step("once the run has ended, the same work is a fork, asked first", async () => {
+    await stopReplayed(page);
+    await page.getByRole("button", { name: "Lower the stem" }).click();
+    await expect(page.getByTestId("fork-question")).toBeVisible();
+    await page.getByRole("button", { name: "Make the fork" }).click();
+    await expect(page).not.toHaveURL(parent);
+    await expect(page.getByTestId("replay-subtitle")).toContainText(/forked from epoch \d+ at /);
+    expect(asked).toEqual(["changes", "forks"]);
+    // The fork is given the work as a plan of the viewer's own.
+    expect(forksAsked).toEqual([
+      [
+        expect.objectContaining({
+          kind: "plan",
+          plan: expect.objectContaining({
+            actions: [
+              expect.objectContaining({ action: expect.objectContaining({ kind: "lower" }) }),
+            ],
+          }),
+        }),
+      ],
+    ]);
+  });
+  await stopReplayed(page);
 });

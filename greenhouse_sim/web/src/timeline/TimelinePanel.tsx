@@ -47,15 +47,16 @@ function turns(timeline: Timeline, seconds: number): [string, TimelineEvent[]][]
   return [...byProcess];
 }
 
-/** A followed run's plan lane, asked for at a moment: again as the moment
- * moves on, as its clock does, and once the viewer has given it a plan. */
+/** A run's plan lane, asked for at a moment: again as the moment moves on,
+ * as its clock or its replay moves it, and once the viewer has given it a
+ * plan. */
 interface PlanRequest {
   run: PlanLaneRun;
   time: number;
 }
 
 const loadPlan = (request: PlanRequest, fetchFn: typeof fetch) =>
-  loadPlanLane(request.run, fetchFn);
+  loadPlanLane(request.run, fetchFn, request.time);
 const planKey = ({ run, time }: PlanRequest) =>
   `${run.runId}:${run.epoch}:${run.version ?? 0}:${time}`;
 
@@ -65,7 +66,8 @@ const planKey = ({ run, time }: PlanRequest) =>
  * minute wide, with the moment marked; and what each process does at that
  * moment, in the order they take their turns. A run followed as it plays
  * has a plan lane too (P13.8): what its plans had due in the window, what
- * became of each and why, and what is still to come.
+ * became of each and why, and what is still to come; so has a stored run
+ * replayed (P22.3), but for what is still to come.
  */
 export function TimelinePanel({
   scenarioId,
@@ -78,7 +80,8 @@ export function TimelinePanel({
   run: RunParts;
   /** The moment drawn, in seconds into the run. */
   time: number;
-  /** The run followed as it plays, whose plan lane is drawn, if one is. */
+  /** The run followed as it plays, or the stored epoch replayed, whose plan
+   * lane is drawn, if one is. */
   played?: PlanLaneRun | null;
 }) {
   const [open, setOpen] = useState(false);

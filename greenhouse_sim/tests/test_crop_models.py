@@ -9,16 +9,20 @@ from pathlib import Path
 from typing import Any, Final
 
 import pytest
+from greenhouse_protocol.enums import ObservationType
 
 import greenhouse_sim
 from greenhouse_sim.biology.area_contract import HourDrivers, StepCourse
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
+from greenhouse_sim.biology.tomato.vanthoor.parameters import VanthoorParameters
 from greenhouse_sim.core.area_crop import AreaInstance
 from greenhouse_sim.core.drivers import HOUSE_HOURS
+from greenhouse_sim.core.vanthoor_crop import VanthoorRung
+from greenhouse_sim.domain.crop import Driver
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.scenarios.crop_parameters import ReducedTomgroCrop
+from greenhouse_sim.scenarios.crop_parameters import ReducedTomgroCrop, VanthoorKatzinCrop
 from greenhouse_sim.scenarios.registry import MODELS
 from greenhouse_sim.scene.snapshot import SceneEntityKind
 from greenhouse_sim.services.crop_models import (
@@ -31,7 +35,7 @@ from greenhouse_sim.services.crop_models import (
 )
 from greenhouse_sim.services.runs import CROP_KINDS
 from greenhouse_sim.services.scenarios import plant_ids
-from greenhouse_sim.units import HOURS_A_DAY
+from greenhouse_sim.units import HOUR_S, HOURS_A_DAY
 from greenhouse_sim.world.scopes import row_scopes
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
@@ -56,6 +60,7 @@ def test_each_crop_model_grows_single_plants_or_an_area() -> None:
         "organ": (False, True),
         "simple": (False, True),
         "reduced_tomgro": (True, False),
+        "vanthoor_katzin": (True, False),
     }
 
 
@@ -112,6 +117,7 @@ def test_only_the_organ_crop_takes_the_runs_own_crop_actions() -> None:
         "organ": CropActions(CROP_KINDS),
         "simple": None,
         "reduced_tomgro": None,
+        "vanthoor_katzin": None,
     }
 
 
@@ -161,6 +167,66 @@ def test_reduced_tomgros_registration_answers_what_the_services_ask_of_it() -> N
     assert [(entity.kind, entity.properties["scope"]) for entity in drawn] == [
         (SceneEntityKind.CANOPY, instance.scope_id) for instance in instances
     ]
+
+
+# The climate box, its rows growing Vanthoor's model as Katzin simplified it.
+VANTHOOR_BOX: Final = ScenarioConfig.model_validate(
+    CONFIG.model_dump() | {"crop_model": "vanthoor_katzin", "crop": {"kind": "vanthoor_katzin"}}
+)
+
+
+def test_vanthoors_registration_answers_what_the_services_ask_of_it() -> None:
+    """A model grown by area at an hour's step (decision 0062): its rung with
+    the parameters it was reproduced with, its driver profile, which gives
+    the air's temperature for the canopy's and says so, its state as a
+    checkpoint keeps it, plausible as its hours add up, drawn as each row's
+    canopy, and sampled in its leaf area index alone."""
+    registered = registration(VANTHOOR_BOX)
+    assert registered.area is not None
+    rung = registered.area.rung(VANTHOOR_BOX)
+    profile = registered.area.profile(VANTHOOR_BOX)
+    scopes = row_scopes(VANTHOOR_BOX.layout, VANTHOOR_BOX.envelope)
+    hour = HourDrivers(temperature_c=22.0, par_above_umol_m2_s=400.0, co2_ppm=420.0)
+    course = StepCourse(hours=(hour,))
+    grown = rung.planted()
+    for _ in range(DAYS * HOURS_A_DAY):
+        grown = rung.live_step(grown, course)
+    instances: list[AreaInstance[Any]] = [
+        AreaInstance(scope_id=scope.scope_id, state=grown) for scope in scopes
+    ]
+    lived = [dict.fromkeys((scope.scope_id for scope in scopes), course)] * (DAYS * HOURS_A_DAY)
+
+    assert isinstance(rung, VanthoorRung)
+    assert rung.parameters == VanthoorParameters() and rung.step_s == HOUR_S
+    assert rung.canopy_height_m == VanthoorKatzinCrop().canopy_height_m
+    assert profile is HOUSE_HOURS and profile.refusal(rung.drivers) is None
+    assert profile.substitutes(rung.drivers) == {Driver.CANOPY_TEMPERATURE: Driver.AIR_TEMPERATURE}
+    state = registered.state.model_validate({"instances": instances, "lived": lived})
+    assert registered.state.model_validate_json(state.model_dump_json()) == state
+    assert state.named == [scope.scope_id for scope in scopes] and state.plants == []
+    assert registered.implausible(state, DAYS) == []
+    # Its temperature sum is not of a day it did not live, nor are its
+    # leaves less than none.
+    (short_a_day,) = registered.implausible(
+        state.model_copy(update={"instances": instances[:1], "lived": lived[HOURS_A_DAY:]}),
+        DAYS,
+    )
+    assert short_a_day == (
+        "row_1's temperature sum is 880 °C day, and the hours it lived add up to 858"
+    )
+    leafless = AreaInstance[Any](scope_id="row_1", state=grown.model_copy(update={"c_leaf": -1.0}))
+    assert registered.implausible(state.model_copy(update={"instances": [leafless]}), DAYS) == [
+        "row_1's fruit, leaves, stems or fruit harvested are negative"
+    ]
+    drawn = registered.area.drawn(instances, scopes, VANTHOOR_BOX)
+    assert [(entity.kind, entity.properties["scope"]) for entity in drawn] == [
+        (SceneEntityKind.CANOPY, instance.scope_id) for instance in instances
+    ]
+    assert drawn[0].properties["lai"] == grown.leaf_area_index(rung.parameters)
+    assert drawn[0].properties["fruit_ch2o_mg_m2"] == grown.c_fruit
+    assert registered.area.sampled(grown) == {
+        ObservationType.LEAF_AREA_INDEX: grown.leaf_area_index(rung.parameters)
+    }
 
 
 # What asks a crop model for anything: the services, the routes over them

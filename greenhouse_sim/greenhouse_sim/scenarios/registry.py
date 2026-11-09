@@ -52,6 +52,7 @@ from greenhouse_sim.scenarios.crop_parameters import (
     OrganCrop,
     ReducedTomgroCrop,
     SimpleCrop,
+    VanthoorKatzinCrop,
 )
 from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.weather.seasonal import SeasonalWeather
@@ -144,6 +145,7 @@ MODELS: Final[Mapping[Part, Mapping[str, Model]]] = {
         Model(Part.CROP, CropModel.ORGAN.value, OrganCrop, "crop"),
         # Grown by area (decision 0062), from its reproduction (decision 0060).
         Model(Part.CROP, CropModel.REDUCED_TOMGRO.value, ReducedTomgroCrop, "crop"),
+        Model(Part.CROP, CropModel.VANTHOOR_KATZIN.value, VanthoorKatzinCrop, "crop"),
     ),
     # What measures the crop, as a run's identity covers it: a walk finds
     # nothing to measure in a crop grown by area, a sample is of nothing else.

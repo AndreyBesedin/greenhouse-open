@@ -111,7 +111,10 @@ export function RunsDialog({
     }
     setStarting(true);
     // Its own days are asked for as none, as its own weather is: the same run.
-    const fewer = Number(days) === scenario.duration_days ? "" : days;
+    // Fewer are sent as the whole number accepted ("10.0" as "10"), since the
+    // API reads an integer's digits.
+    const count = Number(days);
+    const fewer = count === scenario.duration_days ? "" : String(count);
     const answer = await startRun(scenario.id, {
       seed,
       secondsPerDay: pace,
