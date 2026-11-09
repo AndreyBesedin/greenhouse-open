@@ -103,6 +103,12 @@ async function outcomes(page: Page, run: AskedRun, atS: number): Promise<Outcome
  * and waits for the moment to be drawn there. */
 async function replayTo(page: Page, days: number, hours: number): Promise<void> {
   const handle = page.getByRole("slider", { name: "Position in the run" });
+  // The store may hold the moment before the page has heard of it: its frontier
+  // comes with the position, asked every second. Moved before, the handle would
+  // stop at the frontier it knew.
+  await expect
+    .poll(async () => Number(await handle.getAttribute("aria-valuemax")), ARRIVES)
+    .toBeGreaterThanOrEqual(days * DAY_S + hours * HOUR_S);
   await handle.focus();
   await page.keyboard.press("Home");
   for (let day = 0; day < days; day += 1) {
