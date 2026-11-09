@@ -1,6 +1,6 @@
 # P22: Watching and starting a run
 
-**Status:** proposed, in progress (P22.1 and P22.2 are done). What the [QA of 2026-11-04](qa-2026-11-04.md)
+**Status:** proposed, in progress (P22.1, P22.2 and P22.6 are done). What the [QA of 2026-11-04](qa-2026-11-04.md)
 planned beyond its fixes. Part of the [simulator roadmap](README.md).
 
 ## Goal
@@ -55,7 +55,7 @@ The walk of 2026-11-04 found the viewer working, and hard to find one's way in:
 | P22.3 | **The viewer's own play goes,** with a decision on the playback routes and the policy's port | No control starts a playback in the viewer; the browser tests that used it watch in the replay | Proposed: [decision 0074](../decisions/0074-the-viewers-play-and-the-playbacks-http-surfaces-go.md) (proposed), in the [pull requests below](#p223s-pull-requests) |
 | P22.4 | **A new run's form:** the dialog leads with starting a run and lists the runs under it; *Open in the viewer* goes. The form: what the scenario is, its duration, its weather, the crops to read, with a way to make a new scenario from this one (`src/builder/CopyScenario.tsx`), and how fast to compute it; the seed small and optional, as it is now. The start route takes the duration and the weather | A run is started with a duration and a weather of the form's, and repeated by its seed | Proposed |
 | P22.5 | **The pace, said once:** a replay's "s a day" is how fast it shows; the form's is how fast the run computes, and each says so | Neither reads as the other | Proposed |
-| P22.6 | **The scene keeps up** (D3): measured first, server cost per moment against the viewer's loads; then the replay skips moments or loads ahead (`useReplayMoment.ts`, `src/fields/useClimateLoads.ts`) | At 10 s a day, the panels and the timeline show the same day | Proposed |
+| P22.6 | **The scene keeps up** (D3): measured first, server cost per moment against the viewer's loads; then the replay skips moments or loads ahead (`useReplayMoment.ts`, `src/fields/useClimateLoads.ts`) | At 10 s a day, the panels and the timeline show the same day | Done ([measured](#the-scenes-lag-measured-p226)): the panels trailed the timeline by one moment's latency, 0.5 days on average, and read the same day as it 54 to 59% of the time, since a moment costs its climate field's grid run, 1 to 5 s, however far it skips. While a replay plays over the climate field, it now asks for the field ahead, one moment at a time, with the field drawn kept on show (`momentAhead`, `src/scene/useReplayMoment.ts`): the moment the position will stand at when the answer arrives, at the pace and the last field's time, on the whole hour, and, before a day ends, the next day's first minute, in time for the timeline to find it there. Each is drawn once the simulator has answered and the position has reached it, with its glazing and openings, which wait on the same grid run and are then answered at once. At 10 s a day the panels read the same day as the timeline 96 to 97% of the time, 0.2 days behind on average. A position that goes back, or stops playing, draws its own moment as before. Not delivered: the first 0.25 to 0.9 s of each day, while the moment drawn is asked for again rather than taken from the answer ahead, the two read different days; the panels hold the day's last moment, around noon by day, until midnight; a browser spec, as the pace a machine keeps decides the figures, which are measured instead |
 | P22.7 | **The start page:** a title that says what the place is for, the two choices equal, one under the other with "or", each with an icon, fewer words and a tooltip on each button. Before P19.8, which moves the landing page's controls, or folded into it | The walk's words, read on the page | Proposed |
 | P22.8 | **The viewer's panels,** three changes one after another: the header names a run or a simulation, with the version and not the commit except on a branch; a *Display* card beside *House*; equipment in groups, without identifiers. With P19.11 | Each read on the page | Proposed |
 | P22.9 | **The panel under the view:** it folds as the side panels do, their arrows taking the panel's whole height or width; each button says what it does on hover, *Fork* first; *Delete* in place of *Other runs*. With P19.10 | Each read on the page | Proposed |
@@ -130,6 +130,100 @@ before the code it watched goes:
    there, this step is done and the decision accepted.
 
 *Open in the viewer*, in `src/landing/RunsDialog.tsx`, is P22.4's.
+
+## The scene's lag, measured (P22.6)
+
+**Method.** One machine (Intel i9-14900K, 32 threads, 31 GB), Python 3.14, commit
+`2c926594`, the viewer's production build behind `vite preview`, in headless Chromium
+(Playwright 1.64). A run of the reference greenhouse at seed 7, computed by a worker as
+fast as it goes while it was replayed, and other work on the machine (load 7 to 9), so
+**the times are upper bounds**. The replay played for 60 s at 10 s a day, once from
+Day 1 and once from Day 12: every request the page made recorded with its
+`Server-Timing`, and every 250 ms the day the timeline (`replay-moment`) and the panels
+(`climate-time`) read. Then the climate field asked with the replay's own query, one
+request at a time, and several at once, for each moment's own cost.
+
+**The lag is one moment's latency, not a queue.** In both minutes the panels were 0.5
+days behind the timeline on average and 0.9 at most, and read the same day as it 60% of
+the time; the lag did not grow through the minute. The timeline moved 5.9 days and the
+panels showed 18 moments, 3 a day: the replay already skips, moving to the position's
+newest moment each time a field arrives (`src/scene/useReplayMoment.ts`), so nothing
+waits behind it. A field took 2.6 to 2.9 s (median; 1.1 to 5.5) and the next was asked
+0.2 s after it (at most 0.5), at the position's next answer, asked every second. A field
+was on its way 93% of the time: a cycle of 3.3 s, a third of a day at this pace, and the
+panels show the moment the position stood at one to two cycles before.
+
+**A moment costs its climate field, however far it skips.** The field at a moment is a
+grid run started from the whole house's air an hour before the moment's hour began
+(`window_start`, `greenhouse_sim/climate/day.py`), so a moment in another hour than the
+last costs one to two hours of the air cell by cell; the whole house's air on the way
+costs little. The field, one request at a time:
+
+| Moment asked | At night | By day (fans and vents on) |
+| --- | --- | --- |
+| On the hour (a grid run of 1 h) | 0.9 to 1.0 s | 2.6 to 2.9 s |
+| At 59 minutes past (a grid run of 2 h) | 1.9 to 2.0 s | 5.2 to 5.3 s |
+| A day on from the last, at midnight | 0.9 to 1.0 s | |
+| In the same hour as the last | 19 ms a minute on, 0.5 s half an hour on | |
+
+A moment 2.4 h on, as a second of play at 10 s a day moves, costs 1.0 to 4.6 s through
+a day, 25 s for the day's ten. The replay's field is worked out by the simulator from
+the run's plan, not read from the epoch the worker stores. Once it is there, the rest of
+a moment is cheap one request at a time: the glazing, the openings and the equipment
+3 ms each, the house's air 16 to 120 ms, the scene 90 ms (2.6 MB), the crop 100 to
+150 ms (3 to 4 MB). In the replay they are asked with the field, and the glazing and the
+openings wait for its grid run (2.5 s each, as long as the field).
+
+**Requests per day shown.** 223 requests in the minute: 37 per simulated day, 12 per
+moment shown. Each moment asks for the field, the glazing, the openings, the house's air
+twice (the run's own, and the same run all off), the equipment, the weather and the
+scene; each day the crop and the day's weather; and the position is asked every second.
+At most 10 or 11 were on their way at once, 6 or more 17 to 22% of the time, for a few
+hundred milliseconds as a moment's requests start together; the browser's six
+connections hold the field back little (its time in the browser is within 0.4 s of the
+simulator's).
+
+**Moments at once.** The simulator answers each request in a thread of one process.
+Three fields of different hours by day, asked at once, took 4.8 s together, against
+7.7 s one after another; two at night 1.4 s, against 2.0 s: 1.4 to 1.6 times as many
+moments, no more. At 10 s a day the simulator draws 3 to 5 moments a simulated day,
+whichever are asked.
+
+**The fix chosen: load ahead, one moment at a time.** Skipping more cannot close the
+gap: the replay skips already, a moment costs the same however far it skips, and the lag
+stays one cycle (0.3 to 0.6 days at 10 s a day here; up to a day and a half where a moment
+takes the walk's 4 to 6 s, as D3 saw). Loading several moments ahead at once cannot either,
+since the simulator works them only 1.5 times as fast. Rounding to the hour alone, a skip,
+would halve a moment's cost by day and the lag with it, without making the day the same.
+What closes it is to ask, while the field on show stays up, for the moment the position
+will stand at when the answer arrives, on the whole hour, whose grid run is the shorter,
+and to draw it when the timeline reaches it; and, before a day ends, for the next day's
+first minute, so that the panels change day as the timeline does.
+
+**Before and after.** The same recording, once the run was computed: 90 s of play at
+10 s a day from Day 1 and from Day 12, each on a simulator started afresh, which keeps
+no climate run of the one before. Before is commit `e0cd94c6`, after this step's.
+
+| | Before, Day 1 | After, Day 1 | Before, Day 12 | After, Day 12 |
+| --- | --- | --- | --- | --- |
+| The panels and the timeline on the same day | 59% | 97% | 54% | 96% |
+| The panels behind the timeline, on average and at most | 0.47, 0.90 days | 0.22, 0.63 days | 0.51, 0.90 days | 0.25, 0.63 days |
+| The longest the two read different days | 5.9 s | 0.6 s | 5.9 s | 0.9 s |
+| Moments shown, of 8.9 days | 28 | 32 | 27 | 30 |
+| Fields asked, and the simulator's time on them | 29, 80 s | 64, 64 s | 27, 78 s | 62, 64 s |
+| Requests, and at most at once | 339, 10 | 404, 9 | 335, 10 | 391, 9 |
+
+Every stretch on different days after is the first 0.25 to 0.9 s of a day: the next
+day's first minute is drawn as the timeline reaches it, and the field drawn is asked
+again then, which the simulator keeps and answers in 0.1 to 0.5 s. A moment is asked
+twice, ahead and drawn, so the fields asked double; the moments on the whole hour cost
+less, and the simulator spends less time on them for more moments shown. The day's
+last moment is one that leaves the time to ask for the next day's first minute once it
+is drawn, which by day, at 2.5 to 3 s a moment, is around noon: the panels hold it until
+midnight.
+
+Not measured: the browser's own time to parse and draw a moment, the development
+server, and a slower machine, where D3's two days were seen.
 
 ## QA scenario (proposed)
 

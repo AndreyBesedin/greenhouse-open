@@ -68,7 +68,7 @@ import { useDrawnSnapshot } from "./scene/useDrawnSnapshot";
 import { useFollow, withoutRunChanges } from "./scene/useFollow";
 import { useFollowFraming, useOpeningFrame } from "./scene/useFollowFraming";
 import { useMoveDrag } from "./scene/useMoveDrag";
-import { useReplayMoment } from "./scene/useReplayMoment";
+import { type PlayedPace, useReplayMoment } from "./scene/useReplayMoment";
 import { useSceneLoads } from "./scene/useSceneLoads";
 import { type SetSource, useSource } from "./scene/useSource";
 import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
@@ -98,6 +98,8 @@ export function App({
   replay?: {
     source: SceneSource;
     momentS: number | null;
+    /** How the position plays, while it does: the field is asked for ahead of it. */
+    pace?: PlayedPace | null;
     /** Moves the position, which is what moves the moment in a replay. */
     seek: (timeS: number) => void;
     /** A change in the panels, which draws another run than the one replayed
@@ -246,6 +248,7 @@ export function App({
   // A run replayed from the store is drawn at the moment its position stands at.
   useReplayMoment({
     momentS: replay?.momentS ?? null,
+    pace: replay?.pace ?? null,
     source,
     setSource,
     field: fieldName,
