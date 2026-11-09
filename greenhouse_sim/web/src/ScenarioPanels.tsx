@@ -200,8 +200,8 @@ export function ScenarioPanels({
     noFork?: string | null;
     from?: string | null;
   };
-  /** The run followed as it plays, whose plan lane the timeline draws
-   * (P13.8). */
+  /** The run followed as it plays (P13.8), or the stored epoch replayed
+   * (P22.3), whose plan lane the timeline draws. */
   played?: PlanLaneRun | null;
   onSource: (change: SetSource) => void;
   onProbes: (probes: Point3[]) => void;

@@ -78,6 +78,7 @@ import { cameraOf } from "./sensors/camera";
 import { SensorPanel } from "./sensors/SensorPanel";
 import { useSensorReadings } from "./sensors/useSensorReadings";
 import { useSimulatorTime } from "./simulatorTime";
+import type { PlanLaneRun } from "./timeline/planLane";
 import { drawn, failed, failureOf, useLoad } from "./useLoad";
 import { Viewport } from "./Viewport";
 import { useWeatherLoads } from "./weather/useWeatherLoads";
@@ -114,6 +115,8 @@ export function App({
      * while it is, a change steers it in place of a fork. What was given it
      * stays said once it has ended, and the changes after that fork it. */
     steer: SteeredEpoch;
+    /** The epoch replayed, whose plan lane the timeline draws (P22.3). */
+    lane: PlanLaneRun;
   };
 }) {
   const [addressed, setAddressed] = useSource(replay?.source);
@@ -563,14 +566,16 @@ export function App({
                       },
                     })}
                 played={
-                  followed !== null && playback.status === "loaded"
-                    ? {
-                        runId: playback.state.runId,
-                        epoch: playback.state.epoch,
-                        startedAt: playback.state.startedAt,
-                        version: steering.given,
-                      }
-                    : null
+                  replay !== undefined
+                    ? { ...replay.lane, version: steering.given }
+                    : followed !== null && playback.status === "loaded"
+                      ? {
+                          runId: playback.state.runId,
+                          epoch: playback.state.epoch,
+                          startedAt: playback.state.startedAt,
+                          version: steering.given,
+                        }
+                      : null
                 }
                 momentFailed={momentFailed}
                 fieldView={fieldView}
