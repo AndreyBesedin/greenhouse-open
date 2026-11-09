@@ -92,10 +92,9 @@ and half a metre along its y), at the run's start, all at once, and Back
 takes it back; "Back to the moves", or Escape, returns to them (#305). The
 new run keeps the run's heating target changes, each at its moment
 (`&targets=`, decision 0049). "Cancel", or Escape, leaves everything as it
-was; Escape first cancels a drag under way. While the view follows the run
-played back (`&follow=1`), applying the moves starts the playback over with
-that layout, a new run from its first day with the same target changes,
-which the view goes on following and a consumer reads (decision 0041).
+was; Escape first cancels a drag under way. In a run's replay, applying the
+moves makes a fork of the stored run in that layout, from the start of the
+day shown, and the run replayed stays as it is (P17.8).
 
 A scenario's air field, one of the environment fields the simulator publishes
 for it (`greenhouse_sim/fields/`), can be drawn over its scene: "Air field"

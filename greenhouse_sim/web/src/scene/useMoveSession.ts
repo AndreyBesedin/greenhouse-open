@@ -2,15 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 
 import { withTime } from "./edits";
 import { layoutWith, movedBy, type Offset, putBack, sameLayout } from "./moves";
-import { commandPlayback, type PlaybackLoad } from "./playback";
 import type { SceneSource } from "./source";
 import type { SetSource } from "./useSource";
 
 /** A Move session (#209, #271): the scenario's layout it started from, and
  * the layout its moves make, a draft drawn over the scene and asked of the
- * simulator only once it is applied; whether it is being applied, the run
- * played back starting over with it or its scene on its way; and why the
- * run played back could not start over with it, if it could not. */
+ * simulator only once it is applied; whether it is being applied, its scene
+ * or a replay's fork on its way; and why the fork could not be made, if it
+ * could not. */
 export interface MoveSession {
   scenarioId: string;
   from: string | undefined;
@@ -49,34 +48,27 @@ function withLayout(source: SceneSource, layout: string | undefined): SceneSourc
  * the layout drawn; its moves are a draft, which nothing asks the simulator
  * for. Applied, it asks for the layout they make all at once, at the run's
  * start (0 s), in one change of the source, so one page of the browser's
- * history: Back takes it back. While the view follows the run played back
- * (`followed`), the playback starts over with that layout first, as a new
- * run from its first day, and the view follows it; if it cannot, the
- * session stays, saying why. Cancelled, or once the view shows another
- * scenario or layout, as Back does, the draft is let go. Applied, it lasts
- * until the scene with its moves has arrived (`sceneLoading` no longer), so
- * that the items stay drawn where they were dropped meanwhile.
+ * history: Back takes it back. In a replay (`applyLayout`), it makes a fork
+ * in that layout instead; if it cannot, the session stays, saying why.
+ * Cancelled, or once the view shows another scenario or layout, as Back
+ * does, the draft is let go. Applied, it lasts until the scene with its
+ * moves has arrived (`sceneLoading` no longer), so that the items stay drawn
+ * where they were dropped meanwhile.
  */
 export function useMoveSession({
   source,
   setSource,
   defaultLayout,
-  followed,
-  onPlayback,
   sceneLoading,
   applyLayout,
-  fetchFn = fetch,
 }: {
   source: SceneSource;
   setSource: (change: SetSource) => void;
   defaultLayout: string;
-  followed: string | null;
-  onPlayback: (load: PlaybackLoad) => void;
   sceneLoading: boolean;
   /** Where the moves go instead of the view, in a replay: a fork in their
    * layout (P17.8), which answers why not if it could not be made. */
   applyLayout?: ((layout: string) => Promise<string | null>) | undefined;
-  fetchFn?: typeof fetch;
 }): MoveSessionControls {
   const [session, setSession] = useState<MoveSession | null>(null);
   const scenarioId = source.kind === "scenario" ? source.scenarioId : null;
@@ -118,18 +110,6 @@ export function useMoveSession({
         setSession((was) => was && { ...was, applying: false, failure });
       }
       return;
-    }
-    if (followed !== null) {
-      const restarted = await commandPlayback(followed, "restart", fetchFn, to ?? defaultLayout);
-      onPlayback(restarted);
-      if (restarted.status !== "loaded") {
-        const failure =
-          restarted.status === "unavailable" || restarted.status === "failed"
-            ? restarted.reason
-            : "no answer";
-        setSession((was) => was && { ...was, applying: false, failure });
-        return;
-      }
     }
     setSource((current) =>
       current.kind === "scenario" ? withLayout(withTime(current, 0), to) : current,

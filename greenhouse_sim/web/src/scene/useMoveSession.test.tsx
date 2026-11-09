@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
 import { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type RenderedHook, renderHook } from "../testing/renderHook";
-import type { PlaybackLoad } from "./playback";
 import type { SceneSource, TargetChange } from "./source";
 import { type MoveSessionControls, useMoveSession } from "./useMoveSession";
 import type { SetSource } from "./useSource";
@@ -25,27 +24,20 @@ interface Props {
 }
 
 /** The hook over a view whose source changes as the hook changes it, each
- * change kept, in order, beside what else happened. */
+ * change kept, in order. */
 function session({
-  followed = null,
-  fetchFn = vi.fn() as unknown as typeof fetch,
   source = AT_NOON,
   applyLayout,
 }: {
-  followed?: string | null;
-  fetchFn?: typeof fetch;
   source?: SceneSource;
   applyLayout?: (layout: string) => Promise<string | null>;
 } = {}) {
-  const happened: string[] = [];
   const changes: SceneSource[] = [];
-  const played: PlaybackLoad[] = [];
   let props: Props = { source, sceneLoading: false };
   let hook: RenderedHook<Props, MoveSessionControls> | null = null;
   const setSource = (change: SetSource) => {
     const next = typeof change === "function" ? change(props.source) : change;
     changes.push(next);
-    happened.push("source");
     // The view asks for the scene of the source changed, as the viewer does.
     props = { ...props, source: next, sceneLoading: true };
     hook?.rerender(props);
@@ -56,14 +48,8 @@ function session({
         source: shown,
         setSource,
         defaultLayout: "default",
-        followed,
         applyLayout,
-        onPlayback: (load) => {
-          happened.push("playback");
-          played.push(load);
-        },
         sceneLoading,
-        fetchFn,
       }),
     props,
   );
@@ -71,8 +57,6 @@ function session({
   return {
     hook: rendered,
     changes,
-    played,
-    happened,
     /** The view as it is next drawn: another source, or the scene arrived. */
     show(next: Partial<Props>) {
       props = { ...props, ...next };
@@ -81,36 +65,20 @@ function session({
   };
 }
 
-function playbackAnswer(layout: string, targets: [number, string, number][] = []): Response {
-  return new Response(
-    JSON.stringify({
-      scenario_id: "climate_box",
-      run_id: "climate_box-climate-0f00ba11",
-      layout,
-      epoch: 0,
-      greenhouse_id: "climate_box",
-      started_at: "2026-03-01T00:00:00Z",
-      simulated_now: "2026-03-01T00:00:00Z",
-      time_s: 0,
-      day: 0,
-      playing: true,
-      seconds_per_day: 10,
-      worked_out_s: 0,
-      every_s: 300,
-      targets,
-      commands: [],
-      crop: [],
-    }),
-  );
-}
-
 describe("a Move session", () => {
   let current: { hook: RenderedHook<Props, MoveSessionControls> } | undefined;
-  afterEach(() => current?.hook.unmount());
+  // Nothing a session does asks the simulator: the view does, for the source
+  // it changes.
+  const fetchFn = vi.fn();
+  beforeEach(() => vi.stubGlobal("fetch", fetchFn));
+  afterEach(() => {
+    current?.hook.unmount();
+    fetchFn.mockReset();
+    vi.unstubAllGlobals();
+  });
 
   it("holds its moves as a draft, and asks the simulator for nothing", () => {
-    const fetchFn = vi.fn() as unknown as typeof fetch;
-    const view = session({ fetchFn });
+    const view = session();
     current = view;
     act(() => view.hook.current.start());
     act(() => view.hook.current.move("heater", { dx: -0.96, dy: 0.53 }));
@@ -139,6 +107,8 @@ describe("a Move session", () => {
     expect(view.hook.current.session).toMatchObject({ applying: true, to: BOTH_MOVED });
     view.show({ sceneLoading: false });
     expect(view.hook.current.session).toBeNull();
+    // No run played back is started over (P22.3): the view's change is all.
+    expect(fetchFn).not.toHaveBeenCalled();
   });
 
   it("is cancelled, the view as it was", () => {
@@ -184,52 +154,6 @@ describe("a Move session", () => {
     act(() => view.show({ source: { ...AT_NOON, layout: "default~fan:1:0" } }));
 
     expect(view.hook.current.session).toBeNull();
-  });
-
-  it("following, starts the run played back over with its layout first, and the view follows it from its start", async () => {
-    const fetchFn = vi.fn(async () => playbackAnswer("default~heater:-1.0:0.5"));
-    const view = session({ followed: "climate_box", fetchFn: fetchFn as unknown as typeof fetch });
-    current = view;
-    act(() => view.hook.current.start());
-    act(() => view.hook.current.move("heater", { dx: -1, dy: 0.5 }));
-
-    await act(async () => view.hook.current.apply());
-
-    expect(fetchFn.mock.calls.map((call) => [...call] as unknown[])).toEqual([
-      [
-        "/api/scenarios/climate_box/playback/restart?layout=default~heater:-1:0.5",
-        { method: "POST" },
-      ],
-    ]);
-    expect(view.happened).toEqual(["playback", "source"]);
-    expect(view.played).toMatchObject([
-      { status: "loaded", state: { layout: "default~heater:-1.0:0.5", timeS: 0 } },
-    ]);
-    expect(view.changes).toEqual([
-      {
-        kind: "scenario",
-        scenarioId: "climate_box",
-        field: "climate",
-        layout: "default~heater:-1:0.5",
-      },
-    ]);
-  });
-
-  it("following, keeps its moves and says why, if the run played back cannot start over", async () => {
-    const fetchFn = vi.fn(async () => new Response("{}", { status: 400 }));
-    const view = session({ followed: "climate_box", fetchFn: fetchFn as unknown as typeof fetch });
-    current = view;
-    act(() => view.hook.current.start());
-    act(() => view.hook.current.move("heater", { dx: -1, dy: 0.5 }));
-
-    await act(async () => view.hook.current.apply());
-
-    expect(view.changes).toEqual([]);
-    expect(view.hook.current.session).toMatchObject({
-      applying: false,
-      to: "default~heater:-1:0.5",
-      failure: "the simulator answered 400",
-    });
   });
 
   it("in a replay, makes a fork in their layout and leaves the view on the run replayed", async () => {
@@ -280,24 +204,5 @@ describe("a Move session", () => {
         layout: "default~heater:-1:0.5",
       },
     ]);
-  });
-
-  it("following, keeps the target changes the run played back starts over with", async () => {
-    const fetchFn = vi.fn(async () =>
-      playbackAnswer("default~heater:-1.0:0.5", [[25_200, "heating_day", 24]]),
-    );
-    const view = session({
-      followed: "climate_box",
-      fetchFn: fetchFn as unknown as typeof fetch,
-      source: { ...AT_NOON, targets: [WARMER] },
-    });
-    current = view;
-    act(() => view.hook.current.start());
-    act(() => view.hook.current.move("heater", { dx: -1, dy: 0.5 }));
-
-    await act(async () => view.hook.current.apply());
-
-    expect(view.played).toMatchObject([{ status: "loaded", state: { targets: [WARMER] } }]);
-    expect(view.changes).toMatchObject([{ layout: "default~heater:-1:0.5", targets: [WARMER] }]);
   });
 });

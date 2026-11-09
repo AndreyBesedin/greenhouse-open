@@ -35,7 +35,6 @@ import { cropAction } from "./plan/plan";
 import { useGiveToPlayback, useSteering } from "./plan/useSteering";
 import { LabPanels } from "./plants/LabPanels";
 import { type LabRun, PLANT_LAB_POSE } from "./plants/lab";
-import { PlantActions } from "./plants/PlantActions";
 import { PlantDays } from "./plants/PlantDays";
 import { PlantLight } from "./plants/PlantLight";
 import { useLabPlay } from "./plants/useLabPlay";
@@ -372,11 +371,9 @@ export function App({
   } = useMoveDrag({
     source,
     setSource,
-    followed,
     ...(replay === undefined
       ? {}
       : { applyLayout: (layout: string) => replay.forkInLayout(layout, forkFrom) }),
-    onPlayback: setPlayback,
     sceneLoading: sceneProgress.latest.status === "loading",
     snapshot,
     selected,
@@ -620,43 +617,35 @@ export function App({
                 ) : (
                   replayedWork ||
                   (followed !== null && (
-                    <>
-                      <PlaybackPanel
-                        load={playback}
-                        days={summary?.duration_days ?? null}
-                        changed={anotherRun}
-                        refusal={steering.refusal}
-                        onCommand={(command) =>
-                          void commandPlayback(followed, command).then(setPlayback)
-                        }
-                        onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
-                        onOwnRun={() =>
-                          setSource((current) =>
-                            withoutRunChanges(
-                              current,
-                              playedLayout,
-                              playback.status === "loaded" ? playback.state.commands : [],
-                              playback.status === "loaded" ? playback.state.crop : [],
-                            ),
-                          )
-                        }
-                        onStop={() =>
-                          setSource((current) => {
-                            if (current.kind !== "scenario") {
-                              return current;
-                            }
-                            const { follow: _, ...rest } = current;
-                            return rest;
-                          })
-                        }
-                      />
-                      <PlantActions
-                        entity={selected}
-                        day={0}
-                        scheduled={0}
-                        onAct={(action) => steering.act([cropAction(action)])}
-                      />
-                    </>
+                    <PlaybackPanel
+                      load={playback}
+                      days={summary?.duration_days ?? null}
+                      changed={anotherRun}
+                      refusal={steering.refusal}
+                      onCommand={(command) =>
+                        void commandPlayback(followed, command).then(setPlayback)
+                      }
+                      onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
+                      onOwnRun={() =>
+                        setSource((current) =>
+                          withoutRunChanges(
+                            current,
+                            playedLayout,
+                            playback.status === "loaded" ? playback.state.commands : [],
+                            playback.status === "loaded" ? playback.state.crop : [],
+                          ),
+                        )
+                      }
+                      onStop={() =>
+                        setSource((current) => {
+                          if (current.kind !== "scenario") {
+                            return current;
+                          }
+                          const { follow: _, ...rest } = current;
+                          return rest;
+                        })
+                      }
+                    />
                   ))
                 )}
               </ScenarioPanels>

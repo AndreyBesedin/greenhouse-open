@@ -4,7 +4,6 @@ import { refusal } from "../builder/api";
 import { contractCheck } from "../loadJson";
 import { PLAYBACK_SCHEMA } from "./generated/playbackSchema";
 import type { PlaybackState as ServedPlayback } from "./generated/playbackTypes";
-import { layoutText } from "./moves";
 import type { CropCommand, ScheduledCommand, TargetChange } from "./source";
 
 // How often a view following a played-back run asks where its clock is.
@@ -135,19 +134,15 @@ async function answered(response: Response): Promise<PlaybackLoad> {
     : { status: "loaded", state };
 }
 
-/** Starts the scenario's playback, or tells it to play, pause or start over;
- * started over with a layout, it plays that layout's run from its start, a
- * new run (#271). */
+/** Starts the scenario's playback, or tells it to play, pause or start over. */
 export async function commandPlayback(
   scenarioId: string,
   command: PlaybackCommand | "start",
   fetchFn: typeof fetch = fetch,
-  layout?: string,
 ): Promise<PlaybackLoad> {
-  const query = layout === undefined ? "" : `?layout=${layoutText(layout)}`;
   let response: Response;
   try {
-    response = await fetchFn(`${playbackUrl(scenarioId)}/${command}${query}`, { method: "POST" });
+    response = await fetchFn(`${playbackUrl(scenarioId)}/${command}`, { method: "POST" });
   } catch {
     return { status: "unavailable", reason: "the simulator could not be reached" };
   }

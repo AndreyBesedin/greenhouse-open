@@ -14,16 +14,14 @@ import {
   plus,
   shifted,
 } from "./moves";
-import type { PlaybackLoad } from "./playback";
 import type { SceneSource } from "./source";
 import { useMoveSession } from "./useMoveSession";
 import type { SetSource } from "./useSource";
 
 /**
  * Moving equipment and sensors in a scenario's view (#209, #271): a Move
- * session's moves, held until they are applied, all at once (while the view
- * follows the run played back, it starts over with them), and the selected
- * item's drag under way.
+ * session's moves, held until they are applied, all at once (in a replay,
+ * as a fork in their layout), and the selected item's drag under way.
  *
  * It gives what the view draws of them: each item a session moves, by
  * entity, where the session draws it (`nudged`), from where the scene shown
@@ -38,9 +36,7 @@ import type { SetSource } from "./useSource";
 export function useMoveDrag({
   source,
   setSource,
-  followed,
   applyLayout,
-  onPlayback,
   sceneLoading,
   snapshot,
   selected,
@@ -48,10 +44,8 @@ export function useMoveDrag({
 }: {
   source: SceneSource;
   setSource: (change: SetSource) => void;
-  followed: string | null;
   /** In a replay: applying the moves makes a fork in their layout. */
   applyLayout?: (layout: string) => Promise<string | null>;
-  onPlayback: (load: PlaybackLoad) => void;
   sceneLoading: boolean;
   snapshot: SceneSnapshot | null;
   selected: SceneEntity | null;
@@ -66,8 +60,6 @@ export function useMoveDrag({
     source,
     setSource,
     defaultLayout: DEFAULT_LAYOUT,
-    followed,
-    onPlayback,
     applyLayout,
     sceneLoading,
   });
@@ -128,7 +120,6 @@ export function useMoveDrag({
             .filter(([, by]) => by.dx !== 0 || by.dy !== 0)
             .map(([item, by]) => ({ item, label: itemEntities.get(item)?.label ?? item, by })),
           changed: moves.changed,
-          following: followed !== null,
           ...(applyLayout === undefined ? {} : { forking: true }),
           applying: session.applying,
           failure: session.failure,

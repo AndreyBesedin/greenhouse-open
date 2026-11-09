@@ -113,14 +113,12 @@ describe("a run played back, as the viewer reads it", () => {
       state: STATE,
     });
     await commandPlayback("reference_greenhouse", "pause", fetchFn);
-    // Started over with a layout, its moves written as an address writes
-    // them (#271).
-    await commandPlayback("reference_greenhouse", "restart", fetchFn, "default~heater:-1:0.5");
+    await commandPlayback("reference_greenhouse", "restart", fetchFn);
 
     expect(vi.mocked(fetchFn).mock.calls.map(([url, init]) => [url, init?.method])).toEqual([
       [`${playbackUrl("reference_greenhouse")}/start`, "POST"],
       [`${playbackUrl("reference_greenhouse")}/pause`, "POST"],
-      [`${playbackUrl("reference_greenhouse")}/restart?layout=default~heater:-1:0.5`, "POST"],
+      [`${playbackUrl("reference_greenhouse")}/restart`, "POST"],
     ]);
   });
 });

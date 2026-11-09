@@ -12,7 +12,6 @@ const DRAFT: MoveDraft = {
     { item: "co2", label: "CO2 sensor", by: { dx: 0.3, dy: 0 } },
   ],
   changed: true,
-  following: false,
   applying: false,
   failure: null,
 };
@@ -156,27 +155,13 @@ describe("moving equipment and sensors", () => {
     expect(button(container, "Cancel").disabled).toBe(false);
   });
 
-  it("says, following the run played back, that it starts over with the moves, and why it could not", () => {
-    shown = render(panel({ ...DRAFT, following: true }));
+  it("presses nothing more while its moves are applied", () => {
+    shown = render(panel({ ...DRAFT, applying: true }));
     const { container } = shown;
 
-    expect(container.querySelector('[data-testid="move-new-run"]')?.textContent).toContain(
-      "Applying the moves starts the run played back again from its first day, and the view follows it.",
-    );
-    click(button(container, "Start a new run with these moves"));
-    expect(container.querySelector('[data-testid="move-confirm"]')?.textContent).toMatch(
-      /^The run played back starts again from its first day/,
-    );
-    shown.rerender(panel({ ...DRAFT, following: true, applying: true }));
     expect(button(container, "Starting the new run…").disabled).toBe(true);
     expect(button(container, "Cancel").disabled).toBe(true);
     expect(button(container, "Put the heater back").disabled).toBe(true);
-
-    shown.rerender(panel({ ...DRAFT, following: true, failure: "the simulator answered 400" }));
-    expect(container.querySelector('[data-testid="move-failure"]')?.textContent).toBe(
-      "The run played back could not start over: the simulator answered 400.",
-    );
-    expect(button(container, "Start a new run with these moves").disabled).toBe(false);
   });
 
   it("in a replay, says a fork is made and the stored run stays", () => {
