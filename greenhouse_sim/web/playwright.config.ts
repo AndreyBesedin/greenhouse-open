@@ -56,7 +56,8 @@ const ONE_BY_ONE = [
   "replay.spec.ts",
   // Two workers at once, which is all a simulator runs by default.
   "worker-runs.spec.ts",
-  // A plan through the reference greenhouse's first days, on a playback of its own.
+  // Plans given to a run of the reference greenhouse as a worker computes it,
+  // read in its replay.
   "plan-qa.spec.ts",
   // P14.7's QA: a copy of the reference greenhouse through its first four weeks.
   "models-qa.spec.ts",

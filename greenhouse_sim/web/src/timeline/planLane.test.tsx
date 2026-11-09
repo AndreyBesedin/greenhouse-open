@@ -118,6 +118,36 @@ describe("a followed run's plan lane", () => {
     });
   });
 
+  it("of a stored epoch replayed, reads its outcomes through the store by the moment shown, and nothing still to come", async () => {
+    const stored = `/api/runs/${RUN.runId}/epochs/0/outcomes`;
+    const fetchFn = answering({
+      [`${stored}?after=0&t=25200`]: batch(
+        [outcome("change_1", "2026-03-01T06:00:00Z", "executed")],
+        0,
+        true,
+      ),
+      [`${stored}?after=1&t=25200`]: batch(
+        [outcome("change_2", "2026-03-01T06:30:00Z", "late")],
+        1,
+        false,
+      ),
+    });
+
+    const lane = await loadPlanLane({ ...RUN, stored: true }, fetchFn, 7 * 3600);
+
+    expect(
+      lane.status === "loaded" && lane.entries.map(({ ref, status }) => [ref, status]),
+    ).toEqual([
+      ["change_1", "executed"],
+      ["change_2", "late"],
+    ]);
+    // Neither the consumer interface nor the gateway is asked: the store alone.
+    expect(vi.mocked(fetchFn).mock.calls.map(([url]) => url)).toEqual([
+      `${stored}?after=0&t=25200`,
+      `${stored}?after=1&t=25200`,
+    ]);
+  });
+
   it("is unavailable, saying why, when a log is not what the viewer reads", async () => {
     const fetchFn = answering({ [`${OUTCOMES}?after=0`]: { outcomes: "none" }, [ACTIONS]: [] });
 
