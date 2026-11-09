@@ -85,9 +85,13 @@ data.
    every state and hour (`test_vanthoor.py`); and it is grown in the
    Vanthoor house's documented season
    ([the two tomato models in the run](../research/tomato-models-in-the-run.md)),
-   its outputs predictions. Left: for both models, each driver profile's
-   effect measured against the reproduction's forcing, with the canopy's
-   temperature, as decision 0062 asks.
+   its outputs predictions. For both models, the first driver profile's
+   effect is measured against the reproduction's forcing and with a
+   canopy's temperature, simulated by GreenLight's greenhouse, as decision
+   0062 asks
+   ([`research/integrations/driver_profiles`](../../research/integrations/driver_profiles/README.md)).
+   Milestone B is done for both; their outputs stay predictions until
+   milestone C.
 5. **Validate on measured data, as a workflow others can repeat.** Begin
    with the WUR AGC4 dataset, through its adapter, where what it measures
    and its licence allow: inventory what it records (weather, climate,
