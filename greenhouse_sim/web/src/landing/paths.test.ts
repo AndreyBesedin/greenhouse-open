@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-
+import { sourceFromSearch } from "../scene/source";
 import {
   copyAddress,
   copyAsked,
@@ -37,6 +37,16 @@ describe("the viewer's addresses", () => {
     expect(pageAt("/", "?scenario=climate_box")).toBe("viewer");
     expect(pageAt("/", "?scene=example")).toBe("viewer");
     expect(pageAt("/", "?plants=lab&day=45")).toBe("viewer");
+  });
+
+  it("reads no live mode or followed run, a page opening as it would without them (P22.3)", () => {
+    expect(pageAt("/", "?live=climate_box")).toBe("landing");
+    expect(pageAt("/", "?follow=1")).toBe("landing");
+    expect(pageAt("/", "?scenario=climate_box&follow=1")).toBe("viewer");
+    expect(sourceFromSearch("?live=climate_box")).toEqual(sourceFromSearch(""));
+    expect(sourceFromSearch("?scenario=climate_box&field=climate&follow=1")).toEqual(
+      sourceFromSearch("?scenario=climate_box&field=climate"),
+    );
   });
 
   it("shows the viewer at its own address and at any other path", () => {

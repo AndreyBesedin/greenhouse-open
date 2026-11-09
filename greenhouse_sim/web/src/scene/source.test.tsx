@@ -322,26 +322,6 @@ describe("drawing a checked scene", () => {
   });
 });
 
-describe("following a run as it is played back", () => {
-  it("is kept in the address, beside the scenario's field and moment", () => {
-    const search = "?scenario=reference_greenhouse&field=climate&t=600&follow=1";
-    const source = sourceFromSearch(search);
-
-    expect(source).toMatchObject({ kind: "scenario", follow: true, time: 600 });
-    expect(searchFor(source)).toBe(search);
-    expect(sourceFromSearch("?scenario=reference_greenhouse&follow=0")).not.toHaveProperty(
-      "follow",
-    );
-  });
-
-  it("is where the live mode's address opens, the live mode gone (decision 0059)", () => {
-    const source = sourceFromSearch("?live=climate_box");
-
-    expect(source).toEqual({ kind: "scenario", scenarioId: "climate_box", follow: true });
-    expect(searchFor(source)).toBe("?scenario=climate_box&follow=1");
-  });
-});
-
 describe("a run's target changes (#274)", () => {
   it("are kept in the address in the order given, as the simulator's API writes them", () => {
     const search =
@@ -361,8 +341,8 @@ describe("a run's target changes (#274)", () => {
     ).not.toHaveProperty("targets");
   });
 
-  it("follow the run played back, and none is none", () => {
-    const source = sourceFromSearch("?scenario=reference_greenhouse&field=climate&follow=1");
+  it("are set on a scenario, and none is none", () => {
+    const source = sourceFromSearch("?scenario=reference_greenhouse&field=climate");
     if (source.kind !== "scenario") {
       throw new Error("not a scenario");
     }

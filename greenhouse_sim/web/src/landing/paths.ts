@@ -14,18 +14,31 @@ export const REPLAY_PATH = "/replay";
 
 export type Page = "landing" | "viewer" | "replay";
 
+/** What an address no longer says (P22.3, decision 0074): the live mode's
+ * `live=` and a scenario's `follow=1`, read as if they were not there. */
+const FORGOTTEN = ["live", "follow"];
+
 /**
- * Which page an address is. The bare address is the landing page. An address
- * with a query is the viewer, as it was before the landing page: a link such as
- * `/?scenario=climate_box` still shows that scenario. So is any other path, as
- * every address but the QA pages, the builder and the replay always has been.
+ * Which page an address is. The bare address is the landing page, and so is
+ * one whose query says only what is no longer read (`/?live=climate_box`). An
+ * address with a query is the viewer, as it was before the landing page: a link
+ * such as `/?scenario=climate_box` still shows that scenario. So is any other
+ * path, as every address but the QA pages, the builder and the replay always
+ * has been.
  */
 export function pageAt(pathname: string, search: string): Page {
   const path = pathname.replace(/\/$/, "");
   if (path === REPLAY_PATH) {
     return "replay";
   }
-  return path === "" && search === "" ? "landing" : "viewer";
+  if (path !== "") {
+    return "viewer";
+  }
+  const read = new URLSearchParams(search);
+  for (const name of FORGOTTEN) {
+    read.delete(name);
+  }
+  return read.toString() === "" ? "landing" : "viewer";
 }
 
 /**
