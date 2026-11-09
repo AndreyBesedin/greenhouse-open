@@ -50,6 +50,17 @@ async function objectCount(page: Page): Promise<number> {
   return Number(await page.getByTestId("object-count").textContent());
 }
 
+// How long the scene's object count holds still before it is counted.
+const STEADY_MS = 2000;
+
+/** The scene's object count once it holds still for a while, or 0 while it
+ * changes. */
+async function steadyObjectCount(page: Page): Promise<number> {
+  const before = await objectCount(page);
+  await page.waitForTimeout(STEADY_MS);
+  return (await objectCount(page)) === before ? before : 0;
+}
+
 /** Where the replay stands, in seconds into the run, as its timeline says. */
 async function reached(page: Page): Promise<number> {
   const handle = page.getByRole("slider", { name: "Position in the run" });
@@ -87,12 +98,29 @@ test("renderer-smoke: the renderer, end to end", async ({ page }) => {
   await test.step("paused, the replay holds; moved to its start, it is there", async () => {
     await transport.getByRole("button", { name: "Pause" }).click();
     await expect(transport.getByRole("button", { name: "Play" })).toBeVisible();
+    // The climate field of the run's start, which the view asks for again: until
+    // it arrives, the scene keeps the moment before's, its arrows among them,
+    // and the overlays' count below would see them change under it.
+    const fieldAtStart = page.waitForResponse(
+      (response) =>
+        /\/fields\/climate\?/.test(response.url()) &&
+        !new URL(response.url()).searchParams.has("t"),
+      ARRIVES,
+    );
     await handle.focus();
     await page.keyboard.press("Home");
     await expect(handle).toHaveAttribute("aria-valuetext", "Day 1, 00:00");
     // Long enough for the replay to have asked where its position stands twice.
     await page.waitForTimeout(2500);
     expect(await reached(page)).toBe(0);
+    await fieldAtStart;
+    // And the scene of the run's first day, its crop with it, in place of the
+    // day it was played to.
+    await expect(page.getByTestId("scene-status")).toContainText(
+      `${SCENARIO}, 0 days in,`,
+      ARRIVES,
+    );
+    await expect.poll(() => steadyObjectCount(page), ARRIVES).toBeGreaterThan(0);
   });
 
   let shownPaused: string[] = [];
@@ -108,17 +136,23 @@ test("renderer-smoke: the renderer, end to end", async ({ page }) => {
     // Its label, beside those of the scenario's weather, such as the sun.
     await expect(page.getByTestId("debug-label").filter({ hasText: PLANT })).toHaveCount(1);
     await expect.poll(() => objectCount(page)).toBeGreaterThan(0);
-    const withEverything = await objectCount(page);
+    // Counted again from the start should anything of the moment still arrive
+    // while it is counted, and change the scene under the overlays.
+    await expect(async () => {
+      await overlays.getByLabel("Bounding box").check();
+      await overlays.getByLabel("Origin and axes").check();
+      const withEverything = await objectCount(page);
 
-    await overlays.getByLabel("Bounding box").uncheck();
-    await expect.poll(() => objectCount(page)).toBeLessThan(withEverything);
-    const withoutBox = await objectCount(page);
-    await overlays.getByLabel("Origin and axes").uncheck();
-    await expect.poll(() => objectCount(page)).toBeLessThan(withoutBox);
+      await overlays.getByLabel("Bounding box").uncheck();
+      await expect.poll(() => objectCount(page)).toBeLessThan(withEverything);
+      const withoutBox = await objectCount(page);
+      await overlays.getByLabel("Origin and axes").uncheck();
+      await expect.poll(() => objectCount(page)).toBeLessThan(withoutBox);
 
-    await overlays.getByLabel("Bounding box").check();
-    await overlays.getByLabel("Origin and axes").check();
-    await expect.poll(() => objectCount(page)).toBe(withEverything);
+      await overlays.getByLabel("Bounding box").check();
+      await overlays.getByLabel("Origin and axes").check();
+      await expect.poll(() => objectCount(page)).toBe(withEverything);
+    }).toPass(ARRIVES);
   });
 
   await test.step("drawn again at the moment it holds, the run shows the same plant", async () => {
