@@ -82,8 +82,10 @@ data.
    and held to its conformance tests (`test_crop_models.py`,
    `test_area_crop.py`, `test_run_vanthoor.py`); its rung
    (`core.vanthoor_crop.VanthoorRung`) is held to its reproduction on
-   every state and hour (`test_vanthoor.py`). Left: Vanthoor's model shown
-   in a documented scenario; and, for both models, each driver profile's
+   every state and hour (`test_vanthoor.py`); and it is grown in the
+   Vanthoor house's documented season
+   ([the two tomato models in the run](../research/tomato-models-in-the-run.md)),
+   its outputs predictions. Left: for both models, each driver profile's
    effect measured against the reproduction's forcing, with the canopy's
    temperature, as decision 0062 asks.
 5. **Validate on measured data, as a workflow others can repeat.** Begin

@@ -16,6 +16,7 @@ def test_registry_contains_exactly_the_configured_greenhouses() -> None:
         "solar_lab",
         "tomato_compartment",
         "tomgro_house",
+        "vanthoor_house",
     ]
 
 
