@@ -18,13 +18,11 @@ export interface StandingMove {
 }
 
 /** A Move session under way (#271): every item that stands moved in the
- * layout it makes, whether that differs from the run drawn, whether the
- * view follows the run played back, which it then starts over, whether it
- * is being applied, and why it could not be, if it could not. */
+ * layout it makes, whether that differs from the run drawn, whether it is
+ * being applied, and why it could not be, if it could not. */
 export interface MoveDraft {
   moves: readonly StandingMove[];
   changed: boolean;
-  following: boolean;
   /** Whether applying the moves makes a fork of a stored run, which stays. */
   forking?: boolean;
   applying: boolean;
@@ -93,12 +91,9 @@ export function MovePanel({
 }
 
 /** Its moves' new run, said in a line before anything is moved. */
-function newRun(following: boolean, forking: boolean): string {
-  if (forking) {
-    return "Drag equipment or a sensor in the view to move it. Applying the moves makes a fork of this stored run from the start of the day shown, and this run stays as it is.";
-  }
-  return following
-    ? "Drag equipment or a sensor in the view to move it. Applying the moves starts the run played back again from its first day, and the view follows it."
+function newRun(forking: boolean): string {
+  return forking
+    ? "Drag equipment or a sensor in the view to move it. Applying the moves makes a fork of this stored run from the start of the day shown, and this run stays as it is."
     : "Drag equipment or a sensor in the view to move it. Applying the moves starts the run again from its first day.";
 }
 
@@ -115,9 +110,9 @@ function Session({
   onApply: () => void;
   onCancel: () => void;
 }) {
-  const { moves, changed, following, forking = false, applying, failure } = draft;
+  const { moves, changed, forking = false, applying, failure } = draft;
   // Applying asks first, in the panel: the run starts again from its first
-  // day, which no Back of the view's own undoes for the run played back.
+  // day, or a fork is made, which stays.
   const [confirming, setConfirming] = useState(false);
   const asking = confirming && !applying;
   useEffect(() => {
@@ -156,7 +151,7 @@ function Session({
   }, [asking]);
   return (
     <div className="move-session" ref={root}>
-      <p data-testid="move-new-run">{newRun(following, forking)}</p>
+      <p data-testid="move-new-run">{newRun(forking)}</p>
       <details className="move-details">
         <summary>How moving works</summary>
         <p className="move-hint">
@@ -186,8 +181,7 @@ function Session({
       )}
       {failure !== null && (
         <p role="alert" data-testid="move-failure">
-          {forking ? "The run could not be forked" : "The run played back could not start over"}:{" "}
-          {failure}.
+          The run could not be forked: {failure}.
         </p>
       )}
       {asking ? (
@@ -196,7 +190,7 @@ function Session({
           <p id="move-confirm-question" data-testid="move-confirm">
             {forking
               ? "A fork goes on from the start of the day shown with these moves; this run stays as it is."
-              : `${following ? "The run played back" : "The run"} starts again from its first day with these moves; the moment reached is left behind.`}
+              : "The run starts again from its first day with these moves; the moment reached is left behind."}
           </p>
           <div className="move-actions">
             <button
