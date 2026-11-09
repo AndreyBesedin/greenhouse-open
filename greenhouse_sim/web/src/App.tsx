@@ -47,6 +47,7 @@ import type { ViewSample } from "./readouts";
 import { type SteeredEpoch, saysSteering } from "./replay/changes";
 import { EpochSteering } from "./replay/EpochSteering";
 import type { ForkChange } from "./replay/fork";
+import { ReplayPlantActions } from "./replay/ReplayPlantActions";
 import { forkMoment, forkMomentNamed, withPlanOf } from "./replay/replaySource";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { WhatAmISeeing } from "./SeenInTheView";
@@ -379,6 +380,18 @@ export function App({
     onStart: () => setPlacingProbes(false),
   });
   const movePanel = movePanelProps === null ? null : <MovePanel {...movePanelProps} />;
+  // A plant's work in a replay (P22.3): asked of the epoch while it is computed,
+  // a fork from the moment shown once it has ended.
+  const replayedWork = replay !== undefined && (
+    <ReplayPlantActions
+      entity={selected}
+      computing={steersNow}
+      onWork={(action) => steering.act([cropAction(action)])}
+      onFork={(action) =>
+        replay.forkWith({ kind: "work", actions: [cropAction(action)] }, forkFrom)
+      }
+    />
+  );
 
   // The run's observation log while a sensor or a camera is selected.
   const sensors = useSensorReadings(selected, run, qaMode);
@@ -590,14 +603,18 @@ export function App({
               >
                 {/* One child or none: a card is drawn only with something in it. */}
                 {steeredEpoch !== null && saysSteering(steersNow, steering) ? (
-                  <EpochSteering
-                    computing={steersNow}
-                    waiting={steering.waiting > 0}
-                    taken={steering.taken}
-                    refusal={steering.refusal}
-                  />
+                  <>
+                    <EpochSteering
+                      computing={steersNow}
+                      waiting={steering.waiting > 0}
+                      taken={steering.taken}
+                      refusal={steering.refusal}
+                    />
+                    {replayedWork}
+                  </>
                 ) : (
-                  followed !== null && (
+                  replayedWork ||
+                  (followed !== null && (
                     <>
                       <PlaybackPanel
                         load={playback}
@@ -635,7 +652,7 @@ export function App({
                         onAct={(action) => steering.act([cropAction(action)])}
                       />
                     </>
-                  )
+                  ))
                 )}
               </ScenarioPanels>
             )}

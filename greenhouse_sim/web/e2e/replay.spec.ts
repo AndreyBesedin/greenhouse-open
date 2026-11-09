@@ -2,6 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { LANDING_PATH, REPLAY_PATH, runsAddress } from "../src/landing/paths";
 import { unfold } from "./folds";
 import { askForRun, computedTo, openReplay } from "./replays";
+import { onScreen } from "./view";
 
 const DAY_S = 86_400;
 // How long a first day of a run may take to be computed, with the other
@@ -448,4 +449,89 @@ test("a replay's other runs are the scenario's, on the landing page", async ({ p
 
   await expect(page).toHaveURL(/#runs=solar_lab$/);
   await expect(page.getByRole("dialog").getByRole("heading")).toContainText("Solar");
+});
+
+// The reference greenhouse's first row of plants, a stem every 0.75 m from
+// x = 3 m, at y = 2.4 m, standing on a gutter 0.675 m up: a transplant's leaves
+// are small, and a click at its stem may pass between them to the floor, so
+// each plant is clicked about its crown, a few pixels apart.
+const FIRST_ROW = [0, 1, 2, 3, 4].map((at) => ({ x: 3 + 0.75 * at, y: 2.4, z: 0.8 }));
+const ABOUT_THE_CROWN_PX = [0, -4, -8, -12, 4].flatMap((dy) =>
+  [0, -6, 6].map((dx) => ({ dx, dy })),
+);
+
+/** Clicks about the first row's plants until an organ of one is selected. */
+async function selectAnOrgan(page: Page): Promise<void> {
+  // The view is short between the replay's header and its transport: the View
+  // panel is folded once its preset is chosen, so that the row is clear of it.
+  await page.getByRole("button", { name: "Isometric" }).click();
+  await page.getByRole("button", { name: "Fold the View panel" }).click();
+  const selected = page.getByTestId("selected-entity");
+  const organ = /^reference_greenhouse_plant_\d+_/;
+  await expect(async () => {
+    for (const plant of FIRST_ROW) {
+      const { x, y } = await onScreen(page, plant, "isometric");
+      for (const { dx, dy } of ABOUT_THE_CROWN_PX) {
+        await page.mouse.click(x + dx, y + dy);
+        if (organ.test((await selected.textContent({ timeout: 1000 }).catch(() => "")) ?? "")) {
+          return;
+        }
+      }
+    }
+    throw new Error("no organ of the first row's plants was picked");
+  }).toPass({ timeout: COMPUTES });
+}
+
+test("a plant's work in the replay of a run being computed steers it, and once it has ended forks it", async ({
+  page,
+}) => {
+  test.setTimeout(WAITS_FOR_A_DAY * 2);
+  // Paced, so that it is still computed when the work is asked.
+  const run = await askForRun(page, "reference_greenhouse", { seed: 53, secondsPerDay: 60 });
+  await openReplay(page, run);
+  await expect(page.getByTestId("replay-status")).toHaveText(/Queued|Running/);
+  const parent = page.url();
+  const asked = changesAndForks(page);
+  const forksAsked: unknown[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && /\/forks\?/.test(request.url())) {
+      forksAsked.push(request.postDataJSON());
+    }
+  });
+  await selectAnOrgan(page);
+
+  await test.step("asked of the running epoch, its worker takes it, and nothing forks", async () => {
+    await page.getByRole("button", { name: "Lower the stem" }).click();
+    await expect(page.getByTestId("epoch-steering-status")).toHaveText(
+      /^The run took the latest change from Day \d+, \d\d:\d\d\.$/,
+      { timeout: COMPUTES },
+    );
+    expect(asked).toEqual(["changes"]);
+    await expect(page.getByTestId("fork-question")).toHaveCount(0);
+    await expect(page).toHaveURL(parent);
+  });
+
+  await test.step("once the run has ended, the same work is a fork, asked first", async () => {
+    await stopReplayed(page);
+    await page.getByRole("button", { name: "Lower the stem" }).click();
+    await expect(page.getByTestId("fork-question")).toBeVisible();
+    await page.getByRole("button", { name: "Make the fork" }).click();
+    await expect(page).not.toHaveURL(parent);
+    await expect(page.getByTestId("replay-subtitle")).toContainText(/forked from epoch \d+ at /);
+    expect(asked).toEqual(["changes", "forks"]);
+    // The fork is given the work as a plan of the viewer's own.
+    expect(forksAsked).toEqual([
+      [
+        expect.objectContaining({
+          kind: "plan",
+          plan: expect.objectContaining({
+            actions: [
+              expect.objectContaining({ action: expect.objectContaining({ kind: "lower" }) }),
+            ],
+          }),
+        }),
+      ],
+    ]);
+  });
+  await stopReplayed(page);
 });
