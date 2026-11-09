@@ -1923,7 +1923,7 @@
 .landing-form {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: var(--space-5) var(--space-7);
   padding: var(--space-6) var(--space-7);
   border-bottom: 1px solid var(--border);
@@ -1935,6 +1935,19 @@
 .landing-form .landing-input::placeholder {
   color: var(--text-muted);
   opacity: 0.85;
+}
+
+/* The form's heading and the list's, each over what it names. */
+.landing-form-heading {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--font-xl);
+}
+
+.landing-runs-heading {
+  margin: 0;
+  padding: var(--space-6) var(--space-7) var(--space-3);
+  font-size: var(--font-xl);
 }
 
 /* The scenario's crop, and the way to another, on the form's first line; the seed,
@@ -1955,7 +1968,7 @@
 }
 
 .landing-seed .landing-input {
-  width: 12ch;
+  width: 22ch;
 }
 
 .landing-note {

@@ -44,7 +44,6 @@ async function replayOfANewRun(
   await search.fill(scenario);
   await search.press("Enter");
   const dialog = page.getByRole("dialog");
-  await dialog.getByRole("button", { name: "New run" }).click();
   await dialog.getByLabel("Seed", { exact: true }).fill(seed);
   await dialog.getByLabel("Seconds per simulated day").fill(pace);
   await dialog.getByRole("button", { name: "Start run" }).click();
@@ -448,7 +447,7 @@ test("a replay's other runs are the scenario's, on the landing page", async ({ p
   await page.getByRole("link", { name: "Other runs" }).click();
 
   await expect(page).toHaveURL(/#runs=solar_lab$/);
-  await expect(page.getByRole("dialog").getByRole("heading")).toContainText("Solar");
+  await expect(page.getByRole("dialog").getByRole("heading", { level: 2 })).toContainText("Solar");
 });
 
 // The reference greenhouse's first row of plants, a stem every 0.75 m from

@@ -76,7 +76,6 @@ export function Landing({
     return () => clearTimeout(next);
   }, [runs]);
   const [opened, setOpened] = useState(() => newRunScenario(hash) ?? runsScenario(hash));
-  const [form, setForm] = useState(() => newRunScenario(hash) !== null);
   const chosen =
     opened !== null && scenarios.status === "loaded"
       ? scenarios.scenarios.find((each) => each.id === opened)
@@ -108,10 +107,7 @@ export function Landing({
               scenarios={scenarios}
               counts={counts}
               behindDialog={chosen !== undefined}
-              onChoose={(id) => {
-                setForm(false);
-                setOpened(id);
-              }}
+              onChoose={setOpened}
               onBuild={() => navigate(BUILDER_PATH)}
             />
             {opened !== null && scenarios.status === "loaded" && chosen === undefined && (
@@ -150,7 +146,6 @@ export function Landing({
           runs={
             runs.status === "loaded" ? runs.runs.filter((run) => run.scenario_id === chosen.id) : []
           }
-          newRun={form}
           navigate={navigate}
           onClose={() => {
             setOpened(null);
