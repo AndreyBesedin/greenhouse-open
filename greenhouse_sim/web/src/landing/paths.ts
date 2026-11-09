@@ -96,29 +96,28 @@ export function runsAddress(scenarioId: string): string {
   return `${LANDING_PATH}${RUNS}${encodeURIComponent(scenarioId)}`;
 }
 
-/** The scenario whose runs an address's fragment asks to see, if it does. */
-export function runsScenario(hash: string): string | null {
-  if (!hash.startsWith(RUNS) || hash.length === RUNS.length) {
+/** What an address's fragment names after `mark`, if it begins with it and
+ * names something that can be read. */
+function named(hash: string, mark: string): string | null {
+  if (!hash.startsWith(mark) || hash.length === mark.length) {
     return null;
   }
   try {
-    return decodeURIComponent(hash.slice(RUNS.length));
+    return decodeURIComponent(hash.slice(mark.length));
   } catch {
     return null;
   }
 }
 
+/** The scenario whose runs an address's fragment asks to see, if it does. */
+export function runsScenario(hash: string): string | null {
+  return named(hash, RUNS);
+}
+
 /** The scenario whose new-run form an address's fragment asks for, if it
  * does. */
 export function newRunScenario(hash: string): string | null {
-  if (!hash.startsWith(NEW_RUN) || hash.length === NEW_RUN.length) {
-    return null;
-  }
-  try {
-    return decodeURIComponent(hash.slice(NEW_RUN.length));
-  } catch {
-    return null;
-  }
+  return named(hash, NEW_RUN);
 }
 
 const DRAFT = "#draft=";
@@ -130,12 +129,17 @@ export function draftAddress(draftId: string): string {
 
 /** The draft an address's fragment asks the builder to open, if it does. */
 export function draftAsked(hash: string): string | null {
-  if (!hash.startsWith(DRAFT) || hash.length === DRAFT.length) {
-    return null;
-  }
-  try {
-    return decodeURIComponent(hash.slice(DRAFT.length));
-  } catch {
-    return null;
-  }
+  return named(hash, DRAFT);
+}
+
+const COPY = "#copy=";
+
+/** The builder, with a scenario chosen to copy into a new one (P22.4). */
+export function copyAddress(scenarioId: string): string {
+  return `${BUILDER_PATH}${COPY}${encodeURIComponent(scenarioId)}`;
+}
+
+/** The scenario an address's fragment asks the builder to copy, if it does. */
+export function copyAsked(hash: string): string | null {
+  return named(hash, COPY);
 }

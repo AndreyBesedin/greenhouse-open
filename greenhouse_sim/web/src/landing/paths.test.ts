@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { sourceFromSearch } from "../scene/source";
 import {
+  copyAddress,
+  copyAsked,
   draftAddress,
   draftAsked,
   LANDING_PATH,
@@ -120,5 +122,19 @@ describe("the address of a saved draft", () => {
     expect(draftAsked("#draft=")).toBeNull();
     expect(draftAsked("#scenario=box")).toBeNull();
     expect(draftAsked("#draft=%E0%A4%A")).toBeNull();
+  });
+});
+
+describe("the address of a scenario to copy (P22.4)", () => {
+  it("is the builder's, its scenario in a fragment, and reads back", () => {
+    expect(copyAddress("reference greenhouse")).toBe("/builder#copy=reference%20greenhouse");
+    expect(copyAsked("#copy=reference%20greenhouse")).toBe("reference greenhouse");
+  });
+
+  it("asks for none where it names none, or none that can be read", () => {
+    expect(copyAsked("")).toBeNull();
+    expect(copyAsked("#copy=")).toBeNull();
+    expect(copyAsked("#draft=box")).toBeNull();
+    expect(copyAsked("#copy=%E0%A4%A")).toBeNull();
   });
 });

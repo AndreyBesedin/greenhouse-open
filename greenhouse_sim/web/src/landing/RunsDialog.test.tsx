@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DAY_S } from "../clock";
 import type { ScenarioSummary } from "../scenarios";
 import { button, click, enter, type Rendered, render } from "../testing/render";
-import { replayAddress, viewerAddress } from "./paths";
+import { copyAddress, replayAddress } from "./paths";
 import { RunsDialog } from "./RunsDialog";
 import type { StoredRun } from "./storedRuns";
 
@@ -15,7 +15,9 @@ const SCENARIO: ScenarioSummary = {
   description: "organ-level tomato crop",
   plants: 32,
   duration_days: 120,
+  crop_model: "organ",
   layouts: ["default"],
+  weathers: ["default", "cold_spring_day"],
 };
 const RUN_ID = "reference_greenhouse-climate-abc";
 
@@ -93,17 +95,31 @@ describe("the runs of a scenario, in a dialog", () => {
     );
     drawn = rendered;
     const rows = () => [...rendered.container.querySelectorAll(".landing-run")];
-    const field = (name: string) => {
-      const found = [...rendered.container.querySelectorAll("label")].find((each) =>
-        each.textContent?.startsWith(name),
+    const control = (name: string) => {
+      const found = [...rendered.container.querySelectorAll("label")].find(
+        (each) => each.textContent === name,
       );
-      const input = found?.querySelector("input");
-      if (input === null || input === undefined) {
+      const named = found?.htmlFor ? document.getElementById(found.htmlFor) : null;
+      if (named === null) {
         throw new Error(`no field ${name}`);
+      }
+      return named;
+    };
+    const field = (name: string) => {
+      const input = control(name);
+      if (!(input instanceof HTMLInputElement)) {
+        throw new Error(`${name} is no input`);
       }
       return input;
     };
-    return { container: rendered.container, rows, field, navigate, onClose, onChanged };
+    const choice = (name: string) => {
+      const select = control(name);
+      if (!(select instanceof HTMLSelectElement)) {
+        throw new Error(`${name} is no choice`);
+      }
+      return select;
+    };
+    return { container: rendered.container, rows, field, choice, navigate, onClose, onChanged };
   }
 
   /** Where each row's ways to watch its run go: a replay, or the Follow there was. */
@@ -114,14 +130,15 @@ describe("the runs of a scenario, in a dialog", () => {
         .map((a) => a.getAttribute("href")),
     );
 
-  it("opens as a dialog that names the scenario, and links to it in the viewer", () => {
+  it("opens as a dialog that names the scenario, with no way to the viewer but its runs", () => {
     const { container } = shown([]);
     const dialog = container.querySelector("dialog");
 
     expect(dialog?.hasAttribute("open")).toBe(true);
     expect(dialog?.getAttribute("aria-labelledby")).toBe(container.querySelector("h2")?.id);
     expect(container.querySelector("h2")?.textContent).toBe("Reference greenhouse");
-    expect(container.querySelector(`a[href="${viewerAddress(SCENARIO.id)}"]`)).not.toBeNull();
+    // P22.4: *Open in the viewer* is gone; a run is watched in its replay.
+    expect(container.querySelector('a[href^="/view"]')).toBeNull();
   });
 
   it("lists each run in words, with one way to watch each: its replay", () => {
@@ -134,7 +151,13 @@ describe("the runs of a scenario, in a dialog", () => {
       progress: 41 / 120,
       layout: "default~heater:-1:0.5",
     });
-    const replaced = run({ epoch: 1, seed: null, status: "running", progress: 0.5 });
+    const replaced = run({
+      epoch: 1,
+      seed: null,
+      status: "running",
+      progress: 0.5,
+      weather: "cold_spring_day",
+    });
     const { rows } = shown([
       playing,
       replaced,
@@ -148,6 +171,8 @@ describe("the runs of a scenario, in a dialog", () => {
     expect(texts[0]).toContain("Running");
     expect(texts[0]).toContain("41 of 120 days");
     expect(texts[1]).toContain("The scenario's seed");
+    expect(texts[1]).toContain("epoch 1 · cold spring day");
+    expect(texts[0]).not.toContain("its own");
     expect(texts[2]).toContain("Kept400 kB");
     expect(texts[2]).toContain("Finished");
     // One way to watch each (P22.2): its replay, which follows the newest day of
@@ -160,7 +185,7 @@ describe("the runs of a scenario, in a dialog", () => {
   });
 
   it("says so when there is no run yet, and offers the form for one", () => {
-    const { container, field } = shown([]);
+    const { container, field, choice } = shown([]);
     expect(container.textContent).toContain("No runs of this scenario yet.");
     expect(container.querySelector("form")).toBeNull();
 
@@ -168,6 +193,25 @@ describe("the runs of a scenario, in a dialog", () => {
 
     expect(field("Seed").placeholder).toBe("The scenario's own");
     expect(field("Seconds per simulated day").value).toBe("10");
+    // Its own days and weather unless others are chosen (decision 0075).
+    expect(field("Days").value).toBe("120");
+    expect([...choice("Weather").options].map((each) => [each.value, each.text])).toEqual([
+      ["default", "its own"],
+      ["cold_spring_day", "cold spring day"],
+    ]);
+    expect(choice("Weather").value).toBe("default");
+  });
+
+  it("says what the scenario's crop is, and offers a new scenario made from it", () => {
+    const { container } = shown([], true);
+
+    expect(container.querySelector(".landing-crop")?.textContent).toContain(
+      "Its crop: 32 plants, grown by the organ crop model.",
+    );
+    const made = [...container.querySelectorAll("a")].find(
+      (each) => each.textContent === "Make a new scenario from this one",
+    );
+    expect(made?.getAttribute("href")).toBe(copyAddress(SCENARIO.id));
   });
 
   describe("for a worker", () => {
@@ -190,6 +234,87 @@ describe("the runs of a scenario, in a dialog", () => {
       expect(asked).toEqual([{ url: `${RUNS_URL}?seed=75&seconds_per_day=4`, method: "POST" }]);
     });
 
+    it("asks for it under the weather and for the days chosen, and repeats it by its seed", async () => {
+      const asked = simulator({}, { status: 200, body: STARTED });
+      const { container, field, choice, navigate } = shown([], true);
+
+      enter(field("Days"), "10");
+      act(() => {
+        const weather = choice("Weather");
+        weather.value = "cold_spring_day";
+        weather.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      enter(field("Seed"), "7");
+      click(button(container, "Start run"));
+      await vi.waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
+      click(button(container, "New run"));
+      enter(field("Days"), "10");
+      act(() => {
+        const weather = choice("Weather");
+        weather.value = "cold_spring_day";
+        weather.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      enter(field("Seed"), "7");
+      click(button(container, "Start run"));
+      await vi.waitFor(() => expect(navigate).toHaveBeenCalledTimes(2));
+
+      const once = `${RUNS_URL}?seed=7&seconds_per_day=10&weather=cold_spring_day&duration_days=10`;
+      expect(asked.filter((each) => each.method === "POST").map((each) => each.url)).toEqual([
+        once,
+        once,
+      ]);
+    });
+
+    it("asks for its own days as none, as for its own weather", async () => {
+      const asked = simulator({}, { status: 200, body: STARTED });
+      const { container, navigate } = shown([], true);
+
+      click(button(container, "Start run"));
+
+      await vi.waitFor(() => expect(navigate).toHaveBeenCalled());
+      expect(asked.map((each) => each.url)).toEqual([`${RUNS_URL}?seconds_per_day=10`]);
+    });
+
+    it.each(["10.0", "1e1", "010"])(
+      "asks for %j days as the whole number the form accepted",
+      async (days) => {
+        const asked = simulator({}, { status: 200, body: STARTED });
+        const { container, field, navigate } = shown([], true);
+
+        enter(field("Days"), days);
+        click(button(container, "Start run"));
+
+        await vi.waitFor(() => expect(navigate).toHaveBeenCalled());
+        // The API reads its days as an integer's digits (`whole`), not as a number.
+        expect(asked.map((each) => each.url)).toEqual([
+          `${RUNS_URL}?seconds_per_day=10&duration_days=10`,
+        ]);
+      },
+    );
+
+    it.each(["0", "121", "2.5", ""])(
+      "refuses %j days before asking: from 1 to the scenario's own",
+      (days) => {
+        const asked = simulator();
+        const { container, field } = shown([], true);
+
+        enter(field("Days"), days);
+
+        const entered = field("Days");
+        expect(entered.getAttribute("aria-invalid")).toBe("true");
+        // The problem describes its field, after its hint (`Field`).
+        const said = (entered.getAttribute("aria-describedby") ?? "")
+          .split(" ")
+          .map((id) => document.getElementById(id)?.textContent);
+        expect(said).toEqual([
+          "Up to its own 120; a longer run is a scenario of its own.",
+          "From 1 to its 120 days.",
+        ]);
+        expect(button(container, "Start run").disabled).toBe(true);
+        expect(asked).toEqual([]);
+      },
+    );
+
     it("says what the seed's default is and means, as a placeholder and not a value", () => {
       const { container, field } = shown([], true);
       const seed = field("Seed");
@@ -198,7 +323,7 @@ describe("the runs of a scenario, in a dialog", () => {
       expect(seed.placeholder).toBe("The scenario's own");
       const note = container.querySelector(`[id="${seed.getAttribute("aria-describedby")}"]`);
       expect(note?.textContent).toBe(
-        "The default. With no seed, the run uses the scenario's own, so the same scenario gives the same run.",
+        "The default. With no seed, the run uses the scenario's own, so the same choices give the same run.",
       );
     });
 

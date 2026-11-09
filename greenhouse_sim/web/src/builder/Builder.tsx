@@ -5,6 +5,7 @@ import { Button } from "../design/Button";
 import { HomeButton } from "../landing/HomeButton";
 import {
   BUILDER_PATH,
+  copyAsked,
   draftAddress,
   draftAsked,
   LANDING_PATH,
@@ -851,6 +852,7 @@ export function Builder({
             ) : (
               <CopyScenario
                 scenarios={listed}
+                first={copyAsked(hash) ?? ""}
                 busy={busy}
                 onCopy={(scenario, draftId) => void copyHouse(scenario, draftId)}
               />
