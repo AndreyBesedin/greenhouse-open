@@ -80,6 +80,19 @@ export function RunsDialog({
   // A second press of Start while the first is answered would be a second run.
   const [starting, setStarting] = useState(false);
 
+  // Started, the page goes still starting. A browser that keeps a page as it
+  // goes (its back-forward cache) gives it back so on Back, dialog and all:
+  // the form is ready for another run then. A page loaded anew is not starting.
+  useEffect(() => {
+    function shownAgain(event: PageTransitionEvent): void {
+      if (event.persisted) {
+        setStarting(false);
+      }
+    }
+    window.addEventListener("pageshow", shownAgain);
+    return () => window.removeEventListener("pageshow", shownAgain);
+  }, []);
+
   useEffect(() => {
     const shown = dialog.current;
     if (shown !== null && !shown.open) {

@@ -270,6 +270,25 @@ describe("the runs of a scenario, in a dialog", () => {
       ]);
     });
 
+    it("is ready for another run when Back gives the page back from the browser's cache", async () => {
+      simulator({}, { status: 200, body: STARTED });
+      const { container, navigate } = shown([]);
+      const pageShown = (persisted: boolean) =>
+        act(() => {
+          window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted }));
+        });
+
+      click(button(container, "Start run"));
+      await vi.waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
+      expect(button(container, "Start run").disabled).toBe(true);
+
+      // Shown, but not kept as it went: still starting.
+      pageShown(false);
+      expect(button(container, "Start run").disabled).toBe(true);
+      pageShown(true);
+      expect(button(container, "Start run").disabled).toBe(false);
+    });
+
     it("asks for its own days as none, as for its own weather", async () => {
       const asked = simulator({}, { status: 200, body: STARTED });
       const { container, navigate } = shown([]);
