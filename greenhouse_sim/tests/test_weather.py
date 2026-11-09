@@ -75,13 +75,13 @@ def test_every_scenario_but_the_sunlit_ones_keeps_its_outside_as_constant_weathe
     # The climate box's cold, damp night; the others' mild default; the
     # solar lab's clear spring day (P08.6); and the reference greenhouse's
     # season, its days half clouded, more or less (P10.3), which the TOMGRO
-    # house keeps.
+    # and Vanthoor houses keep.
     assert BOX.weather == ConstantWeather(air_temperature_c=8.0, relative_humidity_pct=90.0)
     for name, config in SCENARIO_REGISTRY.items():
         if name == "solar_lab":
             assert isinstance(config.weather, SyntheticWeather)
             assert config.weather.cloud_cover_pct == 0.0
-        elif name in ("reference_greenhouse", "tomgro_house"):
+        elif name in ("reference_greenhouse", "tomgro_house", "vanthoor_house"):
             assert isinstance(config.weather, SeasonalWeather)
             assert config.weather.cloud_cover_pct == 55.0
         else:
