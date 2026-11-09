@@ -123,13 +123,9 @@ const WIND_MARK = "~";
 const FULL_TURN_DEG = 360;
 
 export function sourceFromSearch(search: string): SceneSource {
+  // The live mode's `live=` and a scenario's `follow=1` are read no more: a
+  // page opens as it would without them (P22.3, decision 0074).
   const parameters = new URLSearchParams(search);
-  // The live mode's address opens the scenario's run, followed as it is
-  // played back, which took its place (decision 0059).
-  const liveId = parameters.get("live");
-  if (liveId) {
-    return { kind: "scenario", scenarioId: liveId, follow: true };
-  }
   const scenarioId = parameters.get("scenario");
   if (scenarioId) {
     const layout = parameters.get("layout");
@@ -169,7 +165,6 @@ export function sourceFromSearch(search: string): SceneSource {
       ...(field && probes ? { probes } : {}),
       ...(parameters.get("cfd") === CFD_BOUNDARIES ? { cfdBoundaries: true as const } : {}),
       ...(camera === undefined ? {} : { camera }),
-      ...(parameters.get("follow") === "1" ? { follow: true as const } : {}),
       ...(envelope === null ? {} : { envelope }),
       ...(openings === null ? {} : { openings }),
       ...(levels === null ? {} : { levels }),

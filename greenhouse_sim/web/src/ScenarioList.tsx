@@ -17,23 +17,19 @@ export function scenariosMatching(
   return [...named, ...described];
 }
 
-/** The simulator's scenarios, each to be opened, with any of its layouts,
- * or followed as it is played back; those `filter` matches
- * (`scenariosMatching`). */
+/** The simulator's scenarios, each to be opened, with any of its layouts;
+ * those `filter` matches (`scenariosMatching`). */
 export function ScenarioList({
   state,
   shownLayout = null,
   filter = "",
   onShow,
-  onFollow,
 }: {
   state: ScenariosState;
   /** The scenario on show and its layout, which its layout picker shows. */
   shownLayout?: { scenarioId: string; layout: string } | null;
   filter?: string;
   onShow?: (scenarioId: string, layout?: string) => void;
-  /** Follows its own run as it is played back (decision 0041). */
-  onFollow?: (scenarioId: string) => void;
 }) {
   switch (state.status) {
     case "loading":
@@ -60,7 +56,7 @@ export function ScenarioList({
               <th>Plants</th>
               <th>Days</th>
               {choosing && <th>Layout</th>}
-              {(onShow || onFollow) && <th />}
+              {onShow && <th />}
             </tr>
           </thead>
           <tbody>
@@ -96,30 +92,16 @@ export function ScenarioList({
                     )}
                   </td>
                 )}
-                {(onShow || onFollow) && (
-                  // Its ways of being shown in one cell, which wraps them
-                  // rather than widen the table past the panel.
+                {onShow && (
                   <td>
                     <div className="scenario-actions">
-                      {onShow && (
-                        <button
-                          type="button"
-                          aria-label={`Open ${scenario.id}`}
-                          onClick={() => onShow(scenario.id)}
-                        >
-                          Open
-                        </button>
-                      )}
-                      {onFollow && (
-                        <button
-                          type="button"
-                          aria-label={`Follow ${scenario.id}`}
-                          title="Follow its own run as it is played back, as a consumer reads it"
-                          onClick={() => onFollow(scenario.id)}
-                        >
-                          Follow
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        aria-label={`Open ${scenario.id}`}
+                        onClick={() => onShow(scenario.id)}
+                      >
+                        Open
+                      </button>
                     </div>
                   </td>
                 )}

@@ -1,7 +1,5 @@
 import { useState } from "react";
 
-import { loadFieldNames } from "./fields/FieldControls";
-import { CLIMATE_FIELD } from "./fields/source";
 import { FIRST_LAB_RUN } from "./plants/lab";
 import { DEFAULT_STRESS_PLANTS } from "./qa/stressScene";
 import { ScenarioList } from "./ScenarioList";
@@ -39,8 +37,8 @@ function matching(choices: readonly Choice[], filter: string): readonly Choice[]
 /**
  * What the viewer shows, and the choice of it (#201): folded, one line that
  * says what is shown, or why it is not; opened, the simulator's scenarios,
- * each opened here or followed as it is played back, the test scenes and the plant lab, each
- * group saying what it is, and a filter over all of them. It folds again
+ * each opened here, the test scenes and the plant lab, each group saying
+ * what it is, and a filter over all of them. It folds again
  * once something is chosen. A choice is a new page in the browser's history
  * (`useSource`), so Back returns to the view before.
  */
@@ -115,17 +113,6 @@ export function SourceChooser({
                 : {}),
             })
           }
-          onFollow={(scenarioId) =>
-            // Its climate drawn; or none, if its fields cannot be listed.
-            void loadFieldNames(scenarioId).then(({ names }) =>
-              choose({
-                kind: "scenario",
-                scenarioId,
-                ...(names.includes(CLIMATE_FIELD) ? { field: CLIMATE_FIELD } : {}),
-                follow: true,
-              }),
-            )
-          }
         />
       </section>
       <Group
@@ -141,8 +128,7 @@ export function SourceChooser({
         onChoose={choose}
       />
       <p className="chooser-note">
-        Open: its run here, from its start or its opening day. Follow: its own run as it is played
-        back, the run a consumer reads. Back returns to the view before.
+        Open: its run here, from its start or its opening day. Back returns to the view before.
       </p>
     </details>
   );
