@@ -13,6 +13,7 @@ const RUN = {
   scenario_id: "reference_greenhouse",
   seed: null,
   layout: "default",
+  weather: null,
   status: "queued",
   paused: false,
   frontier_s: DAY_S,

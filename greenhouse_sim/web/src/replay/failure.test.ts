@@ -10,6 +10,7 @@ const FAILED = {
   scenario_id: "reference_greenhouse",
   seed: 7,
   layout: "default",
+  weather: null,
   status: "failed",
   paused: false,
   frontier_s: DAY_S,

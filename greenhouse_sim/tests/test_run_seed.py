@@ -92,7 +92,8 @@ def test_a_checkpoint_of_a_seeded_run_carries_its_seed(simulator: Simulator) -> 
 
 def test_a_seed_makes_another_run_of_a_scenario_without_equipment(simulator: Simulator) -> None:
     # Its air is the same under any seed or weather, but its sensors' readings
-    # are not: the seed tells its runs apart, and the weather still does not.
+    # are not: the seed tells its runs apart. So does another weather, under which
+    # a crop it has grows (decision 0075); its own, named, is the run it was.
     own = SCENARIO_REGISTRY["sensor_lab"].random_seed
     identity = {
         name: air_through_a_run(simulator, run)[1]
@@ -102,7 +103,8 @@ def test_a_seed_makes_another_run_of_a_scenario_without_equipment(simulator: Sim
             "one": RunRequest("sensor_lab", seed=1),
             "two": RunRequest("sensor_lab", seed=2),
             "weather": RunRequest("sensor_lab", weather="cold_spring_day"),
+            "named own": RunRequest("sensor_lab", weather="default"),
         }.items()
     }
-    assert identity["own"] == identity["plain"] == identity["weather"]
-    assert len({identity["plain"], identity["one"], identity["two"]}) == 3
+    assert identity["own"] == identity["plain"] == identity["named own"]
+    assert len({identity[name] for name in ("plain", "one", "two", "weather")}) == 4

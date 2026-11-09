@@ -423,6 +423,8 @@ class Playback:
         *,
         layout: str | None = None,
         seed: int | None = None,
+        weather: str | None = None,
+        end_s: float | None = None,
         targets: Sequence[Commanded] = (),
         seconds_per_day: float = DEFAULT_SECONDS_PER_DAY,
         every_s: float = CONSUMER_CADENCE_S,
@@ -438,13 +440,16 @@ class Playback:
         self.scenario_id = scenario_id
         self.greenhouse_id = config.greenhouse_id
         self.start = run_start(simulator.catalogue, scenario_id)
-        self.end_s = config.duration_days * DAY_S
+        # Where it ends: its scenario's last day, or sooner, the run cut short.
+        self.end_s = config.run_length_s() if end_s is None else end_s
         self.every_s = every_s
         self.layout = layout_name(layout or DEFAULT_LAYOUT)
-        # The seed the run is at, or none: the scenario's own.
+        # The seed the run is at, or none: the scenario's own; and its weather,
+        # by name, or none: its own (decision 0075).
         self.seed = seed
+        self.weather = weather
         _, self.run_id = air_through_a_run(
-            simulator, RunRequest(scenario_id, layout=self.layout, seed=seed)
+            simulator, RunRequest(scenario_id, layout=self.layout, weather=weather, seed=seed)
         )
         if targets:
             # Checked as a run's target changes are; refused, nothing starts.
@@ -453,6 +458,7 @@ class Playback:
                 RunRequest(
                     scenario_id,
                     layout=self.layout,
+                    weather=weather,
                     plan=RunPlan.requested(targets=targets),
                     seed=seed,
                 ),
@@ -575,6 +581,7 @@ class Playback:
                 seed=self.seed,
                 layout=self.layout,
                 duration_s=self.end_s,
+                weather=self.weather,
                 created_at=datetime.now(UTC),
                 fork=fork,
                 scenario_file=scenario_file,
@@ -979,7 +986,11 @@ class Playback:
         """The run it plays: its scenario's own, with its layout and its
         epoch's target changes."""
         return RunRequest(
-            self.scenario_id, layout=self.layout, plan=self._executor.plan(), seed=self.seed
+            self.scenario_id,
+            layout=self.layout,
+            weather=self.weather,
+            plan=self._executor.plan(),
+            seed=self.seed,
         )
 
     def _refusal(self, action: Action, at_s: float) -> str | None:

@@ -94,6 +94,21 @@ def test_a_resumed_epoch_is_the_epoch_that_was_never_interrupted(
     epoch.verify()
 
 
+def test_a_run_for_fewer_days_resumes_to_its_own_end_as_the_whole_runs_first_days(
+    tmp_path: Path, uninterrupted: EpochStore
+) -> None:
+    """Decision 0075: a run cut short is its scenario's run, ended sooner."""
+    with _simulator() as before:
+        epoch = queued(before, FolderStore(tmp_path), SHORT, duration_days=DAYS - 1)
+        assert execute(before, epoch, Stepped([DAY_S])) == Status.INTERRUPTED
+    with _simulator() as after:
+        assert resume(after, epoch, Free()) == Status.FINISHED
+
+    assert epoch.run_id == uninterrupted.run_id
+    assert epoch.frontier_s() == (DAYS - 1) * DAY_S
+    assert _digests(epoch) == _digests(uninterrupted)[: DAYS - 1]
+
+
 def test_an_epoch_with_nothing_committed_begins_again(
     tmp_path: Path, uninterrupted: EpochStore
 ) -> None:

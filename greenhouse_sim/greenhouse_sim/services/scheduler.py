@@ -248,9 +248,12 @@ class Scheduler:
         *,
         layout: str | None = None,
         seed: int | None = None,
+        weather: str | None = None,
+        duration_days: int | None = None,
         driver: Driver | None = None,
     ) -> StoredRun:
-        """Asks for a run of `scenario_id` at `layout` and `seed`: a new epoch
+        """Asks for a run of `scenario_id` at `layout` and `seed`, under `weather`
+        and for `duration_days`, or its scenario's own (decision 0075): a new epoch
         of it, started in the store, executed when a worker is free. A driver
         takes the epoch as fast as it can go, or at a pace."""
         pace = _pace(driver)
@@ -264,6 +267,8 @@ class Scheduler:
                 scenario_id,
                 layout=layout,
                 seed=seed,
+                weather=weather,
+                duration_days=duration_days,
                 seconds_per_day=pace,
                 queued_at=datetime.now(UTC),
             )
@@ -650,11 +655,21 @@ def start(
     *,
     layout: str | None = None,
     seed: int | None = None,
+    weather: str | None = None,
+    duration_days: int | None = None,
     seconds_per_day: float | None = None,
 ) -> StoredRun:
-    """A run of a scenario asked for: freely, or at `seconds_per_day`."""
+    """A run of a scenario asked for (`Scheduler.start`): freely, or at
+    `seconds_per_day`."""
     driver = None if seconds_per_day is None else Paced(seconds_per_day)
-    return of(simulator).start(scenario_id, layout=layout, seed=seed, driver=driver)
+    return of(simulator).start(
+        scenario_id,
+        layout=layout,
+        seed=seed,
+        weather=weather,
+        duration_days=duration_days,
+        driver=driver,
+    )
 
 
 def resume(

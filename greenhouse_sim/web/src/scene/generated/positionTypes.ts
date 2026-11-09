@@ -18,6 +18,7 @@ export interface PositionState {
   epoch: number;
   layout: string;
   seed: number | null;
+  weather: string | null;
   status: Status;
   paused: boolean;
   started_at: string;

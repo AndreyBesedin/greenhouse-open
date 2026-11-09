@@ -121,6 +121,18 @@
       ],
       "title": "Seed"
     },
+    "weather": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Weather"
+    },
     "status": {
       "$ref": "#/$defs/Status"
     },
@@ -269,6 +281,7 @@
     "epoch",
     "layout",
     "seed",
+    "weather",
     "status",
     "paused",
     "started_at",

@@ -15,6 +15,7 @@ function position(more: Partial<PositionState> = {}): PositionState {
     epoch: 0,
     layout: "default",
     seed: 2,
+    weather: null,
     status: "running",
     paused: false,
     started_at: "2026-03-01T00:00:00Z",

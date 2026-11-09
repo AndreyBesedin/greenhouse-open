@@ -79,7 +79,7 @@ from greenhouse_sim.services.run_store import (
     failure_reason,
 )
 from greenhouse_sim.services.run_store import epochs as stored_epochs
-from greenhouse_sim.services.runs import RunRequest
+from greenhouse_sim.services.runs import RunRequest, started_duration_s, started_weather
 from greenhouse_sim.services.scenarios import layout_name, scenario
 from greenhouse_sim.services.simulator import Simulator
 
@@ -125,19 +125,27 @@ def queued(
     *,
     layout: str | None = None,
     seed: int | None = None,
+    weather: str | None = None,
+    duration_days: int | None = None,
     seconds_per_day: float | None = None,
     queued_at: datetime | None = None,
 ) -> EpochStore:
-    """A new epoch of the run of `scenario_id` at `layout` and `seed`, in
+    """A new epoch of the run of `scenario_id` at `layout` and `seed`, under
+    `weather` and for `duration_days`, or the scenario's own (decision 0075), in
     `objects`, `queued`: the run's next epoch, its manifest written last, with
     all a worker in another process needs to run it, the simulator's authorisation
-    among it, and `queued_at` if a scheduler puts it in line. A scenario, a layout or
-    a seed refused starts nothing, as does a scenario that cannot be written as a
-    file. Whoever starts epochs of one store does it one at a time, so that two are
-    never given a number."""
+    among it, and `queued_at` if a scheduler puts it in line. A scenario, a layout,
+    a seed, a weather or a duration refused starts nothing, as does a scenario that
+    cannot be written as a file. Whoever starts epochs of one store does it one at a
+    time, so that two are never given a number. A weather other than its own makes
+    another run, as a seed does; fewer days do not, being the run cut short."""
     config = scenario(simulator.catalogue, scenario_id)
     chosen = layout_name(layout or DEFAULT_LAYOUT)
-    _, run_id = air_through_a_run(simulator, RunRequest(scenario_id, layout=chosen, seed=seed))
+    under = started_weather(weather)
+    duration_s = started_duration_s(config, duration_days)
+    _, run_id = air_through_a_run(
+        simulator, RunRequest(scenario_id, layout=chosen, weather=under, seed=seed)
+    )
     started = stored_epochs(objects, run_id)
     scenario_file = scenario_files.carry(simulator.catalogue, objects, scenario_id)
     manifest = EpochManifest(
@@ -146,7 +154,8 @@ def queued(
         scenario_id=scenario_id,
         seed=seed,
         layout=chosen,
-        duration_s=config.duration_days * DAY_S,
+        duration_s=duration_s,
+        weather=under,
         created_at=datetime.now(UTC),
         queued_at=queued_at,
         scenario_file=scenario_file,
@@ -268,7 +277,9 @@ def scenario_file_of(simulator: Simulator, epoch: EpochStore) -> str | None:
     else a worker could not run it, and it is refused, saying why."""
     manifest = epoch.manifest()
     which = f"epoch {epoch.epoch} of {epoch.run_id}"
-    asked = RunRequest(manifest.scenario_id, layout=manifest.layout, seed=manifest.seed)
+    asked = RunRequest(
+        manifest.scenario_id, layout=manifest.layout, weather=manifest.weather, seed=manifest.seed
+    )
     if manifest.scenario_file is not None:
         if epoch.objects.size(scenario_files.kept_name(manifest.scenario_file)) is None:
             raise Conflict(f"{which}: the scenario file it names is gone from the store")
@@ -339,7 +350,7 @@ def _carry_on(
         # The checkpoint is checked against its commit as it is read.
         data = epoch.checkpoint_at(frontier_s)
         assert data is not None  # check_resumable saw the last commit name one
-        end_s = scenario(simulator.catalogue, epoch.manifest().scenario_id).duration_days * DAY_S
+        end_s = _end_s(simulator, epoch.manifest())
         if frontier_s >= end_s:
             # Its last day was committed and the crash came before the epoch
             # was told it finished: nothing is left to work out.
@@ -366,6 +377,8 @@ def _drive(
         manifest.scenario_id,
         layout=manifest.layout,
         seed=manifest.seed,
+        weather=manifest.weather,
+        end_s=_end_s(simulator, manifest),
         seconds_per_day=driver.seconds_per_day
         if isinstance(driver, Paced)
         else DEFAULT_SECONDS_PER_DAY,
@@ -392,6 +405,14 @@ def _drive(
         status = Status.INTERRUPTED
         epoch.set_status(status)
     return status
+
+
+def _end_s(simulator: Simulator, manifest: EpochManifest) -> float:
+    """Where an epoch's run ends: where its manifest says, or for an epoch that
+    does not, its scenario's last day."""
+    if manifest.duration_s is not None:
+        return manifest.duration_s
+    return scenario(simulator.catalogue, manifest.scenario_id).run_length_s()
 
 
 def _days(run: Playback, after_s: float = 0.0) -> Iterable[float]:

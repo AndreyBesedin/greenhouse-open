@@ -337,8 +337,12 @@ class EpochManifest(BaseModel):
     layout: str
     status: Status = Status.QUEUED
     # How long the run lasts, in seconds, when its writer knows: what its
-    # progress is a part of.
+    # progress is a part of, and where its worker ends it, at most its
+    # scenario's days (decision 0075).
     duration_s: float | None = None
+    # The weather its run is under, by name, if it is not its scenario's own
+    # (decision 0075): none for its own, as every epoch before it was.
+    weather: str | None = None
     # When the epoch was started, when its writer says.
     created_at: datetime | None = None
     # When it was last put in line for a scheduler's worker, which is what brings it
@@ -1407,6 +1411,8 @@ class StoredRun(BaseModel):
     scenario_id: str
     seed: int | None
     layout: str
+    # The weather it is under, by name: none for its scenario's own.
+    weather: str | None = None
     status: Status
     # Whether the playback that computes it here holds its clock: the status of
     # an epoch running, which only the process of that playback knows
@@ -1457,6 +1463,7 @@ def _shown(
         scenario_id=manifest.scenario_id,
         seed=manifest.seed,
         layout=manifest.layout,
+        weather=manifest.weather,
         status=manifest.status,
         frontier_s=frontier_s,
         duration_s=manifest.duration_s,

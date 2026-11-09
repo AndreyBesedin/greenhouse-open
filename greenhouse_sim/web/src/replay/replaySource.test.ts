@@ -9,7 +9,13 @@ const NO_PLAN = { targets: [], commands: [], crop: [] };
 describe("the scene a replay draws", () => {
   it("is the scenario's own run when it has its own seed and layout", () => {
     expect(
-      replaySource({ scenario_id: "climate_box", layout: "default", seed: null, ...NO_PLAN }),
+      replaySource({
+        scenario_id: "climate_box",
+        layout: "default",
+        seed: null,
+        weather: null,
+        ...NO_PLAN,
+      }),
     ).toEqual({
       kind: "scenario",
       scenarioId: "climate_box",
@@ -22,6 +28,7 @@ describe("the scene a replay draws", () => {
       scenario_id: "climate_box",
       layout: "default",
       seed: 7,
+      weather: null,
       ...NO_PLAN,
     });
 
@@ -32,11 +39,23 @@ describe("the scene a replay draws", () => {
     expect(scenarioRun(source).weather).toBe("default#7");
   });
 
+  it("is asked for under the weather a run was started with, its seed after it", () => {
+    const under = { scenario_id: "climate_box", layout: "default", ...NO_PLAN };
+
+    expect(replaySource({ ...under, seed: null, weather: "cold_spring_day" })).toMatchObject({
+      weather: "cold_spring_day",
+    });
+    expect(replaySource({ ...under, seed: 7, weather: "cold_spring_day" })).toMatchObject({
+      weather: "cold_spring_day#7",
+    });
+  });
+
   it("keeps the layout a run was started with", () => {
     const source = replaySource({
       scenario_id: "climate_box",
       layout: "default~heater:-1.0:0.5",
       seed: null,
+      weather: null,
       ...NO_PLAN,
     });
 
@@ -45,7 +64,7 @@ describe("the scene a replay draws", () => {
 });
 
 describe("a replay's plan", () => {
-  const own = { scenario_id: "box", layout: "default", seed: null };
+  const own = { scenario_id: "box", layout: "default", seed: null, weather: null };
   const none = { targets: [], commands: [], crop: [] };
   const planned = {
     targets: [[60, "heating_day", 23]] as [number, string, number][],
