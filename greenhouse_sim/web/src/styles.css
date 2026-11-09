@@ -985,13 +985,6 @@
   vector-effect: non-scaling-stroke;
 }
 
-.timeline-plan-to-come {
-  stroke: var(--chart-strong);
-  stroke-width: 1;
-  stroke-dasharray: 2 2;
-  vector-effect: non-scaling-stroke;
-}
-
 .timeline-plan {
   margin: var(--space-2) 0 0;
   padding-left: 1.5em;

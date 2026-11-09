@@ -554,10 +554,9 @@ const BUILT = new Set([
   "seen-arrow",
   "seen-dot",
   "seen-line",
-  // `timeline-plan-${name}`, a followed run's plan lane's ticks (P13.8).
+  // `timeline-plan-${name}`, a replayed epoch's plan lane's ticks (P13.8).
   "timeline-plan-ran",
   "timeline-plan-not-ran",
-  "timeline-plan-to-come",
   // `landing-status-${run.status}`, a stored run's status on the landing page (P17.5).
   "landing-status-failed",
   "landing-status-interrupted",
@@ -657,8 +656,8 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
 // match nothing on the pages the no-tolerance baselines draw, and the guards below
 // read how a value is written, not which it is.
 const RESOLVED_DIGESTS = {
-  dark: "1512ede711742b1ced329ce4a0a1c4661e69cba635bd8a72ca1d11b4bae7ecc3",
-  light: "7e94cfc33a6719fedb0ce09d391de6704dc0d07accfeb8df4459cc603ba9f999",
+  dark: "4ace9fd54271a86d54fd92f7a565d52ab30d99c73ba9ebe3f6d87475de9cd9ae",
+  light: "b8c24ceb2db4669af5f7b5de66261a175f9609429f50024106b803eae6370cef",
 };
 type ThemeName = keyof typeof RESOLVED_DIGESTS;
 const STYLES_OF_THE_PAGES = withImports(ENTRY, (file) =>

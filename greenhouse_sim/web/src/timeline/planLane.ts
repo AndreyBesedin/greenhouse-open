@@ -1,40 +1,33 @@
 import { contractCheck } from "../loadJson";
-import { ACTION_STATE_SCHEMA } from "../plan/generated/actionStateSchema";
-import type { ActionRef, ActionState, ActionStateKind } from "../plan/generated/actionStateTypes";
 import { OUTCOME_BATCH_SCHEMA } from "../plan/generated/outcomeBatchSchema";
 import type {
   ActionOutcome,
+  ActionRef,
   OutcomeBatch,
   OutcomeStatus,
 } from "../plan/generated/outcomeBatchTypes";
 import type { Action, Harvest } from "../plan/generated/planTypes";
 
 /**
- * The plan lane of a run (P13.8): what its plans had due, what became of each
- * and why, as its outcome log says it, and what is still to come. A run
- * followed as it plays is read through the consumer interface
- * (`/consumer/v1`), and what is still to come as its gateway lists it
- * (`/actuation/v1`). A stored epoch replayed (P22.3, decision 0074) is read
- * through the run store, the outcomes its epoch delivered by the moment shown
- * (`/api/runs/{run}/epochs/{n}/outcomes?t=`); the store keeps no list of the
- * actions still to come, so its lane has none. Each is placed at its moment,
- * in seconds into the run, as the timeline places its events: an outcome where
- * its action started, or was resolved without starting; an action still to
- * come where it falls due.
+ * The plan lane of a stored epoch replayed (P13.8, P22.3, decision 0074): what
+ * its plans had due and what became of each and why, as the outcomes its epoch
+ * delivered by the moment shown say it, read through the run store
+ * (`/api/runs/{run}/epochs/{n}/outcomes?t=`). The store keeps no list of the
+ * actions still to come, so the lane has none. Each is placed at its moment, in
+ * seconds into the run, as the timeline places its events: where its action
+ * started, or was resolved without starting.
  */
 export interface PlanEntry {
-  /** Its moment, in seconds into the run; null for an action still to come
-   * as soon as it can, which has none yet. */
-  timeS: number | null;
+  /** Its moment, in seconds into the run. */
+  timeS: number;
   planId: string;
   /** Which action, as people spell it: `change_1`, `tick@3`. */
   ref: string;
   /** What it does, in words. */
   action: string;
-  /** What became of it, or, still to come, how it stands. */
-  status: OutcomeStatus | ActionStateKind;
+  /** What became of it. */
+  status: OutcomeStatus;
   reason: string | null;
-  resolved: boolean;
 }
 
 export type PlanLaneState =
@@ -43,17 +36,15 @@ export type PlanLaneState =
   | { status: "unavailable"; reason: string }
   | { status: "loaded"; entries: PlanEntry[] };
 
-/** The run whose plan lane is drawn: its identifier, its epoch, and the
- * instant its clock started at; and how many times the viewer has given it
- * a plan (`version`), so that the lane is read again after each, even at a
- * clock that does not move, as a paused run's does not. `stored` says it is a
- * stored epoch replayed, read through the run store. */
+/** The epoch whose plan lane is drawn: its run's identifier, its number, and
+ * the instant its clock started at; and how many times the viewer has given it
+ * a change (`version`), so that the lane is read again after each, even at a
+ * moment that does not move, as a paused replay's does not. */
 export interface PlanLaneRun {
   runId: string;
   epoch: number;
   startedAt: string;
   version?: number;
-  stored?: boolean;
 }
 
 /** What carried an action out, of the outcomes. */
@@ -64,11 +55,9 @@ export const RAN: ReadonlySet<string> = new Set(["executed", "late"]);
 const MOST_PAGES = 50;
 
 const checkBatch = contractCheck<OutcomeBatch>(OUTCOME_BATCH_SCHEMA, "the outcomes");
-const checkState = contractCheck<ActionState>(ACTION_STATE_SCHEMA, "an action");
 
-/** A run's plan lane: every outcome its log holds by its clock, and every
- * action still to come; for a stored epoch, the outcomes it delivered by
- * `atS`, seconds into the run. Every failure becomes a state. */
+/** An epoch's plan lane: the outcomes it delivered by `atS`, seconds into the
+ * run. Every failure becomes a state. */
 export async function loadPlanLane(
   run: PlanLaneRun,
   fetchFn: typeof fetch = fetch,
@@ -76,13 +65,9 @@ export async function loadPlanLane(
 ): Promise<PlanLaneState> {
   try {
     const outcomes = await allOutcomes(outcomesUrl(run, atS), fetchFn);
-    const toCome = run.stored === true ? [] : await actionsToCome(run.runId, fetchFn);
     return {
       status: "loaded",
-      entries: [
-        ...outcomes.map((outcome) => resolvedEntry(outcome, run.startedAt)),
-        ...toCome.map((state) => comingEntry(state, run.startedAt)),
-      ],
+      entries: outcomes.map((outcome) => entryOf(outcome, run.startedAt)),
     };
   } catch (error) {
     return {
@@ -92,14 +77,10 @@ export async function loadPlanLane(
   }
 }
 
-/** Where a run's outcomes after a cursor are read: through the consumer
- * interface for a run followed, through the store for a stored epoch, as
- * delivered by `atS`. */
+/** Where an epoch's outcomes after a cursor are read, as delivered by `atS`. */
 function outcomesUrl(run: PlanLaneRun, atS: number): (after: number) => string {
   const runId = encodeURIComponent(run.runId);
-  return run.stored === true
-    ? (after) => `/api/runs/${runId}/epochs/${run.epoch}/outcomes?after=${after}&t=${atS}`
-    : (after) => `/consumer/v1/runs/${runId}/outcomes?after=${after}`;
+  return (after) => `/api/runs/${runId}/epochs/${run.epoch}/outcomes?after=${after}&t=${atS}`;
 }
 
 async function allOutcomes(
@@ -117,14 +98,6 @@ async function allOutcomes(
     after = batch.next;
   }
   return outcomes;
-}
-
-async function actionsToCome(runId: string, fetchFn: typeof fetch): Promise<ActionState[]> {
-  const body = await read(`/actuation/v1/runs/${encodeURIComponent(runId)}/actions`, fetchFn);
-  if (!Array.isArray(body)) {
-    throw new Error("the run's actions are not what the viewer reads");
-  }
-  return body.map((each) => checked(each, checkState));
 }
 
 async function read(url: string, fetchFn: typeof fetch): Promise<unknown> {
@@ -146,7 +119,7 @@ function checked<T>(
   return read.value;
 }
 
-function resolvedEntry(outcome: ActionOutcome, startedAt: string): PlanEntry {
+function entryOf(outcome: ActionOutcome, startedAt: string): PlanEntry {
   return {
     timeS: secondsInto(startedAt, outcome.started_at ?? outcome.resolved_at),
     planId: outcome.plan_id,
@@ -154,21 +127,6 @@ function resolvedEntry(outcome: ActionOutcome, startedAt: string): PlanEntry {
     action: describeAction(outcome.action),
     status: outcome.status,
     reason: outcome.reason ?? null,
-    resolved: true,
-  };
-}
-
-function comingEntry(state: ActionState, startedAt: string): PlanEntry {
-  const due = state.due ?? null;
-  const at = due === null ? null : typeof due === "string" ? due : due.not_before;
-  return {
-    timeS: at === null ? null : secondsInto(startedAt, at),
-    planId: state.plan_id,
-    ref: refText(state.ref),
-    action: describeAction(state.action),
-    status: state.state,
-    reason: null,
-    resolved: false,
   };
 }
 
