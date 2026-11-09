@@ -22,6 +22,7 @@ from greenhouse_sim.scenarios.crop_parameters import (
     OrganCrop,
     ReducedTomgroCrop,
     SimpleCrop,
+    VanthoorKatzinCrop,
 )
 from greenhouse_sim.weather.recorded import RecordedWeather
 from greenhouse_sim.weather.seasonal import SeasonalWeather
@@ -75,9 +76,10 @@ class ScenarioConfig(BaseModel):
     crop_model: CropModel = CropModel.SIMPLE
     # Its crop model's parameters, of the model its rows grow: by default,
     # that model's own (`greenhouse_sim.scenarios.crop_parameters`).
-    crop: Annotated[SimpleCrop | OrganCrop | ReducedTomgroCrop, Field(discriminator="kind")] = (
-        SimpleCrop()
-    )
+    crop: Annotated[
+        SimpleCrop | OrganCrop | ReducedTomgroCrop | VanthoorKatzinCrop,
+        Field(discriminator="kind"),
+    ] = SimpleCrop()
     crop_work: CropWork = CropWork()
     # The daily walk through its crop's measurement errors.
     crop_walk: Annotated[CropWalk | CanopySample, Field(discriminator="kind")] = CropWalk()

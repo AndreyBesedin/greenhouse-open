@@ -8,7 +8,8 @@ export const BASIC_SETUP_SCHEMA = {
       "enum": [
         "simple",
         "organ",
-        "reduced_tomgro"
+        "reduced_tomgro",
+        "vanthoor_katzin"
       ],
       "title": "CropModel",
       "type": "string"

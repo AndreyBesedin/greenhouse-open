@@ -258,11 +258,12 @@
       "type": "object"
     },
     "CropModel": {
-      "description": "How a scenario's run grows its crop: plant by plant, by the simple\ndaily model (`greenhouse_sim.core.simple_crop`) or organ by organ\n(`greenhouse_sim.core.crop`); or by area, by Reduced-State TOMGRO\n(`greenhouse_sim.core.tomgro_crop`, decision 0060).",
+      "description": "How a scenario's run grows its crop: plant by plant, by the simple\ndaily model (`greenhouse_sim.core.simple_crop`) or organ by organ\n(`greenhouse_sim.core.crop`); or by area, by Reduced-State TOMGRO\n(`greenhouse_sim.core.tomgro_crop`) or Vanthoor's model as Katzin\nsimplified it (`greenhouse_sim.core.vanthoor_crop`, decision 0060).",
       "enum": [
         "simple",
         "organ",
-        "reduced_tomgro"
+        "reduced_tomgro",
+        "vanthoor_katzin"
       ],
       "title": "CropModel",
       "type": "string"
@@ -1257,6 +1258,38 @@
       "title": "UniformAirflow",
       "type": "object"
     },
+    "VanthoorKatzinCrop": {
+      "additionalProperties": false,
+      "description": "The settings of Vanthoor's model as Katzin simplified it, grown by\narea (`greenhouse_sim.biology.tomato.vanthoor`, decisions 0060 and\n0062): the published parameter set it runs, GreenLight 2.0.7's, the\ndriver profile, named and versioned, through which the run gives it its\ndrivers (`greenhouse_sim.core.drivers`), and the height above its\nplanting positions at which the light above its canopy is read, which\nthe model does not grow: the run's choice, in m, not the model's.",
+      "properties": {
+        "parameter_set": {
+          "const": "greenlight_2_0_7",
+          "default": "greenlight_2_0_7",
+          "title": "Parameter Set",
+          "type": "string"
+        },
+        "driver_profile": {
+          "const": "house_hours",
+          "default": "house_hours",
+          "title": "Driver Profile",
+          "type": "string"
+        },
+        "driver_profile_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Driver Profile Version",
+          "type": "integer"
+        },
+        "canopy_height_m": {
+          "default": 2.0,
+          "exclusiveMinimum": 0,
+          "title": "Canopy Height M",
+          "type": "number"
+        }
+      },
+      "title": "VanthoorKatzinCrop",
+      "type": "object"
+    },
     "Vector3": {
       "properties": {
         "x": {
@@ -1673,6 +1706,21 @@
                 },
                 "parameters": {
                   "$ref": "#/$defs/ReducedTomgroCrop"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "vanthoor_katzin"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/VanthoorKatzinCrop"
                 }
               }
             }
