@@ -8,5 +8,10 @@ call for that is not part of the packages: nothing in `greenhouse_sim`,
   their own, each compared with a pinned reference implementation on the
   same drivers (decision 0060, milestone A). `tests/test_reproductions.py`
   holds each to its reference.
+- [`integrations/`](integrations/): what the run's way of driving a
+  reproduced model changes of it (decision 0062, milestone B), measured
+  against the reproduction's forcing and against a reference's
+  greenhouse. [`driver_profiles/`](integrations/driver_profiles/README.md)
+  measures the first driver profile for both tomato models.
 
 The memos that plan this work are in [`docs/research/`](../docs/research/README.md).

@@ -10,7 +10,8 @@ asks for both. Reduced-State TOMGRO's season is documented with
 
 Every number here is a prediction, not validated on measured data
 (milestone C). It holds for the version of each model and driver profile
-named, and a test holds it to the run.
+named. A test holds the season's numbers to the run; the measurement's
+are recorded, not held.
 
 ## Vanthoor's model in a season
 
@@ -81,5 +82,34 @@ reproduction does not cover:
   coupling is one-way;
 - each driver is the hour's mean, held through the hour.
 
-How far that profile moves the model from its reproduction's forcing is
-still to be measured, as milestone B asks.
+How far that profile moves each model is measured below.
+
+## What the driver profile changes
+
+[`research/integrations/driver_profiles`](../../research/integrations/driver_profiles/README.md)
+measures the `house_hours` profile, version 1, for both models, as
+decision 0062 asks: against each reproduction's own forcing, and with a
+canopy's temperature. The canopy's temperature comes from GreenLight's own
+greenhouse, simulated through 109 days of a Dutch winter under
+high-pressure sodium lamps. There the canopy is 0.40 °C cooler than the
+air on average, from 3.1 °C cooler to 5.9 °C warmer.
+
+- **Hour means** in place of the reference's resolution:
+  - Vanthoor's model moves by up to 0.68% of a mass on its reproduction's
+    season, held by `test_vanthoor.py`. In GreenLight's greenhouse it moves
+    by 0.23 g CH₂O m⁻² of any mass at most, and 0.10% of its harvest.
+  - Reduced-State TOMGRO does not move: its reference takes hourly
+    values.
+- **The air's temperature for the canopy's:**
+  - Vanthoor's model reads the canopy's, which the profile replaces. Its
+    temperature sum runs 2.1% ahead by day 109, its stems end 1.4%
+    lighter, and its harvest is 0.12% ahead. The fruit grows faster early,
+    by up to 4.5 g CH₂O m⁻².
+  - Reduced-State TOMGRO reads the air's, which the profile gives as it
+    is. Given the canopy's instead, as a sensitivity, its fruit ends 7.5%
+    lighter and its mature fruit 9.9%.
+
+That is one simulated greenhouse and season. A sunlit, vented house moves
+its canopy from its air otherwise, and no test holds these numbers: the
+simulation is GreenLight's, of its publisher's weather, and is not
+committed.
