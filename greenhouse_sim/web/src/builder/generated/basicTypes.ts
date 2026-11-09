@@ -5,9 +5,10 @@
  * How a scenario's run grows its crop: plant by plant, by the simple
  * daily model (`greenhouse_sim.core.simple_crop`) or organ by organ
  * (`greenhouse_sim.core.crop`); or by area, by Reduced-State TOMGRO
- * (`greenhouse_sim.core.tomgro_crop`, decision 0060).
+ * (`greenhouse_sim.core.tomgro_crop`) or Vanthoor's model as Katzin
+ * simplified it (`greenhouse_sim.core.vanthoor_crop`, decision 0060).
  */
-export type CropModel = "simple" | "organ" | "reduced_tomgro";
+export type CropModel = "simple" | "organ" | "reduced_tomgro" | "vanthoor_katzin";
 
 /**
  * The values of the builder's first form, in metres. Each field's title

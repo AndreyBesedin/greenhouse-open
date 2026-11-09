@@ -9,11 +9,13 @@ class CropModel(StrEnum):
     """How a scenario's run grows its crop: plant by plant, by the simple
     daily model (`greenhouse_sim.core.simple_crop`) or organ by organ
     (`greenhouse_sim.core.crop`); or by area, by Reduced-State TOMGRO
-    (`greenhouse_sim.core.tomgro_crop`, decision 0060)."""
+    (`greenhouse_sim.core.tomgro_crop`) or Vanthoor's model as Katzin
+    simplified it (`greenhouse_sim.core.vanthoor_crop`, decision 0060)."""
 
     SIMPLE = "simple"
     ORGAN = "organ"
     REDUCED_TOMGRO = "reduced_tomgro"
+    VANTHOOR_KATZIN = "vanthoor_katzin"
 
 
 class FruitStatus(StrEnum):

@@ -76,11 +76,15 @@ data.
    the declared tolerances.
    Of milestone B, Reduced-State TOMGRO is a crop model of the run, grown
    in the TOMGRO house's documented season ([P14.10](archive/p14-models-by-manifest.md#steps)).
-   Left here when P14 closed, on 2026-11-06: Vanthoor's model registered,
-   chosen by a manifest and shown in a documented scenario, its rung
-   (`core.vanthoor_crop.VanthoorRung`) already held to its reproduction on
-   every state and hour; and, for both models, each driver profile's effect
-   measured against the reproduction's forcing, with the canopy's
+   Vanthoor's model is one too: registered as `vanthoor_katzin`, version
+   1, with GreenLight 2.0.7's parameters and the `house_hours` driver
+   profile, version 1, chosen by a manifest, checkpointed and replayed,
+   and held to its conformance tests (`test_crop_models.py`,
+   `test_area_crop.py`, `test_run_vanthoor.py`); its rung
+   (`core.vanthoor_crop.VanthoorRung`) is held to its reproduction on
+   every state and hour (`test_vanthoor.py`). Left: Vanthoor's model shown
+   in a documented scenario; and, for both models, each driver profile's
+   effect measured against the reproduction's forcing, with the canopy's
    temperature, as decision 0062 asks.
 5. **Validate on measured data, as a workflow others can repeat.** Begin
    with the WUR AGC4 dataset, through its adapter, where what it measures
