@@ -112,7 +112,9 @@ test("the bare address is the page where a person decides what to do", async ({ 
   expect(errors).toEqual([]);
 });
 
-test("a scenario is searched for and opened in the viewer", async ({ page }) => {
+test("a scenario is searched for, and a new scenario made from it in the builder", async ({
+  page,
+}) => {
   await page.goto(LANDING_PATH);
   const search = page.getByRole("combobox", { name: "Scenario" });
 
@@ -122,13 +124,19 @@ test("a scenario is searched for and opened in the viewer", async ({ page }) => 
   await expect(page.getByRole("option")).toHaveCount(2);
   await search.press("Enter");
 
-  // The scenario's runs are in a dialog, from which the viewer opens on it.
+  // The scenario's runs are in a dialog, which offers no way to the viewer but
+  // its runs (P22.4), and a new scenario from it with another crop or season.
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByRole("heading")).toContainText("Climate box");
-  await dialog.getByRole("link", { name: "Open in the viewer" }).click();
+  await expect(dialog.getByRole("heading", { level: 2 })).toContainText("Climate box");
+  await expect(dialog.getByRole("link", { name: "Open in the viewer" })).toHaveCount(0);
+  await dialog.getByRole("button", { name: "New run" }).click();
+  await expect(dialog.getByText(/^Its crop: 32 plants/)).toBeVisible();
+  await dialog.getByRole("link", { name: "Make a new scenario from this one" }).click();
 
-  await expect(page).toHaveURL(/\/view\?scenario=climate_box$/);
-  await expect(page.locator("canvas")).toBeVisible();
+  await expect(page).toHaveURL(/\/builder#copy=climate_box$/);
+  const copy = page.getByRole("form", { name: "Or copy a scenario's house" });
+  await expect(copy.getByLabel("Scenario")).toHaveValue("climate_box");
+  await expect(copy.getByLabel("The copy's identifier")).toHaveValue("climate_box_copy");
 });
 
 test("a search offers first the scenarios it names, before those it is only a word of", async ({

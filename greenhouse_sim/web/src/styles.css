@@ -1950,14 +1950,6 @@
   background: var(--surface-panel);
 }
 
-.landing-field {
-  display: grid;
-  gap: var(--space-3);
-  font-size: var(--font-sm);
-  font-weight: 600;
-  color: var(--text-soft);
-}
-
 /* What stands in for a value left empty: fainter than a value entered, and read
  * as text. `styles.test.ts` holds its contrast in both themes. */
 .landing-form .landing-input::placeholder {
@@ -1965,17 +1957,25 @@
   opacity: 0.85;
 }
 
-/* The seed, on a line of its own beside what leaving it empty means. */
-.landing-seed {
+/* The scenario's crop, and the way to another, on the form's first line; the seed,
+ * small, on a line of its own over what leaving it empty means. */
+.landing-crop {
   display: flex;
   flex-basis: 100%;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-3) var(--space-5);
+  align-items: center;
+  gap: var(--space-4);
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--text-soft);
 }
 
-.landing-seed .landing-note {
-  flex: 1 1 240px;
+.landing-seed {
+  flex-basis: 100%;
+}
+
+.landing-seed .landing-input {
+  width: 12ch;
 }
 
 .landing-note {

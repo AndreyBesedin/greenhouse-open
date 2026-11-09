@@ -16,15 +16,19 @@ const IDENTIFIER = new RegExp(BASIC_SETUP_SCHEMA.properties.installation_id.patt
  */
 export function CopyScenario({
   scenarios,
+  first = "",
   busy,
   onCopy,
 }: {
   scenarios: readonly ScenarioSummary[];
+  /** The scenario chosen as it opens, as a runs dialog asks (P22.4): by
+   * default, none: the first listed. */
+  first?: string;
   busy: boolean;
   onCopy: (scenario: ScenarioSummary, draftId: string) => void;
 }) {
   const heading = useId();
-  const [chosen, setChosen] = useState("");
+  const [chosen, setChosen] = useState(first);
   const [draftId, setDraftId] = useState("");
   const scenario = scenarios.find((each) => each.id === chosen) ?? scenarios[0];
   if (scenario === undefined) {
