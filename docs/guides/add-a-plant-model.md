@@ -72,7 +72,11 @@ TOMGRO is the first (`greenhouse_sim/greenhouse_sim/core/tomgro_crop.py`),
 held to its reproduction's reference by
 `greenhouse_sim/tests/test_tomgro.py`, to the contract by
 `greenhouse_sim/tests/test_area_crop.py`, and to a scenario's run by
-`greenhouse_sim/tests/test_run_tomgro.py`. What is measured of it is a
+`greenhouse_sim/tests/test_run_tomgro.py`. Vanthoor's model as Katzin
+simplified it is the second, at an hour's step
+(`greenhouse_sim/greenhouse_sim/core/vanthoor_crop.py`,
+`greenhouse_sim/tests/test_vanthoor.py` and
+`greenhouse_sim/tests/test_run_vanthoor.py`). What is measured of it is a
 measurement model's, a model of the crop walk's part that a manifest chooses
 ([decision 0062](../decisions/0062-a-crop-model-declares-its-scope-drivers-outputs-and-capabilities.md)):
 its `AreaAdapter.sampled` says what a sample reads of a state, in its own

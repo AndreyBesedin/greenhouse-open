@@ -18,9 +18,15 @@ from pydantic import ValidationError
 
 from greenhouse_sim.climate.control import Control, HeatingLoop
 from greenhouse_sim.climate.settings import GridAir, WholeHouseAir
+from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED
-from greenhouse_sim.scenarios.crop_parameters import RETIRED, CropWalk, SimpleCrop
+from greenhouse_sim.scenarios.crop_parameters import (
+    RETIRED,
+    CropWalk,
+    SimpleCrop,
+    VanthoorKatzinCrop,
+)
 from greenhouse_sim.scenarios.layout_files import load_layout
 from greenhouse_sim.scenarios.manifest_files import (
     FIRST_SCENARIO,
@@ -239,7 +245,8 @@ def test_a_format_3_manifest_names_its_crop_and_is_called_by_its_name_or_identif
     with pytest.raises(InvalidManifest, match="a crop's variety is named, not ''"):
         scenario_from_manifest("climate_box", older | {"variety": ""})
     with pytest.raises(
-        InvalidManifest, match="a crop model is one of simple, organ, reduced_tomgro, not 'tree'"
+        InvalidManifest,
+        match="a crop model is one of simple, organ, reduced_tomgro, vanthoor_katzin, not 'tree'",
     ):
         scenario_from_manifest("climate_box", older | {"crop_model": "tree"})
     with pytest.raises(InvalidManifest, match=r"a crop model is one of .*, not \['organ'\]"):
@@ -480,6 +487,32 @@ def test_each_parts_model_and_its_parameters_are_read_from_its_section() -> None
     # weather left out, the climate box's runs are under a constant one.
     del document["models"]["weather"]
     assert scenario_from_manifest("climate_box", document).weather.kind == "constant"
+
+
+def test_a_manifest_chooses_vanthoors_model_for_its_rows_and_its_parameters() -> None:
+    """Grown by area (decision 0062), its parameter set and driver profile
+    named, its canopy's height the manifest's; a set it does not have is
+    refused."""
+    document = _manifest("climate_box")
+    rows = [
+        crop | {"crop_model": "vanthoor_katzin"} for crop in document["installation"]["row_crops"]
+    ]
+    chosen = _models(
+        _installation(document, row_crops=rows),
+        crop={"model": "vanthoor_katzin", "parameters": {"canopy_height_m": 1.5}},
+    )
+
+    config = scenario_from_manifest("climate_box", chosen)
+
+    assert config.crop_model == CropModel.VANTHOOR_KATZIN
+    assert config.crop == VanthoorKatzinCrop(canopy_height_m=1.5)
+    assert (config.crop.parameter_set, config.crop.driver_profile) == (
+        "greenlight_2_0_7",
+        "house_hours",
+    )
+    unknown = {"model": "vanthoor_katzin", "parameters": {"parameter_set": "x"}}
+    with pytest.raises(InvalidManifest, match="parameter_set"):
+        scenario_from_manifest("climate_box", _models(chosen, crop=unknown))
 
 
 def test_a_part_with_one_model_and_no_parameters_is_named_or_left_out() -> None:

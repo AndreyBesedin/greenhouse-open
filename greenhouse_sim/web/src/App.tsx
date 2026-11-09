@@ -47,6 +47,7 @@ import type { ViewSample } from "./readouts";
 import { type SteeredEpoch, saysSteering } from "./replay/changes";
 import { EpochSteering } from "./replay/EpochSteering";
 import type { ForkChange } from "./replay/fork";
+import { ReplayPlantActions } from "./replay/ReplayPlantActions";
 import { forkMoment, forkMomentNamed, withPlanOf } from "./replay/replaySource";
 import { ScenarioPanels } from "./ScenarioPanels";
 import { WhatAmISeeing } from "./SeenInTheView";
@@ -68,7 +69,7 @@ import { useDrawnSnapshot } from "./scene/useDrawnSnapshot";
 import { useFollow, withoutRunChanges } from "./scene/useFollow";
 import { useFollowFraming, useOpeningFrame } from "./scene/useFollowFraming";
 import { useMoveDrag } from "./scene/useMoveDrag";
-import { useReplayMoment } from "./scene/useReplayMoment";
+import { type PlayedPace, useReplayMoment } from "./scene/useReplayMoment";
 import { useSceneLoads } from "./scene/useSceneLoads";
 import { type SetSource, useSource } from "./scene/useSource";
 import { entityOfOrgan, organOf, plantOf, selectedEntity } from "./selection";
@@ -78,6 +79,7 @@ import { cameraOf } from "./sensors/camera";
 import { SensorPanel } from "./sensors/SensorPanel";
 import { useSensorReadings } from "./sensors/useSensorReadings";
 import { useSimulatorTime } from "./simulatorTime";
+import type { PlanLaneRun } from "./timeline/planLane";
 import { drawn, failed, failureOf, useLoad } from "./useLoad";
 import { Viewport } from "./Viewport";
 import { useWeatherLoads } from "./weather/useWeatherLoads";
@@ -98,6 +100,8 @@ export function App({
   replay?: {
     source: SceneSource;
     momentS: number | null;
+    /** How the position plays, while it does: the field is asked for ahead of it. */
+    pace?: PlayedPace | null;
     /** Moves the position, which is what moves the moment in a replay. */
     seek: (timeS: number) => void;
     /** A change in the panels, which draws another run than the one replayed
@@ -112,6 +116,8 @@ export function App({
      * while it is, a change steers it in place of a fork. What was given it
      * stays said once it has ended, and the changes after that fork it. */
     steer: SteeredEpoch;
+    /** The epoch replayed, whose plan lane the timeline draws (P22.3). */
+    lane: PlanLaneRun;
   };
 }) {
   const [addressed, setAddressed] = useSource(replay?.source);
@@ -246,6 +252,7 @@ export function App({
   // A run replayed from the store is drawn at the moment its position stands at.
   useReplayMoment({
     momentS: replay?.momentS ?? null,
+    pace: replay?.pace ?? null,
     source,
     setSource,
     field: fieldName,
@@ -376,6 +383,18 @@ export function App({
     onStart: () => setPlacingProbes(false),
   });
   const movePanel = movePanelProps === null ? null : <MovePanel {...movePanelProps} />;
+  // A plant's work in a replay (P22.3): asked of the epoch while it is computed,
+  // a fork from the moment shown once it has ended.
+  const replayedWork = replay !== undefined && (
+    <ReplayPlantActions
+      entity={selected}
+      computing={steersNow}
+      onWork={(action) => steering.act([cropAction(action)])}
+      onFork={(action) =>
+        replay.forkWith({ kind: "work", actions: [cropAction(action)] }, forkFrom)
+      }
+    />
+  );
 
   // The run's observation log while a sensor or a camera is selected.
   const sensors = useSensorReadings(selected, run, qaMode);
@@ -560,14 +579,16 @@ export function App({
                       },
                     })}
                 played={
-                  followed !== null && playback.status === "loaded"
-                    ? {
-                        runId: playback.state.runId,
-                        epoch: playback.state.epoch,
-                        startedAt: playback.state.startedAt,
-                        version: steering.given,
-                      }
-                    : null
+                  replay !== undefined
+                    ? { ...replay.lane, version: steering.given }
+                    : followed !== null && playback.status === "loaded"
+                      ? {
+                          runId: playback.state.runId,
+                          epoch: playback.state.epoch,
+                          startedAt: playback.state.startedAt,
+                          version: steering.given,
+                        }
+                      : null
                 }
                 momentFailed={momentFailed}
                 fieldView={fieldView}
@@ -587,14 +608,18 @@ export function App({
               >
                 {/* One child or none: a card is drawn only with something in it. */}
                 {steeredEpoch !== null && saysSteering(steersNow, steering) ? (
-                  <EpochSteering
-                    computing={steersNow}
-                    waiting={steering.waiting > 0}
-                    taken={steering.taken}
-                    refusal={steering.refusal}
-                  />
+                  <>
+                    <EpochSteering
+                      computing={steersNow}
+                      waiting={steering.waiting > 0}
+                      taken={steering.taken}
+                      refusal={steering.refusal}
+                    />
+                    {replayedWork}
+                  </>
                 ) : (
-                  followed !== null && (
+                  replayedWork ||
+                  (followed !== null && (
                     <>
                       <PlaybackPanel
                         load={playback}
@@ -632,7 +657,7 @@ export function App({
                         onAct={(action) => steering.act([cropAction(action)])}
                       />
                     </>
-                  )
+                  ))
                 )}
               </ScenarioPanels>
             )}

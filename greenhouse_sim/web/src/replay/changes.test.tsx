@@ -123,8 +123,18 @@ describe("the changes asked for what the panels set", () => {
     ]);
   });
 
+  it("are a plant's work together, beside the levels (P22.3)", () => {
+    const lower = { kind: "lower", plant_id: "p30", by_internodes: 1 } as const;
+    const leaf = { kind: "remove_leaf", plant_id: "p30", leaf_id: "p30_l2" } as const;
+
+    expect(changesFor([lower, setLevel("fan", 1), leaf])).toEqual([
+      { kind: "levels", levels: { fan: 1 } },
+      { kind: "work", actions: [lower, leaf] },
+    ]);
+  });
+
   it("are none for what a replay does not steer", () => {
-    expect(changesFor([{ kind: "lower", plant_id: "p30", by_internodes: 1 }])).toBeNull();
+    expect(changesFor([{ kind: "water", plant_id: "p30", amount_ml: 500 }])).toBeNull();
     expect(changesFor([{ kind: "set_level", device_id: "heater", level: "auto" }])).toBeNull();
   });
 });
@@ -149,6 +159,37 @@ describe("giving a running epoch what its replay's panels set", () => {
       { url: CHANGES_URL, body: { kind: "targets", targets: { heating_day: 24 } } },
     ]);
     expect(run.reads()).toBe(2);
+  });
+
+  it("asks a plant's work of the epoch as a plan of the viewer's own, as soon as it can", async () => {
+    vi.useFakeTimers();
+    const run = simulator({ status: 200, body: { request: REQUEST } }, [
+      changes({ log: [logged(REQUEST, 86_460)], done: [REQUEST] }),
+    ]);
+    const lower = { kind: "lower", plant_id: "p30", by_internodes: 1 } as const;
+
+    expect(await giveToEpoch("run 1", 2, [lower], run.fetchFn)).toEqual({
+      status: "given",
+      atS: 86_460,
+    });
+    const [asked] = run.asked;
+    expect(asked?.body).toEqual({
+      kind: "plan",
+      plan: {
+        plan_id: expect.stringMatching(/^plant_work_[0-9a-z]+$/),
+        run_id: "run 1",
+        epoch: 2,
+        revision: 1,
+        actions: [
+          {
+            action_id: "work_1",
+            action: lower,
+            timing: { kind: "asap" },
+            proposed_by: { kind: "person", id: "local_operator" },
+          },
+        ],
+      },
+    });
   });
 
   it("says the simulator's refusal, as of an epoch that ended before the change was asked", async () => {
@@ -215,7 +256,7 @@ describe("giving a running epoch what its replay's panels set", () => {
     const given = await giveToEpoch(
       "run 1",
       2,
-      [{ kind: "lower", plant_id: "p30", by_internodes: 1 }],
+      [{ kind: "water", plant_id: "p30", amount_ml: 500 }],
       run.fetchFn,
     );
 

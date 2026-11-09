@@ -114,6 +114,27 @@ class ReducedTomgroCrop(BaseModel):
     canopy_height_m: PositiveFloat = 2.0
 
 
+class VanthoorKatzinCrop(BaseModel):
+    """The settings of Vanthoor's model as Katzin simplified it, grown by
+    area (`greenhouse_sim.biology.tomato.vanthoor`, decisions 0060 and
+    0062): the published parameter set it runs, GreenLight 2.0.7's, the
+    driver profile, named and versioned, through which the run gives it its
+    drivers (`greenhouse_sim.core.drivers`), and the height above its
+    planting positions at which the light above its canopy is read, which
+    the model does not grow: the run's choice, in m, not the model's."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    BY_AREA: ClassVar[bool] = True
+
+    kind: Literal["vanthoor_katzin"] = "vanthoor_katzin"
+
+    parameter_set: Literal["greenlight_2_0_7"] = "greenlight_2_0_7"
+    driver_profile: Literal["house_hours"] = "house_hours"
+    driver_profile_version: Literal[1] = 1
+    canopy_height_m: PositiveFloat = 2.0
+
+
 class CropWalk(BaseModel):
     """The daily walk through the crop's measurement errors, on either
     crop's walk (`greenhouse_sim.services.crop_log`): the chance that a

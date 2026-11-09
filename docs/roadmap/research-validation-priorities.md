@@ -76,12 +76,22 @@ data.
    the declared tolerances.
    Of milestone B, Reduced-State TOMGRO is a crop model of the run, grown
    in the TOMGRO house's documented season ([P14.10](archive/p14-models-by-manifest.md#steps)).
-   Left here when P14 closed, on 2026-11-06: Vanthoor's model registered,
-   chosen by a manifest and shown in a documented scenario, its rung
-   (`core.vanthoor_crop.VanthoorRung`) already held to its reproduction on
-   every state and hour; and, for both models, each driver profile's effect
-   measured against the reproduction's forcing, with the canopy's
-   temperature, as decision 0062 asks.
+   Vanthoor's model is one too: registered as `vanthoor_katzin`, version
+   1, with GreenLight 2.0.7's parameters and the `house_hours` driver
+   profile, version 1, chosen by a manifest, checkpointed and replayed,
+   and held to its conformance tests (`test_crop_models.py`,
+   `test_area_crop.py`, `test_run_vanthoor.py`); its rung
+   (`core.vanthoor_crop.VanthoorRung`) is held to its reproduction on
+   every state and hour (`test_vanthoor.py`); and it is grown in the
+   Vanthoor house's documented season
+   ([the two tomato models in the run](../research/tomato-models-in-the-run.md)),
+   its outputs predictions. For both models, the first driver profile's
+   effect is measured against the reproduction's forcing and with a
+   canopy's temperature, simulated by GreenLight's greenhouse, as decision
+   0062 asks
+   ([`research/integrations/driver_profiles`](../../research/integrations/driver_profiles/README.md)).
+   Milestone B is done for both; their outputs stay predictions until
+   milestone C.
 5. **Validate on measured data, as a workflow others can repeat.** Begin
    with the WUR AGC4 dataset, through its adapter, where what it measures
    and its licence allow: inventory what it records (weather, climate,

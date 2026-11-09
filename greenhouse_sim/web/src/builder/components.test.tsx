@@ -148,7 +148,12 @@ describe("the builder's parts (P12.2)", () => {
       ".builder-give select option",
     );
 
-    expect([...options].map((each) => each.value)).toEqual(["simple", "organ", "reduced_tomgro"]);
+    expect([...options].map((each) => each.value)).toEqual([
+      "simple",
+      "organ",
+      "reduced_tomgro",
+      "vanthoor_katzin",
+    ]);
   });
 
   it("say whether a draft runs, its errors first", () => {

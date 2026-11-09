@@ -4,7 +4,7 @@ import { refusal } from "../builder/api";
 import { contractCheck } from "../loadJson";
 import type { Action } from "../plan/generated/planTypes";
 import type { Given } from "../plan/plan";
-import type { ForkChange } from "./fork";
+import { changeAsked, type ForkChange } from "./fork";
 import { CHANGE_ASKED_SCHEMA } from "./generated/changeAskedSchema";
 import type { ChangeAsked } from "./generated/changeAskedTypes";
 import { EPOCH_CHANGES_SCHEMA } from "./generated/epochChangesSchema";
@@ -66,18 +66,24 @@ export function whatBecameOf(changes: EpochChanges, request: string): Taken {
       };
 }
 
+// What a plant's buttons ask for (`cropAction`): the work of the run's crew.
+const PLANT_WORK: ReadonlySet<Action["kind"]> = new Set(["remove_leaf", "harvest", "lower"]);
+
 /** The changes a replay asks for the actions the panels set: levels together,
- * targets together. None for an action an epoch is not asked through its
- * replay, such as a plant's work, which only the viewer's own play offers, or
- * a device handed back to its controller. */
+ * targets together, a plant's work together (P22.3). None for an action an
+ * epoch is not asked through its replay, such as a device handed back to its
+ * controller. */
 export function changesFor(actions: readonly Action[]): ForkChange[] | null {
   const levels: Record<string, number> = {};
   const targets: Record<string, number> = {};
+  const work: Action[] = [];
   for (const action of actions) {
     if (action.kind === "set_level" && action.level !== "auto") {
       levels[action.device_id] = action.level;
     } else if (action.kind === "set_target") {
       targets[action.target] = action.value_c;
+    } else if (PLANT_WORK.has(action.kind)) {
+      work.push(action);
     } else {
       return null;
     }
@@ -85,6 +91,7 @@ export function changesFor(actions: readonly Action[]): ForkChange[] | null {
   return [
     ...(Object.keys(levels).length === 0 ? [] : [{ kind: "levels" as const, levels }]),
     ...(Object.keys(targets).length === 0 ? [] : [{ kind: "targets" as const, targets }]),
+    ...(work.length === 0 ? [] : [{ kind: "work" as const, actions: work }]),
   ];
 }
 
@@ -106,7 +113,7 @@ export async function askOfEpoch(
   try {
     const response = await fetchFn(changesUrl(runId, epoch), {
       method: "POST",
-      body: JSON.stringify(change),
+      body: JSON.stringify(changeAsked(change, runId, epoch)),
     });
     if (!response.ok) {
       return { status: "refused", reason: await refusal(response) };
@@ -186,7 +193,10 @@ export async function giveToEpoch(
 ): Promise<Given> {
   const changes = changesFor(actions);
   if (changes === null) {
-    return { status: "refused", reason: "a replay steers a run's levels and targets only" };
+    return {
+      status: "refused",
+      reason: "a replay steers a run's levels, its targets and its plants' work only",
+    };
   }
   let atS: number | undefined;
   for (const change of changes) {
