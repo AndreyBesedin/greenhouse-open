@@ -1943,7 +1943,7 @@
 .landing-form {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: var(--space-5) var(--space-7);
   padding: var(--space-6) var(--space-7);
   border-bottom: 1px solid var(--border);
@@ -1988,7 +1988,7 @@
 }
 
 .landing-seed .landing-input {
-  width: 12ch;
+  width: 22ch;
 }
 
 .landing-note {
