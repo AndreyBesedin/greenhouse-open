@@ -129,7 +129,10 @@ test("a scenario is searched for, and a new scenario made from it in the builder
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("heading", { level: 2 })).toContainText("Climate box");
   await expect(dialog.getByRole("link", { name: "Open in the viewer" })).toHaveCount(0);
-  await dialog.getByRole("button", { name: "New run" }).click();
+  // It leads with the form for a new run, open from the start, and lists the runs under it.
+  await expect(dialog.getByRole("button", { name: "New run" })).toHaveCount(0);
+  await expect(dialog.getByRole("form", { name: "New run" })).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "Its runs" })).toBeVisible();
   await expect(dialog.getByText(/^Its crop: 32 plants/)).toBeVisible();
   await dialog.getByRole("link", { name: "Make a new scenario from this one" }).click();
 
@@ -177,7 +180,7 @@ test("a dialog closed by its button gives focus back to the search, with its lis
   await search.fill("climate_box");
   await search.press("Enter");
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByRole("heading")).toContainText("Climate box");
+  await expect(dialog.getByRole("heading", { level: 2 })).toContainText("Climate box");
 
   await dialog.getByRole("button", { name: "Close" }).click();
 
@@ -193,7 +196,9 @@ test("a dialog closed by Escape gives focus back to the search, with its list sh
   const search = page.getByRole("combobox", { name: "Scenario" });
   await search.fill("climate_box");
   await search.press("Enter");
-  await expect(page.getByRole("dialog").getByRole("heading")).toContainText("Climate box");
+  await expect(page.getByRole("dialog").getByRole("heading", { level: 2 })).toContainText(
+    "Climate box",
+  );
 
   await page.keyboard.press("Escape");
 
@@ -213,9 +218,8 @@ test("a run is started at a seed from a scenario's dialog, listed, and not remov
   await search.fill("solar_lab");
   await search.press("Enter");
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByRole("heading")).toContainText("Solar");
+  await expect(dialog.getByRole("heading", { level: 2 })).toContainText("Solar");
 
-  await dialog.getByRole("button", { name: "New run" }).click();
   // Exactly: the runs of the scenario that other specs have started have labels that say a seed.
   await dialog.getByLabel("Seed", { exact: true }).fill("7");
   // Long enough not to end while this looks at it; it is stopped at the end.
@@ -324,7 +328,6 @@ test("a run refused for a limit says so in the simulator's words where it was as
 
   await page.goto(runsAddress(SCENARIO_ID));
   const dialog = page.getByRole("dialog");
-  await dialog.getByRole("button", { name: "New run" }).click();
   await dialog.getByRole("button", { name: "Start run" }).click();
   const refused = dialog.getByRole("alert");
   await expect(refused).toHaveText(`Not started: ${waiting}.`);

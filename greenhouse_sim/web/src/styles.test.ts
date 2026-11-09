@@ -657,8 +657,8 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
 // match nothing on the pages the no-tolerance baselines draw, and the guards below
 // read how a value is written, not which it is.
 const RESOLVED_DIGESTS = {
-  dark: "8c9c4874e8856b82d51ce5a09736e2756fa16a2e498f57719b97823f11e8adbd",
-  light: "83e093a7f6d5df5fc9d655531d08e6e2bf0d61cdb1de0e0b092a3da59e948586",
+  dark: "41a7934953d841e52775919ba07972b81efa356723d8e84834358f54945efbdf",
+  light: "b20a9e99f3db565e4577f0f932ee2caee89c8a4d3076eaf045df266dc621339b",
 };
 type ThemeName = keyof typeof RESOLVED_DIGESTS;
 const STYLES_OF_THE_PAGES = withImports(ENTRY, (file) =>
