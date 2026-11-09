@@ -356,9 +356,7 @@ describe("the runs of a scenario, in a dialog", () => {
       const pace = field("Seconds to compute a day");
 
       const note = container.querySelector(`[id="${pace.getAttribute("aria-describedby")}"]`);
-      expect(note?.textContent).toBe(
-        "The run's own clock: a day takes no less. Its replay shows the days at a speed of its own.",
-      );
+      expect(note?.textContent).toBe("A day takes no less. Its replay has a speed of its own.");
       expect(pace.placeholder).toBe("As fast as it computes");
     });
 
