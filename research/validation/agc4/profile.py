@@ -25,7 +25,6 @@ A cell that is empty, or holds `NaN`, holds no value.
 
 import argparse
 import csv
-import hashlib
 import io
 import itertools
 import json
@@ -40,22 +39,27 @@ from pathlib import Path
 from typing import Any, Final
 
 import openpyxl
-from greenhouse_adapters.manifests import DatasetManifest, load_manifest
+from greenhouse_adapters.manifests import load_manifest
 from greenhouse_adapters.storage.layout import DataDirectory
 
-CHALLENGE: Final = "wur_agc4-challenge-2024"
-PRETRIAL: Final = "wur_agc4-pretrial-2023"
-CHALLENGE_ARCHIVE: Final = "autonomous_greenhouse_challenge4_timeseries.zip"
-PRETRIAL_ARCHIVE: Final = "4th_autonomous_greenhouse_challenge_dwarf_tomato_pretrial_Timeseries.zip"
+from research.validation.agc4.archives import (
+    CHALLENGE,
+    CHALLENGE_ARCHIVE,
+    PRETRIAL,
+    PRETRIAL_ARCHIVE,
+    PRETRIAL_CLIMATE,
+    PRETRIAL_CLIMATE_SHEET,
+    archive_path,
+    holds,
+    members,
+    provenance,
+)
+
 HARVEST_WORKBOOK: Final = "Harvest.xlsx"
-PRETRIAL_CLIMATE: Final = "ClimateTimeseries.xlsx"
-PRETRIAL_CLIMATE_SHEET: Final = "weather_climate"
 # The pre-trial's climate sheet stamps each row in this column, in local
 # time; it and the other two say the same moment, and are not profiled.
 PRETRIAL_TIME_COLUMN: Final = "date"
 PRETRIAL_STAMPS: Final = frozenset({"datenum", PRETRIAL_TIME_COLUMN, "time"})
-# What the archives' authors wrote where a value is missing, beside an empty cell.
-NO_VALUE: Final = frozenset({"", "nan"})
 # A column with no more values than this lists them: states, flags and steps.
 FEW_VALUES: Final = 10
 SHARE_DIGITS: Final = 4
@@ -88,12 +92,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     data = DataDirectory(arguments.data_dir)
     profile = {
         CHALLENGE: {
-            **_provenance(load_manifest(CHALLENGE), CHALLENGE_ARCHIVE),
-            **profile_challenge(_archive(data, load_manifest(CHALLENGE), CHALLENGE_ARCHIVE)),
+            **provenance(load_manifest(CHALLENGE), CHALLENGE_ARCHIVE),
+            **profile_challenge(archive_path(data, CHALLENGE, CHALLENGE_ARCHIVE)),
         },
         PRETRIAL: {
-            **_provenance(load_manifest(PRETRIAL), PRETRIAL_ARCHIVE),
-            **profile_pretrial(_archive(data, load_manifest(PRETRIAL), PRETRIAL_ARCHIVE)),
+            **provenance(load_manifest(PRETRIAL), PRETRIAL_ARCHIVE),
+            **profile_pretrial(archive_path(data, PRETRIAL, PRETRIAL_ARCHIVE)),
         },
     }
     sys.stdout.write(written(profile) + "\n")
@@ -117,13 +121,13 @@ def written(value: object, depth: int = 0) -> str:
 def profile_challenge(archive: Path) -> Profile:
     """The 2024 archive: its CSVs, and its harvest workbook's sheets."""
     with zipfile.ZipFile(archive) as opened:
-        members = _members(opened)
+        names = members(opened)
         tables = {
             Path(name).name: _profile_csv(opened.read(name))
-            for name in members
+            for name in names
             if name.endswith(".csv")
         }
-        (harvest,) = [name for name in members if Path(name).name == HARVEST_WORKBOOK]
+        (harvest,) = [name for name in names if Path(name).name == HARVEST_WORKBOOK]
         workbook = openpyxl.load_workbook(io.BytesIO(opened.read(harvest)), data_only=True)
     return {"time_series": tables, "harvest": _profile_harvest(workbook)}
 
@@ -132,7 +136,7 @@ def profile_pretrial(archive: Path) -> Profile:
     """The 2023 archive: its climate sheet as a table, every other sheet's size."""
     workbooks: Profile = {}
     with zipfile.ZipFile(archive) as opened:
-        for name in _members(opened):
+        for name in members(opened):
             if not name.endswith(".xlsx"):
                 continue
             book = openpyxl.load_workbook(io.BytesIO(opened.read(name)), data_only=True)
@@ -172,7 +176,7 @@ def _profile_table(
     for index, name in enumerate(header):
         if index == 0 or name in PRETRIAL_STAMPS:
             continue
-        values = [row[index] for row in rows if index < len(row) and _holds(row[index])]
+        values = [row[index] for row in rows if index < len(row) and holds(row[index])]
         column: Profile = {
             "present": len(values),
             "missing_share": round(1 - len(values) / len(rows), SHARE_DIGITS) if rows else 1.0,
@@ -258,53 +262,12 @@ def _mean_of(rows: Sequence[Sequence[object]], column: int) -> float | None:
     return round(sum(numbers) / len(numbers), GRAMS_DIGITS) if numbers else None
 
 
-def _archive(data: DataDirectory, manifest: DatasetManifest, name: str) -> Path:
-    path = data.raw(manifest) / name
-    expected = manifest.artifact(name).md5
-    if not path.is_file():
-        raise SystemExit(
-            f"{path} is missing: `greenhouse-data prepare` downloads it at the dev profile"
-        )
-    if hashlib.md5(path.read_bytes(), usedforsecurity=False).hexdigest() != expected:
-        raise SystemExit(f"{path} does not match its manifest's checksum {expected}")
-    return path
-
-
-def _provenance(manifest: DatasetManifest, name: str) -> Profile:
-    return {
-        "doi": manifest.source.doi,
-        "licence": manifest.licence,
-        "archive": name,
-        "md5": manifest.artifact(name).md5,
-    }
-
-
-def _members(opened: zipfile.ZipFile) -> list[str]:
-    """The archive's files, without the folders and the macOS resource forks
-    its authors' zip tool added."""
-    return sorted(
-        name
-        for name in opened.namelist()
-        if not name.endswith("/")
-        and not name.startswith("__MACOSX/")
-        and Path(name).name != ".DS_Store"
-    )
-
-
 def _compartment(row: Sequence[object]) -> str | None:
     for cell in row:
         found = PLANT.match(str(cell).strip()) if isinstance(cell, str) else None
         if found is not None:
             return f"{found[1]}.{found[2]}"
     return None
-
-
-def _holds(cell: object) -> bool:
-    if cell is None:
-        return False
-    if isinstance(cell, float):
-        return not math.isnan(cell)
-    return str(cell).strip().lower() not in NO_VALUE
 
 
 def _plain(value: object) -> bool:

@@ -10,7 +10,8 @@ call for that is not part of the packages: nothing in `greenhouse_sim`,
   holds each to its reference.
 - [`validation/`](validation/): what measured data hold for a model to
   be held to (item 5), counted file by file.
-  [`agc4/`](validation/agc4/README.md) profiles the two AGC4 archives.
+  [`agc4/`](validation/agc4/README.md) profiles the two AGC4 archives,
+  and builds the hourly drivers decision 0076 runs the tomato models on.
 - [`integrations/`](integrations/): what the run's way of driving a
   reproduced model changes of it (decision 0062, milestone B), measured
   against the reproduction's forcing and against a reference's

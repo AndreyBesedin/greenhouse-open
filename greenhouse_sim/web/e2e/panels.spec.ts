@@ -296,6 +296,37 @@ test("a page opens in its theme before its scripts run, never white in the dark 
   await page.reload();
   expect(await opened()).toEqual({ theme: "light", scheme: "light", drawn: 0 });
   await page.evaluate(() => localStorage.removeItem("greenhouse-sim.panels"));
+
+  // A first visit follows the system's (P19.12); one chosen, whatever it says.
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.reload();
+  expect(await opened()).toEqual({ theme: "light", scheme: "light", drawn: 0 });
+  await page.evaluate(() => localStorage.setItem("greenhouse-sim.panels", "dark"));
+  await page.reload();
+  expect(await opened()).toEqual({ theme: "dark", scheme: "dark", drawn: 0 });
+  await page.evaluate(() => localStorage.removeItem("greenhouse-sim.panels"));
+});
+
+test("a first visit follows the system's theme, and keeps nothing until one is chosen (P19.12)", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/?scene=example");
+  const light = page.getByRole("checkbox", { name: "Light panels" });
+  await expect(light).toBeChecked();
+  expect(await page.evaluate(() => localStorage.getItem("greenhouse-sim.panels"))).toBeNull();
+
+  // The system changes between visits: the next follows it.
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.reload();
+  await expect(light).not.toBeChecked();
+
+  // Chosen, it is kept, whatever the system says.
+  await light.check();
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.reload();
+  await expect(light).toBeChecked();
+  await page.evaluate(() => localStorage.removeItem("greenhouse-sim.panels"));
 });
 
 test("each side's panels fold to a stripe at the view's edge, and open as they were (#304)", async ({

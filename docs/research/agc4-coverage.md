@@ -684,7 +684,7 @@ metadata only, and the tests build miniature workbooks of their own.
    and conversion.
 4. Fix the split, the metrics and the conversions (dry matter, per plant
    or per m², which PAR) in a decision record, before any run is compared
-   with 2024's fruit: proposed in decision
+   with 2024's fruit: done, decision
    [0076](../decisions/0076-the-tomato-models-are-calibrated-on-agc4s-pre-trial-and-tested-once-on-its-challenge.md).
 5. Extend the adapters only for what that model reads: likely the
    per-plant values and the red and green split of `Harvest.xlsx`, its

@@ -61,3 +61,59 @@ CC BY 4.0: Wageningen University & Research, via 4TU.ResearchData.
   November 2023, each channel missing 0.09 % of them.
 
 The memo reads these numbers against what the publisher and the paper say.
+
+## The drivers
+
+Decision [0076](../../../docs/decisions/0076-the-tomato-models-are-calibrated-on-agc4s-pre-trial-and-tested-once-on-its-challenge.md)
+runs each tomato model on AGC4 an hour at a time.
+[`drivers.py`](drivers.py) builds those hours from the same two archives:
+
+```bash
+python -m research.validation.agc4.drivers /tmp/agc4-drivers > research/validation/agc4/drivers.json
+```
+
+- **A series per run:** each 2024 compartment, from 00:00 on 3 September
+  to the midnight that begins its harvest day; and each 2023 light zone,
+  from 00:00 on 5 September to 00:00 on 9 November. Times are at a fixed
+  UTC+01:00, so that every day has 24 hours.
+- **An hour per row:** its start, the mean temperature, PAR above the
+  canopy and CO₂ over the 5-minute rows stamped inside it, and the plants
+  per m² in force at its start: the last `dwarf_tomato/plant_density`
+  written in 2024, and the destructive workbook's `Info` sheet's in 2023.
+- **Filled hours:** a driver with no rows in an hour takes its mean of the
+  hour before, and the hour says so in `filled`. That is one hour per 2024
+  compartment, the one the clocks repeated on 27 October, and two per 2023
+  zone, both 02:00 hours of 29 October, which the pre-trial's wall-clock
+  times cannot tell apart.
+
+The CSVs are data derived from AGC4, and are not committed.
+[`drivers.json`](drivers.json) is: for each series, its file, its hours,
+its first and last hour, the hours filled, and the sha256 of its bytes,
+which are the same on every run.
+
+## The harness
+
+[`harness.py`](harness.py) runs either tomato model on a series of hours,
+as decision 0076 has it, and reads its state per plant at every midnight.
+Each model is the run's own rung, with the parameters it is given, stepped
+as the run steps it: Reduced-State TOMGRO a day at a time, Vanthoor's
+model an hour at a time. What the harness adds is what AGC4's crop does
+and the run's does not:
+
+- **the start:** the 2023 transplants, per plant (`transplants`, from the
+  pre-trial's destructive workbook): 0.068 g of dry leaves, 0.043 g of
+  stem, 35.1 cm² of leaf and five leaves, scaled to the density at
+  transplanting. Vanthoor's buffer starts where its caller says;
+- **the spacing:** where a new density is in force, every state per m² of
+  floor is scaled by the new density over the old, and Reduced-State
+  TOMGRO's ρ is the density in force. Vanthoor's model is spaced at the
+  hour the density changes, 23:00 at the fixed offset for a summer spacing
+  at local midnight; Reduced-State TOMGRO, a day to a step, at the midnight
+  of the day the new density is in force;
+- **the readings:** at each midnight, per plant, the fruit's dry weight
+  (Vanthoor's standing plus harvested), the mature fruit's (Reduced-State
+  TOMGRO's alone), the dry weight above ground and the leaf area index.
+
+It compares nothing with a measurement: that is the calibration's and the
+test's, in that order. A 2023 zone's 65 days run in under a second for
+either model.
