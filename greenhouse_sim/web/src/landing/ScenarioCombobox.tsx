@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 
+import { Field } from "../design/Field";
 import { scenariosMatching } from "../ScenarioList";
 import type { ScenarioSummary } from "../scenarios";
 import { runCountText } from "./storedRuns";
@@ -104,32 +105,33 @@ export function ScenarioCombobox({
 
   return (
     <div className="landing-combobox">
-      <label htmlFor={`${id}-input`} className="landing-label">
-        Scenario
-      </label>
-      <input
-        id={`${id}-input`}
-        type="text"
-        className="landing-input"
-        role="combobox"
-        aria-expanded={open}
-        aria-controls={`${id}-list`}
-        aria-autocomplete="list"
-        aria-activedescendant={open ? optionId(active) : undefined}
-        autoComplete="off"
-        placeholder="Search scenarios"
-        value={query}
-        onChange={(event) => {
-          setQuery(event.target.value);
-          setOpen(true);
-          setActive(0);
-        }}
-        onFocus={() => setOpen(!behindDialog)}
-        // Focus is already there after a choice or Escape: a click opens the list again.
-        onClick={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        onKeyDown={onKeyDown}
-      />
+      <Field label="Scenario">
+        {(control) => (
+          <input
+            {...control}
+            type="text"
+            className={`${control.className} landing-input`}
+            role="combobox"
+            aria-expanded={open}
+            aria-controls={`${id}-list`}
+            aria-autocomplete="list"
+            aria-activedescendant={open ? optionId(active) : undefined}
+            autoComplete="off"
+            placeholder="Search scenarios"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setOpen(true);
+              setActive(0);
+            }}
+            onFocus={() => setOpen(!behindDialog)}
+            // Focus is already there after a choice or Escape: a click opens the list again.
+            onClick={() => setOpen(true)}
+            onBlur={() => setOpen(false)}
+            onKeyDown={onKeyDown}
+          />
+        )}
+      </Field>
       {open && (
         // Chosen on mouse down, which comes before the input loses focus and
         // closes the list.

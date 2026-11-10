@@ -1,5 +1,7 @@
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { BUILDER_PATH } from "../builder/Builder";
+import { LinkButton } from "../design/LinkButton";
+import { Notice } from "../design/Notice";
 import { GithubMark } from "../icons";
 import { forkedText } from "../replay/timeline";
 import { loadScenarios, SCENARIOS_URL, type ScenariosState } from "../scenarios";
@@ -89,10 +91,10 @@ export function Landing({
     <div className="landing">
       <header className="landing-header">
         <h1>Greenhouse simulator</h1>
-        <a href={REPOSITORY_URL} target="_blank" rel="noopener" className="landing-link-button">
+        <LinkButton href={REPOSITORY_URL} target="_blank" rel="noopener">
           <GithubMark />
           Contribute
-        </a>
+        </LinkButton>
       </header>
       <main className="landing-main">
         <h2>What would you like to do?</h2>
@@ -111,17 +113,17 @@ export function Landing({
               onBuild={() => navigate(BUILDER_PATH)}
             />
             {opened !== null && scenarios.status === "loaded" && chosen === undefined && (
-              <p role="alert" className="landing-problem">
+              <Notice kind="problem">
                 This address asks for the scenario {opened}, which the simulator does not have.
-              </p>
+              </Notice>
             )}
           </section>
           <section className="landing-card" aria-labelledby="landing-build">
             <h3 id="landing-build">Build a scenario</h3>
             <p>Lay out a house, its rows, weather and crop models, then run it.</p>
-            <a href={BUILDER_PATH} className="landing-link-button landing-primary">
+            <LinkButton href={BUILDER_PATH} tone="primary" className="landing-card-action">
               Open the builder
-            </a>
+            </LinkButton>
             <UploadScenario navigate={navigate} />
             <SavedDrafts />
           </section>
@@ -184,10 +186,10 @@ function ScenarioChoice({
       );
     case "unavailable":
       return (
-        <p role="alert">
+        <Notice kind="problem">
           The simulator API is not reachable ({scenarios.reason}). Start it with{" "}
           <code>python -m greenhouse_sim.api</code>.
-        </p>
+        </Notice>
       );
     default:
       return <p>Loading scenarios from the simulator…</p>;
@@ -241,7 +243,7 @@ function RecentRuns({
   onChanged: () => void;
 }) {
   if (runs.status === "unavailable") {
-    return <p role="alert">The runs kept cannot be listed: {runs.reason}.</p>;
+    return <Notice kind="problem">The runs kept cannot be listed: {runs.reason}.</Notice>;
   }
   if (runs.status !== "loaded") {
     return <p>Loading the runs kept…</p>;
@@ -312,9 +314,9 @@ function RunRow({
       <RunUsage run={run} />
       <RunFailure run={run} />
       {refusal !== null && (
-        <p role="alert" className="landing-note">
+        <Notice kind="problem" className="landing-run-problem">
           {refusal}
-        </p>
+        </Notice>
       )}
     </li>
   );

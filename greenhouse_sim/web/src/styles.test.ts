@@ -556,7 +556,8 @@ const BUILT = new Set([
   // `timeline-plan-${name}`, a replayed epoch's plan lane's ticks (P13.8).
   "timeline-plan-ran",
   "timeline-plan-not-ran",
-  // `landing-status-${run.status}`, a stored run's status on the landing page (P17.5).
+  // `landing-status-${position.status}`, a run's status in its replay's header (P17.6),
+  // until it is a StatusChip (P19.10).
   "landing-status-failed",
   "landing-status-interrupted",
   "landing-status-queued",
@@ -698,7 +699,7 @@ function outsideTheTokens(stylesheet: string): string[] {
 }
 
 describe("a button that cannot be pressed", () => {
-  it.each([".replay-button", ".landing-button", ".ds-button"])("looks so, as %s", (selector) => {
+  it.each([".replay-button", ".ds-button"])("looks so, as %s", (selector) => {
     const rule = new RegExp(`\\${selector}:disabled\\s*\\{([^}]*)\\}`).exec(STYLES)?.[1] ?? "";
     expect(rule).toMatch(/opacity:/);
     expect(rule).toMatch(/cursor:\s*not-allowed/);
@@ -808,16 +809,14 @@ const OFF_SCALE: Readonly<Record<string, string>> = {
   ".move-list { padding-left: 18px }": "a list's indent",
   ".builder-findings ul { padding-left: 18px }": "a list's indent",
   ".landing-card { gap: 10px }": "between a card's lines",
-  ".landing-link-button { padding: 0 18px }": "a family of button's sides, of the two it has",
-  ".landing-button { padding: 0 18px }": "a family of button's sides, of the two it has",
   ".landing-combobox .landing-input { padding: 0 14px }": "the search's sides, as its options'",
   ".landing-option { padding: var(--space-4) 14px }": "an option's sides, as the search's",
   ".landing-option-none { padding: var(--space-5) 14px }": "the note for no option, as an option's",
   ".landing-run { padding: var(--space-5) 20px }": "a run's row, to the dialog's edge",
-  ".landing-status { padding: var(--space-1) 10px }": "a status chip's sides",
+  ".landing-status { padding: var(--space-1) 10px }":
+    "the replay's status chip's sides, until it is a StatusChip (P19.10)",
   ".landing-dialog-head { padding: 20px var(--space-7) var(--space-5) }": "the dialog's first line",
-  '.landing-dialog p[role="alert"], .landing-dialog p[role="status"] { padding: 10px var(--space-7) }':
-    "a message's line in the dialog",
+  ".landing-dialog-notice { padding: 10px var(--space-7) }": "a message's line in the dialog",
   ".replay-header { gap: var(--space-4) 14px }": "between the header's items",
   ".replay-header { padding: 10px 20px }": "the header's edge",
   ".replay-transport { padding: 14px 20px var(--space-6) }":

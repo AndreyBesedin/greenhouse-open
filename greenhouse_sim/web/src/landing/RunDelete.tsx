@@ -1,5 +1,6 @@
 import { type RefObject, useEffect, useRef, useState } from "react";
 
+import { Button } from "../design/Button";
 import { deleteRun, notDeleted } from "./runActions";
 import { isComputing, runKey, type StoredRun } from "./storedRuns";
 
@@ -101,31 +102,21 @@ export function RunDelete({
 
   return confirming ? (
     <span className="landing-confirm">
-      <button
-        type="button"
-        className="landing-button landing-button-danger"
-        onClick={() => void confirmed()}
-      >
+      <Button tone="danger" onClick={() => void confirmed()}>
         Delete {name}
-      </button>
-      <button
-        ref={keep}
-        type="button"
-        className="landing-button"
-        onClick={() => setConfirming(false)}
-      >
+      </Button>
+      <Button ref={keep} onClick={() => setConfirming(false)}>
         Keep it
-      </button>
+      </Button>
     </span>
   ) : (
-    <button
+    <Button
       ref={pressed}
-      type="button"
-      className="landing-button landing-run-action landing-run-delete"
+      className="landing-run-action landing-run-delete"
       aria-label={`Delete ${name}`}
       onClick={() => setConfirming(true)}
     >
       Delete
-    </button>
+    </Button>
   );
 }

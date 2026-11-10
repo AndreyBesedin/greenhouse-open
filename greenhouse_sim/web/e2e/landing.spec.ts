@@ -57,14 +57,14 @@ test("a list's rows line up, and a dialog's controls stay on their row, whatever
     // One x and one width in each column: the bars, and each kind of control.
     for (const [selector, rowsWithIt] of [
       ["progress", 3],
-      [".landing-status", 3],
+      [".landing-run-status", 3],
       [".landing-run-replay", 3],
       [".landing-run-control", 2],
       [".landing-run-delete", 3],
     ] as const) {
       const column = await columnOf(rows, selector);
       expect(column).toHaveLength(rowsWithIt);
-      if (selector !== ".landing-status") {
+      if (selector !== ".landing-run-status") {
         expect(new Set(column).size, `${selector}: ${column.join(", ")}`).toBe(1);
       }
     }
@@ -304,7 +304,7 @@ test("what a run used, and why one failed, are said under its row, in the dialog
     await expect(unmeasured).toContainText("Wall timenot measured");
     await expect(finished(rows).locator(".landing-run-reason")).toHaveCount(0);
     // On lines of their own, under the row's status.
-    const status = await limited.locator(".landing-status").boundingBox();
+    const status = await limited.locator(".landing-run-status").boundingBox();
     const usage = await limited.locator(".landing-run-usage").boundingBox();
     const reason = await limited.locator(".landing-run-reason").boundingBox();
     expect(usage?.y ?? 0).toBeGreaterThan(status?.y ?? Number.POSITIVE_INFINITY);

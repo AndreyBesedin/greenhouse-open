@@ -1,5 +1,7 @@
 import { useId, useRef, useState } from "react";
 import { installationFile } from "../builder/api";
+import { Button } from "../design/Button";
+import { Notice } from "../design/Notice";
 import { missingWeatherProblem, type PickedFile, uploadFile } from "./sendScenarioFile";
 import { keepHouse, keepSettings, uploadedAddress, uploadedHouseAddress } from "./uploaded";
 
@@ -47,15 +49,14 @@ export function UploadScenario({ navigate }: { navigate: (address: string) => vo
 
   return (
     <div className="landing-upload">
-      <button
-        type="button"
-        className="landing-link-button"
+      <Button
+        className="landing-card-action"
         disabled={reading}
         aria-describedby={hint}
         onClick={() => input.current?.click()}
       >
         Upload a scenario or house file
-      </button>
+      </Button>
       <input
         ref={input}
         type="file"
@@ -75,14 +76,10 @@ export function UploadScenario({ navigate }: { navigate: (address: string) => vo
         A scenario file, or a house file from the builder, opens in the builder, where it can be
         changed before it is run.
       </p>
-      <p role="status" className="landing-note">
+      <Notice kind="status" className="landing-note">
         {reading ? "Reading the file…" : ""}
-      </p>
-      {problem !== null && (
-        <p role="alert" className="landing-problem">
-          {problem}
-        </p>
-      )}
+      </Notice>
+      {problem !== null && <Notice kind="problem">{problem}</Notice>}
     </div>
   );
 }

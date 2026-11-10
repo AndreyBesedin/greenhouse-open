@@ -594,7 +594,7 @@ describe("the runs of a scenario, in a dialog", () => {
     ]);
     const [finished, interrupted] = rows();
 
-    expect(finished?.querySelector(".landing-status")?.textContent).toContain("Damaged");
+    expect(finished?.querySelector(".landing-run-status")?.textContent).toContain("Damaged");
     expect(finished?.textContent).toContain("cannot be read whole");
     expect(finished?.textContent).not.toContain("Finished");
     expect(interrupted?.textContent).not.toContain("Interrupted");
@@ -731,8 +731,10 @@ describe("the runs of a scenario, in a dialog", () => {
     simulator({}, { status: 409, body: { error: "being computed" } });
     const { container } = shown([run({ status: "running", stopping: true })]);
 
-    expect(container.querySelector(".landing-status")?.textContent).toContain("Stopping");
-    expect(container.querySelector(".landing-status")?.textContent).toContain("reads Interrupted");
+    expect(container.querySelector(".landing-run-status")?.textContent).toContain("Stopping");
+    expect(container.querySelector(".landing-run-status")?.textContent).toContain(
+      "reads Interrupted",
+    );
     const pressed = button(container, "Stopping the run with seed 1, epoch 0");
     expect(pressed).toHaveProperty("disabled", true);
     expect(container.querySelector('[aria-label^="Stop the run"]')).toBeNull();

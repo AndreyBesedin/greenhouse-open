@@ -47,31 +47,31 @@ describe("a run's status", () => {
     return { classes: element.className, words: element.textContent, title: element.title };
   }
 
-  it("is the design system's chip, in the tone of its status, with the page's classes beside it", () => {
+  it("is the design system's chip, in the tone of its status, placed by the list's class", () => {
     expect(chip(run({ status: "queued" }))).toEqual({
-      classes: "ds-status-chip ds-status-chip-active landing-status landing-status-queued",
+      classes: "ds-status-chip ds-status-chip-active landing-run-status",
       words: "Queued",
       title: "",
     });
     expect(chip(run({ status: "running" })).classes).toBe(
-      "ds-status-chip ds-status-chip-active landing-status landing-status-running",
+      "ds-status-chip ds-status-chip-active landing-run-status",
     );
     expect(chip(run({ status: "finished" }))).toEqual({
-      classes: "ds-status-chip landing-status landing-status-finished",
+      classes: "ds-status-chip landing-run-status",
       words: "Finished",
       title: "",
     });
     expect(chip(run({ status: "failed" })).classes).toBe(
-      "ds-status-chip ds-status-chip-problem landing-status landing-status-failed",
+      "ds-status-chip ds-status-chip-problem landing-run-status",
     );
     expect(chip(run({ status: "interrupted" })).classes).toBe(
-      "ds-status-chip ds-status-chip-problem landing-status landing-status-interrupted",
+      "ds-status-chip ds-status-chip-problem landing-run-status",
     );
   });
 
   it("says Stopping, and why, of a run asked to stop", () => {
     expect(chip(run({ status: "running", stopping: true }))).toEqual({
-      classes: "ds-status-chip ds-status-chip-active landing-status landing-status-running",
+      classes: "ds-status-chip ds-status-chip-active landing-run-status",
       words: `Stopping ${STOPPING_NOTE}`,
       title: STOPPING_NOTE,
     });
@@ -79,7 +79,7 @@ describe("a run's status", () => {
 
   it("says Damaged of a run with files missing, whatever its status, as a problem", () => {
     expect(chip(run({ status: "finished", damaged: true, stopping: true }))).toEqual({
-      classes: "ds-status-chip ds-status-chip-problem landing-status landing-status-failed",
+      classes: "ds-status-chip ds-status-chip-problem landing-run-status",
       words: `Damaged ${DAMAGED_NOTE}`,
       title: DAMAGED_NOTE,
     });

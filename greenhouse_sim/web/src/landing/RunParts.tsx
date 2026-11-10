@@ -1,3 +1,4 @@
+import { LinkButton } from "../design/LinkButton";
 import { StatusChip, type StatusTone } from "../design/StatusChip";
 import { failedText, NO_REASON_KEPT } from "../replay/failure";
 import { replayAddress } from "./paths";
@@ -28,8 +29,7 @@ const STATUS_TONE: Record<Status, StatusTone> = {
 };
 
 /** A run's status, in words: never a colour alone. One with files missing is
- * called so whatever else it is, since its status says it is whole. The page's
- * classes beside the chip's draw it until the landing page's rules move (P19.8). */
+ * called so whatever else it is, since its status says it is whole. */
 export function RunStatus({ run }: { run: StoredRun }) {
   const status = run.damaged ? "failed" : run.status;
   const [words, note] = run.damaged
@@ -38,11 +38,7 @@ export function RunStatus({ run }: { run: StoredRun }) {
       ? ["Stopping", STOPPING_NOTE]
       : [STATUS_LABEL[run.status], undefined];
   return (
-    <StatusChip
-      tone={STATUS_TONE[status]}
-      note={note}
-      className={`landing-status landing-status-${status}`}
-    >
+    <StatusChip tone={STATUS_TONE[status]} note={note} className="landing-run-status">
       {words}
     </StatusChip>
   );
@@ -71,14 +67,14 @@ export function ReplayLink({ run, label }: { run: StoredRun; label?: string }) {
   const computing = isComputing(run);
   return (
     !run.damaged && (
-      <a
+      <LinkButton
         href={replayAddress(run.run_id, run.epoch, computing)}
-        className="landing-link-button landing-run-action landing-run-replay"
+        className="landing-run-action landing-run-replay"
         aria-label={label}
         title={computing ? FOLLOWS_NOTE : undefined}
       >
         Replay
-      </a>
+      </LinkButton>
     )
   );
 }

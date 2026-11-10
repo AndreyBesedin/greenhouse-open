@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { Button } from "../design/Button";
+import { Notice } from "../design/Notice";
 import { notDoneText, resumeRun, stopRun } from "./runActions";
 import { isComputing, isResumable, type StoredRun } from "./storedRuns";
 
@@ -43,19 +45,18 @@ export function RunControls({
   const word = run.stopping ? "Stopping" : computing ? "Stop" : "Resume";
   return (
     <>
-      <button
-        type="button"
-        className="landing-button landing-run-action landing-run-control"
+      <Button
+        className="landing-run-action landing-run-control"
         aria-label={`${word} ${name}`}
         disabled={busy || run.stopping}
         onClick={() => void act()}
       >
         {word}
-      </button>
+      </Button>
       {problem !== null && (
-        <p role="alert" className="landing-note">
+        <Notice kind="problem" className="landing-run-problem">
           {problem}
-        </p>
+        </Notice>
       )}
     </>
   );
