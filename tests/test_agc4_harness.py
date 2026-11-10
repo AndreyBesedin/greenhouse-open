@@ -3,16 +3,19 @@ its start, its spacing, and its readings per plant. No data needed."""
 
 import io
 import zipfile
+from dataclasses import replace
 from datetime import datetime, timedelta
 from pathlib import Path
 
 import openpyxl
 import pytest
+from greenhouse_sim.biology.area_contract import StepCourse
 from greenhouse_sim.biology.tomato.tomgro.parameters import TomgroParameters, TomgroState
 from greenhouse_sim.biology.tomato.vanthoor.parameters import (
     INITIAL_STATE as VANTHOOR_PUBLISHED,
 )
 from greenhouse_sim.biology.tomato.vanthoor.parameters import VanthoorParameters
+from greenhouse_sim.core.vanthoor_crop import VanthoorRung
 
 from research.validation.agc4 import harness
 from research.validation.agc4.drivers import DAYS, Hour, Series
@@ -151,3 +154,45 @@ def test_tomgro_grows_at_the_density_in_force_whatever_its_published_rho() -> No
     other = harness.run_tomgro(TomgroParameters(ro=1.0), TRANSPLANT, hours)
 
     assert published == other
+
+
+def _spaced_at_23(hours: list[Hour]) -> list[Hour]:
+    """The hours with the second day's density from 23:00 of the first: a
+    summer spacing at local midnight, at the days' fixed offset."""
+    return [
+        replace(hour, plants_per_m2=42.0) if index >= 23 else hour
+        for index, hour in enumerate(hours)
+    ]
+
+
+def test_vanthoor_is_spaced_at_the_hour_the_density_changes() -> None:
+    hours = _spaced_at_23(_hours([56.0, 42.0]))
+    parameters = VanthoorParameters()
+    buffer = parameters.c_buf_min
+
+    midnights = harness.run_vanthoor(parameters, TRANSPLANT, hours, buffer)
+
+    # The same steps by hand: 23 hours at 56 plants per m², the rest at 42.
+    rung = VanthoorRung(parameters, harness.CANOPY_HEIGHT_M)
+    state = VANTHOOR_PUBLISHED.model_copy(
+        update={
+            "c_buf": buffer,
+            "c_fruit": 0.0,
+            "c_leaf": 0.068 * harness.MG_A_G * 56,
+            "c_stem": 0.043 * harness.MG_A_G * 56,
+            "harvested_fruit": 0.0,
+        }
+    )
+    for index, hour in enumerate(hours):
+        if index == 23:
+            state = harness.spaced_vanthoor(state, 56.0, 42.0)
+        state = rung.live_step(state, StepCourse(hours=(harness._drivers(hour),)))
+    assert midnights[1].plants_per_m2 == 42.0
+    assert midnights[-1] == harness._vanthoor_midnight(midnights[-1].at, state, 42.0, parameters)
+
+
+def test_tomgro_is_spaced_at_the_midnight_of_its_day() -> None:
+    """A day is TOMGRO's step: a spacing an hour before midnight waits for it."""
+    at_23 = harness.run_tomgro(TomgroParameters(), TRANSPLANT, _spaced_at_23(_hours([56.0, 42.0])))
+
+    assert at_23 == harness.run_tomgro(TomgroParameters(), TRANSPLANT, _hours([56.0, 42.0]))
