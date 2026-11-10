@@ -3,6 +3,7 @@ import type { OverlayToggles, SceneOverlay } from "./debug/overlays";
 import { Fold } from "./design/Fold";
 import type { FieldView } from "./fields/display";
 import { useFolds } from "./folds";
+import { PanelCard } from "./PanelCard";
 
 // What each overlay over the scene is called beside its switch; the air
 // field is called by how it is drawn.
@@ -23,27 +24,31 @@ function overlayLabel(overlay: SceneOverlay, fieldView: FieldView): string {
   return overlay === "airField" ? `Air field ${fieldView}` : SCENE_OVERLAY_LABELS[overlay];
 }
 
-/** How the view is shown, in a line, as the display options' section folded
- * says it (#273): its colouring, which of its switches are on, and which of
- * the overlays over the scene are hidden, every one being shown at first. */
-export function describeDisplay(
+/** How the scene is drawn, in a line, as its section folded says it (#273): its
+ * colouring, and whether by category and with its dimensions. */
+export function describeColours(
   colourBy: string | null,
-  switches: { showDimensions: boolean; byCategory: boolean; qaMode: boolean },
-  hidden: readonly string[] = [],
+  switches: { showDimensions: boolean; byCategory: boolean },
 ): string {
-  const on = [
-    colourBy === null ? "no colouring" : `coloured by ${colourBy}`,
-    ...(switches.showDimensions ? ["dimensions"] : []),
-    ...(switches.byCategory ? ["categories"] : []),
-    ...(switches.qaMode ? ["QA mode"] : []),
-  ];
-  const hiding = hidden.map((label) => label.charAt(0).toLowerCase() + label.slice(1));
-  return `Display: ${on.join(", ")}${hiding.length > 0 ? `; hiding ${hiding.join(", ")}` : ""}`;
+  return [
+    `Colours: ${colourBy === null ? "their own" : `by ${colourBy}`}`,
+    ...(switches.byCategory ? ["by category"] : []),
+    ...(switches.showDimensions ? ["dimensions shown"] : []),
+  ].join(", ");
 }
 
-/** How the scene is shown: shaded by a property, and measured; which of the
- * overlays over it are drawn; and whether the viewer is in QA mode (P09.6),
- * which shows what the simulator knows and a policy never sees. */
+/** Which of the overlays over the scene are shown, in a line, as their section
+ * folded says it: those hidden, every one being shown at first. */
+export function describeOverlays(hidden: readonly string[]): string {
+  const hiding = hidden.map((label) => label.charAt(0).toLowerCase() + label.slice(1));
+  return hiding.length === 0 ? "Overlays: all shown" : `Overlays: hiding ${hiding.join(", ")}`;
+}
+
+/** The *Display* card (P22.8): how the scene is shown, in its sections, each
+ * folded to the line that says how it stands, as the house's are: its colours,
+ * by a property or by category, and its dimensions; which overlays are drawn
+ * over it; and whether the viewer is in QA mode (P09.6), which shows what the
+ * simulator knows and a policy never sees. */
 export function DisplayOptions({
   colourProperties,
   colourBy,
@@ -75,43 +80,70 @@ export function DisplayOptions({
   qaMode: boolean;
   onQaMode: (on: boolean) => void;
 }) {
-  const fold = useFolds<"display">();
+  const fold = useFolds<"display" | "overlays">();
   return (
-    <Fold
-      className="display-fold"
-      {...fold("display")}
-      summary={
-        <span data-testid="display-summary">
-          {describeDisplay(
-            colourBy,
-            { showDimensions, byCategory, qaMode },
-            drawn
-              .filter((overlay) => !overlays[overlay])
-              .map((overlay) => overlayLabel(overlay, fieldView)),
-          )}
-        </span>
-      }
-    >
-      {colourProperties.length > 0 && (
-        <ColourBy properties={colourProperties} value={colourBy} onChange={onColourBy} />
+    <PanelCard title="Display">
+      <Fold
+        className="display-fold"
+        {...fold("display")}
+        summary={
+          <span data-testid="display-summary">
+            {describeColours(colourBy, { showDimensions, byCategory })}
+          </span>
+        }
+      >
+        {colourProperties.length > 0 && (
+          <ColourBy properties={colourProperties} value={colourBy} onChange={onColourBy} />
+        )}
+        <p>
+          <label>
+            <input
+              type="checkbox"
+              checked={byCategory}
+              onChange={(event) => onByCategory(event.target.checked)}
+            />{" "}
+            Categories
+          </label>{" "}
+          <label>
+            <input
+              type="checkbox"
+              checked={showDimensions}
+              onChange={(event) => onShowDimensions(event.target.checked)}
+            />{" "}
+            Dimensions and axis labels
+          </label>
+        </p>
+      </Fold>
+      {drawn.length > 0 && (
+        <Fold
+          className="display-overlays"
+          {...fold("overlays")}
+          summary={
+            <span data-testid="overlays-summary">
+              {describeOverlays(
+                drawn
+                  .filter((overlay) => !overlays[overlay])
+                  .map((overlay) => overlayLabel(overlay, fieldView)),
+              )}
+            </span>
+          }
+        >
+          <fieldset className="shown-overlays" title={VIEW_ONLY}>
+            <legend>Shown in the view</legend>
+            {drawn.map((overlay) => (
+              <label key={overlay}>
+                <input
+                  type="checkbox"
+                  checked={overlays[overlay]}
+                  onChange={(event) => onOverlays({ ...overlays, [overlay]: event.target.checked })}
+                />{" "}
+                {overlayLabel(overlay, fieldView)}
+              </label>
+            ))}
+          </fieldset>
+        </Fold>
       )}
-      <p>
-        <label>
-          <input
-            type="checkbox"
-            checked={showDimensions}
-            onChange={(event) => onShowDimensions(event.target.checked)}
-          />{" "}
-          Dimensions and axis labels
-        </label>{" "}
-        <label>
-          <input
-            type="checkbox"
-            checked={byCategory}
-            onChange={(event) => onByCategory(event.target.checked)}
-          />{" "}
-          Categories
-        </label>{" "}
+      <p className="display-qa">
         <label>
           <input
             type="checkbox"
@@ -121,21 +153,6 @@ export function DisplayOptions({
           QA mode
         </label>
       </p>
-      {drawn.length > 0 && (
-        <fieldset className="shown-overlays" title={VIEW_ONLY}>
-          <legend>Shown in the view</legend>
-          {drawn.map((overlay) => (
-            <label key={overlay}>
-              <input
-                type="checkbox"
-                checked={overlays[overlay]}
-                onChange={(event) => onOverlays({ ...overlays, [overlay]: event.target.checked })}
-              />{" "}
-              {overlayLabel(overlay, fieldView)}
-            </label>
-          ))}
-        </fieldset>
-      )}
-    </Fold>
+    </PanelCard>
   );
 }

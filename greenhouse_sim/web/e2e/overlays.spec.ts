@@ -29,7 +29,7 @@ test("overlays over the scene are hidden and shown again without asking the simu
 
   // The field's arrows, one batch of them, leave the view with their legend,
   // and the field stays loaded.
-  await unfold(page, "Display");
+  await unfold(page, "Overlays");
   await shown.getByRole("checkbox", { name: "Air field arrows" }).uncheck();
   await expect(page.getByRole("figure", { name: "Field legend" })).toHaveCount(0);
   await expect.poll(() => objectCount(page), { timeout: DRAWN_TIMEOUT_MS }).toBe(drawn - 1);
@@ -72,7 +72,7 @@ test("a climate run's air is hidden without ending the run or moving its moment"
 
   // Choosing no field would end the climate run; hiding its air leaves the
   // run as it stands, its equipment and its charts with it.
-  await unfold(page, "Display");
+  await unfold(page, "Overlays");
   await airField.uncheck();
   await expect(page.getByRole("figure", { name: "Field legend" })).toHaveCount(0);
   await unfold(page, "Air field");
@@ -104,7 +104,7 @@ test("What am I seeing? explains what is drawn, and follows the switches (#205)"
 
   // Hidden by its switch, an overlay leaves the card, which says it is hidden.
   const shown = page.getByRole("group", { name: "Shown in the view" });
-  await unfold(page, "Display");
+  await unfold(page, "Overlays");
   await shown.getByRole("checkbox", { name: "Probes" }).uncheck();
   await expect(card.getByTestId("seen-probes")).toHaveCount(0);
   await expect(card.getByTestId("seen-hidden")).toHaveText("Hidden: probes.");

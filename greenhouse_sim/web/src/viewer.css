@@ -131,6 +131,8 @@
  * it stands (#206, #273), a `Fold`, with room below it; and what the viewer was
  * built from, last. */
 .display-fold,
+.display-overlays,
+.display-qa,
 .field-fold,
 .moment-fold,
 .house-fold,

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { DisplayOptions, describeDisplay } from "./DisplayOptions";
+import { DisplayOptions, describeColours, describeOverlays } from "./DisplayOptions";
 import { ALL_OVERLAYS, type OverlayToggles, type SceneOverlay } from "./debug/overlays";
 import type { FieldView } from "./fields/display";
 import { checkbox, click, type Rendered, render } from "./testing/render";
@@ -86,8 +86,8 @@ describe("the display options", () => {
       "wind",
       "probes",
     ]);
-    expect(shown.querySelector("summary")?.textContent).toBe(
-      "Display: no colouring; hiding wind, probes",
+    expect(shown.querySelector(".display-overlays > summary")?.textContent).toBe(
+      "Overlays: hiding wind, probes",
     );
   });
 
@@ -96,23 +96,23 @@ describe("the display options", () => {
   });
 });
 
-describe("the display options' section, folded", () => {
-  it("says how the view is shown, its colouring and the switches on (#273)", () => {
-    const off = { showDimensions: false, byCategory: false, qaMode: false };
-    expect(describeDisplay(null, off)).toBe("Display: no colouring");
-    expect(describeDisplay("level", { ...off, showDimensions: true, qaMode: true })).toBe(
-      "Display: coloured by level, dimensions, QA mode",
+describe("the Display card's sections, folded (P22.8)", () => {
+  it("say how the scene is coloured, and the switches on (#273)", () => {
+    const off = { showDimensions: false, byCategory: false };
+    expect(describeColours(null, off)).toBe("Colours: their own");
+    expect(describeColours("level", { showDimensions: true, byCategory: true })).toBe(
+      "Colours: by level, by category, dimensions shown",
     );
   });
 
-  it("names the overlays hidden, every one being shown at first", () => {
-    const off = { showDimensions: false, byCategory: false, qaMode: false };
-    expect(describeDisplay(null, off, ["Wind", "Air field arrows"])).toBe(
-      "Display: no colouring; hiding wind, air field arrows",
+  it("name the overlays hidden, every one being shown at first", () => {
+    expect(describeOverlays([])).toBe("Overlays: all shown");
+    expect(describeOverlays(["Wind", "Air field arrows"])).toBe(
+      "Overlays: hiding wind, air field arrows",
     );
   });
 
-  it("folds to that line at first", () => {
+  it("stand in a card of their own, folded to their lines at first, QA mode beside them", () => {
     const shown = render(
       <DisplayOptions
         colourProperties={[]}
@@ -122,7 +122,7 @@ describe("the display options' section, folded", () => {
         onShowDimensions={ignore}
         byCategory={false}
         onByCategory={ignore}
-        drawn={[]}
+        drawn={["wind"]}
         fieldView="arrows"
         overlays={ALL_OVERLAYS}
         onOverlays={ignore}
@@ -131,9 +131,19 @@ describe("the display options' section, folded", () => {
       />,
     );
     try {
-      const fold = shown.container.querySelector("details.display-fold");
-      expect(fold?.hasAttribute("open")).toBe(false);
-      expect(fold?.querySelector("summary")?.textContent).toBe("Display: no colouring");
+      const card = shown.container.querySelector("section.panel-card");
+      expect(card?.querySelector("h2")?.textContent).toBe("Display");
+      const folds = [...(card?.querySelectorAll(":scope > details") ?? [])];
+      expect(folds.map((fold) => fold.className)).toEqual([
+        "ds-fold display-fold",
+        "ds-fold display-overlays",
+      ]);
+      expect(folds.every((fold) => !fold.hasAttribute("open"))).toBe(true);
+      expect(folds.map((fold) => fold.querySelector("summary")?.textContent)).toEqual([
+        "Colours: their own",
+        "Overlays: all shown",
+      ]);
+      expect(checkbox(card as HTMLElement, "QA mode").closest("details")).toBeNull();
     } finally {
       shown.unmount();
     }

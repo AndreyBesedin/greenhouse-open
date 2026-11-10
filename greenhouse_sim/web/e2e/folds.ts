@@ -4,6 +4,7 @@ import { expect, type Page } from "@playwright/test";
  * the name of the group of controls each holds. */
 export const FOLDS = {
   Display: "display-fold",
+  Overlays: "display-overlays",
   "Air field": "field-fold",
   "Climate run": "moment-fold",
   "House air": "house-fold",

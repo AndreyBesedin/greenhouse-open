@@ -27,6 +27,7 @@ async function replayOfAFinishedRun(page: Page, seed: number): Promise<AskedRun>
 // but the climate run's moment (#273).
 const FOLDED: readonly FoldName[] = [
   "Display",
+  "Overlays",
   "Air field",
   "House air",
   "Weather",
@@ -114,9 +115,11 @@ test("info panel: the sections sit in titled cards by topic (#306)", async ({ pa
   const panel = page.locator(".info-panel");
   const card = (title: string) => panel.getByRole("region", { name: title, exact: true });
 
+  // The Display card beside House (P22.8).
   await expect(panel.locator(".panel-card-title")).toHaveText([
     "Simulation",
     "House",
+    "Display",
     "Equipment",
     "Outside",
   ]);
@@ -129,6 +132,9 @@ test("info panel: the sections sit in titled cards by topic (#306)", async ({ pa
   await expect(card("Equipment").locator("details.probes-fold")).toBeVisible();
   await expect(card("Equipment").locator("details.openings-fold")).toBeVisible();
   await expect(card("Equipment").locator("details.equipment-fold")).toBeVisible();
+  await expect(card("Display").locator("details.display-fold")).toBeVisible();
+  await expect(card("Display").locator("details.display-overlays")).toBeVisible();
+  await expect(card("Display").getByRole("checkbox", { name: "QA mode" })).toBeVisible();
   await expect(card("Outside").getByRole("region", { name: "Weather" })).toBeVisible();
 });
 
@@ -143,5 +149,5 @@ test("info panel: a card with nothing in it is not drawn (#306)", async ({ page 
   const panel = page.locator(".info-panel");
   await expect(panel.getByRole("region", { name: "Weather" })).toBeVisible();
 
-  await expect(panel.locator(".panel-card-title")).toHaveText(["House", "Outside"]);
+  await expect(panel.locator(".panel-card-title")).toHaveText(["House", "Display", "Outside"]);
 });
