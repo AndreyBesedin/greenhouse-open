@@ -145,9 +145,9 @@ report says.
 
 ## Order of work
 
-1. **P19:** the design system's remaining steps (P19.8 on), and beside it
+1. **P19:** the design system's remaining steps (P19.10 on), and beside it
    [P22](p22-watching-and-starting-a-run.md), what the QA of 2026-11-04 planned, whose
-   start page and panels line up with P19.8, P19.10 and P19.11.
+   replay and panels line up with P19.10 and P19.11.
 2. **The [research priorities](research-validation-priorities.md)**
    ([decision 0057](../decisions/0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md),
    proposed): two published tomato models reproduced and made P14 models, a validation

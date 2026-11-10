@@ -22,7 +22,9 @@ test("the viewer has a Home button at the top left that opens the landing page",
   await home.focus();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL((url) => url.pathname === LANDING_PATH && url.search === "");
-  await expect(page.getByRole("heading", { name: "What would you like to do?" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Simulate a greenhouse's climate and crop" }),
+  ).toBeVisible();
 });
 
 test("the builder has the same way home, which leaves without saving", async ({ page }) => {
@@ -35,7 +37,9 @@ test("the builder has the same way home, which leaves without saving", async ({ 
   await home.click();
 
   await expect(page).toHaveURL((url) => url.pathname === LANDING_PATH && url.search === "");
-  await expect(page.getByRole("heading", { name: "What would you like to do?" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Simulate a greenhouse's climate and crop" }),
+  ).toBeVisible();
 });
 
 test("the viewer does not show the line that says which scene is shown", async ({ page }) => {

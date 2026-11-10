@@ -6,7 +6,7 @@ import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { button, click, type Rendered, render } from "../testing/render";
-import { UploadScenario } from "./UploadScenario";
+import { UPLOAD_NOTE, UploadScenario } from "./UploadScenario";
 import { keptFields, keptHouse } from "./uploaded";
 
 // The fields the page reads of what the simulator answers an upload of the Climate box's file under another
@@ -140,12 +140,13 @@ describe("a scenario file uploaded from the start page (P17.11)", () => {
     expect(went).toEqual([]);
   });
 
-  it("is a button a person can reach, described by what it does", () => {
+  it("is a button a person can reach, which says what it does on hover and not on the page", () => {
     shown = render(<UploadScenario navigate={() => {}} />);
     const upload = button(shown.container, "Upload a scenario or house file");
-    const hint = shown.container.querySelector(`#${upload.getAttribute("aria-describedby")}`);
 
-    expect(hint?.textContent).toContain("opens in the builder");
+    expect(upload.title).toBe(UPLOAD_NOTE);
+    expect(UPLOAD_NOTE).toContain("in the builder");
+    expect(shown.container.textContent).not.toContain(UPLOAD_NOTE);
     const pick = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
     click(upload);
     expect(pick).toHaveBeenCalledOnce();

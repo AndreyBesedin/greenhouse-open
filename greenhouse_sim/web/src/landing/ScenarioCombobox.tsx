@@ -117,7 +117,7 @@ export function ScenarioCombobox({
             aria-autocomplete="list"
             aria-activedescendant={open ? optionId(active) : undefined}
             autoComplete="off"
-            placeholder="Search scenarios"
+            placeholder="Search by name, identifier or description"
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
