@@ -1,11 +1,19 @@
+import { Button } from "../design/Button";
+import { LinkButton } from "../design/LinkButton";
+import { StatusChip } from "../design/StatusChip";
 import { HomeButton } from "../landing/HomeButton";
 import { replayAddress } from "../landing/paths";
+import { STATUS_TONE } from "../landing/RunParts";
 import { STATUS_LABEL } from "../landing/storedRuns";
 import { failedText } from "./failure";
 import { whyNoFork } from "./fork";
 import type { PositionState } from "./position";
 import { forkedText } from "./timeline";
 import { useForkQuestion } from "./useForkQuestion";
+
+/** What the run's status is named, to whoever hears the page, which is told each
+ * change of it. */
+export const STATUS_NAME = "Run status";
 
 /** The run, in words: whose it is, at which seed, and which epoch. The
  * store keeps every epoch whole until a store can keep only the present; of a
@@ -45,7 +53,7 @@ export function ReplayHeader({
   onFork: () => void;
 }) {
   const noFork = whyNoFork(position);
-  const { trigger, ask, question } = useForkQuestion({ buttonClass: "replay-button" });
+  const { trigger, ask, question } = useForkQuestion({ designed: true });
   return (
     <header className="replay-header">
       <HomeButton />
@@ -60,31 +68,24 @@ export function ReplayHeader({
           </p>
         )}
       </div>
-      <span
-        className={`landing-status landing-status-${position.status}`}
-        data-testid="replay-status"
-      >
+      <StatusChip tone={STATUS_TONE[position.status]} label={STATUS_NAME}>
         {STATUS_LABEL[position.status]}
-      </span>
+      </StatusChip>
       <span className="replay-spacer" />
       {position.fork !== null && position.parent_kept && (
-        <a href={replayAddress(position.fork.run_id, position.fork.epoch)} className="replay-back">
+        <LinkButton href={replayAddress(position.fork.run_id, position.fork.epoch)}>
           The run it came from
-        </a>
+        </LinkButton>
       )}
-      <button
+      <Button
         ref={trigger}
-        type="button"
-        className="replay-button"
         data-testid="replay-fork"
         disabled={forking || noFork !== null}
         onClick={() => ask(onFork)}
       >
         {forking ? "Forking…" : "Fork from here"}
-      </button>
-      <a href={otherRunsHref} className="replay-back">
-        Other runs
-      </a>
+      </Button>
+      <LinkButton href={otherRunsHref}>Other runs</LinkButton>
       {question}
     </header>
   );

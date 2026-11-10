@@ -19,8 +19,8 @@ export const DAMAGED_NOTE = "Files of this run are missing, so it cannot be read
 export const STOPPING_NOTE =
   "Its worker stops at its next look, with what it has committed. The run then reads Interrupted, and can be resumed or deleted.";
 
-// The tone a run's status is drawn in: under way or waiting, or stopped short.
-const STATUS_TONE: Record<Status, StatusTone> = {
+/** The tone a run's status is drawn in: under way or waiting, or stopped short. */
+export const STATUS_TONE: Record<Status, StatusTone> = {
   queued: "active",
   running: "active",
   finished: "plain",

@@ -47,6 +47,21 @@ describe("StatusChip", () => {
     );
   });
 
+  it("is a live region of its name only when it is given one, as a page's one status", () => {
+    const named = drawn(
+      <StatusChip tone="active" label="Run status">
+        Running
+      </StatusChip>,
+    );
+    expect(named.getAttribute("role")).toBe("status");
+    expect(named.getAttribute("aria-label")).toBe("Run status");
+    expect(named.textContent).toBe("Running");
+
+    const listed = drawn(<StatusChip tone="active">Running</StatusChip>);
+    expect(listed.hasAttribute("role")).toBe(false);
+    expect(listed.hasAttribute("aria-label")).toBe(false);
+  });
+
   it("needs its words, as one string, so that a colour never says a status alone", () => {
     // @ts-expect-error a chip with no words is a colour alone
     drawn(<StatusChip tone="problem" />);

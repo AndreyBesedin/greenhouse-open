@@ -556,12 +556,6 @@ const BUILT = new Set([
   // `timeline-plan-${name}`, a replayed epoch's plan lane's ticks (P13.8).
   "timeline-plan-ran",
   "timeline-plan-not-ran",
-  // `landing-status-${position.status}`, a run's status in its replay's header (P17.6),
-  // until it is a StatusChip (P19.10).
-  "landing-status-failed",
-  "landing-status-interrupted",
-  "landing-status-queued",
-  "landing-status-running",
   // `buttonClass`: what is drawn as a button, by its tone and size (P19.6).
   "ds-button",
   "ds-button-primary",
@@ -699,8 +693,8 @@ function outsideTheTokens(stylesheet: string): string[] {
 }
 
 describe("a button that cannot be pressed", () => {
-  it.each([".replay-button", ".ds-button"])("looks so, as %s", (selector) => {
-    const rule = new RegExp(`\\${selector}:disabled\\s*\\{([^}]*)\\}`).exec(STYLES)?.[1] ?? "";
+  it("looks so, as the design system's button", () => {
+    const rule = /\.ds-button:disabled\s*\{([^}]*)\}/.exec(STYLES)?.[1] ?? "";
     expect(rule).toMatch(/opacity:/);
     expect(rule).toMatch(/cursor:\s*not-allowed/);
   });
@@ -813,8 +807,6 @@ const OFF_SCALE: Readonly<Record<string, string>> = {
   ".landing-option { padding: var(--space-4) 14px }": "an option's sides, as the search's",
   ".landing-option-none { padding: var(--space-5) 14px }": "the note for no option, as an option's",
   ".landing-run { padding: var(--space-5) 20px }": "a run's row, to the dialog's edge",
-  ".landing-status { padding: var(--space-1) 10px }":
-    "the replay's status chip's sides, until it is a StatusChip (P19.10)",
   ".landing-dialog-head { padding: 20px var(--space-7) var(--space-5) }": "the dialog's first line",
   ".landing-dialog-notice { padding: 10px var(--space-7) }": "a message's line in the dialog",
   ".replay-header { gap: var(--space-4) 14px }": "between the header's items",

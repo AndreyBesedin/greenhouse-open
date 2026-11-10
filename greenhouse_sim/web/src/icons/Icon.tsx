@@ -9,7 +9,7 @@ interface IconProps {
   viewBox: string;
   /** Drawn as outlines in the text's colour, or filled in it. */
   style: "outline" | "filled";
-  size?: number;
+  size?: number | undefined;
 }
 
 /**

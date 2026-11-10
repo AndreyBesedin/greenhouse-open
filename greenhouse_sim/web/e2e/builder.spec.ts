@@ -201,7 +201,10 @@ test("builder: a draft saved and a run of it started in one step, on a worker, i
   await page.getByRole("button", { name: "Save and start a run" }).click();
 
   await expect(page).toHaveURL(new RegExp(`/replay\\?run=${id}_r1.*follow=1`), ARRIVES);
-  await expect(page.getByTestId("replay-status")).toHaveText(/Queued|Running|Finished/, ARRIVES);
+  await expect(page.getByRole("status", { name: "Run status" })).toHaveText(
+    /Queued|Running|Finished/,
+    ARRIVES,
+  );
   await expect(page.getByTestId("scene-status")).toContainText(`${id}_r1`, ARRIVES);
   // A worker computes it, which knows the scenario only from the store.
   await expect
@@ -215,7 +218,7 @@ test("builder: a draft saved and a run of it started in one step, on a worker, i
       { timeout: 90_000 },
     )
     .toBeGreaterThan(0);
-  await expect(page.getByTestId("replay-status")).toHaveText(/Running|Finished/);
+  await expect(page.getByRole("status", { name: "Run status" })).toHaveText(/Running|Finished/);
   // A house with no equipment has a climate run as any other: the replay draws it,
   // and no moment of the run is said not to be drawn.
   await expect(page.getByTestId("climate-failed")).toHaveCount(0);
@@ -484,7 +487,9 @@ test("builder: the reference greenhouse's house edited, put back, through its fi
     await run.getByLabel("Seed").fill("42");
     await page.getByRole("button", { name: "Save and start a run" }).click();
     await expect(page).toHaveURL(new RegExp(`/replay\\?run=${id}_r1.*follow=1`), ARRIVES);
-    await expect(page.getByTestId("replay-status")).toHaveText("Finished", { timeout: 120_000 });
+    await expect(page.getByRole("status", { name: "Run status" })).toHaveText("Finished", {
+      timeout: 120_000,
+    });
     const [drawn, reference] = await Promise.all(
       [`${id}_r1`, "reference_greenhouse"].map((scenario) => houseDrawn(page, scenario)),
     );

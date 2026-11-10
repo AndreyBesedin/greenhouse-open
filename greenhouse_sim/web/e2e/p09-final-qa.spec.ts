@@ -279,7 +279,10 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   // panel, which its worker takes at the run's own clock (decision 0073).
   const steered = await askForRun(page, "climate_box", { seed: 66, secondsPerDay: STEERED_PACE });
   await openReplay(page, steered);
-  await expect(page.getByTestId("replay-status")).toHaveText(/Queued|Running/, ARRIVES);
+  await expect(page.getByRole("status", { name: "Run status" })).toHaveText(
+    /Queued|Running/,
+    ARRIVES,
+  );
   await say(page, "New in 0.5.0: a run steered from its replay while it is computed");
   await unfold(page, "Equipment");
   await page

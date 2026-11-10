@@ -269,28 +269,6 @@
   width: 100%;
 }
 
-/* The replay's header draws its run's status with these until it is a
- * `StatusChip` (P19.10); a list of runs draws its chips with the component. */
-.landing-status {
-  padding: var(--space-1) 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  font-size: var(--font-sm);
-  font-weight: 600;
-}
-
-.landing-status-running,
-.landing-status-queued {
-  border-color: var(--action);
-  color: var(--action);
-}
-
-.landing-status-failed,
-.landing-status-interrupted {
-  border-color: var(--warn);
-  color: var(--warn);
-}
-
 /* The runs of a scenario, in a dialog of their own (P17.5). */
 .landing-dialog {
   box-sizing: border-box;
