@@ -24,6 +24,9 @@ describe("a running epoch steered from its replay", () => {
 
     expect(said(rendered.container, "epoch-steering")).toContain(ENDED_STEERING);
     expect(said(rendered.container, "epoch-steering-refused")).toBe("Not changed: it ended first.");
+    expect(
+      rendered.container.querySelector('[data-testid="epoch-steering-refused"]')?.className,
+    ).toBe("ds-notice ds-notice-problem targets-note");
   });
 
   it("says a change waits for the worker, then the moment the run took it from", () => {

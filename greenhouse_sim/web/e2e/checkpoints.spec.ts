@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { unfold } from "./folds";
+import { colourAndWarn } from "./warn";
 
 // A run's checkpoints (P09.5): the climate box, its heater on ten minutes
 // into its first day, saved at its second day's start, restored from its
@@ -102,6 +103,8 @@ test("checkpoints: a run saved at a day's start is restored, downloaded and uplo
       "the body is not JSON",
       ARRIVES,
     );
+    const { colour, warn } = await colourAndWarn(panel.getByTestId("checkpoints-problem"));
+    expect(colour).toBe(warn);
   });
 });
 

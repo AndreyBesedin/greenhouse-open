@@ -1,4 +1,5 @@
 import { Fold } from "../design/Fold";
+import { Notice } from "../design/Notice";
 import { useLoad } from "../useLoad";
 import { labRunQuery } from "./lab";
 import {
@@ -120,7 +121,9 @@ export function PlantStructure({
     case "loading":
       return <p>Loading the plant's structure…</p>;
     case "unavailable":
-      return <p role="alert">The plant's structure is not available: {state.reason}.</p>;
+      return (
+        <Notice kind="problem">The plant's structure is not available: {state.reason}.</Notice>
+      );
     case "loaded":
       return (
         <>

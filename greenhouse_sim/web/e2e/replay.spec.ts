@@ -3,6 +3,7 @@ import { LANDING_PATH, REPLAY_PATH, replayTarget, runsAddress } from "../src/lan
 import { unfold } from "./folds";
 import { type AskedRun, askForRun, computedTo, openReplay, stopRun } from "./replays";
 import { onScreen } from "./view";
+import { colourAndWarn } from "./warn";
 
 const DAY_S = 86_400;
 // How long a first day of a run may take to be computed, with the other
@@ -456,6 +457,8 @@ test("an address that names no run, or a run that is not kept, says so and offer
 
   await page.goto(`${REPLAY_PATH}?run=there-is-no-such-run&epoch=0`);
   await expect(page.getByTestId("replay-notice")).toContainText("cannot be replayed");
+  const { colour, warn } = await colourAndWarn(page.getByTestId("replay-notice"));
+  expect(colour).toBe(warn);
   await page.getByRole("link", { name: "Home" }).click();
   await expect(
     page.getByRole("heading", { name: "Simulate a greenhouse's climate and crop" }),

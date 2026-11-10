@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-
+import { Notice } from "../design/Notice";
 import { quantityScale } from "../fields/drawing";
 import { FieldLegend } from "../fields/FieldLegend";
 import { FieldSlice } from "../fields/FieldSlice";
@@ -69,9 +69,9 @@ export function QaSolar({ search }: { search: string }) {
 
   if (view === null) {
     return (
-      <p className="qa-caption" role="alert">
+      <Notice kind="problem" className="qa-caption">
         The view must be morning, noon or evening.
-      </p>
+      </Notice>
     );
   }
   if (snapshot === null || loaded === null || moment === null) {

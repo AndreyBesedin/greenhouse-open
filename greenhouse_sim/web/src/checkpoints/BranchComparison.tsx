@@ -1,5 +1,6 @@
 import { CHART_WIDTH, polylinePoints } from "../charts/chart";
 import { dayBegun } from "../clock";
+import { Notice } from "../design/Notice";
 import { useLoad } from "../useLoad";
 import { type ComparisonRequest, comparisonKey, loadComparison, type TwoSeries } from "./branches";
 import type { CheckpointSummary } from "./checkpoints";
@@ -84,7 +85,7 @@ export function BranchComparison({
       {before && <p>The moment drawn lies before the checkpoint.</p>}
       {state.status === "loading" && <p>Running both branches…</p>}
       {state.status === "unavailable" && (
-        <p role="alert">The branches cannot be compared: {state.reason}.</p>
+        <Notice kind="problem">The branches cannot be compared: {state.reason}.</Notice>
       )}
       {state.status === "loaded" && (
         <figure aria-label="Branch comparison">

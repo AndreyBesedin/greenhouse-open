@@ -83,6 +83,12 @@
   font-weight: 600;
 }
 
+/* Why the scene shown is not drawn, said on the chooser's line, where a
+ * paragraph, and so `Notice`, cannot stand: a problem, in `--warn` as one is. */
+.source-problem {
+  color: var(--warn);
+}
+
 .info-panel dl {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -527,6 +533,12 @@
   left: 12px;
   margin: 0;
   padding: var(--space-2) var(--space-4);
+}
+
+/* A QA page's address it cannot draw is a problem: the caption's own colour, set
+ * above for the panels over the view, would cover `Notice`'s `--warn`. */
+.qa-caption[role="alert"] {
+  color: var(--warn);
 }
 
 /* The reference QA's state probes, under its caption. */

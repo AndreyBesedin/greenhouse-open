@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 
 import { Button } from "../design/Button";
 import { LinkButton } from "../design/LinkButton";
+import { Notice } from "../design/Notice";
 import { StatusChip } from "../design/StatusChip";
 import { HomeButton } from "../landing/HomeButton";
 import { replayAddress } from "../landing/paths";
@@ -90,14 +91,14 @@ export function ReplayHeader({
         {position.status === "failed" && <p data-testid="replay-failed">{failedText(failure)}</p>}
         {noFork !== null && <p data-testid="replay-no-fork">{noFork}</p>}
         {forkRefused !== null && (
-          <p role="alert" data-testid="replay-fork-refused">
+          <Notice kind="problem" data-testid="replay-fork-refused">
             This run could not be forked: {forkRefused}.
-          </p>
+          </Notice>
         )}
         {deleteRefused !== null && (
-          <p role="alert" data-testid="replay-delete-refused">
+          <Notice kind="problem" data-testid="replay-delete-refused">
             {deleteRefused}
-          </p>
+          </Notice>
         )}
       </div>
       <StatusChip tone={STATUS_TONE[position.status]} label={STATUS_NAME}>

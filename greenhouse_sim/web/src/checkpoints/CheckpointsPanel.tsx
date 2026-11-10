@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { dayBegun, daysEnded } from "../clock";
 import { Button } from "../design/Button";
 import { Fold } from "../design/Fold";
+import { Notice } from "../design/Notice";
 import type { RunParts } from "../scene/run";
 import { useLoad } from "../useLoad";
 import {
@@ -127,12 +128,12 @@ export function CheckpointsPanel({
       />
       {working !== null && <p data-testid="checkpoints-working">{working}</p>}
       {problem !== null && (
-        <p role="alert" data-testid="checkpoints-problem">
+        <Notice kind="problem" data-testid="checkpoints-problem">
           {problem}
-        </p>
+        </Notice>
       )}
       {state.status === "unavailable" && (
-        <p role="alert">The checkpoints cannot be listed: {state.reason}.</p>
+        <Notice kind="problem">The checkpoints cannot be listed: {state.reason}.</Notice>
       )}
       {state.status === "loaded" && kept.length === 0 && <p>None kept for this scenario.</p>}
       {kept.length > 0 && (

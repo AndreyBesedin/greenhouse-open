@@ -65,6 +65,8 @@ describe("what the viewer says of the scene it draws", () => {
 
     expect(said.className).not.toContain("visually-hidden");
     expect(said.getAttribute("role")).toBe("alert");
+    // On the chooser's line, where `Notice`, a paragraph, cannot stand: in --warn by its class.
+    expect(said.className).toBe("source-problem");
     expect(said.textContent).toBe("The scenario climate_box was rejected: no greenhouse.");
   });
 
@@ -73,6 +75,8 @@ describe("what the viewer says of the scene it draws", () => {
 
     expect(said.className).not.toContain("visually-hidden");
     expect(said.getAttribute("role")).toBe("alert");
+    // On the chooser's line, where `Notice`, a paragraph, cannot stand: in --warn by its class.
+    expect(said.className).toBe("source-problem");
     expect(said.textContent).toBe(
       "The scenario climate_box is not available: the simulator could not be reached.",
     );

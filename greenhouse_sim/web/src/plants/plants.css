@@ -19,6 +19,12 @@
   color: var(--warn);
 }
 
+/* The plants that break the structure's rules: a problem, and a list, which
+ * `Notice`, a paragraph, cannot hold. */
+.lab-rule-problems {
+  color: var(--warn);
+}
+
 /* The plant lab's debug tree: an organ per line, scrolling on its own. */
 .plant-structure {
   max-height: 40vh;

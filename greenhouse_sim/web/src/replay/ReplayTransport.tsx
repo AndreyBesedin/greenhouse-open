@@ -2,6 +2,7 @@ import { useId } from "react";
 
 import { Button } from "../design/Button";
 import { IconButton } from "../design/IconButton";
+import { Notice } from "../design/Notice";
 import { PauseIcon, PlayIcon, StepBackIcon, StepForwardIcon } from "../icons";
 import type { PositionState } from "./position";
 import { ReplayTimeline } from "./ReplayTimeline";
@@ -107,9 +108,9 @@ export function ReplayTransport({
   return (
     <section className="replay-transport" aria-label="Move through the run" hidden={folded}>
       {refused !== null && (
-        <p role="alert" className="replay-refused">
+        <Notice kind="problem" className="replay-refused">
           That did not reach the run: {refused}. Reload the page to open it again.
-        </p>
+        </Notice>
       )}
       {forkWait !== null && (
         <p role="status" className="replay-refused" data-testid="replay-fork-wait">

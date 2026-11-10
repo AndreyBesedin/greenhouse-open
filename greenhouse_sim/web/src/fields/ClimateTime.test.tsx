@@ -209,6 +209,9 @@ describe("a climate run's moment on its way", () => {
     expect(said(view.container, "climate-failed")).toBe(
       "Day 2, 10 min cannot be drawn; 10 min is shown.",
     );
+    expect(view.container.querySelector('[data-testid="climate-failed"]')?.className).toBe(
+      "ds-notice ds-notice-problem climate-time-note",
+    );
     view.unmount();
   });
 });

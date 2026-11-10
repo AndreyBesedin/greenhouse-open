@@ -1,6 +1,7 @@
 import { useMemo, useRef } from "react";
 
 import { App } from "../App";
+import { Notice } from "../design/Notice";
 import { HomeButton } from "../landing/HomeButton";
 import { LANDING_PATH, replayTarget } from "../landing/paths";
 import { PanelStripe } from "../PanelStripe";
@@ -33,9 +34,9 @@ export function Replay({ search = location.search }: { search?: string }) {
   const target = replayTarget(search);
   if (target === null) {
     return (
-      <Notice>
+      <NoRun>
         <p>This address names no run to replay: it wants a run and an epoch.</p>
-      </Notice>
+      </NoRun>
     );
   }
   return <ReplayOf runId={target.runId} epoch={target.epoch} following={target.following} />;
@@ -95,13 +96,16 @@ function ReplayOf({
 
   if (position === null || source === null) {
     return (
-      <Notice>
-        <p role={load.status === "unavailable" ? "alert" : "status"} data-testid="replay-notice">
+      <NoRun>
+        <Notice
+          kind={load.status === "unavailable" ? "problem" : "status"}
+          data-testid="replay-notice"
+        >
           {load.status === "unavailable"
             ? `This run cannot be replayed: ${load.reason}.`
             : "Opening the run…"}
-        </p>
-      </Notice>
+        </Notice>
+      </NoRun>
     );
   }
   const name =
@@ -155,7 +159,7 @@ function ReplayOf({
 }
 
 /** What the page says while there is no run to show, with the way home. */
-function Notice({ children }: { children: React.ReactNode }) {
+function NoRun({ children }: { children: React.ReactNode }) {
   return (
     <div className="replay">
       <header className="replay-header">

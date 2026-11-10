@@ -1,4 +1,5 @@
 import { dayCount } from "../clock";
+import { Notice } from "../design/Notice";
 import { useLoad } from "../useLoad";
 import { labChecksUrl, loadLabChecks } from "./checks";
 import { type LabRun, labRunQuery } from "./lab";
@@ -17,9 +18,9 @@ export function RuleChecks({ run }: { run: LabRun }) {
       return <p data-testid="rule-checks">Checking the plants' structure…</p>;
     case "unavailable":
       return (
-        <p data-testid="rule-checks" role="alert">
+        <Notice kind="problem" data-testid="rule-checks">
           The plants' structure could not be checked: {state.reason}.
-        </p>
+        </Notice>
       );
     case "loaded": {
       const wrong = Object.entries(state.problems).filter(([, problems]) => problems.length > 0);
@@ -32,7 +33,7 @@ export function RuleChecks({ run }: { run: LabRun }) {
         );
       }
       return (
-        <div data-testid="rule-checks" role="alert">
+        <div data-testid="rule-checks" role="alert" className="lab-rule-problems">
           <p>
             {dayCount(state.day)} in, {wrong.length} of {plants} plants break the structure's rules:
           </p>

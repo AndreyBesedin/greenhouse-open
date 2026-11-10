@@ -176,5 +176,8 @@ describe("moving equipment and sensors", () => {
     shown = render(panel({ ...DRAFT, forking: true, failure: "no room" }));
 
     expect(said(shown.container, "move-failure")).toBe("The run could not be forked: no room.");
+    expect(shown.container.querySelector('[data-testid="move-failure"]')?.className).toContain(
+      "ds-notice-problem",
+    );
   });
 });

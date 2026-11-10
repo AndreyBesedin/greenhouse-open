@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-
+import { Notice } from "../design/Notice";
 import { describeTime } from "../fields/ClimateTime";
 import { FieldArrows } from "../fields/FieldArrows";
 import { FieldLegend } from "../fields/FieldLegend";
@@ -69,9 +69,9 @@ export function QaReference({ search }: { search: string }) {
 
   if (view === null || drawn === null) {
     return (
-      <p className="qa-caption" role="alert">
+      <Notice kind="problem" className="qa-caption">
         There is no such view of the reference greenhouse.
-      </p>
+      </Notice>
     );
   }
   if (qa === null || moment === null || snapshot === null) {
@@ -100,7 +100,7 @@ export function QaReference({ search }: { search: string }) {
     return (
       <main className="qa-camera">
         {spec === null ? (
-          <p role="alert">The reference greenhouse has no camera.</p>
+          <Notice kind="problem">The reference greenhouse has no camera.</Notice>
         ) : (
           <CameraView
             snapshot={snapshot}

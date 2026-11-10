@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from "react";
 
 import { Button } from "../design/Button";
+import { Notice } from "../design/Notice";
 import { sizeText } from "../landing/storedRuns";
 import { bytesOf, downloadScenarioFile, offerFile } from "./scenarioFile";
 
@@ -76,7 +77,7 @@ export function ShareScenario({ scenarioId }: { scenarioId: string }) {
         Download it as a file and send it to a colleague. They upload it from the start page and it
         opens here.
       </p>
-      {problem !== null && <p role="alert">The file cannot be made: {problem}</p>}
+      {problem !== null && <Notice kind="problem">The file cannot be made: {problem}</Notice>}
       {offer?.without != null && (
         <label className="builder-share-recording">
           <input

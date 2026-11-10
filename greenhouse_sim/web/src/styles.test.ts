@@ -534,14 +534,16 @@ function misnamed(classes: readonly string[]): string[] {
 
 // The viewer's handwritten sources, which give elements their classes.
 function sources(folder: string): string[] {
+  return sourcePaths(folder).map((path) => readFileSync(path, "utf8"));
+}
+
+function sourcePaths(folder: string): string[] {
   return readdirSync(folder).flatMap((entry) => {
     const path = join(folder, entry);
     if (statSync(path).isDirectory()) {
-      return sources(path);
+      return sourcePaths(path);
     }
-    return /\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry)
-      ? [readFileSync(path, "utf8")]
-      : [];
+    return /\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry) ? [path] : [];
   });
 }
 /** The end of the value that starts at `start`: a string's closing quote,
@@ -1292,5 +1294,62 @@ describe("a panel folder's stylesheet (P19.11)", () => {
         writers,
       ),
     ).toEqual([".field-probes p", ".weather-panel"]);
+  });
+});
+
+/** Whether `stylesheet` draws the class `name` in `--warn`, a rule naming it so. */
+function drawsInWarn(stylesheet: string, name: string): boolean {
+  const named = new RegExp(`\\.${name}(?![\\w-])`);
+  return [...stylesheet.replace(COMMENT, "").matchAll(/([^{};]*)\{([^}]*)\}/g)].some(
+    ([, prelude, block]) =>
+      named.test(prelude ?? "") && /(?:^|;)\s*color:\s*var\(--warn\)\s*(?:;|$)/.test(block ?? ""),
+  );
+}
+
+/** Each alert the files write that `stylesheet` does not draw in `--warn`, as
+ * "path: its opening tag": one is a problem `Notice`, or an element whose role is
+ * `alert`, drawn by one of its classes. */
+function alertsNotInWarn(
+  files: readonly { path: string; text: string }[],
+  stylesheet: string,
+): string[] {
+  return files.flatMap(({ path, text }) =>
+    [...text.matchAll(/<\w+\b[^>]*?\brole=(?:"alert"|\{[^}]*"alert"[^}]*\})[^>]*>/g)]
+      .filter(([tag]) => {
+        const classes = /className="([^"]*)"/.exec(tag)?.[1]?.split(/\s+/) ?? [];
+        return !classes.some((name) => drawsInWarn(stylesheet, name));
+      })
+      .map(([tag]) => `${path}: ${tag.replace(/\s+/g, " ")}`),
+  );
+}
+
+describe("an alert (P19.12)", () => {
+  it("is drawn in --warn: a problem Notice, or an element whose class draws it so", () => {
+    const files = sourcePaths(SOURCE_ROOT)
+      .filter((path) => !path.includes("/src/design/"))
+      .map((path) => ({ path: path.slice(SOURCE_ROOT.length), text: readFileSync(path, "utf8") }));
+    expect(drawsInWarn(STYLES, "ds-notice-problem")).toBe(true);
+    expect(alertsNotInWarn(files, STYLES)).toEqual([]);
+  });
+
+  it("refuses one in the text's colour, however its role is written", () => {
+    const stylesheet = `
+      .a-problem { margin: 0; color: var(--warn); }
+      /* .b-said { color: var(--warn); } */
+      .b-said { color: var(--text); }
+      .c-problem-row { color: var(--warn); }
+    `;
+    const text = `
+      <p role="alert" className="a-problem">drawn</p>
+      <p className="b-said" role="alert">not drawn</p>
+      <span role={failed ? "alert" : "status"}>not drawn</span>
+      <p role="alert" className="c-problem">not drawn: another's class</p>
+      <p role="status">not an alert</p>
+    `;
+    expect(alertsNotInWarn([{ path: "x.tsx", text }], stylesheet)).toEqual([
+      'x.tsx: <p className="b-said" role="alert">',
+      'x.tsx: <span role={failed ? "alert" : "status"}>',
+      'x.tsx: <p role="alert" className="c-problem">',
+    ]);
   });
 });

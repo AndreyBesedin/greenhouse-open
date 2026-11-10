@@ -1,4 +1,5 @@
 import { dayCount } from "./clock";
+import { Notice } from "./design/Notice";
 import { DEFAULT_LAYOUT } from "./scenarios";
 import { baseLayout, movesIn } from "./scene/moves";
 import type { SceneState } from "./scene/sceneLoad";
@@ -50,13 +51,13 @@ export function SceneStatus({ source, state }: { source: SceneSource; state: Sce
       return <span data-testid="scene-status">Loading the {describeSource(source)}…</span>;
     case "unavailable":
       return (
-        <span data-testid="scene-status" role="alert">
+        <span data-testid="scene-status" role="alert" className="source-problem">
           The {describeSource(source, null)} is not available: {state.reason}.
         </span>
       );
     case "rejected":
       return (
-        <span data-testid="scene-status" role="alert">
+        <span data-testid="scene-status" role="alert" className="source-problem">
           The {describeSource(source, null)} was rejected: {state.problems.join("; ")}.
         </span>
       );
@@ -78,8 +79,8 @@ export function SceneFailures({ failures }: { failures: readonly string[] }) {
     return null;
   }
   return (
-    <p data-testid="scene-failures" role="alert">
+    <Notice kind="problem" data-testid="scene-failures">
       Not drawn as asked: {failures.join("; ")}.
-    </p>
+    </Notice>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { DAY_S, dayNumber, dayStart, runDay } from "../clock";
 import { Button } from "../design/Button";
+import { Notice } from "../design/Notice";
 
 // The time of day moves a minute at a time.
 const CLIMATE_STEP_S = 60;
@@ -167,10 +168,10 @@ export function ClimateTime({
         </p>
       )}
       {failed && !arrived && (
-        <p className="climate-time-note" data-testid="climate-failed" role="alert">
+        <Notice kind="problem" className="climate-time-note" data-testid="climate-failed">
           {sentence(describe(time))} cannot be drawn
           {shown === null ? "" : `; ${describe(shown)} is shown`}.
-        </p>
+        </Notice>
       )}
       {days > 1 && !followed && (
         <div className="climate-time-row">
