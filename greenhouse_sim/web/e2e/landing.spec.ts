@@ -238,7 +238,11 @@ test("a run is started at a seed from a scenario's dialog, listed, and not remov
     // The seed whole, and the row's own: other specs leave runs at other seeds.
     await row.getByRole("button", { name: /^Delete the run with seed 7,/ }).click();
     await row.getByRole("button", { name: /^Delete the run with seed 7,/ }).click();
-    await expect(dialog.getByRole("alert")).toContainText("being computed");
+    // Refused whether a worker computes it or it waits for one, as it does
+    // while the runs of the specs beside this one have both workers.
+    await expect(dialog.getByRole("alert")).toContainText(
+      /still being computed|waiting for a worker/,
+    );
     await expect(row).toBeVisible();
 
     await dialog.getByRole("button", { name: "Close" }).click();
