@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import type { Theme } from "../src/design/theme.ts";
 import { designAddress } from "../src/qa/designPage.ts";
+import { focusRing } from "./focusRing";
 
 // The design system's reference page (P19.6), which needs no simulator: what a page
 // reaches only with data is shown here, in each theme, for these checks and for its
@@ -294,5 +295,24 @@ test.describe("a component, by keyboard", () => {
 
     await page.keyboard.press("Tab");
     expect(await outline(page.locator(":focus"))).toBe("solid 3px 2px");
+  });
+
+  test("draws the one ring, in --action, on every kind of control the keyboard reaches", async ({
+    page,
+  }) => {
+    // A button, a link, a field's input and select, and a fold's line (P19.12): each
+    // was drawn by the browser's own ring but the buttons.
+    const enabled = page
+      .locator("main")
+      .locator("button:enabled, a, input:enabled, select:enabled, summary");
+    const kinds = new Set<string>();
+    for (let tab = 0; tab < (await enabled.count()); tab += 1) {
+      const focused = page.locator(":focus");
+      const kind = await focused.evaluate((element) => element.tagName.toLowerCase());
+      kinds.add(kind);
+      expect(await focusRing(focused), kind).toBe("solid 3px 2px --action");
+      await page.keyboard.press("Tab");
+    }
+    expect([...kinds].sort()).toEqual(["a", "button", "input", "select", "summary"]);
   });
 });

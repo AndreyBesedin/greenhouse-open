@@ -15,6 +15,14 @@ html {
   color-scheme: var(--scheme);
 }
 
+/* Focus, where the keyboard has put it, in one ring of the tokens on every
+ * control and on whatever a page focuses, rather than the browser's, drawn in
+ * each control's own way (P19.12). */
+:focus-visible {
+  outline: var(--focus-width) solid var(--action);
+  outline-offset: var(--focus-offset);
+}
+
 /* Said to whoever hears the page and not shown: what the page already tells
  * those who see it, such as what the scene shows, or a chip's note. */
 .visually-hidden {

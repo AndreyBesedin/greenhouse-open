@@ -33,11 +33,6 @@
   cursor: not-allowed;
 }
 
-.ds-button:focus-visible {
-  outline: var(--focus-width) solid var(--action);
-  outline-offset: var(--focus-offset);
-}
-
 .ds-button-primary {
   border-color: var(--action);
   color: var(--action);

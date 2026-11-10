@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { LANDING_PATH, REPLAY_PATH, replayTarget, runsAddress } from "../src/landing/paths";
+import { focusRing } from "./focusRing";
 import { unfold } from "./folds";
 import { type AskedRun, askForRun, computedTo, openReplay, stopRun } from "./replays";
 import { onScreen } from "./view";
@@ -135,6 +136,8 @@ test("a stored run is replayed: its header, its scene and a timeline over what i
   await handle.focus();
   await page.keyboard.press("PageUp");
   await expect(handle).toHaveAttribute("aria-valuetext", "Day 1, 24:00");
+  // Its ring is the one ring in the handle's fill, as its edge is --action (P19.12).
+  expect(await focusRing(handle)).toBe("solid 3px 2px --text");
   await expect(page.getByTestId("replay-moment")).toHaveText("Day 1, 24:00");
   await expect(page.getByTestId("scene-status")).toContainText("solar_lab, 1 day in,");
 
