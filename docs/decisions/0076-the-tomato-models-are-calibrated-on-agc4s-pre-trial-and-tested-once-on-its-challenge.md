@@ -52,9 +52,12 @@ assessment, and are a validation of their own.
   zone's PAR. Neither model reads EC, so a light level's two EC
   treatments are two measurements of one prediction.
 - *Test data:* every 2024 fruit measurement of all six compartments: the
-  three samplings' fruit per plant, the final harvest's fruit per plant
-  over the plants weighed whole, and its red fruit over the 50 weighed for
-  it. None of it is read before the test, nor any 2024 dry matter.
+  three samplings' fruit per plant, and the final harvest's fruit per
+  plant over the plants weighed whole, for both models; and, for
+  Reduced-State TOMGRO alone, the final harvest's red fruit over the 50
+  plants weighed for it, held to its mature fruit. Vanthoor's model tells
+  no ripeness, so it has no red fruit to compare. None of it is read before
+  the test, nor any 2024 dry matter.
 - *Once:* each model runs the test once, with the calibrated parameters,
   and its result is reported whatever it is. A model changed after its
   test, and tested again, reports both tests, the first kept.
@@ -72,8 +75,12 @@ calibration commits a manifest before it runs. The manifest names its
 parameters, each with its bounds and why it is chosen, and its targets,
 objective, starting values and method. Every other parameter keeps its
 published value. The objective is the sum, over the calibration targets,
-of the squared natural logarithm of the predicted per-plant value over
-the measured. Each quantity weighs the same, so no one quantity's scale
+of the squared natural logarithm of (predicted + c) over (measured + c),
+each per plant. For each quantity, c is half the smallest value above
+zero measured of it in the calibration data. A target measured as zero is
+kept, since fruit not yet set is itself a measurement. A prediction of
+zero then still gives a finite residual. A target with no measurement is
+no target. Each quantity weighs the same, so no one quantity's scale
 dominates. A calibrated parameter set is kept apart from the model's
 published defaults, with its source and its data, and is never one of
 them.
@@ -98,6 +105,11 @@ them.
 - *Carbohydrate to dry matter,* for Vanthoor's model: one for one, as
   GreenLight 2.0.7's own yield takes them. Reduced-State TOMGRO's 0.75 is
   reported as a sensitivity.
+- *Vanthoor's fruit* is its standing fruit plus its harvested fruit, in
+  the calibration and the test alike: AGC4 picked nothing from a plant
+  before it was measured. Its leaves pruned past a leaf area index of 3
+  are kept in no state, and AGC4 pruned none, so a run that prunes says so
+  beside its comparisons.
 - *Dry to fresh:* the pre-trial's fruit dry-matter fraction at its last
   date, 8.0 %, the mean over 48 plants of `DW fruits` over
   `FW fruits clusters`. It is the calibration year's own measurement,
@@ -108,7 +120,9 @@ them.
 - *Hours and days:* each driver is the mean of the 5-minute rows stamped
   inside its hour. Days are taken at a fixed UTC+01:00, so that every day
   has 24 hours. An hour with no rows takes the previous hour's means; that
-  happens once in 2024, the repeated hour of 27 October. A 2024 run starts
+  happens once in 2024, the repeated hour of 27 October, and twice in
+  2023, both of 29 October's 02:00 hours, which the pre-trial's wall-clock
+  times cannot tell apart. A 2024 run starts
   at 00:00 UTC+01:00 on 3 September, an hour after its files begin. A
   2023 run starts at 00:00 UTC+01:00 on 5 September, the first whole day
   of its climate, from the state sampled on 4 September.
@@ -125,7 +139,9 @@ them.
   relative error.
 - *Over the test:* the mean relative error (the bias), the root mean
   square of the relative errors, and how many of the 24 compartment-dates
-  fall within two standard errors of their measurement.
+  of fruit per plant fall within two standard errors of their
+  measurement. Reduced-State TOMGRO's six red-fruit comparisons are
+  reported apart, with the same measures, and are not pooled with them.
 - *Across the six final harvests:* Spearman's rank correlation between
   predicted and measured fruit per plant: whether the model orders the
   teams' strategies as their crops came out. A shared conversion factor
