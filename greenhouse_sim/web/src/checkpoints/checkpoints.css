@@ -1,0 +1,29 @@
+/* A scenario's checkpoints: save one, upload one, and those kept listed. */
+.checkpoints {
+  margin: 0 0 var(--space-4);
+}
+
+.checkpoints ol {
+  margin: var(--space-2) 0;
+  padding-left: 1.4em;
+}
+
+/* Two branches compared: A, the checkpoint's run, solid; B, dashed. */
+.branches {
+  margin: 0 0 var(--space-4);
+}
+
+.branches polyline {
+  fill: none;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.branch-a {
+  stroke: var(--data-blue);
+}
+
+.branch-b {
+  stroke: var(--data-red);
+  stroke-dasharray: 3 2;
+}

@@ -1159,7 +1159,14 @@ describe("a page's stylesheet (P19.8, P19.9, P19.10)", () => {
 
 // The folders of panels whose rules stand in a stylesheet of their own,
 // `<folder>/<folder>.css` (P19.11).
-const PANEL_STYLESHEETS: readonly string[] = ["fields", "weather"];
+const PANEL_STYLESHEETS: readonly string[] = [
+  "fields",
+  "weather",
+  "sensors",
+  "qaMode",
+  "timeline",
+  "checkpoints",
+];
 const SOURCE_ROOT = fileURLToPath(new URL(".", import.meta.url));
 
 /** The folders of `src/` whose sources write each class, the files at its root
@@ -1183,8 +1190,9 @@ function classWriters(root: string): Map<string, Set<string>> {
 }
 
 /** The selector lists in `stylesheets` out of place by the folders that write their
- * classes: in a folder's stylesheet, one that names no class its sources write;
- * elsewhere, one whose classes, those written at all, only one such folder's write. */
+ * classes: in a folder's stylesheet, one that names classes written and none its
+ * sources write (a class built, not written, is none's); elsewhere, one whose
+ * classes, those written at all, only one such folder's write. */
 function panelRulesMisplaced(
   stylesheets: readonly { path: string; text: string }[],
   writers: ReadonlyMap<string, ReadonlySet<string>>,
@@ -1199,7 +1207,7 @@ function panelRulesMisplaced(
         .map(([, name]) => writers.get(name ?? ""))
         .filter((folders) => folders !== undefined);
       if (own !== undefined) {
-        return !written.some((folders) => folders.has(own));
+        return written.length > 0 && !written.some((folders) => folders.has(own));
       }
       return PANEL_STYLESHEETS.some(
         (folder) =>
@@ -1237,7 +1245,7 @@ describe("a panel folder's stylesheet (P19.11)", () => {
           },
           {
             path: "/web/src/fields/fields.css",
-            text: ".house-air-row { gap: 0; } .info-panel .field-probes { gap: 0; } .weather-panel { gap: 0; }",
+            text: ".house-air-row { gap: 0; } .info-panel .field-probes { gap: 0; } .weather-panel { gap: 0; } .built { gap: 0; }",
           },
         ],
         writers,

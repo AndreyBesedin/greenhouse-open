@@ -8,3 +8,7 @@
 @import "./viewer.css";
 @import "./fields/fields.css";
 @import "./weather/weather.css";
+@import "./sensors/sensors.css";
+@import "./qaMode/qaMode.css";
+@import "./timeline/timeline.css";
+@import "./checkpoints/checkpoints.css";

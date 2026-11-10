@@ -37,6 +37,10 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL: `http://localhost:${PREVIEW_PORT}`,
+    // A system that says dark, so that a first visit opens dark, as every page
+    // did before it followed the system's (P19.12); a spec that wants light
+    // chooses it, or asks for a light system.
+    colorScheme: "dark",
     viewport: VIEW,
     video: { mode: "on", size: VIEW },
     // The full browser, whose headless mode draws on the graphics card.
