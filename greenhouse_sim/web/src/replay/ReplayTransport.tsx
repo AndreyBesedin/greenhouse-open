@@ -168,8 +168,10 @@ export function ReplayTransport({
           {computedText(span)}
         </span>
         <span className="replay-spacer" />
+        {/* How fast the replay shows the run, which is not how fast the run is
+            computed: the form that starts a run asks that (P22.5). */}
         <label className="replay-pace" htmlFor={paceId}>
-          Pace
+          Shows a day in
           <select
             id={paceId}
             value={position.seconds_per_day}
@@ -177,7 +179,7 @@ export function ReplayTransport({
           >
             {paces.map((seconds) => (
               <option key={seconds} value={seconds}>
-                {seconds} s a day
+                {seconds} s
               </option>
             ))}
           </select>

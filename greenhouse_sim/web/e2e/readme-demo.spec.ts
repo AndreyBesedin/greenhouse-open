@@ -196,7 +196,7 @@ test("the README's demo shows the simulator's main features, each under its capt
 
   // Played last: a moment asked for after playing waits on what playing asked.
   const transport = page.locator(".replay-transport");
-  await transport.getByLabel("Pace").selectOption("2");
+  await transport.getByLabel("Shows a day in").selectOption("2");
   await transport.getByRole("button", { name: "Play" }).click();
   await expect(transport.getByRole("button", { name: "Pause" })).toBeVisible(ARRIVES);
   await say(page, "Played, a day every two seconds: day and night, the crop growing");

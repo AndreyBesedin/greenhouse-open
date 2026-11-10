@@ -26,7 +26,7 @@ function collectErrors(page: Page): string[] {
 async function start(page: Page, seed: string): Promise<{ runId: string; epoch: number }> {
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Seed", { exact: true }).fill(seed);
-  await dialog.getByLabel("Seconds per simulated day").fill(SECONDS_PER_DAY);
+  await dialog.getByLabel("Seconds to compute a day").fill(SECONDS_PER_DAY);
   await dialog.getByRole("button", { name: "Start run" }).click();
   await expect(page).toHaveURL(new RegExp(`${REPLAY_PATH}\\?run=.*&follow=1$`));
   const target = replayTarget(new URL(page.url()).search);
@@ -134,7 +134,7 @@ test("a run is started for the form's days and under its weather, and repeated b
     await dialog.getByLabel("Days").fill("1");
     await dialog.getByLabel("Weather").selectOption({ label: "cold spring day" });
     await dialog.getByLabel("Seed", { exact: true }).fill("75");
-    await dialog.getByLabel("Seconds per simulated day").fill("");
+    await dialog.getByLabel("Seconds to compute a day").fill("");
     await dialog.getByRole("button", { name: "Start run" }).click();
     await expect(page).toHaveURL(new RegExp(`${REPLAY_PATH}\\?run=.*&follow=1$`));
     const target = replayTarget(new URL(page.url()).search);

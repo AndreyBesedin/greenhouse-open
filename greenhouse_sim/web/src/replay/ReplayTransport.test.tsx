@@ -143,9 +143,19 @@ describe("what moves a position over a stored run", () => {
 
   it("sets how fast a day plays, among the paces, and keeps one it has", () => {
     const { container, onPace } = shown(position({ seconds_per_day: 7 }));
-    const pace = select(container, "Pace");
+    // Said as how fast it shows, not as a run's pace, which is how fast it is
+    // computed (P22.5).
+    const pace = select(container, "Shows a day in");
 
-    expect([...pace.options].map((o) => o.textContent)).toContain("7 s a day");
+    expect([...pace.options].map((o) => o.textContent)).toEqual([
+      "2 s",
+      "5 s",
+      "7 s",
+      "10 s",
+      "30 s",
+      "60 s",
+    ]);
+    expect(container.textContent).not.toMatch(/\d s a day/);
     choose(pace, "30");
     expect(onPace).toHaveBeenCalledWith(30);
   });

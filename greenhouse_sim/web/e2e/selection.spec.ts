@@ -79,7 +79,7 @@ test("a selection stays on its entity while the replay plays its run on", async 
   // Played at its quickest, each new day of the crop is a new scene; the
   // selection and its label follow the plant.
   const transport = page.locator(".replay-transport");
-  await transport.getByLabel("Pace").selectOption("2");
+  await transport.getByLabel("Shows a day in").selectOption("2");
   await transport.getByRole("button", { name: "Play" }).click();
   await expect(age).not.toHaveText(firstAge ?? "", ARRIVES);
   await expect(selected).toHaveText(REPLAYED_PLANT_ID);

@@ -200,7 +200,7 @@ describe("the runs of a scenario, in a dialog", () => {
     ]);
 
     expect(field("Seed").placeholder).toBe("The scenario's own");
-    expect(field("Seconds per simulated day").value).toBe("10");
+    expect(field("Seconds to compute a day").value).toBe("10");
     // Its own days and weather unless others are chosen (decision 0075).
     expect(field("Days").value).toBe("120");
     expect([...choice("Weather").options].map((each) => [each.value, each.text])).toEqual([
@@ -233,7 +233,7 @@ describe("the runs of a scenario, in a dialog", () => {
       const { container, field, navigate } = shown([]);
 
       enter(field("Seed"), "7x5");
-      enter(field("Seconds per simulated day"), "4");
+      enter(field("Seconds to compute a day"), "4");
       click(button(container, "Start run"));
 
       await vi.waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
@@ -351,11 +351,20 @@ describe("the runs of a scenario, in a dialog", () => {
       );
     });
 
+    it("says its pace is how fast the run is computed, not how fast its replay shows it", () => {
+      const { container, field } = shown([]);
+      const pace = field("Seconds to compute a day");
+
+      const note = container.querySelector(`[id="${pace.getAttribute("aria-describedby")}"]`);
+      expect(note?.textContent).toBe("A day takes no less. Its replay has a speed of its own.");
+      expect(pace.placeholder).toBe("As fast as it computes");
+    });
+
     it("leaves out a seed and a pace not entered: the scenario's own, as fast as it computes", async () => {
       const asked = simulator({ [`POST ${RUNS_URL}?`]: { status: 200, body: STARTED } });
       const { container, field, navigate } = shown([]);
 
-      enter(field("Seconds per simulated day"), "");
+      enter(field("Seconds to compute a day"), "");
       click(button(container, "Start run"));
 
       await vi.waitFor(() => expect(navigate).toHaveBeenCalled());
