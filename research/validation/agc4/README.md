@@ -258,3 +258,60 @@ What it shows:
 Each limit is reported, not corrected: decision 0076 has a calibration
 change nothing outside its manifest. The test on 2024 runs these
 parameters once.
+
+## The test
+
+[`challenge.py`](challenge.py) runs decision 0076's test of a calibrated
+model on the 2024 challenge, and writes its report to
+`tested/<model>.json`:
+
+```bash
+python -m research.validation.agc4.challenge tomgro /tmp/agc4-drivers
+python -m research.validation.agc4.challenge vanthoor_katzin /tmp/agc4-drivers
+```
+
+Each model is tested once: the script refuses to run where its report is
+already there, and writes it only if it is not, so a first report is never
+overwritten. It refuses a 2024 series whose sha256 is not the one
+`drivers.json` records. The model runs with the parameters its
+calibration's report holds, every other published, from the 2023
+transplants scaled to 56 plants per m², through each compartment's hours to
+the midnight that begins its harvest day.
+
+- **What it is held to:** the fruit's fresh weight per plant, as the
+  adapter reads `Harvest.xlsx`, at the three samplings (6 plants each) and
+  at the final harvest (the 30 plants weighed whole, 21 in 3.06): 24
+  compartment-dates. For Reduced-State TOMGRO alone, the final harvest's
+  red fruit over the 50 plants weighed for it, held to its mature fruit and
+  reported apart. Vanthoor's model tells no ripeness.
+- **The prediction:** the model's dry fruit per plant at the midnight that
+  begins the measurement's day, over the pre-trial's fruit dry-matter
+  fraction at its last date, computed from its 48 plants: 8.02 %. For a
+  sampling, the midnight after is given beside it.
+- **The measures:** per compartment-date, the prediction, the measurement
+  with its standard error and its plants, the error and the relative error;
+  over the test, the bias, the root mean square of the relative errors, how
+  many fall within two standard errors, and Spearman's rank correlation over
+  the six final harvests.
+- **The baseline and the skill:** every compartment's fruit as the
+  pre-trial's EC3 treatments grew theirs, by the days since transplanting:
+  none at transplanting, then the mean of the four light zones' means, 0.0,
+  0.76 and 16.3 g of dry fruit per plant 14, 25 and 66 days after, linear
+  between them and past the last at its last interval's rate. Its fruit is
+  dry, as the pre-trial weighed it, and is made fresh by the same fraction
+  as the model's, so that the skill, one minus the model's sum of squared
+  errors over the baseline's, compares how each grows dry matter, not how
+  either is converted. The baseline's own measures are given beside the
+  model's.
+- **The sensitivities:** the same measures with GreenLight's assumed 6 %,
+  with the lowest and the highest dry matter of 2024's red batches (from
+  [`profile.json`](profile.json)), with each sampling at the midnight
+  after, and, for Vanthoor's model, with Reduced-State TOMGRO's 0.75 g of
+  dry matter per g of carbohydrate.
+- **With them:** the run time, the hours each series fills from the hour
+  before, the largest leaf area index and, for Vanthoor's model, the leaves
+  pruned per plant by each date, and each difference between what the
+  model gives and what was measured.
+
+The procedure is committed before it runs: no 2024 fruit was compared with
+a prediction to write it.

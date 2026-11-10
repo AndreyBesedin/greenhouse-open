@@ -12,7 +12,8 @@ call for that is not part of the packages: nothing in `greenhouse_sim`,
   be held to (item 5), counted file by file.
   [`agc4/`](validation/agc4/README.md) profiles the two AGC4 archives,
   builds the hourly drivers decision 0076 runs the tomato models on, runs
-  the models on them, and calibrates each on the 2023 pre-trial.
+  the models on them, calibrates each on the 2023 pre-trial, and holds the
+  procedure of the single test on 2024's fruit.
 - [`integrations/`](integrations/): what the run's way of driving a
   reproduced model changes of it (decision 0062, milestone B), measured
   against the reproduction's forcing and against a reference's

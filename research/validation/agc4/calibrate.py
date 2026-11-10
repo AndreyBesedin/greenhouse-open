@@ -49,7 +49,7 @@ from research.validation.agc4.calibration import (
     readings_of,
     targets,
 )
-from research.validation.agc4.drivers import PRETRIAL_ZONES, Hour
+from research.validation.agc4.drivers import Hour
 from research.validation.agc4.harness import Transplant, read_series, transplants
 
 HERE: Final = Path(__file__).resolve().parent
@@ -63,15 +63,15 @@ INDENT: Final = " "
 NEAR_A_BOUND: Final = 0.01
 
 
-def zones(drivers_dir: Path) -> dict[str, list[Hour]]:
-    """The pre-trial's series, one per light zone, each checked against the
-    sha256 `drivers.json` records."""
-    recorded = json.loads(DRIVERS.read_text())[PRETRIAL]["series"]
+def zones(drivers_dir: Path, dataset: str = PRETRIAL) -> dict[str, list[Hour]]:
+    """A dataset's series, one per 2023 light zone or 2024 compartment, each
+    checked against the sha256 `drivers.json` records."""
+    recorded = json.loads(DRIVERS.read_text())[dataset]["series"]
     found: dict[str, list[Hour]] = {}
-    for zone in PRETRIAL_ZONES:
-        path = drivers_dir / recorded[zone]["file"]
+    for zone, entry in recorded.items():
+        path = drivers_dir / entry["file"]
         text = path.read_bytes()
-        if hashlib.sha256(text).hexdigest() != recorded[zone]["sha256"]:
+        if hashlib.sha256(text).hexdigest() != entry["sha256"]:
             raise ValueError(f"{path} is not the series drivers.json records")
         found[zone] = read_series(text.decode())
     return found
