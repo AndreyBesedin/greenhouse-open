@@ -1159,7 +1159,7 @@ describe("a page's stylesheet (P19.8, P19.9, P19.10)", () => {
 
 // The folders of panels whose rules stand in a stylesheet of their own,
 // `<folder>/<folder>.css` (P19.11).
-const PANEL_STYLESHEETS: readonly string[] = ["fields"];
+const PANEL_STYLESHEETS: readonly string[] = ["fields", "weather"];
 const SOURCE_ROOT = fileURLToPath(new URL(".", import.meta.url));
 
 /** The folders of `src/` whose sources write each class, the files at its root
