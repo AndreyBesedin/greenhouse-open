@@ -26,7 +26,7 @@ POLL_S = 0.01
 TESTS = Path(__file__).parent
 # A store's own forgetting, called by a test file rather than by conftest's
 # fixtures.
-OWN_FORGETTING = re.compile(r"\.forget\(\)|\bforget_(?!everything)\w+\(|stop_playbacks\(")
+OWN_FORGETTING = re.compile(r"\.forget\(\)|\bforget_(?!everything)\w+\(")
 
 
 def _making(value: str) -> Callable[[list[tuple[str, str]]], str]:
@@ -222,24 +222,14 @@ def test_a_simulator_forgets_what_it_keeps_those_that_build_on_others_first(
 ) -> None:
     forgotten: list[str] = []
     with Simulator() as simulator:
-        monkeypatch.setattr(simulator.playbacks, "stop", lambda: forgotten.append("playbacks"))
-        for name in ("checkpoints", "crops", "climate_runs", "sunlight", "states", "cursors"):
+        for name in ("checkpoints", "crops", "climate_runs", "sunlight", "states"):
             kept = getattr(simulator, name)
             monkeypatch.setattr(kept, "forget", lambda name=name: forgotten.append(name))
 
         simulator.forget()
 
-        # The playbacks, which work days out from the runs, stop first; a
-        # checkpoint, which takes its state with it, goes before the states.
-        assert forgotten == [
-            "playbacks",
-            "checkpoints",
-            "crops",
-            "climate_runs",
-            "sunlight",
-            "states",
-            "cursors",
-        ]
+        # A checkpoint, which takes its state with it, goes before the states.
+        assert forgotten == ["checkpoints", "crops", "climate_runs", "sunlight", "states"]
 
 
 def test_each_simulator_keeps_its_own(simulator: Simulator) -> None:
@@ -252,7 +242,7 @@ def test_each_simulator_keeps_its_own(simulator: Simulator) -> None:
 
 
 def test_no_test_forgets_a_store_itself() -> None:
-    # Only conftest's fixtures forget (`afresh`, `no_playbacks`), so that a
+    # Only conftest's fixtures forget (`afresh`), so that a
     # test's slate is clean however the suite is ordered.
     forgetting = [
         f"{path.name}:{number}"

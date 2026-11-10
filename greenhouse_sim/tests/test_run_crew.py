@@ -46,7 +46,6 @@ from greenhouse_protocol.plan import (
 
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.catalogue import PACKAGED
-from greenhouse_sim.services import playback
 from greenhouse_sim.services.gateway import (
     LOCAL_AUTHORISATION,
     LOCAL_OPERATOR,
@@ -302,8 +301,9 @@ def test_a_playback_with_a_crew_ends_a_plan_the_same_after_it_starts_over(
     playback starts over and is given it again."""
     clock = _Clock()
     with simulator_of(PLAYED, crew=ONE_HAND) as simulator:
-        playback.start(simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
-        played = playback.playback(simulator, SCENARIO)
+        played = Playback(
+            simulator, SCENARIO, seconds_per_day=24.0, clock=clock, epochs=Epochs(tmp_path)
+        )
         ends = []
         for _ in range(2):
             state = played.state()
@@ -332,8 +332,9 @@ def test_a_playback_and_its_gateway_stop_together_where_a_timed_action_is_refuse
     starts at that same day's start."""
     clock = _Clock()
     with simulator_of(PLAYED, crew=ONE_HAND) as simulator:
-        playback.start(simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
-        played = playback.playback(simulator, SCENARIO)
+        played = Playback(
+            simulator, SCENARIO, seconds_per_day=24.0, clock=clock, epochs=Epochs(tmp_path)
+        )
         state = played.state()
 
         def given(plan_id: str, *actions: PlannedAction) -> None:
@@ -349,7 +350,7 @@ def test_a_playback_and_its_gateway_stop_together_where_a_timed_action_is_refuse
 
         given("crop", _planned("ripe", _ripe(0), START + DAY))
         assert played.work_day(0) and played.work_day(1)
-        simulator.authorise(INSPECTIONS_ONLY)
+        played.authorise(INSPECTIONS_ONLY)
         played.command(PlaybackCommand.PLAY)
         clock.now = 26.0
         assert played.state().simulated_now == START + DAY

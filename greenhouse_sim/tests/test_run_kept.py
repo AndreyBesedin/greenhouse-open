@@ -26,7 +26,7 @@ from greenhouse_sim.services.run_store import (
     stored_runs,
 )
 from greenhouse_sim.services.runs import RunRequest
-from greenhouse_sim.services.scenarios import layout_name, scenario
+from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import delivered_between
 from greenhouse_sim.services.simulator import Simulator
 
@@ -226,35 +226,12 @@ def test_a_run_is_asked_for_at_a_seed(short: Simulator, tmp_path: Path) -> None:
 
     assert seeded.run_id == run_id(7) != plain.run_id == run_id(None) == explicit.run_id
     assert (seeded.seed, plain.seed) == (7, None)
-    assert seeded.plays(None, 7) and not seeded.plays(None, 8) and seeded.plays(None)
     assert {(r.run_id, r.seed) for r in stored_runs(epochs.objects)} == {
         (seeded.run_id, 7),
         (plain.run_id, None),
         (explicit.run_id, own),
     }
     assert {r.status for r in stored_runs(epochs.objects)} == {Status.QUEUED}
-
-
-def test_a_playback_started_at_another_seed_starts_over(
-    simulator: Simulator, no_playbacks: Callable[[], None], tmp_path: Path
-) -> None:
-    epochs, clock = Epochs(tmp_path), Clock()
-    first = playback.start(simulator, BOX, 10.0, hold=True, clock=clock, epochs=epochs)
-    same = playback.start(simulator, BOX, 10.0, hold=True, clock=clock, epochs=epochs)
-    other = playback.start(simulator, BOX, 10.0, seed=7, hold=True, clock=clock, epochs=epochs)
-
-    assert same.run_id == first.run_id
-    assert other.run_id != first.run_id
-    assert [found.run_id for found in simulator.playbacks.all()] == [other.run_id]
-    assert playback.playback(simulator, BOX).seed == 7
-    # Rearranged, it keeps the seed.
-    moved = playback.command(simulator, BOX, PlaybackCommand.RESTART, "default~heater:-1:0.5")
-    assert playback.playback(simulator, BOX).seed == 7 and moved.run_id != other.run_id
-    # Asked for at another seed alone, it keeps its layout.
-    again = playback.start(simulator, BOX, 10.0, seed=8, hold=True, clock=clock, epochs=epochs)
-    kept = playback.playback(simulator, BOX)
-    assert (kept.seed, kept.layout) == (8, layout_name("default~heater:-1:0.5"))
-    assert again.run_id not in (other.run_id, moved.run_id)
 
 
 def test_the_epochs_kept_by_files_before_are_counted_on_from(tmp_path: Path) -> None:

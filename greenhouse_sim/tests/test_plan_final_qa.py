@@ -60,10 +60,7 @@ class _Played:
     operator and read by a cursor, each as the protocol's documents write it."""
 
     def __init__(self, simulator: Simulator, tmp_path: Path) -> None:
-        self.simulator = simulator
-        self.found: Playback = simulator.playbacks.made_once(
-            SCENARIO, lambda _: Playback(simulator, SCENARIO, epochs=Epochs(tmp_path))
-        )
+        self.found = Playback(simulator, SCENARIO, epochs=Epochs(tmp_path))
         self.state = self.found.state()
 
     def to(self, hours: float) -> None:
@@ -258,7 +255,7 @@ def test_a_principal_may_do_what_it_is_granted_until_its_grant_is_withdrawn(
     assert vent.refused == ()
 
     played.to(14.5)
-    played.simulator.authorise(_authorisation(2))
+    played.found.authorise(_authorisation(2))
     withdrawn_at = played.found.state().simulated_now
     played.to(15.5)
 

@@ -9,7 +9,6 @@ import sys
 from collections.abc import Iterator
 from datetime import timedelta
 from pathlib import Path
-from time import monotonic
 from typing import Final
 
 import pytest
@@ -19,7 +18,7 @@ from greenhouse_protocol.outcome import OutcomeStatus
 from greenhouse_protocol.plan import At, Plan, PlannedAction
 
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.services import forks, interventions, playback, scheduler
+from greenhouse_sim.services import forks, interventions, scheduler
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
@@ -52,8 +51,6 @@ NO_LEVELS: Final = AuthorisationConfig(
         ),
     ),
 )
-# A seed the box is not played at by its own, so another run of it.
-OTHER_SEED: Final = 991
 # How a log says the authorisation `NO_LEVELS`.
 SAID: Final = {"kind": "authorisation", "authorisation": NO_LEVELS.model_dump(mode="json")}
 
@@ -287,30 +284,3 @@ def test_an_epoch_kept_with_no_authorisation_in_its_log_is_carried_on(
 
     assert kept == [("noon", OutcomeStatus.EXECUTED, None)]
     assert _ended(epoch) == kept
-
-
-def test_a_change_of_authorisation_reaches_the_epoch_of_a_playback_replaced(
-    tmp_path: Path,
-) -> None:
-    """A playback replaced by one at another seed tells its epoch nothing of a
-    change of the simulator's authorisation: its own change goes to the one in
-    its place. So the epoch it leaves, which can be carried on, is asked to take
-    it through the store, as an epoch no playback plays is."""
-    with _simulator(runs=FolderStore(tmp_path)) as server:
-        first = playback.start(server, BOX, hold=True)
-        second = playback.start(server, BOX, seed=OTHER_SEED, hold=True)
-        replaced = EpochStore(FolderStore(tmp_path), first.run_id, first.epoch)
-        playing = EpochStore(FolderStore(tmp_path), second.run_id, second.epoch)
-        for retiring in server.playbacks.retiring():
-            retiring.finish(monotonic() + 10)
-        assert replaced.manifest().status in {Status.QUEUED, Status.RUNNING} or (
-            replaced.manifest().carries_on
-        )
-
-        server.authorise(NO_LEVELS)
-
-        asked = [json.loads(replaced.request(name) or b"") for name in replaced.requests()]
-        assert asked == [SAID]
-        # The one playing is told by its playback, at its clock's moment.
-        assert playing.requests() == []
-        assert [entry.what for entry in playing.logged()] == [SAID]

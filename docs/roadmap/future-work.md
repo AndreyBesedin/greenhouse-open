@@ -161,10 +161,12 @@ and 0066). Left, from P17, each designed in its document:
   so that a batch of runs for training keeps about 0.2 to 0.4 MB at day 120 in place of
   11 to 24 MB. Its invariant and its measurements are in P17's design and its P17.1
   record. Every epoch is kept whole today, and the viewer's header says so.
-- **The consumer interface and the policy port reading a stored epoch** (P17.4, P17.7):
-  they read the live playbacks, so a consumer follows a run its server plays, not an
-  epoch a worker computes or one kept from before a restart. Whether the playbacks stay
-  for them is [P22.3](p22-watching-and-starting-a-run.md#steps)'s decision.
+- **A consumer interface and a gateway over a worker's epoch** (P17.4, P17.7): settled
+  by [decision 0074](../decisions/0074-the-viewers-play-and-the-playbacks-http-surfaces-go.md)
+  in [P22.3](p22-watching-and-starting-a-run.md#steps), the simulator serves neither
+  over HTTP, and the policy's port reads a playback of its own, in the process or in its
+  own server. A consumer that reads a run live, as it computes, or gives one plans,
+  needs both designed afresh over a worker's epoch, by a decision of their own.
 - **A crop action still under way at a kept state** (P17.8, P17.9): a fork or a resume
   from a state kept while a crew was still at an action is refused, since nothing kept
   says what the action did. A crew's work in progress kept with the checkpoint would let
@@ -177,10 +179,6 @@ and 0066). Left, from P17, each designed in its document:
 Recorded 2026-11-08, as [P18](archive/p18-resources-and-deployment.md) closed (decision
 0067). Left, from P18, each in its step's row or its final QA:
 
-- **A playback in the API's process has no limits** (P18.3): it opens an epoch with no
-  budget. No route or option of the API starts one since
-  [P22.3](p22-watching-and-starting-a-run.md#steps)'s step 8; the simulator's book of
-  them goes in its step 9 (decision 0074).
 - **One store, several servers** (P18.4): each server keeps its own limit on workers and
   its own count of what waits, so that two on one folder can pass the limit between them.
   A worker that a killed server started is not counted until it claims its epoch.

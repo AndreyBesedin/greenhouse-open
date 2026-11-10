@@ -1,5 +1,5 @@
 """A simulator's state, in one object (decision 0048): its scenarios and
-the runs it plays back, closed with it; made by the server, or given to it."""
+what it keeps, closed with it; made by the server, or given to it."""
 
 import ast
 import errno
@@ -13,26 +13,15 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.api.server import create_server
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.catalogue import PACKAGED, Catalogue
-from greenhouse_sim.services import playback
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
 
 CONFIG = SCENARIO_REGISTRY["climate_box"]
-# A pace slow enough that a playback is still working its days out when the
-# test closes it.
-SECONDS_PER_DAY = 600.0
 # How long a test waits for a thread it expects to finish.
 WAIT_S = 5.0
 # How long a test gives a thread it expects to be still waiting.
 STILL_WAITING_S = 0.3
-
-
-def _playing() -> list[str]:
-    """The playbacks working days out on a thread, in this process."""
-    return [
-        thread.name for thread in threading.enumerate() if thread.name.startswith("playback of")
-    ]
 
 
 def test_a_simulator_knows_the_packaged_scenarios_and_its_own() -> None:
@@ -52,46 +41,43 @@ def test_a_simulator_can_be_given_its_catalogue() -> None:
 
 def test_a_simulator_used_as_a_context_is_closed_after_it() -> None:
     with Simulator() as simulator:
-        playback.start(simulator, CONFIG.greenhouse_id, SECONDS_PER_DAY)
+        assert not simulator.closed
 
-    assert simulator.closed and _playing() == []
+    assert simulator.closed
 
 
 def test_a_server_closes_the_simulator_it_made() -> None:
     server = create_server(port=0)
-    playback.start(server.simulator, CONFIG.greenhouse_id, SECONDS_PER_DAY)
 
     server.server_close()
 
-    assert server.simulator.closed and _playing() == []
+    assert server.simulator.closed
 
 
 def test_a_server_leaves_a_simulator_it_was_given_to_its_giver() -> None:
     with Simulator() as simulator:
         server = create_server(port=0, simulator=simulator)
-        playback.start(simulator, CONFIG.greenhouse_id, SECONDS_PER_DAY)
 
         server.server_close()
 
-        assert server.simulator is simulator
-        assert not simulator.closed and simulator.playbacks.all() != []
-    assert _playing() == []
+        assert server.simulator is simulator and not simulator.closed
+    assert simulator.closed
 
 
 def test_a_second_close_waits_for_the_first(monkeypatch: pytest.MonkeyPatch) -> None:
     simulator = Simulator()
     release, begun = threading.Event(), threading.Event()
-    stop = simulator.playbacks.close
+    forget = simulator.forget
 
     def held() -> None:
-        # The first close is held while it stops the playbacks; a second
+        # The first close is held while it lets go of what is kept; a second
         # would not be, if it got this far.
         if not begun.is_set():
             begun.set()
             release.wait(WAIT_S)
-        stop()
+        forget()
 
-    monkeypatch.setattr(simulator.playbacks, "close", held)
+    monkeypatch.setattr(simulator, "forget", held)
     first = threading.Thread(target=simulator.close)
     second = threading.Thread(target=simulator.close)
     try:
@@ -117,27 +103,6 @@ def test_a_port_already_taken_is_reported_as_such() -> None:
         taken.server_close()
 
     assert raised.value.errno == errno.EADDRINUSE
-
-
-def test_closing_a_simulator_stops_its_playbacks_and_starts_none_after() -> None:
-    simulator = Simulator()
-    playback.start(simulator, "climate_box", 600.0)
-
-    simulator.close()
-
-    assert simulator.playbacks.all() == []
-    assert not any(thread.name.startswith("playback of") for thread in threading.enumerate())
-    with pytest.raises(RuntimeError, match="closed"):
-        playback.start(simulator, "climate_box", 600.0)
-
-
-def test_each_simulator_plays_its_own_runs_back() -> None:
-    with Simulator() as simulator, Simulator() as other:
-        playback.start(simulator, "climate_box", 600.0, hold=True)
-
-        assert [found.scenario_id for found in simulator.playbacks.all()] == ["climate_box"]
-        assert other.playbacks.all() == []
-        assert simulator.cursors is not other.cursors
 
 
 def test_a_scenario_registered_with_a_simulator_is_answered_by_it_alone() -> None:
@@ -208,7 +173,6 @@ PROCESS_STATE = frozenset(
         "Event",
         "Semaphore",
         "Thread",
-        "Playbacks",
         "Cursors",
         "Catalogue",
     }

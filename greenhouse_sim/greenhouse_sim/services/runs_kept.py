@@ -41,15 +41,14 @@ def runs_of(simulator: Simulator, scenario_id: str) -> list[StoredRun]:
     the simulator does not know is not found."""
     if simulator.catalogue.entry(scenario_id) is None:
         raise NotFound(f"there is no scenario {scenario_id!r}")
-    return _pauses_said(simulator, stored_runs(_objects(simulator), scenario_id))
+    return stored_runs(_objects(simulator), scenario_id)
 
 
 def all_runs(simulator: Simulator) -> list[StoredRun]:
     """Every stored epoch, the newest started first and those with no start
     time last: what a landing page shows of the runs of all scenarios."""
-    found = _pauses_said(simulator, stored_runs(_objects(simulator)))
     return sorted(
-        found,
+        stored_runs(_objects(simulator)),
         key=lambda run: (
             run.created_at is None,
             -(run.created_at.timestamp() if run.created_at is not None else 0.0),
@@ -64,46 +63,24 @@ def epoch_of(simulator: Simulator, run_id: str, epoch: int) -> StoredRun:
     objects = _objects(simulator)
     if epoch not in stored_epochs(objects, run_id):
         raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
-    return _pauses_said(simulator, [stored_run(objects, run_id, epoch)])[0]
-
-
-def _pauses_said(simulator: Simulator, runs: list[StoredRun]) -> list[StoredRun]:
-    """`runs`, those running that a playback of this simulator holds said to be
-    paused: the store calls them running, and they stand still."""
-    held = simulator.playbacks.held()
-    return [
-        run.model_copy(update={"paused": True})
-        if run.status == Status.RUNNING and (run.run_id, run.epoch) in held
-        else run
-        for run in runs
-    ]
+    return stored_run(objects, run_id, epoch)
 
 
 def delete_epoch(simulator: Simulator, run_id: str, epoch: int) -> dict[str, JsonValue]:
     """Removes a stored epoch a person no longer wants, with the positions
     over it. One the store calls queued or running is not removed, whoever
-    works on it: a worker in a process of its own is seen by no playback here.
-    Nor is one a replaced producer is still writing, whatever the store says
-    yet. A run left running by a producer that is gone stays so until it is
-    found interrupted, as a simulator starts or when it is asked to resume or
-    stop (`interrupted`, P17.9); one asked to stop, until its worker has looked."""
+    works on it. A run left running by a producer that is gone stays so until
+    it is found interrupted, as a simulator starts or when it is asked to resume
+    or stop (`interrupted`, P17.9); one asked to stop, until its worker has
+    looked."""
     objects = _objects(simulator)
     if epoch not in stored_epochs(objects, run_id):
         raise NotFound(f"run {run_id} has no epoch {epoch} in the store")
-    if stored_run(objects, run_id, epoch).status in (
-        Status.QUEUED,
-        Status.RUNNING,
-    ) or _winding_down(simulator, run_id, epoch):
+    if stored_run(objects, run_id, epoch).status in (Status.QUEUED, Status.RUNNING):
         raise Conflict(f"run {run_id}, epoch {epoch} is being computed: wait for it, or stop it")
     simulator.positions.close_over(run_id, epoch)
     delete_stored_epoch(objects, run_id, epoch)
     return {"deleted": f"{run_id}/{epoch}"}
-
-
-def _winding_down(simulator: Simulator, run_id: str, epoch: int) -> bool:
-    """Whether a playback replaced by another, told to stop, is still writing
-    an epoch."""
-    return any(found.has_epoch(run_id, epoch) for found in simulator.playbacks.retiring())
 
 
 def _stored(simulator: Simulator, run_id: str, epoch: int) -> StoredEpoch:

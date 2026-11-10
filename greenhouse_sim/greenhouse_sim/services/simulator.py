@@ -1,13 +1,13 @@
 """A simulator's state, in one object (decision 0048, AUDIT.15).
 
 A `Simulator` owns what a simulator keeps and runs: the scenarios it knows,
-packaged and registered (`scenarios.catalogue`), the runs it plays back,
-the cursors it has given consumers, the installations' drafts it is given a
-store of (`builder.drafts`, decision 0051), who may act on its runs
-(`authorisation`, decision 0052), and what its runs may use (`limits`, decision
-0067). The server makes one, or is given one; a test makes its own. Closing it
-stops what it runs, waiting for each run's thread and ending each worker's
-process (`scheduler`), and it starts nothing after.
+packaged and registered (`scenarios.catalogue`), the positions over its stored
+runs, the installations' drafts it is given a store of (`builder.drafts`,
+decision 0051), who may act on its runs (`authorisation`, decision 0052), and
+what its runs may use (`limits`, decision 0067). The server makes one, or is
+given one; a test makes its own. Closing it stops what it runs, ending each
+worker's process (`scheduler`), and it starts nothing after. It keeps no book
+of playbacks (decision 0074): whoever plays a run makes its `Playback`.
 
 The services that keep runs reach what they keep through it: its climate
 runs, crops, sunlight, checkpoints and the states runs take over from them,
@@ -33,10 +33,8 @@ from greenhouse_sim.services import (
     scenario_files,
     sunlight,
 )
-from greenhouse_sim.services.consumer import Cursors
 from greenhouse_sim.services.gateway import LOCAL_AUTHORISATION, NO_CREW, Crew
 from greenhouse_sim.services.limits import Limits
-from greenhouse_sim.services.playback import Playbacks
 from greenhouse_sim.services.run_store import ObjectStore
 from greenhouse_sim.services.stored_playback import Positions
 
@@ -57,12 +55,12 @@ class Simulator:
     ) -> None:
         self.catalogue = Catalogue() if catalogue is None else catalogue
         # Who may do what on its runs: each run's gateway enforces it. One
-        # change of it at a time, so that it and every playback's agree, and
-        # every epoch begun meanwhile begins under one or is asked to take it.
+        # change of it at a time, so that every epoch begun meanwhile begins
+        # under one or is asked to take it.
         self.authorisation = authorisation
         self.authorising = threading.Lock()
         # Who carries its runs' crop actions out (P13.6): so many at once,
-        # each taking its kind's time; every playback's run has it.
+        # each taking its kind's time; every run it plays has it.
         self.crew = crew
         # Where the drafts it is asked for are kept, if anywhere: a file of
         # its user's, which outlives it, and which it never forgets.
@@ -78,9 +76,7 @@ class Simulator:
         self.scheduling = threading.Lock()
         # Set under `scheduling` when it closes: no scheduler is made after.
         self.scheduling_closed = False
-        self.playbacks = Playbacks()
         self.positions = Positions()
-        self.cursors = Cursors()
         # What the services keep, this simulator's alone.
         self.states = kept_states.new_store()
         self.sunlight = sunlight.new_store()
@@ -106,35 +102,27 @@ class Simulator:
         return self._closed
 
     def authorise(self, authorisation: AuthorisationConfig) -> None:
-        """Who may do what on its runs from now on: every playback's gateway
-        enforces it from its clock's moment, and records the change; a
-        playback started later takes it from the start. An epoch in its store
-        that no playback of it plays, one a worker computes, will compute or may
-        carry on, is asked to take it through the store, from the moment its
-        worker takes it (decision 0072). Changes made at once are made one after
-        the other, every playback's and every epoch's in the same order."""
+        """Who may do what on its runs from now on: a run started later takes
+        it from the start, and an epoch in its store that a worker computes,
+        will compute or may carry on is asked to take it through the store,
+        from the moment its worker takes it (decision 0072). Changes made at
+        once are made one after the other, every epoch's in the same order."""
         with self.authorising:
             self.authorisation = authorisation
-            for played in self.playbacks.all():
-                played.authorise(authorisation)
             interventions.authorise_kept(self, authorisation)
 
     def forget(self) -> None:
-        """Lets go of everything kept, those that build on others first: the
-        playbacks, which work days out from the runs kept, stop before the
-        runs go; a checkpoint takes its state with it; the cursors given go
-        too. The scenarios it knows stay."""
-        self.playbacks.stop()
+        """Lets go of everything kept, those that build on others first: a
+        checkpoint takes its state with it. The scenarios it knows stay."""
         self.positions.forget()
         self.checkpoints.forget()
         self.crops.forget()
         self.climate_runs.forget()
         self.sunlight.forget()
         self.states.forget()
-        self.cursors.forget()
 
     def close(self) -> None:
-        """Stops the playbacks, waits for them, and lets go of everything
+        """Stops its scheduler, ending its workers, and lets go of everything
         kept. A close asked for while another is under way
         waits for it; one asked for after does nothing."""
         with self._closing:
@@ -146,7 +134,6 @@ class Simulator:
                     scheduler = self.scheduler
                 if scheduler is not None:
                     scheduler.close()
-                self.playbacks.close()
                 self.forget()
             finally:
                 self._closed = True

@@ -113,7 +113,7 @@ class SimulatorServer(ThreadingHTTPServer):
 
     def server_close(self) -> None:
         # It accepts no request once its socket is closed; then the simulator
-        # goes with the server that made it, its playbacks stopped.
+        # goes with the server that made it, its workers ended.
         super().server_close()
         if self._makes_simulator:
             self.simulator.close()

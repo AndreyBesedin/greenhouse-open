@@ -47,7 +47,6 @@ from greenhouse_protocol.plan import ActionKey, At, Plan, PlannedAction, Princip
 
 from greenhouse_sim.api import policy_server
 from greenhouse_sim.api.policy_server import PolicyPortServer
-from greenhouse_sim.services import playback
 from greenhouse_sim.services.credentials import (
     Credentials,
     Role,
@@ -55,7 +54,7 @@ from greenhouse_sim.services.credentials import (
     new_credential,
     new_credential_for,
 )
-from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.forecasts import (
     PERSISTED,
     PERSISTENCE,
@@ -70,7 +69,7 @@ from greenhouse_sim.services.playback import (
     RecordsAfter,
     delivered,
 )
-from greenhouse_sim.services.policy_port import RunPolicyPort, policy_port
+from greenhouse_sim.services.policy_port import RunPolicyPort
 from greenhouse_sim.services.policy_requests import ServedPorts
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import DAY_S
@@ -486,20 +485,6 @@ def test_a_run_that_starts_over_while_a_port_reads_it_is_read_in_its_new_epoch(
     assert (first.epoch, then.epoch) == (1, 1)
     assert first.observations != () and then.observations != ()
     assert check_polls([first, then], greenhouse_id=port.run().greenhouse_id) == []
-
-
-def test_a_port_is_opened_on_a_run_played_back(
-    simulator: Simulator, no_playbacks: Callable[[], None]
-) -> None:
-    playback.start(simulator, SCENARIO, SECONDS_PER_DAY, hold=True)
-    run_id = playback.playback(simulator, SCENARIO).run_id
-
-    port = policy_port(simulator.playbacks, run_id, POLICY)
-
-    assert port.run().run_id == run_id
-    assert port.context().principal == POLICY
-    with pytest.raises(NotFound):
-        policy_port(simulator.playbacks, "no-such-run", POLICY)
 
 
 # Over the network (P15.5).

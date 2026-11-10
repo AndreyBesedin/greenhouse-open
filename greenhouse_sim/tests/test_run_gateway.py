@@ -20,7 +20,7 @@ from greenhouse_protocol.outcome import OutcomeStatus, TargetSet
 from greenhouse_protocol.plan import ExecutorKind, ExecutorRef
 
 from greenhouse_sim.scenarios.catalogue import PACKAGED
-from greenhouse_sim.services import crop_models, playback
+from greenhouse_sim.services import crop_models
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR, RunExecutor, run_items, run_kinds
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
 from greenhouse_sim.services.runs import CROP_KINDS, crop_model_refusal
@@ -176,10 +176,10 @@ def test_a_target_changed_while_the_run_plays_ends_in_an_outcome_a_consumer_read
     pending when the run starts over is cancelled, the first outcome of the
     new epoch."""
     clock = _Clock()
-    started = playback.start(
-        simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path)
+    played = Playback(
+        simulator, SCENARIO, seconds_per_day=24.0, clock=clock, epochs=Epochs(tmp_path)
     )
-    played = playback.playback(simulator, SCENARIO)
+    started = played.state()
     assert played.work_day(0)
     played.command(PlaybackCommand.PLAY)
     clock.now = 6.0 + 30.0 / HOUR_S

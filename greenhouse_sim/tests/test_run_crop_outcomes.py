@@ -42,7 +42,7 @@ from greenhouse_sim.biology.tomato.organ.topology import HarvestFruit
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.organs import FruitStage
 from greenhouse_sim.scenarios.catalogue import PACKAGED
-from greenhouse_sim.services import plants, playback
+from greenhouse_sim.services import plants
 from greenhouse_sim.services.crop_log import crop_actions_done
 from greenhouse_sim.services.crop_models import ORGAN
 from greenhouse_sim.services.gateway import (
@@ -246,10 +246,10 @@ def test_crop_actions_given_to_a_playback_end_in_outcomes_naming_their_events(
     played_on: Simulator, tmp_path: Path
 ) -> None:
     clock = _Clock()
-    started = playback.start(
-        played_on, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path)
+    played = Playback(
+        played_on, SCENARIO, seconds_per_day=24.0, clock=clock, epochs=Epochs(tmp_path)
     )
-    played = playback.playback(played_on, SCENARIO)
+    started = played.state()
     day_1 = START + DAY
     given: list[tuple[str, Action, object]] = [
         ("ripe", RIPE, day_1),
@@ -310,10 +310,10 @@ def test_a_crop_action_waiting_for_another_at_its_day_start_is_carried_out_after
     assigned at that same instant, and done that day after it. Its event
     comes after those already delivered then, whatever its plant."""
     clock = _Clock()
-    started = playback.start(
-        played_on, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path)
+    played = Playback(
+        played_on, SCENARIO, seconds_per_day=24.0, clock=clock, epochs=Epochs(tmp_path)
     )
-    played = playback.playback(played_on, SCENARIO)
+    started = played.state()
     day_1 = START + DAY
     receipt = played.submit(
         Plan(

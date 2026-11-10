@@ -21,7 +21,7 @@ from greenhouse_protocol.plan import At, Plan, PlannedAction
 
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.services import forks, playback, runs_kept
+from greenhouse_sim.services import forks, runs_kept
 from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR
 from greenhouse_sim.services.interventions import LevelsAsked, TargetsAsked
@@ -532,21 +532,6 @@ def test_what_is_no_fork_is_refused_over_the_api(
     assert set(whole.objects.children(whole.run_id)) == before
 
 
-def test_a_playback_rearranged_says_it_came_from_the_epoch_it_replaced(tmp_path: Path) -> None:
-    """Starting a played run over with its equipment moved is a fork of the
-    epoch it plays, at its start, which stays in the store."""
-    with _simulator(tmp_path) as made:
-        started = playback.start(made, SHORT, hold=True)
-        moved = playback.command(made, SHORT, playback.PlaybackCommand.RESTART, layout=MOVED)
-        kept = EpochStore(FolderStore(tmp_path), moved.run_id, moved.epoch)
-        fork = kept.manifest().fork
-        assert fork is not None
-        assert (fork.run_id, fork.epoch) == (started.run_id, started.epoch)
-        assert fork.at_s == 0.0
-        assert fork.layout == MOVED
-        assert EpochStore(FolderStore(tmp_path), started.run_id, started.epoch).manifest()
-
-
 def test_a_fork_of_a_fork_inherits_as_far_back_as_its_parent_holds(
     simulator: Simulator, whole: EpochStore
 ) -> None:
@@ -726,12 +711,3 @@ def test_a_plan_its_parent_refused_as_another_epochs_is_not_given_by_its_fork(
         assert fork.manifest().fork.inherited == 0  # type: ignore[union-attr]
         assert _worked(made, fork) == Status.FINISHED
         assert fork.outcomes().records == []
-
-
-def test_a_playback_at_another_seed_is_another_run_and_no_fork(tmp_path: Path) -> None:
-    with _simulator(tmp_path) as made:
-        playback.start(made, SHORT, hold=True)
-        other = playback.start(made, SHORT, hold=True, seed=7)
-        kept = EpochStore(FolderStore(tmp_path), other.run_id, other.epoch)
-        assert kept.manifest().seed == 7
-        assert kept.manifest().fork is None

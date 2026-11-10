@@ -19,9 +19,9 @@ unless they are the local operator's, are its log's first entry, and each change
 of them made while it runs is an entry at its moment (`AuthorisationChanged`). A
 log with no such first entry began under the local operator's rights, so that an
 epoch begun under them, as every one kept before was, has the log and the digest
-it had. A change of the simulator's authorisation reaches an epoch no playback of
-it plays as a request in the store, as any change does (`authorise_kept`), which
-only the simulator asks: the API takes none.
+it had. A change of the simulator's authorisation reaches an epoch as a request
+in the store, as any change does (`authorise_kept`), which only the simulator
+asks: the API takes none.
 """
 
 from collections.abc import Mapping, Sequence
@@ -335,20 +335,16 @@ def changes(simulator: Simulator, run_id: str, epoch: int) -> EpochChanges:
 
 def authorise_kept(simulator: Simulator, authorisation: AuthorisationConfig) -> None:
     """Asks every epoch of the simulator's store that a worker works, will work
-    or may carry on, and that no playback of it plays, to take `authorisation`
-    from its next moment: a request, taken in the order of the requests, and
-    logged where it is taken. Those its playbacks play are told by them, at
-    their clocks' moments. Under the simulator's lock of its authorisation, so
-    that the changes are asked in the order they were made."""
+    or may carry on to take `authorisation` from its next moment: a request,
+    taken in the order of the requests, and logged where it is taken. Under the
+    simulator's lock of its authorisation, so that the changes are asked in the
+    order they were made."""
     objects: ObjectStore | None = simulator.runs
     if objects is None:
         return
-    played = simulator.playbacks.kept()
     asked = AuthorisationChanged(authorisation=authorisation).model_dump(mode="json")
     for run_id in objects.children():
         for number in stored_epochs(objects, run_id):
-            if (run_id, number) in played:
-                continue
             kept = EpochStore(objects, run_id, number)
             manifest = kept.manifest()
             if manifest.status in _WORKED or manifest.carries_on:

@@ -7,9 +7,9 @@ its model grows it, is not what the simulator publishes. It publishes only
 noisy observations of it, as a real greenhouse's sensors and the people
 walking its crop would: each sensor with the imperfections its layout gives
 it (noise, bias, drift, readings dropped or delivered late), and each plant
-measured with the walk's errors. A consumer reads those through the consumer
-interface, as it reads any producer's (decision 0040), and nothing else of
-the run.
+measured with the walk's errors. A consumer reads those, by a cursor in the
+run's log of them, as it reads any producer's (decision 0040), and nothing
+else of the run.
 
 Here the climate box's run is played back (decision 0041), its clock moved by
 hand a day at a time, and each day's observations are read once the clock
@@ -26,7 +26,7 @@ from typing import Final
 from greenhouse_protocol.enums import ObservationType
 from greenhouse_protocol.observation import Observation
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.services import consumer, playback
+from greenhouse_sim.services.consumer import MOST_PER_BATCH
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
 from greenhouse_sim.services.simulator import Simulator
 
@@ -70,29 +70,31 @@ def run(days: int) -> list[list[Observation]]:
     day before. Its epochs are kept in a folder of its own, gone after."""
     with tempfile.TemporaryDirectory() as kept, Simulator() as simulator:
         clock = Clock()
-        run_id = playback.start(
+        played = Playback(
             simulator,
             SCENARIO,
-            SECONDS_PER_DAY,
-            hold=True,
+            seconds_per_day=SECONDS_PER_DAY,
             clock=clock,
             epochs=Epochs(Path(kept)),
-        ).run_id
-        played = playback.playback(simulator, SCENARIO)
-        played.command(PlaybackCommand.PLAY)
-        seen: int | None = None
-        per_day: list[list[Observation]] = []
-        for day in range(1, days + 1):
-            advance(played, clock, day * DAY_S)
-            observations: list[Observation] = []
-            while True:
-                delivered = consumer.observations(simulator, run_id, after=seen)
-                observations += delivered.observations
-                seen = delivered.next
-                if not delivered.has_more:
-                    break
-            per_day.append(observations)
-        return per_day
+        )
+        played.begin()
+        try:
+            played.command(PlaybackCommand.PLAY)
+            seen = 0
+            per_day: list[list[Observation]] = []
+            for day in range(1, days + 1):
+                advance(played, clock, day * DAY_S)
+                observations: list[Observation] = []
+                while True:
+                    delivered = played.records_after(seen, MOST_PER_BATCH)
+                    observations += delivered.records
+                    seen = delivered.next
+                    if not delivered.has_more:
+                        break
+                per_day.append(observations)
+            return per_day
+        finally:
+            played.stop()
 
 
 def read(observations: list[Observation], sensor_id: str) -> str:

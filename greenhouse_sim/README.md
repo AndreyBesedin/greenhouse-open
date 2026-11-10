@@ -136,8 +136,8 @@ simplest to the richest, and a new model joins it as a rung of one of them
 ## The viewer
 
 The browser viewer shows what the simulator is doing, in 3D: a scenario's
-run at a moment of it, or followed as it is played back, growing as its
-clock moves on, with controls to play, pause and start it over.
+run at a moment of it, or a run its workers compute, replayed as it grows,
+with controls to play, pause and pace the replay.
 `uv run demo`, from a clone, starts both and opens the reference greenhouse
 ([docs/demo.md](../docs/demo.md)), once `uv run setup` has installed the
 viewer's packages (and Node 24, if the machine's is older). Or start the local API, then the viewer:

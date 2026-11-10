@@ -41,6 +41,7 @@ from greenhouse_sim.services.credentials import credentials_file, new_credential
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.forecasts import PERSISTENCE_ID
 from greenhouse_sim.services.gateway import LOCAL_AUTHORISATION, authorisation_file
+from greenhouse_sim.services.playback import Playback, PlaybackCommand
 from greenhouse_sim.services.policy_requests import ServedPorts, served_budget
 from greenhouse_sim.services.simulator import Simulator
 
@@ -136,18 +137,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     simulator = Simulator(authorisation=authorisation)
     for refused in checkpoints.load_openings(simulator):
         print(f"not kept: {refused}", file=sys.stderr)
-    state = playback.start(
+    played = Playback(
         simulator,
         args.scenario,
-        args.seconds_per_day,
-        hold=args.hold,
+        seconds_per_day=args.seconds_per_day,
         epochs=playback.default_epochs(),
     )
-    played = playback.playback(simulator, args.scenario)
     try:
         budget = served_budget(played, args.forecasts)
     except InvalidRequest as error:
         parser.error(error.message)
+    played.begin()
+    state = played.state() if args.hold else played.command(PlaybackCommand.PLAY)
     server = PolicyPortServer(
         ServedPorts(played, credentials, budget=budget), host=args.host, port=args.port
     )
@@ -163,6 +164,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         pass
     finally:
         server.server_close()
+        played.stop()
         simulator.close()
     return 0
 
