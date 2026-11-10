@@ -80,6 +80,21 @@ describe("the panels' stripes (#304)", () => {
     expect(storedFolds()).toEqual(new Set());
   });
 
+  it("stand as tall as the panel beside them, never shorter than their tab", () => {
+    const toggle = () => undefined;
+    const height = (heightPx: number | null) => {
+      shown?.unmount();
+      shown = render(
+        <PanelStripe side="info" folded={false} onToggle={toggle} heightPx={heightPx} />,
+      );
+      return button(shown.container, "Fold the info panel").style.height;
+    };
+    expect(height(312.5)).toBe("312.5px");
+    expect(height(40)).toBe("96px");
+    // Until the panel is measured, the stylesheet's tab.
+    expect(height(null)).toBe("");
+  });
+
   it("keep the sides folded for the next visit, and nothing else", () => {
     localStorage.setItem("greenhouse-sim.folded", "view,elsewhere");
     expect(storedFolds()).toEqual(new Set(["view"]));

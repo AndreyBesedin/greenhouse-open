@@ -1286,12 +1286,14 @@
   bottom: 0;
 }
 
-/* A stripe the whole height of the side's inner edge (P22.9), so that it is
- * found anywhere along the panels it folds. */
+/* A stripe at the top of the side's inner edge, as tall as the panel beside it
+ * (P22.9, `PanelSide`), and no taller, so that it never stands over the view a
+ * click is meant for; a tab of this height until that panel is measured. */
 .panel-stripe {
   flex: none;
-  align-self: stretch;
+  align-self: flex-start;
   width: 14px;
+  height: 96px;
   padding: 0;
   border: none;
   border-radius: var(--radius-sm);
@@ -1312,6 +1314,7 @@
 /* A replay's controls under the view fold to a stripe the whole width of their
  * upper edge (P22.9). */
 .panel-stripe-across {
+  align-self: stretch;
   width: auto;
   height: 14px;
 }
