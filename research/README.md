@@ -8,6 +8,9 @@ call for that is not part of the packages: nothing in `greenhouse_sim`,
   their own, each compared with a pinned reference implementation on the
   same drivers (decision 0060, milestone A). `tests/test_reproductions.py`
   holds each to its reference.
+- [`validation/`](validation/): what measured data hold for a model to
+  be held to (item 5), counted file by file.
+  [`agc4/`](validation/agc4/README.md) profiles the two AGC4 archives.
 - [`integrations/`](integrations/): what the run's way of driving a
   reproduced model changes of it (decision 0062, milestone B), measured
   against the reproduction's forcing and against a reference's

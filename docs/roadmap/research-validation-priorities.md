@@ -102,6 +102,10 @@ data.
    data before any tuning, by held-out compartments or periods. Report the
    metrics, sample counts, missing data and run times, and compare crop or
    climate outputs only where their definitions and units match.
+   Done: the AGC4 inventory, checked against the publisher's own files,
+   and its two time-series archives profiled
+   ([`research/validation/agc4`](../../research/validation/agc4/README.md)):
+   rows, spans and gaps per channel, and the fruit weighed and dried.
 6. **Compare with Modelica, bounded.** As the roadmap's greenhouse R&D
    workflows and Modelica comparison plan it: one documented, measured
    interval of TiGwerLib reproduced in OpenModelica, then compared on
