@@ -1156,3 +1156,92 @@ describe("a page's stylesheet (P19.8, P19.9, P19.10)", () => {
     ]);
   });
 });
+
+// The folders of panels whose rules stand in a stylesheet of their own,
+// `<folder>/<folder>.css` (P19.11).
+const PANEL_STYLESHEETS: readonly string[] = ["fields"];
+const SOURCE_ROOT = fileURLToPath(new URL(".", import.meta.url));
+
+/** The folders of `src/` whose sources write each class, the files at its root
+ * being `.`'s. */
+function classWriters(root: string): Map<string, Set<string>> {
+  const writers = new Map<string, Set<string>>();
+  for (const entry of readdirSync(root)) {
+    const path = join(root, entry);
+    const directory = statSync(path).isDirectory();
+    if (!directory && !(/\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry))) {
+      continue;
+    }
+    const folder = directory ? entry : ".";
+    for (const source of directory ? sources(path) : [readFileSync(path, "utf8")]) {
+      for (const name of classesAssigned(source)) {
+        writers.set(name, new Set([...(writers.get(name) ?? []), folder]));
+      }
+    }
+  }
+  return writers;
+}
+
+/** The selector lists in `stylesheets` out of place by the folders that write their
+ * classes: in a folder's stylesheet, one that names no class its sources write;
+ * elsewhere, one whose classes, those written at all, only one such folder's write. */
+function panelRulesMisplaced(
+  stylesheets: readonly { path: string; text: string }[],
+  writers: ReadonlyMap<string, ReadonlySet<string>>,
+): string[] {
+  return stylesheets.flatMap(({ path, text }) => {
+    const own = PANEL_STYLESHEETS.find((folder) => path.endsWith(`/src/${folder}/${folder}.css`));
+    return selectorLists(text).filter((list) => {
+      if (list.startsWith("@")) {
+        return false;
+      }
+      const written = [...list.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)]
+        .map(([, name]) => writers.get(name ?? ""))
+        .filter((folders) => folders !== undefined);
+      if (own !== undefined) {
+        return !written.some((folders) => folders.has(own));
+      }
+      return PANEL_STYLESHEETS.some(
+        (folder) =>
+          written.length > 0 &&
+          written.every((folders) => folders.size === 1 && folders.has(folder)),
+      );
+    });
+  });
+}
+
+describe("a panel folder's stylesheet (P19.11)", () => {
+  it("holds the rules of its folder's classes, and only those", () => {
+    const stylesheets = importedStylesheets(ENTRY);
+    for (const folder of PANEL_STYLESHEETS) {
+      expect(stylesheets.map(({ path }) => path)).toContainEqual(
+        expect.stringContaining(`/src/${folder}/${folder}.css`),
+      );
+    }
+    expect(panelRulesMisplaced(stylesheets, classWriters(SOURCE_ROOT))).toEqual([]);
+  });
+
+  it("refuses a folder's rule written elsewhere, and another's written in it", () => {
+    const writers = new Map([
+      ["field-probes", new Set(["fields"])],
+      ["house-air-row", new Set(["fields", "plants"])],
+      ["info-panel", new Set(["."])],
+      ["weather-panel", new Set(["weather"])],
+    ]);
+    expect(
+      panelRulesMisplaced(
+        [
+          {
+            path: "/web/src/styles.css",
+            text: ".field-probes p { gap: 0; } .info-panel .house-air-row { gap: 0; } .built { gap: 0; }",
+          },
+          {
+            path: "/web/src/fields/fields.css",
+            text: ".house-air-row { gap: 0; } .info-panel .field-probes { gap: 0; } .weather-panel { gap: 0; }",
+          },
+        ],
+        writers,
+      ),
+    ).toEqual([".field-probes p", ".weather-panel"]);
+  });
+});

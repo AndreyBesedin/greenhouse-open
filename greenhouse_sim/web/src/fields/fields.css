@@ -1,0 +1,211 @@
+/* The panels of a scenario's air and its run (P19.11): the air field's choice and
+ * probes, the climate run's moment, the house's air, its schedule and the probes'
+ * charts. */
+.field-controls {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: 0;
+}
+
+.field-controls p {
+  margin: var(--space-1) 0 0;
+}
+
+.field-probes {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: 0;
+}
+
+.field-probes p {
+  margin: var(--space-1) 0 var(--space-2);
+}
+
+.field-probes input[type="number"] {
+  width: 4.5em;
+}
+
+.field-probes table {
+  margin-top: var(--space-2);
+  border-collapse: collapse;
+}
+
+/* Through the table, so that they come after the info panel's own cells, which
+ * set every side, whatever the order the stylesheets are imported in. */
+.field-probes table th {
+  padding-right: var(--space-3);
+  vertical-align: top;
+}
+
+.field-probes table td {
+  padding-bottom: var(--space-2);
+}
+
+.field-views {
+  display: flex;
+  gap: 10px;
+  margin: var(--space-2) 0;
+}
+
+.field-slice {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.field-slice-position {
+  display: grid;
+  grid-template-columns: 2em 1fr 8em;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.field-legend .scalar-ticks input {
+  width: 5em;
+}
+
+/* A climate run's moment: play, a slider over its day, and the moment
+ * shown; under them, a slider over its days, a step either way, and play's
+ * pace. */
+.climate-time {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.climate-time-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.climate-time-slider {
+  flex: 1;
+  min-width: 0;
+}
+
+/* What the moment asked for is waiting on, or why it cannot be drawn. */
+.climate-time-note {
+  margin: 0;
+  font-size: 0.85em;
+}
+
+/* While nothing loads, the line keeps its height, unseen (#301). */
+.climate-time-idle {
+  visibility: hidden;
+}
+
+/* The house's air as one volume through the run, the run all off dashed. */
+.house-air {
+  margin: 0 0 var(--space-4);
+}
+
+.house-air-row {
+  display: grid;
+  grid-template-columns: 15em 1fr;
+  gap: var(--space-3);
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.house-air-chart {
+  width: 100%;
+  height: 18px;
+}
+
+.house-air-chart polyline {
+  fill: none;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.house-air-run {
+  stroke: var(--data-red);
+}
+
+.house-air-off {
+  stroke: var(--chart-off);
+  stroke-dasharray: 3 2;
+}
+
+/* A climate run's schedule, folded to a line and a bar across the moment's
+ * day under it, a marker at each command's moment, filled once applied;
+ * opened, the commands listed. */
+.climate-schedule {
+  margin: 0 0 var(--space-4);
+}
+
+/* The bar is part of the summary, under its line, so that it shows while
+ * the schedule is folded. */
+.climate-schedule-bar {
+  display: block;
+  position: relative;
+  height: 10px;
+  margin: var(--space-1) var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--chart-soft);
+}
+
+.climate-schedule-bar span {
+  position: absolute;
+  bottom: -4px;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border: 1px solid var(--chart-strong);
+  border-radius: 50%;
+  background: var(--chart-face);
+}
+
+.climate-schedule-bar span.applied {
+  background: var(--chart-strong);
+}
+
+/* A daily command's marker is square, as it comes back every day. */
+.climate-schedule-bar span.daily {
+  border-radius: 1px;
+}
+
+.climate-schedule ol {
+  margin: 0;
+  padding-left: 1.5em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Probes' charts through a climate run: this run's line solid, the run
+ * with everything off dashed, and the moment drawn a faint line. */
+.probe-charts figure {
+  margin: 0 0 var(--space-3);
+}
+
+.probe-chart svg {
+  display: block;
+  width: 100%;
+  height: 52px;
+  border: 1px solid var(--border);
+}
+
+.probe-chart polyline {
+  fill: none;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.probe-chart .probe-charts-controlled,
+.probe-charts-key .probe-charts-controlled {
+  stroke: var(--data-navy);
+  color: var(--chart-blue-text);
+}
+
+.probe-chart .probe-charts-off,
+.probe-charts-key .probe-charts-off {
+  stroke: var(--chart-soft);
+  stroke-dasharray: 4 3;
+  color: var(--chart-soft);
+}
+
+.probe-chart-cursor {
+  stroke: var(--chart-faint);
+  vector-effect: non-scaling-stroke;
+}
