@@ -1,3 +1,4 @@
+import { Button } from "../design/Button";
 import { formatValue } from "../readouts";
 import type { Point3 } from "../world";
 import { quantityTitle } from "./display";
@@ -142,13 +143,13 @@ export function FieldProbes({
   return (
     <fieldset className="field-probes" aria-label="Probes">
       <p className="field-probes-actions">
-        <button
-          type="button"
+        <Button
+          size="compact"
           disabled={full}
           onClick={() => onProbes([...probes, middleOf(field)])}
         >
           Add a probe
-        </button>{" "}
+        </Button>{" "}
         <label>
           <input
             type="checkbox"
@@ -225,13 +226,13 @@ export function FieldProbes({
                       value={probe.z}
                       onChange={(z) => move(index, { z })}
                     />
-                    <button
-                      type="button"
+                    <Button
+                      size="compact"
                       aria-label={`Remove ${name}`}
                       onClick={() => onProbes(probes.filter((_, at) => at !== index))}
                     >
                       ✕
-                    </button>
+                    </Button>
                     <div data-testid={`probe-${index + 1}-reading`}>
                       {fieldName}: {readingText(field, reading)}
                     </div>

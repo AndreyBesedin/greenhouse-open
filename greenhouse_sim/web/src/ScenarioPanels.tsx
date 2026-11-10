@@ -6,6 +6,7 @@ import { BranchComparison } from "./checkpoints/BranchComparison";
 import { checkpointRun, comparable } from "./checkpoints/branches";
 import { CheckpointsPanel } from "./checkpoints/CheckpointsPanel";
 import { type CheckpointSummary, restored } from "./checkpoints/checkpoints";
+import { Button } from "./design/Button";
 import { Fold } from "./design/Fold";
 import { EquipmentControls, equipmentIn } from "./EquipmentControls";
 import { ClimateSchedule } from "./fields/ClimateSchedule";
@@ -101,17 +102,18 @@ function ForkLevels({
               .join(", ")}: not yet this run's or a fork's.`}
       </p>
       {noFork !== null && <p className="targets-note">{noFork}</p>}
-      <button
+      <Button
+        size="compact"
         ref={trigger}
         type="button"
         disabled={none || noFork !== null}
         onClick={() => ask(onFork)}
       >
         Fork from {from ?? "here"} with these levels
-      </button>
-      <button type="button" disabled={none} onClick={onPutBack}>
+      </Button>
+      <Button size="compact" disabled={none} onClick={onPutBack}>
         Put them back
-      </button>
+      </Button>
       {question}
     </div>
   );

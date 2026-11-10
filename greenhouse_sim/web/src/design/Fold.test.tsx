@@ -55,4 +55,14 @@ describe("Fold", () => {
     shown.rerender(<Folds onToggled={toggled} />);
     expect(shown.container.querySelectorAll("details")[1]?.open).toBe(true);
   });
+
+  it("keeps its own state, the browser's, when no page keeps it", () => {
+    shown = render(<Fold summary="Its own">what it holds</Fold>);
+    const fold = shown.container.querySelector("details") as HTMLDetailsElement;
+    expect(fold.open).toBe(false);
+
+    fold.open = true;
+    shown.rerender(<Fold summary="Its own">what it holds, drawn again</Fold>);
+    expect(shown.container.querySelector("details")?.open).toBe(true);
+  });
 });

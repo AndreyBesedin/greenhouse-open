@@ -1,3 +1,4 @@
+import { Button } from "./design/Button";
 import { DEFAULT_LAYOUT, type ScenarioSummary, type ScenariosState } from "./scenarios";
 
 /** The scenarios whose name, identifier or description holds `filter`,
@@ -95,13 +96,13 @@ export function ScenarioList({
                 {onShow && (
                   <td>
                     <div className="scenario-actions">
-                      <button
-                        type="button"
+                      <Button
+                        size="compact"
                         aria-label={`Open ${scenario.id}`}
                         onClick={() => onShow(scenario.id)}
                       >
                         Open
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 )}

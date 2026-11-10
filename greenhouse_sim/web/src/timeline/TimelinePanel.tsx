@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CHART_WIDTH } from "../charts/chart";
+import { Fold } from "../design/Fold";
 import { describeTime } from "../fields/ClimateTime";
 import type { RunParts } from "../scene/run";
 import { useLoad } from "../useLoad";
@@ -89,12 +90,12 @@ export function TimelinePanel({
     key: planKey,
   });
   return (
-    <details
+    <Fold
       className="timeline"
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
+      summary="Timeline"
     >
-      <summary>Timeline</summary>
       <select
         aria-label="Timeline zoom"
         value={zoom}
@@ -116,7 +117,7 @@ export function TimelinePanel({
         />
       )}
       {plan.status === "unavailable" && <p>The run's plan cannot be read: {plan.reason}.</p>}
-    </details>
+    </Fold>
   );
 }
 

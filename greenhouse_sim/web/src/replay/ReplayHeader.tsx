@@ -63,7 +63,7 @@ export function ReplayHeader({
   onDeleted: () => void;
 }) {
   const noFork = whyNoFork(position);
-  const { trigger, ask, question } = useForkQuestion({ designed: true });
+  const { trigger, ask, question } = useForkQuestion({ size: "target" });
   const heading = useRef<HTMLHeadingElement>(null);
   // Why the run was not deleted, said while the run stands as it was asked about.
   const [notGone, setNotGone] = useState<{ why: string; status: Status } | null>(null);

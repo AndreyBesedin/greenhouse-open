@@ -1,5 +1,5 @@
 import { useState } from "react";
-
+import { Button } from "./design/Button";
 import { Fold } from "./design/Fold";
 import { FIRST_LAB_RUN } from "./plants/lab";
 import { DEFAULT_STRESS_PLANTS } from "./qa/stressScene";
@@ -158,9 +158,9 @@ function Group({
       <p className="chooser-note">{note}</p>
       <p className="chooser-choices">
         {choices.map((choice) => (
-          <button type="button" key={choice.label} onClick={() => onChoose(choice.source)}>
+          <Button size="compact" key={choice.label} onClick={() => onChoose(choice.source)}>
             {choice.label}
-          </button>
+          </Button>
         ))}
       </p>
     </section>

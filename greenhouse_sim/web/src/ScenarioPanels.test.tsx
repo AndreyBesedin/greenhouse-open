@@ -151,6 +151,13 @@ describe("a stored run's panels", () => {
     click(fork());
     expect(onFork).not.toHaveBeenCalled();
     expect(said(rendered.container, "fork-question")).toContain(WHAT_A_FORK_DOES);
+    // The panel's buttons are the design system's, compact; its fork the main
+    // answer (#674 had left it the browser's).
+    expect(fork().className).toBe("ds-button ds-button-compact");
+    expect(button(rendered.container, "Make the fork").className).toBe(
+      "ds-button ds-button-primary ds-button-compact",
+    );
+    expect(button(rendered.container, "Cancel").className).toBe("ds-button ds-button-compact");
     click(button(rendered.container, "Make the fork"));
     expect(onFork).toHaveBeenCalledOnce();
     click(button(rendered.container, "Put them back"));
