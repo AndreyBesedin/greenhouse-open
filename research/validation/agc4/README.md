@@ -61,3 +61,32 @@ CC BY 4.0: Wageningen University & Research, via 4TU.ResearchData.
   November 2023, each channel missing 0.09 % of them.
 
 The memo reads these numbers against what the publisher and the paper say.
+
+## The drivers
+
+Decision [0076](../../../docs/decisions/0076-the-tomato-models-are-calibrated-on-agc4s-pre-trial-and-tested-once-on-its-challenge.md)
+runs each tomato model on AGC4 an hour at a time.
+[`drivers.py`](drivers.py) builds those hours from the same two archives:
+
+```bash
+python -m research.validation.agc4.drivers /tmp/agc4-drivers > research/validation/agc4/drivers.json
+```
+
+- **A series per run:** each 2024 compartment, from 00:00 on 3 September
+  to the midnight that begins its harvest day; and each 2023 light zone,
+  from 00:00 on 5 September to 00:00 on 9 November. Times are at a fixed
+  UTC+01:00, so that every day has 24 hours.
+- **An hour per row:** its start, the mean temperature, PAR above the
+  canopy and CO₂ over the 5-minute rows stamped inside it, and the plants
+  per m² in force at its start: the last `dwarf_tomato/plant_density`
+  written in 2024, and the destructive workbook's `Info` sheet's in 2023.
+- **Filled hours:** a driver with no rows in an hour takes its mean of the
+  hour before, and the hour says so in `filled`. That is one hour per 2024
+  compartment, the one the clocks repeated on 27 October, and two per 2023
+  zone, both 02:00 hours of 29 October, which the pre-trial's wall-clock
+  times cannot tell apart.
+
+The CSVs are data derived from AGC4, and are not committed.
+[`drivers.json`](drivers.json) is: for each series, its file, its hours,
+its first and last hour, the hours filled, and the sha256 of its bytes,
+which are the same on every run.
