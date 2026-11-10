@@ -127,7 +127,8 @@ export function ReplayTransport({
             <StepBackIcon />
           </IconButton>
           <IconButton
-            tone="primary"
+            // Pause too: one button that turns, in one colour, its icon saying which.
+            tone="go"
             className="replay-play"
             label={position.playing ? "Pause" : "Play"}
             title={position.playing ? TRANSPORT_NOTES.pause : TRANSPORT_NOTES.play}

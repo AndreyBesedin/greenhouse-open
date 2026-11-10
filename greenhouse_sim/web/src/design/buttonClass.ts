@@ -1,6 +1,6 @@
 /** What a button or a link drawn as one does: `primary` is what a page is for,
- * and `danger` cannot be taken back. */
-export type ButtonTone = "plain" | "primary" | "danger";
+ * `danger` cannot be taken back, in red, and `go` sets a run going, in green. */
+export type ButtonTone = "plain" | "primary" | "danger" | "go";
 /** `target` is what a pointer or a finger is given to hit; `compact` is for dense
  * panels and forms. */
 export type ButtonSize = "target" | "compact";

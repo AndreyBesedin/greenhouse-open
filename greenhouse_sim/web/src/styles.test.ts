@@ -76,10 +76,27 @@ function rawColours(stylesheet: string): string[] {
     .map(([property, value]) => `${property}: ${value};`);
 }
 
+// A field a page draws itself: an input, a select or a text area, by its element
+// or by a class named for one.
+const FIELD_SELECTOR = /(?:^|[\s,>+~(])(?:input|select|textarea)\b|-(?:input|select)\b/;
+
+/** The rules of `stylesheet` that draw a field's edge in `--border`, a card's and a
+ * divider's line, too faint for the only edge a control has (P19.12). */
+function fieldsEdgedInBorder(stylesheet: string): string[] {
+  const rules = stylesheet.replace(/\/\*[\s\S]*?\*\//g, "");
+  return [...rules.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter(
+      ([, selector, body]) =>
+        FIELD_SELECTOR.test((selector ?? "").trim()) &&
+        /(?:^|[;\s])border(?:-[a-z-]+)?\s*:[^;]*var\(--border\)/.test(body ?? ""),
+    )
+    .map(([, selector]) => (selector ?? "").trim());
+}
+
 // What a colour token may be, by the role it has: a new one is added here, where
 // review sees it (decision 0068).
 const COLOUR_ROLE =
-  /^--(?:surface-\w+|text(?:-\w+)?|border|action|warn|mark|scheme|chart-[\w-]+|data-\w+)$/;
+  /^--(?:surface-\w+|text(?:-\w+)?|border(?:-\w+)?|action|warn|danger|go|mark|scheme|chart-[\w-]+|data-\w+)$/;
 
 // And the size tokens, each scale's steps written out, so that a new step is too.
 const SIZE_STEP =
@@ -122,6 +139,28 @@ describe("the stylesheet", () => {
       "box-shadow: 0 0 2px oklch(0.7 0.1 200);",
       "outline-color: navy;",
       "border-top: 1px solid color-mix(in srgb, #fff 25%, transparent);",
+    ]);
+  });
+
+  it("draws a field's only edge in `--border-control`, not a card's `--border` (P19.12)", () => {
+    expect(fieldsEdgedInBorder(STYLES)).toEqual([]);
+  });
+
+  it("takes a rule for a field's when it names one, and its edge for `--border` alone", () => {
+    const written = `
+      /* .gone select { border: 1px solid var(--border); } */
+      .replay-pace select { border: 1px solid var(--border); }
+      .landing-input { padding: 0; border-color: var(--border); }
+      @media (width < 600px) { .a > input[type="search"] { border-bottom: 1px solid var(--border); } }
+      .b select { border: 1px solid var(--border-control); }
+      .c-input { border: 1px solid var(--text-muted); }
+      .selection, .inputs, .input-row { border: 1px solid var(--border); }
+      .card { border: 1px solid var(--border); }
+    `;
+    expect(fieldsEdgedInBorder(written)).toEqual([
+      ".replay-pace select",
+      ".landing-input",
+      '.a > input[type="search"]',
     ]);
   });
 
@@ -200,7 +239,7 @@ const MARK_NEEDS = 3;
 const SITS_ON: readonly { needs: number; what: readonly string[]; on: readonly string[] }[] = [
   {
     needs: TEXT_NEEDS,
-    what: ["--text", "--text-soft", "--text-muted", "--action", "--warn"],
+    what: ["--text", "--text-soft", "--text-muted", "--action", "--warn", "--danger", "--go"],
     on: ["--surface-page", "--surface-panel"],
   },
   // The words of a label over the scene; a pressed button's; a chart key's; a compass's N.
@@ -208,10 +247,12 @@ const SITS_ON: readonly { needs: number; what: readonly string[]; on: readonly s
   { needs: TEXT_NEEDS, what: ["--surface-page"], on: ["--action"] },
   { needs: TEXT_NEEDS, what: ["--chart-soft", "--chart-blue-text"], on: ["--surface-panel"] },
   { needs: TEXT_NEEDS, what: ["--text-muted"], on: ["--chart-face"] },
-  // A control's outline: a field's, a plain button's, a primary's, a danger's.
+  // A control's outline: a field's, a primary's, a danger's, a go's. A plain button's is
+  // `--border`, a card's and a divider's, which needs none: its words, or its
+  // icon in `--text`, identify it (WCAG 2.2's 1.4.11); a field's do not.
   {
     needs: MARK_NEEDS,
-    what: ["--border", "--text-muted", "--action", "--warn"],
+    what: ["--border-control", "--text-muted", "--action", "--danger", "--go"],
     on: ["--surface-page", "--surface-panel"],
   },
   // A chart's lines, in its panel; a compass's on its face.
@@ -244,11 +285,6 @@ const CONTRAST_FAILURES: Readonly<Record<string, number>> = {
   "dark: --chart-soft on --surface-panel, needs 4.5": 4.36,
   "light: --chart-soft on --surface-panel, needs 4.5": 2.7,
   "light: --chart-blue-text on --surface-panel, needs 4.5": 3.94,
-  // A control's only outline: the words of a button identify it, a field's do not.
-  "dark: --border on --surface-page, needs 3": 2.09,
-  "dark: --border on --surface-panel, needs 3": 1.49,
-  "light: --border on --surface-page, needs 3": 1.48,
-  "light: --border on --surface-panel, needs 3": 1.22,
   // A chart's lines, the same in both themes, which show on one of them.
   "dark: --data-blue on --surface-panel, needs 3": 2.96,
   "dark: --data-navy on --surface-panel, needs 3": 2.58,
@@ -564,6 +600,7 @@ const BUILT = new Set([
   "ds-button",
   "ds-button-primary",
   "ds-button-danger",
+  "ds-button-go",
   "ds-button-compact",
   // `StatusChip` by its tone (P19.7).
   "ds-status-chip",

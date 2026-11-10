@@ -1,6 +1,11 @@
 /* Colours by what they do (decision 0068), on every page: dark by default, light
  * if chosen (`theme.ts`, #208). The 3D scene, its legends' colour scales and
- * the charts' coloured lines are the same in both. */
+ * the charts' coloured lines are the same in both. `--border` is a card's or a
+ * divider's line, which may be faint; `--border-control` the only edge of a field
+ * a page draws itself, which needs 3:1 (WCAG 1.4.11), as strong as the browser
+ * draws its own fields' (#858585 dark, #767676 light). `--danger` is what cannot
+ * be taken back, red, and `--go` what sets a run going, green: a button's words and
+ * outline in each, apart from `--warn`'s orange, which is a problem said. */
 :root {
   --scheme: dark;
   --surface-panel: rgb(17 24 39 / 90%);
@@ -8,7 +13,10 @@
   --text-muted: #a7b1c2;
   --text-soft: #c3cad6;
   --border: #3d4a5f;
+  --border-control: #7a8699;
   --warn: #ffb380;
+  --danger: #ff7b72;
+  --go: #3fb950;
   --action: #8cb8ff;
   --mark: #e277b5;
   --surface-label: rgb(17 24 39 / 85%);
@@ -31,7 +39,10 @@
   --text-muted: #555555;
   --text-soft: #444444;
   --border: #cccccc;
+  --border-control: #767676;
   --warn: #8a3b12;
+  --danger: #b42318;
+  --go: #1b6e33;
   --action: #1f5fbf;
   --mark: #aa3377;
   --surface-label: rgb(255 255 255 / 85%);
