@@ -80,7 +80,10 @@ describe("the timeline over a stored run", () => {
     shown(0);
     const filled = rendered?.container.querySelector<HTMLElement>(".replay-computed");
 
-    expect(filled?.style.width).toBe(`${(41 / 120) * 100}%`);
+    // A share of the run's days, which a DOM may keep to fewer digits.
+    const width = filled?.style.width ?? "";
+    expect(width).toMatch(/%$/);
+    expect(Number.parseFloat(width)).toBeCloseTo((41 / 120) * 100, 3);
   });
 
   it("is operated by the keys: an hour, a day, the ends", () => {
