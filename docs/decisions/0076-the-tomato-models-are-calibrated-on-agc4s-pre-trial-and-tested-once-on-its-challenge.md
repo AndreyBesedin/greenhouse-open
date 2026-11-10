@@ -111,7 +111,7 @@ them.
   are kept in no state, and AGC4 pruned none, so a run that prunes says so
   beside its comparisons.
 - *Dry to fresh:* the pre-trial's fruit dry-matter fraction at its last
-  date, 8.0 %, the mean over 48 plants of `DW fruits` over
+  date, 8.02 %, the mean over 48 plants of `DW fruits` over
   `FW fruits clusters`. It is the calibration year's own measurement,
   mostly of green fruit, cluster stems included. GreenLight's assumed 6 %
   and the range of 2024's red batches are reported as sensitivities. No
@@ -185,7 +185,7 @@ numbers and checksums, as the profile's are.
   season.
 - Some known weaknesses are accepted, and reported with the result rather
   than corrected:
-  - the 8.0 % fraction is mostly green fruit, while the final harvest is
+  - the 8.02 % fraction is mostly green fruit, while the final harvest is
     mostly red;
   - the PAR sensor is at a fixed height;
   - the canopy's temperature is the air's;
