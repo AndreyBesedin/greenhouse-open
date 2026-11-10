@@ -1,0 +1,11 @@
+/* Whether a solved airflow case's boundaries are drawn, under the air field's
+ * choice (P19.11). */
+.cfd-controls {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: 0;
+}
+
+.cfd-controls p {
+  margin: var(--space-1) 0 0;
+}
