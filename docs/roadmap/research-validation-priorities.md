@@ -107,7 +107,9 @@ data.
    ([`research/validation/agc4`](../../research/validation/agc4/README.md)):
    rows, spans and gaps per channel, and the fruit weighed and dried; and
    each model's drivers and outputs mapped to its columns and measurements
-   ([the mapping memo](../research/agc4-model-mapping.md)).
+   ([the mapping memo](../research/agc4-model-mapping.md)); and the hourly
+   drivers of each 2024 compartment and 2023 light zone built, and the
+   harness that runs either model on them, as decision 0076 fixes them.
 6. **Compare with Modelica, bounded.** As the roadmap's greenhouse R&D
    workflows and Modelica comparison plan it: one documented, measured
    interval of TiGwerLib reproduced in OpenModelica, then compared on
@@ -193,6 +195,6 @@ benchmark uses.
 
 Decision
 [0076](../decisions/0076-the-tomato-models-are-calibrated-on-agc4s-pre-trial-and-tested-once-on-its-challenge.md),
-proposed, makes the second and third for the tomato models: AGC4 first,
+accepted, makes the second and third for the tomato models: AGC4 first,
 calibrated on its 2023 pre-trial and tested once on its 2024 challenge,
 with its conversions, metrics and a baseline fixed before.

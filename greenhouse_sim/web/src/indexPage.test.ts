@@ -51,6 +51,28 @@ describe("the page every address is served", () => {
     expect(themeBeforeTheScripts()).toBe(storedTheme());
   });
 
+  it("puts the system's theme on the document on a first visit, as the viewer reads it", () => {
+    const system = (scheme: string) =>
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: query === `(prefers-color-scheme: ${scheme})`,
+      }));
+    try {
+      system("light");
+      expect(themeBeforeTheScripts()).toBe("light");
+      expect(storedTheme()).toBe("light");
+      system("dark");
+      expect(themeBeforeTheScripts()).toBe("dark");
+
+      // One chosen in this browser, whatever the system says.
+      localStorage.setItem("greenhouse-sim.panels", "dark");
+      system("light");
+      expect(themeBeforeTheScripts()).toBe("dark");
+      expect(storedTheme()).toBe("dark");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("is dark when the browser keeps nothing it can read", () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new Error("refused");
