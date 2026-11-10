@@ -102,6 +102,12 @@ data.
    data before any tuning, by held-out compartments or periods. Report the
    metrics, sample counts, missing data and run times, and compare crop or
    climate outputs only where their definitions and units match.
+   Done: the AGC4 inventory, checked against the publisher's own files,
+   and its two time-series archives profiled
+   ([`research/validation/agc4`](../../research/validation/agc4/README.md)):
+   rows, spans and gaps per channel, and the fruit weighed and dried; and
+   each model's drivers and outputs mapped to its columns and measurements
+   ([the mapping memo](../research/agc4-model-mapping.md)).
 6. **Compare with Modelica, bounded.** As the roadmap's greenhouse R&D
    workflows and Modelica comparison plan it: one documented, measured
    interval of TiGwerLib reproduced in OpenModelica, then compared on
@@ -184,3 +190,9 @@ Each reproduction's tolerances, stated before its run (decision 0060);
 which measured data constrain the models, AGC4's or Oliveira et al.'s; the
 first splits and metrics; and which baselines and measures a first
 benchmark uses.
+
+Decision
+[0076](../decisions/0076-the-tomato-models-are-calibrated-on-agc4s-pre-trial-and-tested-once-on-its-challenge.md),
+proposed, makes the second and third for the tomato models: AGC4 first,
+calibrated on its 2023 pre-trial and tested once on its 2024 challenge,
+with its conversions, metrics and a baseline fixed before.

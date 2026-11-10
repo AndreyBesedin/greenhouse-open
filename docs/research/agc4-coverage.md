@@ -1,6 +1,7 @@
 # What the AGC4 dataset gives a tomato model's validation
 
-**Status:** Memo, 2026-10-28. An inventory for item 5 of the
+**Status:** Memo, 2026-10-28; checked against the publisher's own files,
+and its archives profiled, on 2026-11-10. An inventory for item 5 of the
 [research priorities](../roadmap/research-validation-priorities.md)
 ([decision 0057](../decisions/0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md)):
 what the WUR Autonomous Greenhouse Challenge, 4th edition (AGC4), records,
@@ -38,20 +39,31 @@ nothing: the first splits and metrics are for a decision record.
   files; their notes date their measurements of the files to 2026-09-14.
   They are the repository's reading of the files, not the publisher's
   description, and are cited below as "the adapter's notes".
+- **The publisher's own files**, read on 2026-11-10 from the archives
+  `greenhouse-data prepare` downloads at the `dev` profile, which leaves
+  the images out: the 2024 record's `README.md`; inside its time-series
+  archive, a shorter `ReadMe.md`, `channel_info.json` (each channel's
+  name, unit, type and description) and the `Information` sheet of
+  `Harvest.xlsx`; and the 2023 workbooks' `Info` sheets. They were not
+  available when this memo was first written, on 2026-10-28, as
+  `data.4tu.nl` did not answer then.
+- **The profile,** [`research/validation/agc4`](../../research/validation/agc4/README.md):
+  every file of both time-series archives counted, from the archives with
+  the checksums it names: rows, spans and steps, the share missing per
+  column, the plants per sheet, and the fruit dried. Cited below as "the
+  profile".
 
-**Not checked.** `data.4tu.nl` and the challenge's website did not answer
-on 2026-10-28, so the records' landing pages, the 2024 record's
-`README.md` (3,715 bytes) and the `channel_info.json` inside its
-time-series archive were not read for this memo. No file was downloaded
-from either record. A statement marked *not verified* is one that neither
-the publisher's texts above nor the adapters settle.
+**Not checked.** The records' landing pages and the challenge's website;
+the image archives, which were not downloaded. A statement marked *not
+verified* is one that neither the publisher's texts and files above nor
+the adapters settle.
 
 ## The two records
 
 | | 2024 challenge | 2023 pre-trial |
 | --- | --- | --- |
 | Experiment | six compartments, each controlled by one team's algorithm, one crop cycle each | one compartment, tables under four light and two EC treatments, one crop cycle |
-| Crop | dwarf cherry tomato 'Pick-&-Joy Red Cherry' (paper §2.2) | dwarf tomato, `Variety` written `Cherry` (adapter's notes); the cultivar is *not verified* |
+| Crop | dwarf cherry tomato 'Pick-&-Joy Red Cherry' (paper §2.2) | dwarf tomato, `Variety` written `Cherry` (adapter's notes) and `Cherry CV` (`DestructiveHarvest.xlsx`, `Info`); the cultivar is *not verified* |
 | Period | transplanted 3 September 2024; harvested per compartment, the last on 21 November 2024 (paper §2.1) | climate from 5 September to 9 November 2023; crop measured from 4 September to 9 November 2023 (adapter's notes) |
 | Files | `autonomous_greenhouse_challenge4_timeseries.zip` (6.0 MB), `autonomous_greenhouse_challenge4_canopy_camera.zip` (31.4 GB), `README.md` | `4th_autonomous_greenhouse_challenge_dwarf_tomato_pretrial_Timeseries.zip` (4.2 MB), `..._pretrial_canopy_cam.zip` (4.5 GB), `..._pretrial_single_plant_cam.zip` (7.5 GB) |
 | Licence | CC BY 4.0 | CC BY 4.0 |
@@ -68,10 +80,11 @@ The pre-trial was the teams' training data for the challenge (paper §2.1).
 The time-series archive holds, under
 `autonomous_greenhouse_challenge4_timeseries/`, one CSV per compartment in
 `timeseries/`, the site's `timeseries/weather.csv` and
-`timeseries/weather_forecast.csv`, the workbook `Harvest.xlsx`, and a
-`channel_info.json` giving each channel's unit (adapter's notes,
-`agc4_challenge_2024/channels.py`). Whether it holds anything else is
-*not verified*.
+`timeseries/weather_forecast.csv`, the workbook `Harvest.xlsx`, a
+`channel_info.json` giving each channel's unit, type (measurement,
+parameter or calculation) and, for most, a description, and a `ReadMe.md`;
+nothing else but the macOS metadata of the tool that zipped it
+(`__MACOSX/`, `.DS_Store`; the profile).
 
 | Compartment | Team | File | Canopy camera |
 | --- | --- | --- | --- |
@@ -82,9 +95,10 @@ The time-series archive holds, under
 | 3.07 | IDEAS | `timeseries/ideas.csv` | `cam_19` |
 | 3.08 | Trigger | `timeseries/trigger.csv` | `cam_18` |
 
-Compartments and teams are the paper's (Figure 1); files and cameras are
-the adapter's (`agc4_challenge_2024/compartments.py`, taken from the
-README). The Reference compartment was run by the paper's authors
+Compartments and teams are the paper's (Figure 1) and the README's;
+files and cameras are the README's, as the adapter has them
+(`agc4_challenge_2024/compartments.py`). The Reference compartment was
+run by the paper's authors
 (§2.1). The six compartments are equal in size and equipment, with three
 tables of 200 plants each (§2.2).
 
@@ -93,9 +107,15 @@ before and `+01:00` after the clock change of 27 October 2024 (adapter's
 notes, `common/time.py`). One row every 5 minutes (DataCite abstract;
 paper Table A3). The adapter reads the energy and cost columns as
 increments over the 5 minutes ending at the row; whether other values are
-instants or means over the interval is *not verified*. Sensors were
-installed from 1 August and remote control tested from 15 August 2024
-(§2.1); when the files' rows begin and end is *not verified*.
+instants or means over the interval is *not verified*, as
+`channel_info.json` does not say. Sensors were installed from 1 August and
+remote control tested from 15 August 2024 (§2.1), but each compartment's
+file begins at 00:00 on 3 September 2024 and ends at 12:00 on its harvest
+day, the day its `dwarf_tomato/harvest_date` names: 20,029 to 22,909
+rows. The weather's and the forecast's files run from 00:05 on 3
+September to 23:55 on 21 November, 23,039 rows each (the profile).
+`channel_info.json` gives the experiment as 3 September to 22 November
+2024, in `Europe/Amsterdam` time.
 
 **Weather outside** (`timeseries/weather.csv`, one for the site; paper
 Table A3 for units and meaning):
@@ -115,7 +135,9 @@ Neither Table A3 nor the adapter's map has an outside CO₂.
 temperature, relative humidity, global radiation, the day's radiation sum
 and cloudiness (1 to 8), "updated a few times per day" and spanning "the
 coming 7 days" (Table A3); wind too (adapter's notes). The adapter found
-its rows indexed by the time a forecast is for, with no issue time.
+its rows indexed by the time a forecast is for, with no issue time. Its
+radiation sum is on every row; its other columns are empty on 91.7 % of
+rows (the profile).
 
 **Climate inside** (each compartment's CSV):
 
@@ -132,10 +154,18 @@ its rows indexed by the time a forecast is for, with no issue time.
   sensor (Agrifusion), leaf temperature by infrared thermometers (Trigger),
   chlorophyll fluorescence (MuGrow).
 
-The substrate and team sensors' column names are *not verified*; the
-adapter's notes say they are per-sensor columns of the compartment files.
-Each compartment has one measuring point, so no spatial gradient is
-recorded.
+The substrate sensors are three columns each of
+`compartment/substrate/bulk_ec`, `relative_permittivity` and
+`substrate_temperature` (the second and third suffixed `.1` and `.2`), in
+every compartment's file but the Reference's, which has none. The teams'
+own are Agrifusion's `compartment/mass.plant`,
+`air_temperature.microclimate`, `relative_humidity.microclimate` and
+`vivent_biosignals`; Trigger's `compartment/mass.plant` and two
+`compartment/leaf_temperature` columns; and MuGrow's six
+`compartment/fluorescence/gardin_*` columns. Agrifusion's scale and
+microclimate columns are empty on 55 % of rows, MuGrow's fluorescence on
+28 to 78 % (the profile). Each compartment has one measuring point, so no
+spatial gradient is recorded.
 
 **Equipment** (§2.2): pipe-rail heating, 120 W/m² at peak; continuous roof
 ventilation, 0.3 m² of opening per m², behind insect netting; an energy
@@ -165,8 +195,8 @@ screen and a black-out screen; 8 dimmable LED fixtures, 20 to
   `compartment/co2_actuation_state` and
   `compartment/co2_dosage_minutes_cumulative` (reset daily, Table A2).
 
-No column for fogging's state is in Table A2 or the adapter's map; whether
-the files have one is *not verified*.
+No column for fogging's state is in Table A2, the adapter's map,
+`channel_info.json` or the files (the profile).
 
 **Irrigation** (§2.2, Tables A1 to A3): one 1.2 L/h dripper per pot, shots
 of 1 minute (20 mL), the interval set by the algorithm;
@@ -178,7 +208,10 @@ daily); the drain's `compartment/water_drain/water_volume`, `.../ec` and
 recorded states, not metered. The DataCite abstract says so, and the
 paper's §2.5 ("Cultivation Objective") gives the formulas: heating from
 the difference between pipe and air temperature, lighting from the lamps'
-activation, CO₂ from the dosing minutes.
+activation, CO₂ from the dosing minutes. `channel_info.json` types the
+`energy/*` columns as measurements and the `economics/*` ones as
+calculations; which is right for energy is *not verified*. Both are on
+every row of every compartment's file (the profile).
 
 **Crop and fruit** (`Harvest.xlsx`): measured by hand, destructively; the
 samplings' results were not disclosed to the teams' algorithms (§2.2).
@@ -195,16 +228,34 @@ samplings' results were not disclosed to the teams' algorithms (§2.2).
   on the first sampling's sheet (adapter's notes;
   `greenhouse_adapters/tests/test_wur_2024_harvest.py` mirrors the
   shapes).
-- Six plants per intermediate sampling; at the final harvest, 50 plants
-  from the centre of the middle table, their fruit sorted by ripeness,
-  counted, weighed and dried (§2.2). Table 1 gives each compartment's red
-  fruit dry-matter percentage. Whether `Harvest.xlsx` holds dry weights
-  per plant is *not verified*.
+- Six plants per compartment at each intermediate sampling; at the final
+  harvest, 50 plants from the centre of the middle table, their fruit
+  sorted by ripeness, counted, weighed and dried (§2.2). The sheets sort
+  the first 30 plants (21 in 3.06) into green and red, and give the other
+  20 (29) their red fruit's fresh weight alone, with its count in 3.01,
+  3.03 and 3.08 (the profile). Over all 50, the red fruit's mean fresh
+  weight per plant is 219 to 283 g, Table 1's figures; over the sorted
+  plants alone, 208 to 271 g.
+- No dry weight per plant. Each final harvest's sheet ends with a
+  `drying` block, which the `Information` sheet defines (`fw excl bag`,
+  `dw excl bag`, `dw%`): a batch of red fruit dried in every compartment,
+  and one of green fruit in three. Their dry matter (the profile):
+
+  | Compartment | Red fruit | Green fruit |
+  | --- | --- | --- |
+  | 3.01 | 6.04 % (250 fruit) | none dried |
+  | 3.02 | 7.28 % (150) | 8.08 % (150) |
+  | 3.03 | 7.18 % (250) | none dried |
+  | 3.06 | 6.56 % (150) | 7.61 % (count not given) |
+  | 3.07 | 6.77 % (150) | 7.69 % (146) |
+  | 3.08 | 5.93 % (250) | none dried |
+
+  The red batches' percentages are Table 1's, 5.9 to 7.3 %.
 
 Neither the paper nor the abstract describes a vegetative measurement in
 2024: no plant height, leaf count, leaf area or leaf or stem mass. The
 canopy height of the paper's Figure 9 is computed from the images; it is
-*not verified* as a published column.
+not a column of the files (the profile).
 
 **Yield and harvest.** `dwarf_tomato/harvest_date` holds the day of year of
 the compartment's single final harvest, "Jan 1st = 1" (Table A1), written
@@ -237,13 +288,16 @@ day. In the paper only (§2.2, §3.3, §3.4, §4.7):
 - fruit fallen off plants by the final harvest;
 - pests found by sticky-trap cameras, plants scouted by hand.
 
-Whether the files record any of these beyond spacing and harvest is *not
-verified*.
+The files record none of these beyond spacing and harvest: no column
+names them (the profile).
 
 **Images.** `autonomous_greenhouse_challenge4_canopy_camera.zip`: one
 top-view Oak-D S2 RGB-D camera per compartment, about 1.5 m above the
-middle table (§2.3). The DataCite abstract says 4 images a day, the paper
-says hourly.
+middle table (§2.3). Four images a day, at 04:00, 08:00, 12:00 and 16:00
+local time, as the README and the DataCite abstract say; the paper says
+hourly. The README adds that the depth images are aligned to the colour
+images, both 3840 × 2160, and that the camera's intrinsics are in
+`canopy_camera_config.json`, in a `configs` folder.
 
 ### The 2023 pre-trial
 
@@ -252,7 +306,8 @@ The time-series archive holds three workbooks (adapter's notes,
 
 - **Time** (`ClimateTimeseries.xlsx`, sheet `weather_climate`): `datenum`,
   a MATLAB datenum in Dutch local wall-clock time with no offset; a row
-  every 5 minutes from 5 September to 9 November 2023; the hour repeated
+  every 5 minutes from 5 September to 9 November 2023, 18,721 rows (the
+  profile); the hour repeated
   when the clocks went back on 29 October left empty; missing values
   written `NaN` (`climate.py`).
 - **Weather outside:** `tout`, `rhout`, `iglob`, `windsp`, `rain` (a share
@@ -278,8 +333,15 @@ The time-series archive holds three workbooks (adapter's notes,
   `Treatment`, `Variety`, `EC`, `Light`, `Plant density (p/m2)`,
   `Sample n`, `Sample name`, and per-plant organ measurements such as
   `FW leaves (g/plant)` and `Trusses (#/plant)`, dry weights among them
-  (`destructive.py`). The full list of measured columns is *not
-  verified*.
+  (`destructive.py`). The workbook's `Info` sheet lists what was measured:
+  plant height; cotyledon, leaf and flower-cluster counts; fresh weights of
+  the plant, leaves, stem, flowers and fruiting clusters; leaf area, with a
+  leaf area meter; dry weights of the leaves, stem, flowers and fruiting
+  clusters, oven-dried for 8 days at 80 °C, and the plant's as their sum;
+  open flowers, fruit attachment points and fruit set; and green, orange
+  and red fruit counts. It gives the density as 48 plants/m² from 4 to 18
+  September, 36 to 22 September, 25 to 29 September, and 20 from 9 October
+  to 9 November 2023.
 - **Single plants:** 479 plants imaged one by one, "as well their plant
   traits (height, fresh weight, leaf area, number of red fruits)"
   (DataCite abstract), in the 7.5 GB single-plant archive. Whether the
@@ -291,15 +353,19 @@ The time-series archive holds three workbooks (adapter's notes,
 | | 2024 challenge | 2023 pre-trial |
 | --- | --- | --- |
 | Climate, weather, controls | every 5 minutes, six compartments, 10 to 11 weeks of crop | every 5 minutes, one compartment, about 9 weeks |
-| Fruit | per compartment, 3 samplings of 6 plants and a final harvest of 50 | at 4 destructive dates, 48 treated plants each after transplanting |
+| Fruit | per compartment, 3 samplings of 6 plants and a final harvest of 50, 30 of them (21 in 3.06) weighed whole | at 4 destructive dates, 48 treated plants each after transplanting |
 | Vegetative | none described | weekly on 40 plants; organ weights at 4 dates; 479 imaged plants |
 | Images | canopy, per compartment | canopy, and single plants |
 
 - **Gaps.** An empty cell in a 2024 CSV and `NaN` in 2023 are missing
-  values (adapter's notes). How much is missing, per channel and
-  compartment, has been measured neither by the publisher's texts read here
-  nor by the repository. Data were delayed or sensor connections lost "a
-  number of times" (§4.6).
+  values (adapter's notes). The profile counts them per column. In 2024,
+  the channels a crop model reads (air temperature, humidity, CO₂, PAR,
+  the lamps, the heating pipe) miss 0.06 % of each compartment's rows, and
+  the weather none; setpoints are often empty
+  (`water_supply_interval_setpoint` on 99 % of IDEAS's rows), and
+  `plant_density` and `harvest_date` are written only when they change. In
+  2023, every climate channel misses 0.09 % of rows. Data were delayed or
+  sensor connections lost "a number of times" (§4.6).
 - **Fruit lost before measurement.** Fruit fresh weight drops at the final
   harvest in most compartments; staff saw fruit fallen off (§3.3).
 - **2023 crop sheet.** Coloured fruit is split into yellow, orange and red
@@ -339,9 +405,11 @@ and `tiny` builds compartment 3.06 only (`cli.py`). Paths below are under
   `sampling_observations` writes, per sampling and compartment, the mean
   fruit count and mean fruit fresh weight per sampled plant, at local noon;
   `final_harvest_event` writes one `HARVEST` event per compartment with the
-  sampled plants' summed fruit fresh weight (`harvested_mass_g`) and count,
-  their number, and the means per plant of total and red fruit count and
-  weight.
+  summed fruit fresh weight (`harvested_mass_g`) and count of the plants
+  weighed whole, their number, and their means per plant; and the means per
+  plant of red fruit count and weight over every plant counted or weighed
+  for it, with the number of plants each is over. Those means are Table
+  1's: 219 to 283 g of red fruit per plant, over 50 plants.
 
 Left out:
 
@@ -355,11 +423,11 @@ Left out:
   and `dwarf_tomato/pot_area`;
 - of `Harvest.xlsx`: the per-plant values (only means and sums are
   written), the green and red split at the three intermediate samplings,
-  the standard errors, any dry weight, and the information sheet.
+  the standard errors, the dried batches, and the information sheet.
 
-`harvested_mass_g` is the total fruit, ripe and unripe, of the plants on
-the final-harvest sheet: neither the compartment's yield nor a mass per
-m².
+`harvested_mass_g` is the total fruit, ripe and unripe, of the plants
+sorted by colour on the final-harvest sheet: neither the compartment's
+yield nor a mass per m².
 
 ### The 2023 pre-trial (`agc4_pretrial_2023/`)
 
@@ -432,18 +500,20 @@ local time, and the day of a clock change has 23 or 25 hours.
 
 | A model's output | What AGC4 measured | What differs |
 | --- | --- | --- |
-| Fruit dry weight per m² | 2024: total fruit fresh weight per plant (`FW tot`) at 3 samplings and the final harvest | Fresh, not dry: only the red fruit's dry-matter percentage is given, once per compartment (Table 1). Per plant, not per m². |
+| Fruit dry weight per m² | 2024: total fruit fresh weight per plant (`FW tot`) at 3 samplings and the final harvest | Fresh, not dry: dry matter is given for one dried batch of red fruit per compartment, and of green fruit in three (§1). Per plant, not per m². |
 | Mature fruit dry weight (TOMGRO), harvested fruit dry matter (Vanthoor) | 2024: red fruit fresh weight per plant (`FW red`) at the final harvest, and red and green splits on later sampling sheets | Red is a colour, not the model's maturity. AGC4 harvests nothing until the end, so a model's harvested fruit must be added back to its standing fruit, or its harvest switched off. Fruit fallen off before the final harvest is missing from the measurement. |
 | Fruit number | `# tot`, `#tom red` per plant | A Vanthoor-type model counts fruit; Reduced-State TOMGRO does not. |
-| Leaf area index, node number, above-ground dry weight | 2024: none. 2023: weekly leaf and truss counts and leaf length and width; organ weights at 4 dates; leaf area of 479 imaged plants | A different year and treatments. Leaf length and width are not leaf area. |
+| Leaf area index, node number, above-ground dry weight | 2024: none. 2023: weekly leaf and truss counts and leaf length and width; organ fresh and dry weights and leaf area at 4 dates; leaf area of 479 imaged plants | A different year and treatments. Leaf length and width are not leaf area. |
 | Yield per m² per year | 30 to 45 kg/m²/year (§3.3.3) | Extrapolated by the paper from Table 1, not measured. |
 
 **Fresh against dry.** A model's dry fruit weight compares with AGC4's
-fresh weight only through a dry-matter fraction. The only one given is
-the red fruit's, per compartment at the final harvest (5.9 to 7.3 %);
-none is given for green fruit, or for the intermediate samplings. Either
-the fraction becomes a stated parameter of the comparison, or the
-comparison waits for dry weights per plant, if `Harvest.xlsx` has them.
+fresh weight only through a dry-matter fraction. `Harvest.xlsx` gives one
+per dried batch at the final harvest: red fruit's in every compartment
+(5.93 to 7.28 %), green fruit's in 3.02, 3.06 and 3.07 (7.61 to
+8.08 %); none for the intermediate samplings, and no dry weight per
+plant (§1). The fraction is therefore a stated parameter of the
+comparison: a compartment's own, a colour's, or one pooled, each with
+what it leaks (§4).
 
 **Harvested against standing.** Every 2024 fruit measurement is of fruit
 on the plant: the samplings and the final harvest alike. A model that
@@ -523,7 +593,8 @@ given checks the crop's response, not those choices.
 
 **Sample counts.** For fruit, 2024 gives four dates per compartment, 24
 compartment-dates in all, with 6 plants at each sampling and 50 at each
-final harvest. 2023 gives 4 destructive dates with 48 treated plants on
+final harvest, 30 (21 in 3.06) of them weighed whole and the rest for
+their red fruit alone. 2023 gives 4 destructive dates with 48 treated plants on
 each of the last three, and 9 weekly dates on 40 plants.
 
 ## 5. Limitations
@@ -543,8 +614,9 @@ metadata only, and the tests build miniature workbooks of their own.
 **What it cannot validate:**
 
 - vegetative growth in 2024: leaf area, nodes, leaf or stem mass;
-- fruit dry weight per plant in 2024, unless `Harvest.xlsx` holds it, and
-  the dry matter of green fruit;
+- fruit dry weight per plant in 2024, which `Harvest.xlsx` does not hold
+  (batches of fruit were dried), and green fruit's dry matter in 3.01,
+  3.03 and 3.08;
 - photosynthesis, respiration, transpiration and water uptake as fluxes:
   no gas exchange or transpiration is measured; two compartments' pot
   scales are not read;
@@ -558,10 +630,12 @@ metadata only, and the tests build miniature workbooks of their own.
 
 **Known data issues:**
 
-- the share of missing values per channel is unknown (above);
+- gaps per channel, which the profile counts (§1): small in the climate,
+  large in some setpoints, the teams' own sensors and the forecast;
 - fruit fallen off before the final harvest (§3.3);
-- `weather/wind_direction.registration` holds bit flags, while Table A3
-  describes degrees (adapter's notes);
+- `weather/wind_direction.registration` holds eight bit-flag values, 1 to
+  128 (the profile), while Table A3 and `channel_info.json` describe
+  degrees;
 - the forecast has no issue time (adapter's notes);
 - the `*_vip` values often differ from their setpoints, which Table A1
   says "often match": the CO₂ value used matched its setpoint 62 % of the
@@ -570,36 +644,53 @@ metadata only, and the tests build miniature workbooks of their own.
 - CO₂ dosing minutes reset each day around 07:40 local, not at midnight
   (adapter's notes);
 - a pipe temperature of 0 means no water flows (Table A2), not 0 °C;
-- the drain volume is "liter/10 pots" in Table A3, while the adapter takes
-  channel_info's L/m² for it; which is right is *not verified*;
-- the irrigation interval is in seconds in §2.4 and in minutes in Table A1;
-- the images: 4 a day in the DataCite abstract, hourly in §2.3;
-- Table 1 gives 101 % red fruit for one compartment, worth checking
-  against the per-plant rows;
+- the drain volume is "liter/10 pots" in Table A3, while
+  `channel_info.json` gives L/m², as the adapter takes it; which is right
+  is *not verified*;
+- the irrigation interval is in seconds in §2.4, and in minutes in Table
+  A1 and `channel_info.json`;
+- the images: hourly in §2.3, 4 a day in the README and the DataCite
+  abstract;
+- Table 1 gives 101 % red fruit for one compartment. The sheets' own red
+  shares by fresh weight (`%red (FW)`) are 74.8 to 93.8 %, over the
+  plants sorted by colour; but 3.03's sheet sums its red fruit counts over
+  all 50 plants (1,660) and its totals over the 30 sorted (1,216), and a
+  share taken from such sums passes 100 %. Whether that is how Table 1's
+  figure arose is *not verified*;
+- the 22 October sampling's mean row for 3.08 is labelled 307, after
+  3.08's plants (the profile counts plants by their own labels, six for
+  each);
 - 2023: one sample, `Cherry_EC3_ML_3` on 18 September 2023, lists 1,287.85 g
   of dry flowers on a 19.17 g plant; the `Info` sheet's column names differ
   from the data's; the workbook's own sum columns count a blank truss cell
-  as zero (adapter's notes, `destructive.py` and `crops.py`).
+  as zero (adapter's notes, `destructive.py` and `crops.py`); and the
+  destructive workbook's density steps give none from 29 September to 9
+  October 2023.
 
 ## 6. Next steps
 
-1. When `data.4tu.nl` answers, read the 2024 `README.md` and
-   `channel_info.json` and the 2023 workbooks' `Info` sheets, and correct
-   this memo where they differ.
-2. Profile the time-series archives with the adapters, at the `dev`
-   profile, without images: per compartment and column, the first and last
-   timestamp, the rows and the share missing; per `Harvest.xlsx` sheet, the
-   plants per compartment and the columns, dry weights included. Record
-   the numbers, not the data.
-3. With the model chosen (item 4 of the priorities), write its inputs and
-   outputs against this inventory: each driver's column, aggregation and
-   unit, and each output's measured counterpart and conversion.
+1. Done, 2026-11-10: the 2024 `README.md`, `ReadMe.md` and
+   `channel_info.json`, `Harvest.xlsx`'s `Information` sheet and the 2023
+   workbooks' `Info` sheets read, and this memo corrected where they
+   differ.
+2. Done, 2026-11-10: the time-series archives profiled, without images
+   ([`research/validation/agc4`](../../research/validation/agc4/README.md)):
+   per file and column, the rows, the span and the share missing; per
+   `Harvest.xlsx` sheet, the plants per compartment, the columns and the
+   fruit dried. The numbers, not the data.
+3. Done, 2026-11-10: each model's inputs and outputs against this
+   inventory, in [their own memo](agc4-model-mapping.md): each driver's
+   column, aggregation and unit, and each output's measured counterpart
+   and conversion.
 4. Fix the split, the metrics and the conversions (dry matter, per plant
    or per m², which PAR) in a decision record, before any run is compared
-   with 2024's fruit.
+   with 2024's fruit: proposed in decision
+   [0076](../decisions/0076-the-tomato-models-are-calibrated-on-agc4s-pre-trial-and-tested-once-on-its-challenge.md).
 5. Extend the adapters only for what that model reads: likely the
-   per-plant values and the red and green split of `Harvest.xlsx`, and the
-   pre-trial's `par1` to `par4` with the zone each belongs to.
+   per-plant values and the red and green split of `Harvest.xlsx`, its
+   dried batches, and the pre-trial's `par1` to `par4` with the zone each
+   belongs to. The final harvest's plants weighed for red fruit alone are
+   read already, in the `HARVEST` event's means of red fruit (§2).
 6. Build the drivers per compartment, calibrate on the calibration data,
    run the test once, and report the metrics, sample counts, missing data,
    run times and differences of definition, as the priorities ask.

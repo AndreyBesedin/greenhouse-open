@@ -466,9 +466,14 @@ describe("the runs of a scenario, in a dialog", () => {
     await vi.waitFor(() => expect(document.activeElement).toBe(container.querySelector("h2")));
   });
 
-  it("says why when a run is not removed", async () => {
+  it("says when a run is not removed as its worker has not stopped yet", async () => {
     simulator(
-      {},
+      {
+        [`POST /api/runs/${RUN_ID}/epochs/0/stop`]: {
+          status: 200,
+          body: run({ status: "running", stopping: true }),
+        },
+      },
       {
         status: 409,
         body: { error: "run reference_greenhouse-climate-abc, epoch 0 is being computed" },
@@ -477,12 +482,12 @@ describe("the runs of a scenario, in a dialog", () => {
     const { container, onChanged } = shown([run({ status: "running" })]);
 
     click(button(container, "Delete the run with seed 1, epoch 0"));
-    click(button(container, "Delete the run with seed 1, epoch 0"));
+    click(button(container, "Stop and delete the run with seed 1, epoch 0"));
 
     await vi.waitFor(() => expect(container.querySelector('[role="alert"]')).not.toBeNull());
-    // Which, as the row says it, and what to do with the button beside it.
+    // Which, as the row says it, and when it can be deleted.
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-      "The run with seed 1, epoch 0 is still being computed: stop it, then delete it.",
+      "The run with seed 1, epoch 0 is stopping: it can be deleted once it reads Interrupted.",
     );
     // The row is read again: what is said of it stands only while it does.
     expect(onChanged).toHaveBeenCalledTimes(1);
@@ -504,10 +509,18 @@ describe("the runs of a scenario, in a dialog", () => {
     }
 
     async function refused(): Promise<Element> {
-      simulator({}, { status: 409, body: { error: "being computed" } });
+      simulator(
+        {
+          [`POST /api/runs/${RUN_ID}/epochs/0/stop`]: {
+            status: 200,
+            body: run({ status: "running", stopping: true }),
+          },
+        },
+        { status: 409, body: { error: "being computed" } },
+      );
       const { container } = shown([KEPT]);
       click(button(container, "Delete the run with seed 1, epoch 0"));
-      click(button(container, "Delete the run with seed 1, epoch 0"));
+      click(button(container, "Stop and delete the run with seed 1, epoch 0"));
       await vi.waitFor(() => expect(container.querySelector('[role="alert"]')).not.toBeNull());
       return container;
     }
@@ -528,27 +541,26 @@ describe("the runs of a scenario, in a dialog", () => {
       expect(container.querySelector('[role="alert"]')).toBeNull();
     });
 
-    it.each([
-      [
-        "stopping",
-        run({ status: "running", stopping: true }),
-        "The run with seed 1, epoch 0 is stopping: delete it once it reads Interrupted.",
-      ],
-      [
-        "waiting for a worker",
-        run({ status: "queued" }),
-        "The run with seed 1, epoch 0 is waiting for a worker: stop it, then delete it.",
-      ],
-    ])("says the run is %s once its row reads so", async (_, now, said) => {
+    it("says the same once its row reads it waiting for a worker", async () => {
       const container = await refused();
 
-      listed([now]);
+      listed([run({ status: "queued" })]);
 
-      expect(container.querySelector('[role="alert"]')?.textContent).toBe(said);
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+        "The run with seed 1, epoch 0 is stopping: it can be deleted once it reads Interrupted.",
+      );
     });
 
     it("says one over by its status is being written still, and to try again", async () => {
-      simulator({}, { status: 409, body: { error: "being computed" } });
+      simulator(
+        {
+          [`POST /api/runs/${RUN_ID}/epochs/0/stop`]: {
+            status: 200,
+            body: run({ status: "running", stopping: true }),
+          },
+        },
+        { status: 409, body: { error: "being computed" } },
+      );
       const { container } = shown([run({ status: "interrupted" })]);
 
       click(button(container, "Delete the run with seed 1, epoch 0"));
@@ -728,7 +740,15 @@ describe("the runs of a scenario, in a dialog", () => {
   });
 
   it("calls a run asked to stop stopping, with nothing more to press and no way to delete it yet", async () => {
-    simulator({}, { status: 409, body: { error: "being computed" } });
+    simulator(
+      {
+        [`POST /api/runs/${RUN_ID}/epochs/0/stop`]: {
+          status: 200,
+          body: run({ status: "running", stopping: true }),
+        },
+      },
+      { status: 409, body: { error: "being computed" } },
+    );
     const { container } = shown([run({ status: "running", stopping: true })]);
 
     expect(container.querySelector(".landing-run-status")?.textContent).toContain("Stopping");
@@ -740,11 +760,11 @@ describe("the runs of a scenario, in a dialog", () => {
     expect(container.querySelector('[aria-label^="Stop the run"]')).toBeNull();
 
     click(button(container, "Delete the run with seed 1, epoch 0"));
-    click(button(container, "Delete the run with seed 1, epoch 0"));
+    click(button(container, "Stop and delete the run with seed 1, epoch 0"));
 
     await vi.waitFor(() =>
       expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-        "The run with seed 1, epoch 0 is stopping: delete it once it reads Interrupted.",
+        "The run with seed 1, epoch 0 is stopping: it can be deleted once it reads Interrupted.",
       ),
     );
   });
@@ -848,7 +868,7 @@ describe("the runs of a scenario, in a dialog", () => {
     });
     const { container, onChanged } = shown([run({ status: "running" })]);
     click(button(container, "Delete the run with seed 1, epoch 0"));
-    click(button(container, "Delete the run with seed 1, epoch 0"));
+    click(button(container, "Stop and delete the run with seed 1, epoch 0"));
     await vi.waitFor(() => expect(container.querySelector('[role="alert"]')).not.toBeNull());
 
     click(button(container, "Stop the run with seed 1, epoch 0"));

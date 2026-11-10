@@ -1,11 +1,16 @@
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "../design/Button";
 import { deleteRun, notDeleted } from "./runActions";
 import { isComputing, runKey, type StoredRun } from "./storedRuns";
 
-/** What Delete says on hover (P22.7). */
+/** What Delete says on hover (P22.7), and of a run being computed. */
 export const DELETE_NOTE = "Delete this run and what it kept; asks first";
+export const STOP_AND_DELETE_NOTE = "Stop this run, then delete it and what it kept; asks first";
+
+/** What Delete's question says of a run being computed, before its answers. */
+export const STOPS_FIRST =
+  "This run is being computed: deleting it stops it first, then deletes it and what it kept.";
 
 /** A list's deletions and what it says of one refused. Why a run not over is not
  * deleted is read off its row, as `runs` has it now: it follows the row, and goes
@@ -28,11 +33,13 @@ export function useRunDeletion(
     }
   }, [refused, running]);
 
-  /** Asks for `run` to be deleted, and says whether it was. */
+  /** Asks for `run` to be deleted, stopped first if it is being computed, and
+   * says whether it was. */
   async function remove(run: StoredRun): Promise<boolean> {
     const answer = await deleteRun(run);
-    if (answer === "being computed") {
-      // The row may have moved on since it was read: it is what is said of it.
+    if (answer === "stopping") {
+      // Asked to stop, its worker has not looked yet. The row may have moved on
+      // since it was read: it is what is said of it.
       const over = !isComputing(run);
       setProblem(over ? notDeleted(run, nameOf(run)) : null);
       setRefused(over ? null : runKey(run));
@@ -62,18 +69,22 @@ export function useRunDeletion(
 
 /** A run's Delete, in two steps, on every list of runs: pressed, it asks on a line
  * of its own, with the keyboard on the answer that loses nothing. `name` says which
- * run, for whoever hears the button. `onDelete` says whether the run went: if it
+ * run, for whoever hears the button. A run `computing` is stopped before it is
+ * deleted, as the question says first. `onDelete` says whether the run went: if it
  * did, its row goes with it, and the keyboard to `whenGone`, the list's heading,
  * rather than to the page's body. */
 export function RunDelete({
   name,
+  computing,
   onDelete,
   whenGone,
 }: {
   name: string;
+  computing: boolean;
   onDelete: () => Promise<boolean>;
   whenGone: RefObject<HTMLElement | null>;
 }) {
+  const said = useId();
   const [confirming, setConfirming] = useState(false);
   // What had the keyboard is off the page while it asks, and back once it has.
   const pressed = useRef<HTMLButtonElement>(null);
@@ -105,10 +116,23 @@ export function RunDelete({
 
   return confirming ? (
     <span className="landing-confirm">
-      <Button tone="danger" onClick={() => void confirmed()}>
-        Delete {name}
+      {computing && (
+        <span id={said} className="landing-confirm-note">
+          {STOPS_FIRST}
+        </span>
+      )}
+      <Button
+        tone="danger"
+        aria-describedby={computing ? said : undefined}
+        onClick={() => void confirmed()}
+      >
+        {computing ? `Stop and delete ${name}` : `Delete ${name}`}
       </Button>
-      <Button ref={keep} onClick={() => setConfirming(false)}>
+      <Button
+        ref={keep}
+        aria-describedby={computing ? said : undefined}
+        onClick={() => setConfirming(false)}
+      >
         Keep it
       </Button>
     </span>
@@ -117,7 +141,7 @@ export function RunDelete({
       ref={pressed}
       className="landing-run-action landing-run-delete"
       aria-label={`Delete ${name}`}
-      title={DELETE_NOTE}
+      title={computing ? STOP_AND_DELETE_NOTE : DELETE_NOTE}
       onClick={() => setConfirming(true)}
     >
       Delete
