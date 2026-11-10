@@ -281,7 +281,7 @@ test.describe("a kind of equipment the viewer was built without", () => {
       await page.getByRole("slider", { name: "Time of day" }).fill(String(2 * HOUR_S));
       await expect(page.getByTestId("climate-time")).toHaveText("2 h 00 min", ARRIVES);
       await expect(page.getByTestId("equipment-summary")).toHaveText(
-        /^Equipment: panel 1 100%, panel 2 100%;/,
+        /^Equipment: radiant panels 100%;/,
       );
       // The panel keeps the hour before's trace while the next one loads,
       // so the reading is asked again until the warmed air arrives.
