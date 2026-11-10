@@ -1,0 +1,68 @@
+{
+ "model": "tomgro",
+ "parameters_published": "greenhouse_sim/greenhouse_sim/biology/tomato/tomgro/parameters.py, Oliveira et al.'s",
+ "quantities": [
+  "dry_weight_g",
+  "fruit_dry_g",
+  "leaf_area_index"
+ ],
+ "decision": "0076",
+ "targets": {
+  "data": "the 2023 pre-trial's destructive samples (DestructiveHarvest.xlsx, All Data) on 18 and 29 September and 9 November 2023, per light zone and EC treatment, means per plant",
+  "exclusion": "an organ dried heavier than it weighed fresh is no target, nor is its plant's dry weight above ground",
+  "listed_in": "screen.json, targets"
+ },
+ "objective": "decision 0076: the sum over the targets of ln((predicted + c) / (measured + c))², c half the smallest mean above zero of each quantity",
+ "drivers": "drivers.py's 2023 series, one per light zone, with the sha256 drivers.json gives",
+ "initial_state": "the 2023 transplants per plant (harness.transplants), scaled to the density at transplanting",
+ "method": {
+  "optimizer": "scipy.optimize.minimize, method Powell, scipy 1.18.1",
+  "scaling": "each parameter mapped linearly from its bounds to [0, 1]",
+  "start": "the published values, each held within its bounds",
+  "options": {
+   "xtol": 0.0001,
+   "ftol": 1e-06,
+   "maxfev": 4000
+  }
+ },
+ "fixed": "every other parameter at its published value; ρ is the density in force (harness)",
+ "parameters": [
+  {
+   "name": "n_ff",
+   "published": 22.0,
+   "bounds": [
+    6.0,
+    22.0
+   ],
+   "why": "The nodes at which the first fruit sets, the screen's largest change (60.7 of 89.5). The published 22 nodes are an indeterminate crop's: the pre-trial's dwarf crop had fruit set by 29 September, 25 days after transplanting, where the published run sets none. Bounded below by the transplants' five leaves."
+  },
+  {
+   "name": "delta",
+   "published": 0.038,
+   "bounds": [
+    0.004,
+    0.05
+   ],
+   "why": "The leaf area added with each node, at most (m² node⁻¹). The pre-trial's leaf area index was 1.28 to 2.54, the published run's 1.5 to 4.0, at its cap; a dwarf plant's leaves are smaller than the indeterminate crop's the value is for. Screen: 24.5."
+  },
+  {
+   "name": "qe",
+   "published": 0.08,
+   "bounds": [
+    0.04,
+    0.1
+   ],
+   "why": "The leaves' quantum efficiency, the light the crop turns into growth. Screen: 33.4. E, the conversion of CH₂O to dry weight, moves the objective the same way (34.6); one of the two is calibrated, the leaves' rather than the biochemical conversion."
+  },
+  {
+   "name": "alpha_f",
+   "published": 0.8,
+   "bounds": [
+    0.4,
+    1.0
+   ],
+   "why": "The share of net growth to the fruit, at most. Weak in the screen (6.0) only because the published run sets no fruit until late; once fruit sets earlier it decides the fruit's dry weight, 67 % of the pre-trial's dry weight above ground by 9 November."
+  }
+ ],
+ "not_chosen": "n_max (58.8: both steps worsen it, and without the node counts among the targets it trades off against n_ff), e (with qe), n_b, p_1, lai_max, sl_n1 (24.8 to 30.0)."
+}

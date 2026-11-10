@@ -114,3 +114,52 @@ and the run's does not:
 It compares nothing with a measurement: that is the calibration's and the
 test's, in that order. A 2023 zone's 65 days run in under a second for
 either model.
+
+## The calibration's targets, screen and manifests
+
+Decision 0076 has each model's calibration name its parameters, bounds,
+targets, objective, start and method in a manifest committed before it
+runs. [`calibration.py`](calibration.py) gives the targets and the
+objective, and a screen of which parameters move it:
+
+```bash
+python -m research.validation.agc4.calibration /tmp/agc4-drivers > research/validation/agc4/screen.json
+```
+
+- **The targets:** the pre-trial's destructive samples on 18 and 29
+  September and 9 November 2023, per light zone and EC treatment, the mean
+  per plant of the dry weight above ground, the fruit's, the leaves' and
+  the stem's, and the leaf area index: 120 in all, in
+  [`screen.json`](screen.json). A plant whose fruiting clusters weigh
+  nothing fresh has no fruit, a measured zero. An organ dried heavier than
+  it weighed fresh is no target, nor its plant's total: seven stems and one
+  flower cluster on 18 September.
+- **The objective:** decision 0076's, the sum of squared log ratios, each
+  side raised by half the smallest mean above zero of its quantity.
+  Reduced-State TOMGRO is held to the dry weight above ground, the fruit's
+  and the leaf area index; Vanthoor's model to all five.
+- **The screen:** each model at its published parameters, then each
+  parameter alone at 0.8 and 1.25 times its value, on the calibration data
+  alone. At the published parameters the objective is 89.5 for
+  Reduced-State TOMGRO and 173.3 for Vanthoor's model.
+
+The manifests, [`manifests/tomgro.json`](manifests/tomgro.json) and
+[`manifests/vanthoor_katzin.json`](manifests/vanthoor_katzin.json), each
+name four parameters from the screen, chosen for distinct processes, not
+two that move the objective the same way:
+
+| Model | Parameter | Process | Bounds | Screen |
+| --- | --- | --- | --- | --- |
+| Reduced-State TOMGRO | `n_ff` | the fruit's onset | 6 to 22 nodes | 60.7 |
+| | `delta` | leaf area per node | 0.004 to 0.05 m² | 24.5 |
+| | `qe` | light use (with E, not both) | 0.04 to 0.1 | 33.4 |
+| | `alpha_f` | the fruit's share of growth | 0.4 to 1.0 | 6.0 |
+| Vanthoor's model | `sla` | leaf area per carbohydrate | 2.0 to 6.0 × 10⁻⁵ m² mg⁻¹ | 134.9 |
+| | `alpha` | light use (with the CO₂ terms, not all) | 0.25 to 0.5 | 87.1 |
+| | `t_end_sum` | the fruit's onset | 200 to 1,500 °C day | 26.6 |
+| | `rg_fruit` | the fruit's sink | 0.15 to 0.8 mg m⁻² s⁻¹ | 33.8 |
+
+Each says why it is chosen, which strong ones are left and why, and the
+method: scipy's Powell from the published values, each parameter scaled to
+its bounds. Vanthoor's buffer starts at its `c_buf_min`, the least below
+which its growth stops. No calibration has run.

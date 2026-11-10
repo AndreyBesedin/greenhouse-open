@@ -1,0 +1,70 @@
+{
+ "model": "vanthoor_katzin",
+ "parameters_published": "greenhouse_sim/greenhouse_sim/biology/tomato/vanthoor/parameters.py, GreenLight 2.0.7's",
+ "quantities": [
+  "dry_weight_g",
+  "fruit_dry_g",
+  "dry_leaves_g",
+  "dry_stem_g",
+  "leaf_area_index"
+ ],
+ "decision": "0076",
+ "targets": {
+  "data": "the 2023 pre-trial's destructive samples (DestructiveHarvest.xlsx, All Data) on 18 and 29 September and 9 November 2023, per light zone and EC treatment, means per plant",
+  "exclusion": "an organ dried heavier than it weighed fresh is no target, nor is its plant's dry weight above ground",
+  "listed_in": "screen.json, targets"
+ },
+ "objective": "decision 0076: the sum over the targets of ln((predicted + c) / (measured + c))², c half the smallest mean above zero of each quantity",
+ "drivers": "drivers.py's 2023 series, one per light zone, with the sha256 drivers.json gives",
+ "initial_state": "the 2023 transplants per plant (harness.transplants), scaled to the density at transplanting; carbohydrate taken for dry matter one for one; the buffer at c_buf_min, 1 g CH₂O m⁻², the least below which the model's growth stops (the objective at the published parameters: 173.3, against 210.1 started empty)",
+ "method": {
+  "optimizer": "scipy.optimize.minimize, method Powell, scipy 1.18.1",
+  "scaling": "each parameter mapped linearly from its bounds to [0, 1]",
+  "start": "the published values, each held within its bounds",
+  "options": {
+   "xtol": 0.0001,
+   "ftol": 1e-06,
+   "maxfev": 600
+  }
+ },
+ "fixed": "every other parameter at its published value",
+ "parameters": [
+  {
+   "name": "sla",
+   "published": 2.66e-05,
+   "bounds": [
+    2e-05,
+    6e-05
+   ],
+   "why": "The specific leaf area (m² mg⁻¹ CH₂O), the screen's largest change (134.9 of 173.3). The pre-trial measured it: 251 to 352 cm² g⁻¹ of dry leaves after transplanting, 536 at it, against the published 266 cm² g⁻¹ CH₂O."
+  },
+  {
+   "name": "alpha",
+   "published": 0.385,
+   "bounds": [
+    0.25,
+    0.5
+   ],
+   "why": "Photons to electrons, the light the leaves turn into growth. Screen: 87.1. The stomatal CO₂ ratio and the CO₂ compensation's temperature coefficient move the objective the same way (87.1 each); one light-use parameter is calibrated."
+  },
+  {
+   "name": "t_end_sum",
+   "published": 1035.0,
+   "bounds": [
+    200.0,
+    1500.0
+   ],
+   "why": "The temperature sum to a fully generative crop (°C day): fruit growth's onset, as n_ff is Reduced-State TOMGRO's. The published value is about 50 days at 20 °C, and the pre-trial's dwarf crop set fruit within 25; but the screen moves it the other way (147.2 at 1.25 times, 200.0 at 0.8), while the published leaves are short of their area. Its bounds allow both. Screen: 26.6."
+  },
+  {
+   "name": "rg_fruit",
+   "published": 0.328,
+   "bounds": [
+    0.15,
+    0.8
+   ],
+   "why": "The fruit's potential growth (mg CH₂O m⁻² s⁻¹), its sink beside the leaves' and stem's: with the supply calibrated through alpha, it sets the share of growth to fruit, 67 % of the pre-trial's dry weight above ground by 9 November. Screen: 33.8."
+  }
+ ],
+ "not_chosen": "t_can24_max (63.4), rg_leaf (55.5: the fruit's sink is calibrated against it instead), k1_par (46.4), c_leaf_m (42.9), and eta_co2_air_stom and c_gamma (with alpha)."
+}
