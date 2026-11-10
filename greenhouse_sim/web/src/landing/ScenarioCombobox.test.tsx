@@ -257,7 +257,9 @@ describe("the choice of a scenario to open", () => {
     try {
       const { input, press, options } = shown();
       act(() => input.focus());
-      const list = input.parentElement?.querySelector('[role="listbox"]') as HTMLElement;
+      const list = document.getElementById(
+        input.getAttribute("aria-controls") ?? "",
+      ) as HTMLElement;
 
       press("ArrowDown");
       press("ArrowDown");

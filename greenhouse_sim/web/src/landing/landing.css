@@ -71,40 +71,22 @@
 
 .landing-card p {
   margin: 0;
+}
+
+/* A card's words come second to its heading; a problem keeps its own colour. */
+.landing-card p:not([role="alert"]) {
   color: var(--text-soft);
 }
 
-.landing-link-button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-4);
+/* A button in a card's column, as wide as its words. */
+.landing-card-action {
   align-self: flex-start;
-  box-sizing: border-box;
-  min-height: var(--target);
-  padding: 0 18px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  color: var(--text);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.landing-primary {
-  border-color: var(--action);
-  color: var(--action);
 }
 
 .landing-upload {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-}
-
-.landing-upload .landing-link-button {
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 600;
 }
 
 .landing-drafts {
@@ -130,20 +112,9 @@
   flex: none;
 }
 
-.landing-card p.landing-problem {
-  color: var(--warn);
-}
-
+/* Its options hang under the search. */
 .landing-combobox {
   position: relative;
-  display: grid;
-  gap: var(--space-3);
-}
-
-.landing-label {
-  font-size: var(--font-sm);
-  font-weight: 600;
-  color: var(--text-soft);
 }
 
 .landing-input {
@@ -156,6 +127,7 @@
   color: var(--text);
   font: inherit;
   font-size: var(--font-lg);
+  font-weight: normal;
 }
 
 .landing-combobox .landing-input {
@@ -281,6 +253,8 @@
   width: 100%;
 }
 
+/* The replay's header draws its run's status with these until it is a
+ * `StatusChip` (P19.10); a list of runs draws its chips with the component. */
 .landing-status {
   padding: var(--space-1) 10px;
   border: 1px solid var(--border);
@@ -345,42 +319,9 @@
   gap: var(--space-4);
 }
 
-.landing-dialog p[role="alert"],
-.landing-dialog p[role="status"] {
-  margin: 0;
+/* A notice of the whole dialog, under its form. */
+.landing-dialog-notice {
   padding: 10px var(--space-7);
-}
-
-.landing-dialog p[role="alert"] {
-  color: var(--warn);
-}
-
-.landing-button {
-  box-sizing: border-box;
-  min-height: var(--target);
-  padding: 0 18px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface-page);
-  color: var(--text);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.landing-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.landing-button-primary {
-  border-color: var(--action);
-  color: var(--action);
-}
-
-.landing-button-danger {
-  border-color: var(--warn);
-  color: var(--warn);
 }
 
 .landing-form {
@@ -453,7 +394,7 @@
   gap: var(--space-4);
 }
 
-.landing-run > .landing-status {
+.landing-run > .landing-run-status {
   grid-column: 2;
   justify-self: start;
 }
@@ -479,8 +420,7 @@
   grid-column: 6;
 }
 
-/* What is said of a row, or asked of it, on a line of its own under it. */
-.landing-run > .landing-note,
+/* What is asked of a row, on a line of its own under it. */
 .landing-run > .landing-confirm {
   grid-column: 1 / -1;
 }
@@ -524,12 +464,19 @@
   color: var(--warn);
 }
 
+/* Why what was asked of a row was not done: a `Notice`, in its colour. */
+.landing-run-problem {
+  flex-basis: 100%;
+  font-size: var(--font-sm);
+}
+
 .landing-room-refusal {
   margin-top: var(--space-2);
 }
 
 .landing-run > .landing-run-usage,
-.landing-run > .landing-run-reason {
+.landing-run > .landing-run-reason,
+.landing-run > .landing-run-problem {
   grid-column: 1 / -1;
 }
 

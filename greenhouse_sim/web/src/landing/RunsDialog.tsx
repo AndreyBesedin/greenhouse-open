@@ -26,8 +26,7 @@ export function cropText({ plants, crop_model }: ScenarioSummary): string {
   return `${plants} ${plants === 1 ? "plant" : "plants"}${grown}`;
 }
 
-/** A field's control as the start page draws its own, until its look is the
- * design system's (P19.8). */
+/** A field's control as the start page draws it: `Field` draws none (P19.7). */
 function landed(className: string): string {
   return `${className} landing-input`;
 }
@@ -157,9 +156,7 @@ export function RunsDialog({
           </p>
         </div>
         <div className="landing-dialog-actions">
-          <button type="button" className="landing-button" onClick={close}>
-            Close
-          </button>
+          <Button onClick={close}>Close</Button>
         </div>
       </header>
 
@@ -260,8 +257,16 @@ export function RunsDialog({
         </p>
       </form>
 
-      {deletion.problem !== null && <Notice kind="problem">{deletion.problem}</Notice>}
-      {deletion.notOver !== null && <Notice kind="problem">{deletion.notOver}</Notice>}
+      {deletion.problem !== null && (
+        <Notice kind="problem" className="landing-dialog-notice">
+          {deletion.problem}
+        </Notice>
+      )}
+      {deletion.notOver !== null && (
+        <Notice kind="problem" className="landing-dialog-notice">
+          {deletion.notOver}
+        </Notice>
+      )}
       <h3 id={runsHeading} className="landing-runs-heading">
         Its runs
       </h3>
