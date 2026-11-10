@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, test } from "@playwright/test";
 import { VIEWER_PATH } from "../src/landing/paths";
 import { QA_REFERENCE_PATH } from "../src/qa/referencePage.ts";
 import { chooser } from "./chooser";
@@ -156,6 +156,11 @@ test("the reference greenhouse's demo walks through P09's final QA", async ({ pa
   const instances = camera.getByRole("tab", { name: "Instance" });
   await instances.click();
   await expect(instances).toHaveAttribute("aria-selected", "true");
+  // The pass shown looks so, apart from the others, each a button of the design system.
+  const colour = (tab: Locator) => tab.evaluate((element) => getComputedStyle(element).color);
+  expect(await colour(instances)).not.toBe(
+    await colour(camera.getByRole("tab", { name: "Depth" })),
+  );
   await say(page, "8. And what each pixel shows");
   // Put away: a selected camera draws its passes again with every scene.
   await page
