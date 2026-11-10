@@ -21,6 +21,7 @@ const COLOURS = [
   "text-soft",
   "text-muted",
   "border",
+  "border-control",
   "action",
   "warn",
   "mark",
