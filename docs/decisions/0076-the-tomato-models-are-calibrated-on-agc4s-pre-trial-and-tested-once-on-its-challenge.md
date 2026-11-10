@@ -105,13 +105,18 @@ them.
   and the range of 2024's red batches are reported as sensitivities. No
   2024 batch is used in the headline result, since each is a measured
   output of its compartment.
-- *Hours and days:* each driver is the mean of the 5-minute rows inside
-  its hour. Days are taken at a fixed UTC+01:00, so that every day has 24
-  hours. An hour with no rows takes the previous hour's means; that
-  happens once in 2024, the repeated hour of 27 October.
+- *Hours and days:* each driver is the mean of the 5-minute rows stamped
+  inside its hour. Days are taken at a fixed UTC+01:00, so that every day
+  has 24 hours. An hour with no rows takes the previous hour's means; that
+  happens once in 2024, the repeated hour of 27 October. A 2024 run starts
+  at 00:00 UTC+01:00 on 3 September, an hour after its files begin. A
+  2023 run starts at 00:00 UTC+01:00 on 5 September, the first whole day
+  of its climate, from the state sampled on 4 September.
 - *Timing:* a measurement is compared with the model's state at the
-  midnight after its day. The midnight before is reported beside it, as
-  the timing's uncertainty.
+  midnight that begins its day. For a sampling, the midnight after is
+  reported beside it, as the timing's uncertainty. A 2024 compartment's
+  file ends at 12:00 on its harvest day, so no run goes past the midnight
+  before its final harvest.
 
 **The metrics, for each model.**
 
