@@ -199,15 +199,6 @@ def test_an_authorisation_changed_while_a_run_plays_holds_from_then_and_is_recor
         assert [change.version for change in changes] == [1, 2]
         with pytest.raises(InvalidRequest, match="not authorised to set_target"):
             played.set_targets({"heating_day": 24.0})
-        # Started over, it keeps the authorisation in force: its record begins
-        # again there.
-        played.command(PlaybackCommand.RESTART)
-        played.authorise(EVERY_KIND)
-        played.command(PlaybackCommand.RESTART)
-        played.set_targets({"heating_day": 24.0})
-        assert [(c.version, c.at) for c in played.plan(TARGETS_PLAN).authorisation] == [
-            (2, played.start)
-        ]
 
 
 @pytest.mark.slow

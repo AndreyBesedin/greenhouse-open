@@ -172,9 +172,7 @@ def test_a_target_changed_while_the_run_plays_ends_in_an_outcome_a_consumer_read
 ) -> None:
     """Set at 6 h 00 min 30 s, the night's target is the local operator's
     action at 6 h 01: done when the clock passes it, by the run, with its
-    effect, in the outcome log a consumer polls. One set for later and still
-    pending when the run starts over is cancelled, the first outcome of the
-    new epoch."""
+    effect, in the outcome log a consumer polls."""
     clock = _Clock()
     played = Playback(
         simulator, SCENARIO, seconds_per_day=24.0, clock=clock, epochs=Epochs(tmp_path)
@@ -199,19 +197,6 @@ def test_a_target_changed_while_the_run_plays_ends_in_an_outcome_a_consumer_read
     done_at_s = 6 * HOUR_S + 60.0
     assert done.resolved_at == START + timedelta(seconds=done_at_s)
     assert done.executor == ExecutorRef(kind=ExecutorKind.SIMULATED_RUN, id=started.run_id)
-
-    clock.now = 8.0
-    played.set_targets({"heating_day": 25.0})
-    restarted = played.command(PlaybackCommand.RESTART)
-    assert restarted.targets == []
-    # Its records worked out again from the first change it had made, now
-    # the scenario's own run's.
-    assert restarted.worked_out_s == done_at_s
-    # A new epoch's log starts again from its first cursor.
-    polls.append(_poll(played))
-    (dropped,) = polls[-1].outcomes
-    assert (polls[-1].epoch, dropped.status) == (restarted.epoch, OutcomeStatus.CANCELLED)
-    assert "started over" in (dropped.reason or "")
     assert check_polls(polls) == []
 
 

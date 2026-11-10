@@ -22,11 +22,9 @@ import pytest
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import interrupted, leases
-from greenhouse_sim.services.errors import Conflict
 from greenhouse_sim.services.playback import (
     Epochs,
     Playback,
-    PlaybackCommand,
 )
 from greenhouse_sim.services.run_store import (
     EpochManifest,
@@ -427,10 +425,6 @@ def _played(server: Simulator) -> Playback:
     return Playback(server, BOX, epochs=Epochs(objects=_store(server)))
 
 
-def _epoch_of(server: Simulator, found: Playback) -> EpochStore:
-    return EpochStore(_store(server), found.run_id, found.state().epoch)
-
-
 def _delete_path(epoch: EpochStore) -> str:
     return f"/api/runs/{epoch.run_id}/epochs/{epoch.epoch}/delete"
 
@@ -455,19 +449,6 @@ def test_a_playback_whose_thread_cannot_be_started_leaves_an_epoch_that_can_be_d
     assert not EpochStore(_store(server), run.run_id, run.epoch).worked()
     path = f"/api/runs/{run.run_id}/epochs/{run.epoch}/delete"
     assert respond(server, "POST", path).status == HTTPStatus.OK
-
-
-def test_a_playback_stopped_opens_no_epoch_no_one_could_end(server: Simulator) -> None:
-    found = _played(server)
-    epoch = _epoch_of(server, found)
-    found.begin()
-    found.stop()
-
-    # A restart once it was told to stop, its playback in hand.
-    with pytest.raises(Conflict, match="no longer works"):
-        found.command(PlaybackCommand.RESTART)
-
-    assert [run.epoch for run in stored_runs(_store(server))] == [epoch.epoch]
 
 
 def test_workers_a_killed_server_left_stop_through_the_store_and_the_run_is_deleted_or_resumed(

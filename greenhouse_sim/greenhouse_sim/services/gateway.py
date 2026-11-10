@@ -430,15 +430,6 @@ class RunExecutor:
             )
         )
 
-    def forget(self) -> None:
-        """Forgets every action, as a run started over from its start does:
-        its plan is empty again, and its clock at the start."""
-        given = [held for held in self._held.values() if not held.revoked and held.refusal is None]
-        self._held = {}
-        self.now = self._start
-        if given:
-            self._changed(min(self.seconds(held.assignment.at) for held in given))
-
     def _given(self) -> list[_Held]:
         """Every action given, and not revoked or to be refused."""
         return [held for held in self._held.values() if not held.revoked and held.refusal is None]

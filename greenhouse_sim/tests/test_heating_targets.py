@@ -270,5 +270,3 @@ def test_a_target_set_while_the_run_plays_steers_it_from_the_next_minute(
     # was read back before it.
     delivered_heat = [r for r in again.records if r.observation_id == warmer[6].observation_id]
     assert [r.value for r in delivered_heat] == [warmer[6].value]
-    # Started over, it is the scenario's own run again.
-    assert played.command(PlaybackCommand.RESTART).targets == []
