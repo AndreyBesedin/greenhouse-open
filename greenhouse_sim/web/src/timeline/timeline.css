@@ -1,0 +1,64 @@
+/* A run's timeline: a lane per process, its events as ticks across the
+ * window, the moment drawn a line across them all. */
+.timeline {
+  margin: 0 0 var(--space-4);
+}
+
+.timeline select {
+  margin: var(--space-2) 0;
+}
+
+.timeline-lanes {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-lane {
+  display: grid;
+  grid-template-columns: 8em 1fr;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.timeline-lane svg {
+  display: block;
+  width: 100%;
+  height: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.timeline-ticks {
+  stroke: var(--data-blue);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.timeline-now {
+  stroke: var(--chart-strong);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.timeline-turns {
+  margin: var(--space-2) 0 0;
+  padding-left: 1.5em;
+}
+
+/* A followed run's plan lane (P13.8): what ran, what did not, and what is
+ * still to come; and each listed with its outcome. */
+.timeline-plan-ran {
+  stroke: var(--data-green);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.timeline-plan-not-ran {
+  stroke: var(--data-red);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.timeline-plan {
+  margin: var(--space-2) 0 0;
+  padding-left: 1.5em;
+}
