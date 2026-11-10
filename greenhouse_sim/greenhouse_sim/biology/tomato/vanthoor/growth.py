@@ -75,6 +75,12 @@ def fruit_harvest(c_fruit: float, p: VanthoorParameters) -> float:
     return _harvest(c_fruit, p.c_fruit_max, FRUIT_HARVEST_SMOOTHING, FRUIT_HARVEST_MOST)
 
 
+def leaf_pruning(c_leaf: float, p: VanthoorParameters) -> float:
+    """The leaves' pruning rate at `c_leaf` (mg CH₂O m⁻² s⁻¹). The switch is
+    smooth: it prunes some leaf below `c_leaf_max`, half its most rate at it."""
+    return _harvest(c_leaf, p.c_leaf_max, LEAF_HARVEST_SMOOTHING, LEAF_HARVEST_MOST)
+
+
 def _smooth_ramp(x: float) -> float:
     """Eq 9.27, B.6: 0 for a negative `x` and `x` for a positive one, with
     its corner rounded off."""
@@ -162,7 +168,7 @@ def rates(
         Q10_PER_C * (t_can_24 - Q10_REFERENCE_C)
     )
     harvested = fruit_harvest(c_fruit, p)
-    pruned = _harvest(c_leaf, p.c_leaf_max, LEAF_HARVEST_SMOOTHING, LEAF_HARVEST_MOST)
+    pruned = leaf_pruning(c_leaf, p)
     return [
         assimilated - to_fruit - to_leaf - to_stem - growth_respiration,
         to_fruit - maintenance * c_fruit * p.c_fruit_m - harvested,

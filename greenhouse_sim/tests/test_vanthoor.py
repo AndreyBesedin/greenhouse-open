@@ -17,7 +17,13 @@ from typing import Any, Final
 import pytest
 
 from greenhouse_sim.biology.area_contract import HourDrivers, StepCourse
-from greenhouse_sim.biology.tomato.vanthoor.growth import fruit_harvest, live_hour, rates
+from greenhouse_sim.biology.tomato.vanthoor.growth import (
+    LEAF_HARVEST_MOST,
+    fruit_harvest,
+    leaf_pruning,
+    live_hour,
+    rates,
+)
 from greenhouse_sim.biology.tomato.vanthoor.parameters import (
     INITIAL_STATE,
     VanthoorParameters,
@@ -214,6 +220,16 @@ def test_the_fruit_harvested_it_keeps_is_what_left_the_fruit() -> None:
             other, rel=INTEGRAL_RELATIVE, abs=INTEGRAL_ABSOLUTE_MG_M2
         ), f"hour {hour}"
     assert season[-1].harvested_fruit > 6e5
+
+
+def test_its_leaves_are_pruned_by_a_smooth_switch_about_their_most() -> None:
+    p = VanthoorParameters()
+
+    at_most = leaf_pruning(p.c_leaf_max, p)
+
+    assert at_most == pytest.approx(LEAF_HARVEST_MOST / 2)
+    # At a leaf area index of 2.3, of a most of 3, some leaf is pruned still.
+    assert 0 < leaf_pruning(p.c_leaf_max * 2.3 / 3, p) < at_most
 
 
 def test_driven_by_hour_means_it_stays_within_what_the_means_change() -> None:

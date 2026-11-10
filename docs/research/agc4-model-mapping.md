@@ -30,8 +30,9 @@ cited by section.
   1, GreenLight 2.0.7's parameters): a carbohydrate buffer, fruit, leaves
   and stems in mg CH₂O per m² of floor, a temperature sum, the canopy's
   temperature over the last day, and the fruit harvested since planting. It
-  harvests fruit beyond 300 g CH₂O m⁻² standing and prunes leaves beyond a
-  leaf area index of 3. It has no plant density and counts no fruit.
+  harvests fruit beyond 300 g CH₂O m⁻² standing and prunes leaves about a
+  leaf area index of 3, each by a smooth switch that already removes some
+  well below it. It has no plant density and counts no fruit.
 - **Both** are driven an hour at a time through the `house_hours` profile,
   version 1: each hour's mean temperature, PAR above the canopy and CO₂
   (`HourDrivers`), a day of at most 24 hours to a step (`StepCourse`).
@@ -174,9 +175,11 @@ force), and weekly leaf and truss counts on 40 plants.
 
 The pre-trial's plants were sampled whole, nothing picked from them, so
 Vanthoor's fruit is held to them as in 2024: standing plus harvested. Its
-leaves pruned beyond a leaf area index of 3 leave `c_leaf` and are kept in
-no state, while AGC4 prunes none; a run that prunes says so beside its
-comparison. The pre-trial's leaf area index reached 2.54.
+leaves pruned leave `c_leaf` and are kept in no state, while AGC4 prunes
+none; a run that prunes says so beside its comparison. The pre-trial's
+leaf area index reached 2.54, short of 3, but the switch is smooth: the
+calibrated run prunes from a leaf area index well below it (the
+calibration's report, [the AGC4 README](../../research/validation/agc4/README.md#the-calibration)).
 
 ## What this leaves to decide
 
