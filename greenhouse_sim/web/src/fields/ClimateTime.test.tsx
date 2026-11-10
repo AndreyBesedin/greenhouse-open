@@ -324,7 +324,6 @@ describe("a climate run's moment, in a view that follows the run played back", (
         time={DAY_S}
         shown={DAY_S}
         followed
-        followedNote={REPLAYED_NOTE}
         days={14}
         playing={false}
         onTime={ignore}
@@ -337,18 +336,14 @@ describe("a climate run's moment, in a view that follows the run played back", (
     expect(REPLAYED_NOTE).not.toContain("Stop following");
   });
 
-  it("leaves play, the sliders, the day steps and the pace to the run played back, and says so", () => {
-    // The playback's play and pause are the view's (#270): a play of the
-    // climate run's own, or a slider over one day, would say a state the
-    // run is not in.
+  it("leaves play, the sliders, the day steps and the pace to what follows it, and gets them back", () => {
+    // A play of the climate run's own, or a slider over one day, would say a
+    // state the run is not in (#270).
     const view = render(followed({ time: 3 * DAY_S + 600, shown: 3 * DAY_S + 600 }));
 
     expect(view.container.querySelectorAll("button, input, select")).toHaveLength(0);
     expect(said(view.container, "climate-time")).toBe("day 4, 10 min");
-    expect(said(view.container, "climate-followed")).toBe(
-      "The run played back moves this moment on with its clock: play and pause it there. " +
-        "Stop following to choose the moment here, or play it.",
-    );
+    expect(said(view.container, "climate-followed")).toBe(REPLAYED_NOTE);
     // No longer followed, its own play and sliders are back.
     view.rerender(
       <ClimateTime

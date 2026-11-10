@@ -78,9 +78,6 @@ export type SceneSource =
       /** Where the camera starts, rather than the default preset: for a part
        * of a big greenhouse no preset frames. */
       camera?: CameraPose;
-      /** Whether its moment follows the clock of its own run played back
-       * (P10.2, decision 0041), rather than being set here. */
-      follow?: true;
       envelope?: Readonly<Record<string, number>>;
       openings?: Readonly<Record<string, number>>;
       levels?: Readonly<Record<string, number>>;
@@ -259,7 +256,7 @@ export function searchFor(source: SceneSource): string {
         .map((part) => `&${part}`)
         .join(
           "",
-        )}${source.clouds === undefined ? "" : `&clouds=${source.clouds}`}${source.wind === undefined ? "" : `&wind=${source.wind}`}${fieldQuery(source)}${source.crop === undefined || source.crop.length === 0 ? "" : `&crop=${cropText(source.crop)}`}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}${source.follow ? "&follow=1" : ""}`;
+        )}${source.clouds === undefined ? "" : `&clouds=${source.clouds}`}${source.wind === undefined ? "" : `&wind=${source.wind}`}${fieldQuery(source)}${source.crop === undefined || source.crop.length === 0 ? "" : `&crop=${cropText(source.crop)}`}${source.cfdBoundaries ? `&cfd=${CFD_BOUNDARIES}` : ""}${source.camera === undefined ? "" : `&camera=${cameraText(source.camera)}`}`;
   }
 }
 

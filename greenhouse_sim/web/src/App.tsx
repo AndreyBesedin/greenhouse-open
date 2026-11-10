@@ -29,10 +29,9 @@ import { Inspector } from "./Inspector";
 import { opensFramed } from "./landing/paths";
 import { MovePanel } from "./MovePanel";
 import { PanelSide } from "./PanelSide";
-import { PlaybackPanel } from "./PlaybackPanel";
 import { usePanelFolds } from "./panelFolds";
 import { cropAction } from "./plan/plan";
-import { useGiveToPlayback, useSteering } from "./plan/useSteering";
+import { NOT_STEERED, useSteering } from "./plan/useSteering";
 import { LabPanels } from "./plants/LabPanels";
 import { type LabRun, PLANT_LAB_POSE } from "./plants/lab";
 import { PlantDays } from "./plants/PlantDays";
@@ -61,13 +60,11 @@ import {
 } from "./scene/edits";
 import { runningThermostat } from "./scene/equipment";
 import { baseLayout } from "./scene/moves";
-import { commandPlayback } from "./scene/playback";
 import { runApartFromItsMoment, scenarioRun } from "./scene/run";
 import { type SceneSource, searchFor, shownBy } from "./scene/source";
 import { useDrawnSnapshot } from "./scene/useDrawnSnapshot";
-import { useFollow, withoutRunChanges } from "./scene/useFollow";
-import { useFollowFraming, useOpeningFrame } from "./scene/useFollowFraming";
 import { useMoveDrag } from "./scene/useMoveDrag";
+import { useOpeningFrame } from "./scene/useOpeningFrame";
 import { type PlayedPace, useReplayMoment } from "./scene/useReplayMoment";
 import { useSceneLoads } from "./scene/useSceneLoads";
 import { type SetSource, useSource } from "./scene/useSource";
@@ -227,18 +224,8 @@ export function App({
   } = useFieldDrawing(source, run, climateRun);
   const fieldName = source.kind === "scenario" ? (source.field ?? null) : null;
 
-  // A run followed as it is played back (P10.2, decision 0041); the run's own
-  // play stands aside as the clock moves the moment drawn on.
+  // The run's own play stands aside as a replay moves the moment drawn on.
   const stopClimatePlay = useCallback(() => setPlayingClimate(false), []);
-  const { followed, playback, setPlayback, playedLayout, anotherRun } = useFollow({
-    source,
-    addressed,
-    setSource,
-    field: fieldName,
-    fieldShownMoment: fieldProgress.shown?.field.timeS ?? null,
-    fieldFailed: failed(fieldProgress.latest),
-    onClockMoved: stopClimatePlay,
-  });
   // What a change in a replay's panels forks from: the moment they show.
   const forkFrom = forkMoment(fieldName, fieldProgress.shown?.field.timeS, replay?.momentS ?? null);
   // A running epoch's plan grows while it is replayed: the scene follows it.
@@ -259,15 +246,13 @@ export function App({
     fieldFailed: failed(fieldProgress.latest),
     onClockMoved: stopClimatePlay,
   });
-  // A run followed as it plays is steered from the panels through its plan
-  // (P13.8): its levels shown as it has them at its clock. So is an epoch
-  // replayed while it is computed, through its changes (P22.1): its levels
-  // shown as it has them at the moment the replay shows.
-  const clockS = playback.status === "loaded" ? playback.state.timeS : null;
+  // An epoch replayed while it is computed is steered from the panels through
+  // its changes (P22.1): its levels shown as it has them at the moment the
+  // replay shows.
   const steeredEpoch = replay?.steer ?? null;
   // Whether a change made now steers the epoch replayed, rather than forking it.
   const steersNow = steeredEpoch?.computing === true;
-  const steeredAt = replay === undefined ? clockS : (replay.momentS ?? 0);
+  const steeredAt = replay === undefined ? null : (replay.momentS ?? 0);
   const shownWhenSteered = useMemo(
     () =>
       source.kind === "scenario" && steeredAt !== null
@@ -275,11 +260,10 @@ export function App({
         : {},
     [source, steeredAt],
   );
-  const giveToPlayback = useGiveToPlayback(followed, setPlayback);
   const steering = useSteering(
-    replay === undefined ? followed : (steeredEpoch?.epoch ?? null),
+    steeredEpoch?.epoch ?? null,
     shownWhenSteered,
-    steeredEpoch?.give ?? giveToPlayback,
+    steeredEpoch?.give ?? NOT_STEERED,
   );
   // What of the moment asked for failed to arrive, while something else of
   // it is drawn in its place: the scene and the field each say why when
@@ -346,18 +330,11 @@ export function App({
   });
   const selectedCamera = selected === null ? null : cameraOf(selected);
 
-  useFollowFraming({
-    followed,
-    latestScene: sceneProgress.latest,
-    camera: source.kind === "scenario" ? source.camera : undefined,
-    cameraAt: sample?.camera ?? null,
-    setSource,
-  });
   const openingPose = useOpeningFrame({
     scenarioId:
       source.kind === "scenario" && opensFramed(location.pathname) ? source.scenarioId : null,
     latestScene: sceneProgress.latest,
-    ownCamera: source.kind === "scenario" && (source.camera !== undefined || followed !== null),
+    ownCamera: source.kind === "scenario" && source.camera !== undefined,
     presetChosen: source.kind === "scenario" && presetIn === source.scenarioId,
   });
   // Equipment and sensors moved in a Move session (#209, #271), and the
@@ -543,7 +520,7 @@ export function App({
                     replay.forkWith({ kind: "targets", targets }, forkFrom);
                     return;
                   }
-                  if (followed !== null || steersNow) {
+                  if (steersNow) {
                     steering.setTargets(targets);
                     return;
                   }
@@ -558,7 +535,7 @@ export function App({
                         asked: replayLevels,
                         onLevels: (levels) => setReplayLevels((was) => ({ ...was, ...levels })),
                       }
-                    : (followed !== null || steersNow) && steeredAt !== null
+                    : steersNow && steeredAt !== null
                       ? { at: steeredAt, asked: steering.asked, onLevels: steering.steer }
                       : undefined
                 }
@@ -575,18 +552,7 @@ export function App({
                         from: forkMomentNamed(forkFrom, replay.momentS),
                       },
                     })}
-                played={
-                  replay !== undefined
-                    ? { ...replay.lane, version: steering.given }
-                    : followed !== null && playback.status === "loaded"
-                      ? {
-                          runId: playback.state.runId,
-                          epoch: playback.state.epoch,
-                          startedAt: playback.state.startedAt,
-                          version: steering.given,
-                        }
-                      : null
-                }
+                played={replay === undefined ? null : { ...replay.lane, version: steering.given }}
                 momentFailed={momentFailed}
                 fieldView={fieldView}
                 fieldSlice={fieldSlice}
@@ -615,38 +581,7 @@ export function App({
                     {replayedWork}
                   </>
                 ) : (
-                  replayedWork ||
-                  (followed !== null && (
-                    <PlaybackPanel
-                      load={playback}
-                      days={summary?.duration_days ?? null}
-                      changed={anotherRun}
-                      refusal={steering.refusal}
-                      onCommand={(command) =>
-                        void commandPlayback(followed, command).then(setPlayback)
-                      }
-                      onStart={() => void commandPlayback(followed, "start").then(setPlayback)}
-                      onOwnRun={() =>
-                        setSource((current) =>
-                          withoutRunChanges(
-                            current,
-                            playedLayout,
-                            playback.status === "loaded" ? playback.state.commands : [],
-                            playback.status === "loaded" ? playback.state.crop : [],
-                          ),
-                        )
-                      }
-                      onStop={() =>
-                        setSource((current) => {
-                          if (current.kind !== "scenario") {
-                            return current;
-                          }
-                          const { follow: _, ...rest } = current;
-                          return rest;
-                        })
-                      }
-                    />
-                  ))
+                  replayedWork
                 )}
               </ScenarioPanels>
             )}
