@@ -158,7 +158,6 @@ export function App({
   );
   // Whether a click places a probe, and how high.
   const [placingProbes, setPlacingProbes] = useState(false);
-  const [playingClimate, setPlayingClimate] = useState(false);
   const [probeHeight, setProbeHeight] = useState(DEFAULT_PROBE_HEIGHT_M);
   const [presetRequest, setPresetRequest] = useState<PresetRequest | null>(null);
   // The scenario a preset was chosen in: another's opening frame is its own.
@@ -189,7 +188,6 @@ export function App({
       setSelectedId(null);
     }
     setPlaying(false);
-    setPlayingClimate(false);
     display.setColourBy(null);
     if (to.kind !== "scenario" || to.probes === undefined) {
       setPlacingProbes(false);
@@ -224,8 +222,6 @@ export function App({
   } = useFieldDrawing(source, run, climateRun);
   const fieldName = source.kind === "scenario" ? (source.field ?? null) : null;
 
-  // The run's own play stands aside as a replay moves the moment drawn on.
-  const stopClimatePlay = useCallback(() => setPlayingClimate(false), []);
   // What a change in a replay's panels forks from: the moment they show.
   const forkFrom = forkMoment(fieldName, fieldProgress.shown?.field.timeS, replay?.momentS ?? null);
   // A running epoch's plan grows while it is replayed: the scene follows it.
@@ -244,7 +240,6 @@ export function App({
     field: fieldName,
     fieldShownMoment: fieldProgress.shown?.field.timeS ?? null,
     fieldFailed: failed(fieldProgress.latest),
-    onClockMoved: stopClimatePlay,
   });
   // An epoch replayed while it is computed is steered from the panels through
   // its changes (P22.1): its levels shown as it has them at the moment the
@@ -564,14 +559,12 @@ export function App({
                 probes={probes}
                 placing={placingProbes}
                 probeHeight={probeHeight}
-                playingClimate={playingClimate}
                 replayed={replay !== undefined}
                 {...(replay === undefined ? {} : { onSeek: replay.seek })}
                 onSource={setSource}
                 onProbes={setProbes}
                 onPlacing={setPlacingProbes}
                 onProbeHeight={setProbeHeight}
-                onPlayingClimate={setPlayingClimate}
                 onOwnRange={() => setFieldRange(null)}
               >
                 {/* One child or none: a card is drawn only with something in it. */}

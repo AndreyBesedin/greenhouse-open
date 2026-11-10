@@ -62,12 +62,10 @@ function panelsElement(more: Partial<ComponentProps<typeof ScenarioPanels>> = {}
       probes={[]}
       placing={false}
       probeHeight={1}
-      playingClimate={false}
       onSource={vi.fn()}
       onProbes={vi.fn()}
       onPlacing={vi.fn()}
       onProbeHeight={vi.fn()}
-      onPlayingClimate={vi.fn()}
       onOwnRange={vi.fn()}
       {...more}
     />

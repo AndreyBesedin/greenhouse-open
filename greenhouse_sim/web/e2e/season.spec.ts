@@ -72,20 +72,9 @@ test("season: the time controls span the run's days, each chart its moment's day
     await expect(run.getByRole("button", { name: "Next day" })).toBeDisabled();
     await expect(markers).toHaveCount(0);
   });
-
-  await test.step("played a day a step, it keeps its time of day, and stops at the end", async () => {
-    await day.fill("12");
-    await expect(moment).toHaveText("day 13, 1 h 00 min", ARRIVES);
-    await run.getByRole("combobox", { name: "Pace" }).selectOption({ label: "1 day a step" });
-    await run.getByRole("button", { name: "Play" }).click();
-    await expect(moment).toHaveText("day 14, 1 h 00 min", ARRIVES);
-    await expect(moment).toHaveText("day 14, 24 h 00 min", ARRIVES);
-    await expect(run.getByRole("button", { name: "Play" })).toBeVisible();
-    await expect(page).toHaveURL(new RegExp(`&t=${14 * DAY_S}(&|$)`));
-  });
 });
 
-test("season: a day on its way says so, play waits for it, and one that cannot be drawn stops play", async ({
+test("season: a day on its way says so, and one that cannot be drawn says what is drawn instead", async ({
   page,
 }) => {
   test.setTimeout(240_000);
@@ -113,83 +102,20 @@ test("season: a day on its way says so, play waits for it, and one that cannot b
     await expect(pending).toBeHidden();
   });
 
-  await test.step("play waits for the day it asked for, says so, and pauses and resumes there", async () => {
-    const { held } = await holdField(page, 3 * DAY_S + 600);
-    await run.getByRole("combobox", { name: "Pace" }).selectOption({ label: "1 day a step" });
-    await run.getByRole("button", { name: "Play" }).click();
-    const route = await held;
-    await expect(pending).toHaveText(/^Playing: waiting for day 4, 10 min… \d+ s$/);
-
-    await run.getByRole("button", { name: "Pause" }).click();
-    await expect(pending).toHaveText(/^Loading day 4, 10 min… \d+ s$/);
-    await run.getByRole("button", { name: "Play" }).click();
-    await expect(pending).toHaveText(/^Playing: waiting for day 4, 10 min… \d+ s$/);
-    // The next day's field fails, once play moves on to it.
-    await page.route(fieldAt(4 * DAY_S + 600), (failing) =>
+  await test.step("a day that cannot be drawn says what is drawn instead", async () => {
+    await page.route(fieldAt(3 * DAY_S + 600), (failing) =>
       failing.fulfill({ status: 500, json: { error: "a failure for the test" } }),
     );
-    await route.continue();
-    await expect(moment).toHaveText("day 4, 10 min", ARRIVES);
-  });
-
-  await test.step("a day that cannot be drawn stops play, which says what is drawn instead", async () => {
+    await run.getByRole("button", { name: "Next day" }).click();
     await expect(page.getByTestId("climate-failed")).toHaveText(
-      "Day 5, 10 min cannot be drawn; day 4, 10 min is shown.",
+      "Day 4, 10 min cannot be drawn; day 3, 10 min is shown.",
       ARRIVES,
     );
-    await expect(run.getByRole("button", { name: "Play" })).toBeVisible();
-    await expect(moment).toHaveText("day 4, 10 min");
+    await expect(moment).toHaveText("day 3, 10 min");
     await expect(page.getByTestId("scene-failures")).toHaveText(
       "Not drawn as asked: the field is not available (the simulator API answered 500).",
     );
     // The field drawn is day 3's still, not taken off the view.
     await expect(page.getByTestId("field-status")).toContainText("cells");
-  });
-});
-
-test("season: play and pause pressed in a hurry while a day is on its way end as last pressed, and resume from there (#202)", async ({
-  page,
-}) => {
-  test.setTimeout(240_000);
-  await page.goto(`/?scenario=climate_box&field=climate&t=600&schedule=${SCHEDULE}`);
-  const run = page.getByRole("group", { name: "Climate run" });
-  const moment = page.getByTestId("climate-time");
-  const pending = page.getByTestId("climate-pending");
-  const toggle = run.getByRole("button", { name: /^(Play|Pause)$/ });
-  await expect(moment).toHaveText("10 min", ARRIVES);
-  await expect(pending).toBeHidden(ARRIVES);
-
-  await test.step("pressed seven times while day 1 is held, it ends paused, waiting for nothing new", async () => {
-    const { held } = await holdField(page, DAY_S + 600);
-    await run.getByRole("combobox", { name: "Pace" }).selectOption({ label: "1 day a step" });
-    await toggle.click();
-    const route = await held;
-    for (let pressed = 0; pressed < 7; pressed++) {
-      await toggle.click();
-    }
-    await expect(toggle).toHaveText("Play");
-    await expect(pending).toHaveText(/^Loading day 2, 10 min… \d+ s$/);
-    // No step after day 1 is asked for while paused, before or after it
-    // arrives.
-    const later: string[] = [];
-    page.on("request", (request) => {
-      const t = Number(new URL(request.url()).searchParams.get("t"));
-      if (request.url().includes("/fields/climate") && t > DAY_S + 600) {
-        later.push(request.url());
-      }
-    });
-    await route.continue();
-    await expect(moment).toHaveText("day 2, 10 min", ARRIVES);
-    await expect(pending).toBeHidden();
-    await page.waitForTimeout(2000);
-    await expect(moment).toHaveText("day 2, 10 min");
-    expect(later).toEqual([]);
-  });
-
-  await test.step("played again, it moves on from the day it stopped at", async () => {
-    await toggle.click();
-    await expect(moment).toHaveText("day 3, 10 min", ARRIVES);
-    await toggle.click();
-    await expect(toggle).toHaveText("Play");
   });
 });

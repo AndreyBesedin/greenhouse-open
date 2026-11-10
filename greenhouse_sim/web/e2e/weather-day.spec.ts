@@ -161,13 +161,6 @@ test("weather-day: the climate box through a cold spring day", async ({ page }) 
     );
   });
 
-  await test.step("played, it moves on through the day", async () => {
-    const run = page.getByRole("group", { name: "Climate run" });
-    await run.getByRole("button", { name: "Play" }).click();
-    await expect(page.getByTestId("climate-time")).toHaveText("20 h 05 min", ARRIVES);
-    await run.getByRole("button", { name: "Pause" }).click();
-  });
-
   await test.step("the replay is the same every time", async () => {
     await at(page, CONTROLLED, 20 * H, "20 h 00 min");
     // Read once what it compares with the same day all off has arrived.

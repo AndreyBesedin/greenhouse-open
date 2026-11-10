@@ -1,36 +1,8 @@
-import { type Page, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import { expect, WAITS_FOR_THE_SIMULATOR_MS } from "./arrives";
 import { unfold } from "./folds";
 
 test.describe.configure({ timeout: WAITS_FOR_THE_SIMULATOR_MS });
-
-/** Starts noting each moment the climate run's control shows, with the one it
- * shows now, as the page draws it; what is read gives them in order. A test
- * that looked for each in turn would miss a moment that a loaded machine shows
- * only between two of its looks. */
-async function momentsShown(page: Page): Promise<() => Promise<string[]>> {
-  await page.evaluate(() => {
-    const shown: string[] = [];
-    const note = () => {
-      const moment = document.querySelector('[data-testid="climate-time"]')?.textContent ?? "";
-      if (moment !== shown.at(-1)) {
-        shown.push(moment);
-      }
-    };
-    note();
-    new MutationObserver(note).observe(document.body, {
-      subtree: true,
-      childList: true,
-      characterData: true,
-    });
-    Object.assign(window, { momentsShown: shown });
-  });
-  return () => page.evaluate(() => (window as unknown as { momentsShown: string[] }).momentsShown);
-}
-
-// How long a pause must hold for the play's next step, were it to come, to have
-// come (`PLAY_PAUSE_MS`, doubled and more).
-const A_STEP_WOULD_HAVE_COME_MS = 1000;
 
 // Three probes on the climate box's fan's axis, 2.8 m up along the middle of
 // the house, from its rotor at x = 1 m: in its 3 m core, far down the house,
@@ -128,25 +100,6 @@ test("climate: a running heater warms its corner and the house through the run",
     await expect(highest).toHaveValue(reached);
     await run.getByRole("slider", { name: "Time of day" }).fill("600");
     await expect(moment).toHaveText("10 min");
-  });
-
-  await test.step("played, the run moves on a minute at a time, until paused", async () => {
-    const shown = await momentsShown(page);
-    await run.getByRole("button", { name: "Play" }).click();
-    await expect.poll(async () => (await shown()).length).toBeGreaterThanOrEqual(3);
-    await run.getByRole("button", { name: "Pause" }).click();
-    await expect(run.getByRole("button", { name: "Play" })).toBeVisible();
-    // A step on its way when paused still arrives; none comes after it.
-    await expect(page.getByTestId("climate-pending")).toHaveCount(0);
-    const atPause = await moment.textContent();
-    await page.waitForTimeout(A_STEP_WOULD_HAVE_COME_MS);
-    await expect(moment).toHaveText(atPause ?? "");
-
-    // Every moment it played through was drawn, each a minute after the last,
-    // from where it stood to where it paused.
-    const played = await shown();
-    expect(played.at(-1)).toBe(atPause);
-    expect(played).toEqual(played.map((_, step) => `${10 + step} min`));
   });
 
   await test.step("switched off ten minutes in, the house cools to 12 °C and saturates", async () => {

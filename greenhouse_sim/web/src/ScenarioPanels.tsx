@@ -133,7 +133,6 @@ export function ScenarioPanels({
   probes,
   placing,
   probeHeight,
-  playingClimate,
   replayed = false,
   steersReplayed = false,
   onSeek,
@@ -147,7 +146,6 @@ export function ScenarioPanels({
   onProbes,
   onPlacing,
   onProbeHeight,
-  onPlayingClimate,
   onOwnRange,
 }: {
   /** What leads the simulation's card: a replay's steering and a plant's
@@ -170,7 +168,6 @@ export function ScenarioPanels({
   probes: Point3[];
   placing: boolean;
   probeHeight: number;
-  playingClimate: boolean;
   /** Whether a replay of a stored run moves the moment, and not this panel. */
   replayed?: boolean;
   /** In a replay: whether its epoch is being computed, so that a target or a
@@ -214,7 +211,6 @@ export function ScenarioPanels({
   onProbes: (probes: Point3[]) => void;
   onPlacing: (placing: boolean) => void;
   onProbeHeight: (height: number) => void;
-  onPlayingClimate: (playing: boolean) => void;
   /** The field's colours go back to its own range. */
   onOwnRange: () => void;
 }) {
@@ -236,8 +232,7 @@ export function ScenarioPanels({
   const fieldName = source.field;
   const probing = fieldName !== undefined && probed !== null;
 
-  // The moment changes from the source as it is then: playing, the climate
-  // run moves on render after render.
+  // The moment changes from the source as it is then.
   const setTime = useCallback(
     (seconds: number) =>
       onSource((current) => (current.kind === "scenario" ? withTime(current, seconds) : current)),
@@ -314,9 +309,7 @@ export function ScenarioPanels({
                 followed={replayed}
                 {...(replayed ? { describe: dayLabel } : {})}
                 days={days}
-                playing={playingClimate}
                 onTime={setTime}
-                onPlaying={onPlayingClimate}
               />
             </Fold>
           )}

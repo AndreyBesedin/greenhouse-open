@@ -126,7 +126,7 @@ its tests and its golden views (`tests/test_reference_qa.py`).
    instance pass, and reads, under the pointer, what each pixel shows and
    how far ahead.
 9. **The crop, accelerated: its seeded variation, its fruit ripening.**
-   "Climate run" moves a day at a time, or plays a day a step. No two
+   "Climate run" moves a day at a time. No two
    plants are alike, each drawn from the seed; a selected part of a plant
    charts its days, the air and its own light on each, and its fruit
    reddens as it ripens. The first red fruit, on day 86, hangs on plant 30's

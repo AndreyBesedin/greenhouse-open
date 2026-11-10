@@ -28,7 +28,7 @@ describe("the moment a replay draws", () => {
   let rendered: Rendered | undefined;
   afterEach(() => rendered?.unmount());
 
-  function Probe(props: Props & { setSource: (change: SetSource) => void; onMoved: () => void }) {
+  function Probe(props: Props & { setSource: (change: SetSource) => void }) {
     useReplayMoment({
       momentS: props.momentS,
       source: props.source ?? SOURCE,
@@ -36,21 +36,19 @@ describe("the moment a replay draws", () => {
       field: props.field ?? null,
       fieldShownMoment: props.fieldShownMoment ?? null,
       fieldFailed: props.fieldFailed ?? false,
-      onClockMoved: props.onMoved,
     });
     return null;
   }
 
   function shown(props: Props) {
     const setSource = vi.fn();
-    const onMoved = vi.fn();
-    rendered = render(<Probe {...props} setSource={setSource} onMoved={onMoved} />);
+    rendered = render(<Probe {...props} setSource={setSource} />);
     /** The source the last change makes of the one drawn. */
     const made = (): SceneSource | undefined => {
       const change = setSource.mock.calls.at(-1)?.[0] as SetSource | undefined;
       return typeof change === "function" ? change(props.source ?? SOURCE) : change;
     };
-    return { setSource, onMoved, made, props };
+    return { setSource, made, props };
   }
 
   it("is a whole minute", () => {
@@ -58,11 +56,10 @@ describe("the moment a replay draws", () => {
     expect(replayedMoment(59.9)).toBe(0);
   });
 
-  it("draws the position's moment, and the run's own play stands aside", () => {
-    const { made, onMoved } = shown({ momentS: 7200 });
+  it("draws the position's moment", () => {
+    const { made } = shown({ momentS: 7200 });
 
     expect(made()).toMatchObject({ kind: "scenario", time: 7200 });
-    expect(onMoved).toHaveBeenCalledOnce();
   });
 
   it("does nothing while there is no position, or the moment is already drawn", () => {
@@ -115,7 +112,6 @@ describe("the moment a replay draws", () => {
       });
 
       expect(held.setSource).toHaveBeenCalledOnce();
-      expect(held.onMoved).toHaveBeenCalledOnce();
       rendered?.unmount();
     }
   });
@@ -259,7 +255,6 @@ describe("a playing replay's moment, asked for ahead", () => {
         setSource,
         field: "climate",
         fieldFailed: false,
-        onClockMoved: () => undefined,
         fetchFn: fetchFn as unknown as typeof fetch,
       });
       return source.kind === "scenario" ? source.time : undefined;
