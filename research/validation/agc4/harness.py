@@ -12,10 +12,14 @@ run's does not:
   and leaves. Reduced-State TOMGRO starts at as many nodes as leaves.
   Vanthoor's model takes the dry weight as its carbohydrate, one for one,
   starts its buffer where it is told, and keeps its own temperatures;
-- **its spacing:** at the first midnight a lower density is in force, every
-  state per m² of floor is multiplied by the new density over the old, so
-  that each plant keeps what it had, and Reduced-State TOMGRO's ρ is the
-  density in force;
+- **its spacing:** where a new density is in force, every state per m² of
+  floor is multiplied by the new density over the old, so that each plant
+  keeps what it had, and Reduced-State TOMGRO's ρ is the density in force.
+  Vanthoor's model is spaced at the hour the density changes, which a
+  summer spacing at local midnight puts at 23:00 at the days' fixed
+  offset. Reduced-State TOMGRO lives a whole day to a step, so it is
+  spaced at the midnight of the day its new density is in force, that
+  hour later;
 - **its readings:** at each midnight, per plant at the density in force:
   the fruit's dry weight (Vanthoor's standing plus harvested), the mature
   fruit's (Reduced-State TOMGRO's alone), the dry weight above ground, and
@@ -184,9 +188,12 @@ def run_vanthoor(
     rung = VanthoorRung(parameters, CANOPY_HEIGHT_M)
     midnights: list[Midnight] = []
     for day in days:
-        state, density = spaced_vanthoor(state, density, day[0].plants_per_m2), day[0].plants_per_m2
-        midnights.append(_vanthoor_midnight(day[0].start, state, density, parameters))
         for hour in day:
+            if hour.plants_per_m2 != density:
+                state = spaced_vanthoor(state, density, hour.plants_per_m2)
+                density = hour.plants_per_m2
+            if hour is day[0]:
+                midnights.append(_vanthoor_midnight(hour.start, state, density, parameters))
             state = rung.live_step(state, StepCourse(hours=(_drivers(hour),)))
     end = days[-1][-1].start + (days[-1][-1].start - days[-1][-2].start)
     midnights.append(_vanthoor_midnight(end, state, density, parameters))
