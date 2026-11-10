@@ -286,10 +286,8 @@ def test_an_unknown_token_and_the_local_apis_routes_are_refused(served: Served) 
     bearer = {"Authorization": f"Bearer {served.token}"}
     for method, path in (
         ("GET", "/api/scenarios"),
-        ("GET", f"/api/scenarios/{SCENARIO}/playback"),
-        ("POST", f"/api/scenarios/{SCENARIO}/playback/pause"),
+        ("POST", f"/api/scenarios/{SCENARIO}/runs"),
         ("GET", f"/api/scenarios/{SCENARIO}/climate/truth"),
-        ("GET", "/consumer/v1/runs"),
     ):
         request = Request(
             served.url + path,

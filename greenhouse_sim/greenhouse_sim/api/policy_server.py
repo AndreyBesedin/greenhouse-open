@@ -6,8 +6,8 @@ routes (`policy`) and nothing else.
         [--authorisation FILE] [--host HOST] [--port PORT] [--seconds-per-day S] [--hold]
     python -m greenhouse_sim.api.policy_server --new-credential KIND:ID
 
-It plays a scenario's own run back from its start, as the local API's
-`--play` does, and serves its port; the local API is not started. Each
+It plays a scenario's own run back from its start in a playback of its own,
+against one clock, and serves its port; the local API is not started. Each
 request carries a bearer token that the credentials file holds by its
 SHA-256 (`services.credentials`), and is answered as from that policy.
 Plans are checked against the authorisation file, as the local API's are

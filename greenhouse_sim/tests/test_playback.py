@@ -2,6 +2,7 @@
 0041): the viewer and a consumer follow the same run, and the clock never
 passes what is worked out."""
 
+import math
 import sys
 import threading
 import time
@@ -16,7 +17,7 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.api.server import create_server
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import heat_log, playback, run_state, sensors
-from greenhouse_sim.services.errors import NotFound
+from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand, PlaybackFailed
 from greenhouse_sim.services.runs import RunRequest
@@ -227,28 +228,25 @@ def test_a_restart_with_another_layout_plays_its_run_from_its_start_as_a_new_run
     assert Epochs(tmp_path).next(moved.run_id) == 2
 
 
-def test_the_api_starts_a_playback_over_with_a_layout_and_refuses_one_it_cannot_play(
+def test_a_playback_started_over_with_a_layout_it_cannot_play_is_refused_and_plays_on(
     simulator: Simulator,
     no_playbacks: Callable[[], None],
 ) -> None:
-    path = f"/api/scenarios/{SCENARIO}/playback"
-    started = respond(simulator, "POST", f"{path}/start?seconds_per_day=600&layout={MOVED}")
-    assert started.status == 200 and isinstance(started.body, dict)
-    assert started.body["layout"] == MOVED_NAME
-    own = respond(simulator, "POST", f"{path}/restart?layout=default")
-    assert own.status == 200 and isinstance(own.body, dict)
-    assert (own.body["layout"], own.body["time_s"]) == ("default", 0.0)
+    started = playback.start(simulator, SCENARIO, 600.0, layout=MOVED)
+    assert started.layout == MOVED_NAME
+    own = playback.command(simulator, SCENARIO, PlaybackCommand.RESTART, "default")
+    assert (own.layout, own.time_s) == ("default", 0.0)
 
-    for refused, status in [
-        (f"{path}/restart?layout=default~boiler:1:0", 400),
-        (f"{path}/restart?layout=default~heater:99:0", 400),
-        (f"{path}/restart?layout=nowhere", 404),
-        (f"{path}/play?layout={MOVED}", 400),
+    for command, layout, refusal in [
+        (PlaybackCommand.RESTART, "default~boiler:1:0", InvalidRequest),
+        (PlaybackCommand.RESTART, "default~heater:99:0", InvalidRequest),
+        (PlaybackCommand.RESTART, "nowhere", NotFound),
+        (PlaybackCommand.PLAY, MOVED, InvalidRequest),
     ]:
-        assert respond(simulator, "POST", refused).status == status, refused
+        with pytest.raises(refusal):
+            playback.command(simulator, SCENARIO, command, layout)
     # Refused, the run played back plays on.
-    state = respond(simulator, "GET", path)
-    assert isinstance(state.body, dict) and state.body["run_id"] == own.body["run_id"]
+    assert playback.state(simulator, SCENARIO).run_id == own.run_id
     assert [found.layout for found in simulator.playbacks.all()] == ["default"]
 
 
@@ -281,36 +279,20 @@ def test_a_run_played_to_its_end_stops_there(simulator: Simulator, clock: Clock)
         run.stop()
 
 
-def test_the_api_starts_a_playback_and_commands_it(
+def test_a_playback_started_plays_and_is_paused_and_paced(
     simulator: Simulator, no_playbacks: Callable[[], None]
 ) -> None:
-    assert respond(simulator, "GET", f"/api/scenarios/{SCENARIO}/playback").status == 404
-    started = respond(
-        simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?seconds_per_day=600"
-    )
-    assert started.status == 200 and isinstance(started.body, dict)
-    assert started.body["playing"] is True
-    assert started.body["epoch"] == 0
-    assert str(started.body["run_id"]).startswith(f"{SCENARIO}-climate-")
+    with pytest.raises(NotFound):
+        playback.state(simulator, SCENARIO)
+    started = playback.start(simulator, SCENARIO, 600.0)
+    assert started.playing is True
+    assert started.epoch == 0
+    assert started.run_id.startswith(f"{SCENARIO}-climate-")
 
-    paused = respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/pause")
-    assert isinstance(paused.body, dict) and paused.body["playing"] is False
-    paced = respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/pace?seconds_per_day=5")
-    assert isinstance(paced.body, dict) and paced.body["seconds_per_day"] == 5
-    assert respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/rewind").status == 404
-    assert (
-        respond(
-            simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/pace?seconds_per_day=0"
-        ).status
-        == 400
-    )
-    assert (
-        respond(
-            simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/pace?seconds_per_day=x"
-        ).status
-        == 400
-    )
-    assert respond(simulator, "POST", "/api/scenarios/nowhere/playback/start").status == 404
+    assert playback.command(simulator, SCENARIO, PlaybackCommand.PAUSE).playing is False
+    assert playback.set_pace(simulator, SCENARIO, 5.0).seconds_per_day == 5
+    with pytest.raises(NotFound):
+        playback.start(simulator, "nowhere")
 
 
 @pytest.mark.slow
@@ -394,24 +376,21 @@ def test_time_spent_waiting_for_a_day_is_not_banked(simulator: Simulator, clock:
 def test_a_pace_is_a_finite_number_of_seconds(
     simulator: Simulator, no_playbacks: Callable[[], None]
 ) -> None:
-    assert respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start").status == 200
-    for pace in ("1e309", "inf", "nan", "-1"):
-        refused = respond(
-            simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/pace?seconds_per_day={pace}"
-        )
-        assert refused.status == 400, pace
+    playback.start(simulator, SCENARIO)
+    for pace in (math.inf, math.nan, 0.0, -1.0):
+        with pytest.raises(InvalidRequest):
+            playback.set_pace(simulator, SCENARIO, pace)
 
 
 def test_a_start_at_a_pace_refused_starts_nothing(
     simulator: Simulator, no_playbacks: Callable[[], None]
 ) -> None:
-    for pace in ("0", "-1", "nan"):
-        refused = respond(
-            simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?seconds_per_day={pace}"
-        )
-        assert refused.status == 400, pace
+    for pace in (0.0, -1.0, math.nan):
+        with pytest.raises(InvalidRequest):
+            playback.start(simulator, SCENARIO, pace)
     assert simulator.playbacks.all() == []
-    assert respond(simulator, "GET", f"/api/scenarios/{SCENARIO}/playback").status == 404
+    with pytest.raises(NotFound):
+        playback.state(simulator, SCENARIO)
 
 
 def test_a_run_that_cannot_be_worked_out_is_the_simulator_s_failure(

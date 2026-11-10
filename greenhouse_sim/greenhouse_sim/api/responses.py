@@ -1,8 +1,8 @@
 """An answer to a request, as an interface gives it: a status and a JSON
-body. Shared by the viewer's routes (`routes`) and the consumer's
-(`consumer`), which import nothing else of each other; and how the
-gateway's routes (`actuation`) and a policy's port's (`policy`) answer a
-service's record or its refusal, and read a whole-number parameter."""
+body. Shared by the viewer's routes (`routes`) and a policy's port's
+(`policy`), which import nothing else of each other; and how the port's
+routes answer a service's record or its refusal, and read a whole-number
+parameter."""
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass

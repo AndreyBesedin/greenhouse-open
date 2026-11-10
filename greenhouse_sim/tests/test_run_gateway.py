@@ -1,7 +1,7 @@
 """A playback's run as the executor of its gateway (P13.3, decision 0046):
 held to the protocol's executor and gateway contracts, its plan made of the
 actions the gateway gives it, and a target changed while the run plays
-ending in its outcome, which a consumer reads."""
+ending in its outcome, in the log a consumer polls."""
 
 from dataclasses import replace
 from datetime import timedelta
@@ -12,14 +12,13 @@ import pytest
 from greenhouse_protocol.actions import ActionKind, ActionRef, SetLevel, SetTarget
 from greenhouse_protocol.assignment import Assignment, ReportStatus
 from greenhouse_protocol.authorisation import AuthorisationConfig
-from greenhouse_protocol.contracts.consumer import OutcomeBatch, check_polls
+from greenhouse_protocol.contracts.consumer import FIRST_CURSOR, OutcomeBatch, check_polls
 from greenhouse_protocol.contracts.execution import Revocation, check_executor
 from greenhouse_protocol.contracts.gateway import check_gateway
 from greenhouse_protocol.contracts.memory_gateway import InMemoryGateway
 from greenhouse_protocol.outcome import OutcomeStatus, TargetSet
 from greenhouse_protocol.plan import ExecutorKind, ExecutorRef
 
-from greenhouse_sim.api.consumer import consumer_respond
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services import crop_models, playback
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR, RunExecutor, run_items, run_kinds
@@ -185,13 +184,12 @@ def test_a_target_changed_while_the_run_plays_ends_in_an_outcome_a_consumer_read
     played.command(PlaybackCommand.PLAY)
     clock.now = 6.0 + 30.0 / HOUR_S
     played.set_targets({"heating_night": 22.0})
-    path = f"/consumer/v1/runs/{started.run_id}/outcomes"
-    polls = [_poll(simulator, path)]
+    polls = [_poll(played)]
     assert polls[0].outcomes == ()
 
     assert played.work_day(0)
     clock.now = 7.0
-    polls.append(_poll(simulator, f"{path}?after={polls[-1].next}"))
+    polls.append(_poll(played, polls[-1].next))
     (done,) = polls[-1].outcomes
     assert (done.status, done.effect, done.principal) == (
         OutcomeStatus.EXECUTED,
@@ -209,18 +207,17 @@ def test_a_target_changed_while_the_run_plays_ends_in_an_outcome_a_consumer_read
     # Its records worked out again from the first change it had made, now
     # the scenario's own run's.
     assert restarted.worked_out_s == done_at_s
-    polls.append(_poll(simulator, f"{path}?after={polls[-1].next}"))
-    polls.append(_poll(simulator, path))
+    # A new epoch's log starts again from its first cursor.
+    polls.append(_poll(played))
     (dropped,) = polls[-1].outcomes
     assert (polls[-1].epoch, dropped.status) == (restarted.epoch, OutcomeStatus.CANCELLED)
     assert "started over" in (dropped.reason or "")
     assert check_polls(polls) == []
 
 
-def _poll(simulator: Simulator, path: str) -> OutcomeBatch:
-    answer = consumer_respond(simulator, "GET", path)
-    assert answer is not None and answer.status == 200, answer
-    return OutcomeBatch.model_validate(answer.body)
+def _poll(played: Playback, after: int = FIRST_CURSOR) -> OutcomeBatch:
+    """The outcomes of the run's actions written after `after`, by its clock."""
+    return played.outcomes_after(after, ALL)[0]
 
 
 class _Clock:

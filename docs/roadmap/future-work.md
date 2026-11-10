@@ -178,8 +178,9 @@ Recorded 2026-11-08, as [P18](archive/p18-resources-and-deployment.md) closed (d
 0067). Left, from P18, each in its step's row or its final QA:
 
 - **A playback in the API's process has no limits** (P18.3): it opens an epoch with no
-  budget, and `--play` is not refused. Whether such playbacks stay at all is
-  [P22.3](p22-watching-and-starting-a-run.md#steps)'s decision.
+  budget. No route or option of the API starts one since
+  [P22.3](p22-watching-and-starting-a-run.md#steps)'s step 8; the simulator's book of
+  them goes in its step 9 (decision 0074).
 - **One store, several servers** (P18.4): each server keeps its own limit on workers and
   its own count of what waits, so that two on one folder can pass the limit between them.
   A worker that a killed server started is not counted until it claims its epoch.

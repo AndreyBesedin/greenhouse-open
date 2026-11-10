@@ -55,9 +55,7 @@ service, an arm among a run's routes, and their tests.
    will use it, and in `greenhouse_sim/web/README.md` if the viewer does.
 
 The API's server (`greenhouse_sim/greenhouse_sim/api/server.py`) needs no
-change. The consumer interface (`greenhouse_sim/greenhouse_sim/api/consumer.py`,
-decision 0040) is the protocol's, with its own rules: a route for clients
-of a run goes there only by that decision.
+change.
 
 ## Tests
 

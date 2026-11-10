@@ -8,8 +8,9 @@ playback's, and its clock the playback's. A consumer reaches observed
 records only: what the run's sensors delivered by the clock, what happened
 in it, and the outcomes of the actions its plans gave it (P13.3). Nothing
 here reads the run's truth, its model state, its scene, or anything of QA
-mode; the consumer's routes reach the simulator through this module alone,
-and a test holds both to that.
+mode. The simulator no longer serves these reads over HTTP, `/consumer/v1`
+(decision 0074): the examples read a run in the process, and the policy's
+port reads by its cursors and batches.
 
 A cursor counts the records delivered in one epoch of one log. A cursor the
 producer never gave in the current epoch, one kept from an epoch before, is
@@ -24,7 +25,6 @@ import threading
 from typing import Final, Protocol
 
 from greenhouse_protocol.contracts.consumer import (
-    CONSUMER_PREFIX,
     FIRST_CURSOR,
     EventBatch,
     ObservationBatch,
@@ -42,8 +42,6 @@ from greenhouse_sim.services.scenarios import Scenarios, described_plants, scena
 
 # The most records a batch holds, whatever a client asks for.
 MOST_PER_BATCH: Final = 5_000
-# Where the interface's routes live: `/consumer/v1`.
-ROUTES_PREFIX: Final = CONSUMER_PREFIX
 
 
 def run_descriptor(state: PlaybackState) -> RunDescriptor:

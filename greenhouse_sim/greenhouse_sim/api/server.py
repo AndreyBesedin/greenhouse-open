@@ -1,16 +1,14 @@
 """Serving the local API over HTTP, on this machine only.
 
-    python -m greenhouse_sim.api [--port PORT] [--play SCENARIO]
+    python -m greenhouse_sim.api [--port PORT]
 
 The browser viewer's development server forwards `/api` here, so the API
 needs no cross-origin headers. It binds to the loopback interface: it is a
 tool for a developer's own machine, not a service.
 
-The consumer interface's routes (`/consumer/v1`, `consumer`) answer before
-the viewer's, `GET` only, and then the gateway's (`/actuation/v1`,
-`actuation`), which give, steer and read a played-back run's plans as the
-local operator (P13.7). `--play SCENARIO` plays a scenario's own run back
-from its start (`services.playback`), for the viewer and a consumer.
+A run is asked of the simulator's workers (`POST /api/scenarios/{id}/runs`),
+read through its epoch and steered through its changes; no route plays a
+run back in the API's process (decision 0074).
 
 A run's checkpoints are saved or uploaded as POST requests, with a JSON
 body.
@@ -36,11 +34,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Final, cast
 
-from greenhouse_sim.api.actuation import actuation_respond, is_actuation
-from greenhouse_sim.api.consumer import consumer_respond
 from greenhouse_sim.api.responses import Response
 from greenhouse_sim.api.routes import respond
-from greenhouse_sim.services import checkpoints, playback
+from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.drafts import DraftStore, store_at
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.gateway import (
@@ -200,40 +196,17 @@ class JsonHandler(BaseHTTPRequestHandler):
 
 
 class _Handler(JsonHandler):
-    """The local API's: the consumer interface's routes, the gateway's, then
-    the viewer's."""
+    """The local API's: the viewer's routes."""
 
     def do_GET(self) -> None:
         started = time.perf_counter()
         # What is only read is given up once its client has gone, as a viewer
         # goes from a moment it has moved on from.
         with wanted_while(self._client_is_there):
-            consumers = self._safely(lambda: consumer_respond(self._simulator, "GET", self.path))
-            if consumers is not None:
-                self._send(consumers, started)
-                return
-            acts = self._safely(lambda: actuation_respond(self._simulator, "GET", self.path))
-            if acts is not None:
-                self._send(acts, started)
-                return
             self._send(self._safely(lambda: respond(self._simulator, "GET", self.path)), started)
 
     def do_POST(self) -> None:
         started = time.perf_counter()
-        consumers = self._safely(lambda: consumer_respond(self._simulator, "POST", self.path))
-        if consumers is not None:
-            self._send(consumers, started)
-            return
-        if is_actuation(self.path):
-            given = self._body()
-            if isinstance(given, Response):
-                self._send(given, started)
-                return
-            answered = self._safely(
-                lambda: actuation_respond(self._simulator, "POST", self.path, given)
-            )
-            self._send(answered or Response(HTTPStatus.NOT_FOUND, {"detail": "no route"}), started)
-            return
         body = self._body()
         if isinstance(body, Response):
             self._send(body, started)
@@ -340,24 +313,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Serve the simulator's local API.")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument(
-        "--play",
-        action="append",
-        default=[],
-        metavar="SCENARIO",
-        help="play a scenario's own run back from its start, for the viewer and a consumer",
-    )
-    parser.add_argument(
-        "--hold",
-        action="store_true",
-        help="hold a played-back run's clock until it is told to play, its days worked out ahead",
-    )
-    parser.add_argument(
-        "--play-seconds-per-day",
-        type=float,
-        default=playback.DEFAULT_SECONDS_PER_DAY,
-        help="how fast a played-back run's clock plays a simulated day",
-    )
-    parser.add_argument(
         "--drafts",
         type=Path,
         default=None,
@@ -393,20 +348,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     host, port = server.server_address[:2]
     print(f"greenhouse-sim API on http://{host!s}:{port}/api", flush=True)
-    for scenario_id in args.play:
-        played = playback.start(
-            server.simulator,
-            scenario_id,
-            args.play_seconds_per_day,
-            hold=args.hold,
-            epochs=playback.default_epochs(),
-        )
-        held = f" (held: POST /api/scenarios/{scenario_id}/playback/play)" if args.hold else ""
-        print(
-            f"playing {played.run_id}, epoch {played.epoch}{held}, "
-            f"read at http://{host!s}:{port}/consumer/v1",
-            flush=True,
-        )
     try:
         server.serve_forever()
     except KeyboardInterrupt:
