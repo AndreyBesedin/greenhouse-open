@@ -1,0 +1,261 @@
+/* The replay of a stored run (P17.6): a header, the scene, and what moves a
+ * position over the run. */
+.replay {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--surface-page);
+  color: var(--text);
+  font-size: var(--font-md);
+  line-height: 1.4;
+}
+
+.replay-scene {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.replay-header,
+.replay-transport {
+  background: var(--surface-panel);
+  border: 0 solid var(--border);
+}
+
+.replay-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) 14px;
+  padding: 10px 20px;
+  border-bottom-width: 1px;
+}
+
+/* What a fork does, asked on a line of its own before it is made, as a run's
+ * Delete asks. */
+.replay-fork-question {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.replay-fork-question p {
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--text-soft);
+}
+
+.replay-header > .replay-fork-question {
+  justify-content: flex-end;
+}
+
+.replay-title h1 {
+  margin: 0;
+  font-size: var(--font-xl);
+}
+
+.replay-title p {
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--text-soft);
+}
+
+.replay-spacer {
+  flex-grow: 1;
+}
+
+.replay-back,
+.replay-button,
+.replay-follow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  min-width: var(--target);
+  min-height: var(--target);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.replay-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.replay-play {
+  min-width: 52px;
+  border-color: var(--action);
+  color: var(--action);
+}
+
+.replay-follow[aria-pressed="true"] {
+  border-color: var(--action);
+  background: var(--action);
+  color: var(--surface-page);
+}
+
+.replay-transport {
+  padding: 14px 20px var(--space-6);
+  border-top-width: 1px;
+}
+
+.replay-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+  margin-bottom: var(--space-5);
+}
+
+.replay-buttons {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.replay-moment {
+  font-size: var(--font-xl);
+}
+
+.replay-computed-text {
+  color: var(--text-soft);
+}
+
+.replay-refused {
+  margin: 0 0 10px;
+  color: var(--warn);
+}
+
+.replay-pace {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--text-soft);
+}
+
+.replay-pace select {
+  min-height: var(--target);
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-panel);
+  color: var(--text);
+  font: inherit;
+}
+
+.replay-timeline {
+  position: relative;
+}
+
+.replay-track {
+  position: relative;
+  height: 44px;
+  cursor: pointer;
+  touch-action: none;
+  border-radius: 7px;
+  /* What is not computed yet, hatched in the rule's colour in either theme. */
+  background:
+    repeating-linear-gradient(135deg, var(--border) 0 6px, transparent 6px 12px) center / 100% 14px
+    no-repeat;
+}
+
+.replay-computed {
+  position: absolute;
+  top: 15px;
+  left: 0;
+  height: 14px;
+  border-radius: 7px 0 0 7px;
+  background: var(--action);
+}
+
+.replay-frontier {
+  position: absolute;
+  top: 8px;
+  width: 2px;
+  height: 28px;
+  margin-left: -1px;
+  background: var(--action);
+}
+
+.replay-handle {
+  position: absolute;
+  top: 6px;
+  box-sizing: border-box;
+  width: 20px;
+  height: 32px;
+  margin-left: -10px;
+  border: 3px solid var(--action);
+  border-radius: var(--radius-md);
+  background: var(--text);
+}
+
+.replay-handle:focus-visible {
+  outline: var(--focus-width) solid var(--text);
+  outline-offset: var(--focus-offset);
+}
+
+.replay-ticks {
+  position: relative;
+  height: 18px;
+  font-size: var(--font-xs);
+  color: var(--text-soft);
+}
+
+.replay-tick {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.replay-tick:first-child {
+  transform: none;
+}
+
+.replay-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-7);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-xs);
+  color: var(--text-soft);
+}
+
+.replay-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.replay-swatch {
+  width: 18px;
+  height: 8px;
+  border-radius: var(--radius-sm);
+}
+
+.replay-swatch-computed {
+  background: var(--action);
+}
+
+.replay-swatch-pending {
+  background: repeating-linear-gradient(135deg, var(--border) 0 3px, transparent 3px 6px);
+}
+
+.replay-notice {
+  padding: var(--space-8) var(--space-7);
+  text-align: center;
+  color: var(--text-soft);
+}
