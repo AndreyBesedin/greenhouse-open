@@ -40,6 +40,11 @@ def _workbook() -> BytesIO:
     )
     final.append([306, "306-1", 300.0, 40, 10, 50.0, 30, 250.0])
     final.append([306, "306-2", 100.0, 20, 5, 20.0, 15, 80.0])
+    # Weighed for red fruit alone: uncounted, as on 3.02's sheet, and counted,
+    # as on 3.03's.
+    final.append([306, "306-3", None, None, None, None, None, 150.0])
+    final.append([306, "306-4", None, 25, None, None, 25, 210.0])
+    final.append(["total", None, None, None, None, None, None, 690.0])  # aggregate: ignored
 
     buffer = BytesIO()
     book.save(buffer)
@@ -87,7 +92,6 @@ def test_final_harvest_is_a_greenhouse_level_event_with_declared_date_source() -
     assert event.parameters["harvested_mass_g"] == 400.0
     assert event.parameters["harvested_fruit_count"] == 60
     assert event.parameters["plants_sampled"] == 2
-    assert event.parameters["mean_red_fruit_count_per_plant"] == 22.5
     assert event.parameters["date_source"] == "end_of_recording"
     assert final_harvest_event(workbook, compartment("3.01"), harvested_at=recording_end) is None
 
@@ -106,3 +110,21 @@ def test_final_harvest_event_records_where_its_date_came_from() -> None:
     assert event is not None
     assert event.timestamp == harvested_at
     assert event.parameters["date_source"] == "dwarf_tomato/harvest_date"
+
+
+def test_final_harvest_means_red_fruit_over_every_plant_weighed_or_counted_for_it() -> None:
+    """The plants weighed for their red fruit alone count in its means, as in
+    the paper's Table 1, and not in the sums of all fruit, which they lack."""
+    workbook = read_harvest_workbook(_workbook())
+
+    event = final_harvest_event(
+        workbook, compartment("3.06"), harvested_at=datetime(2024, 11, 15, 11, tzinfo=UTC)
+    )
+
+    assert event is not None
+    assert event.parameters["harvested_mass_g"] == 400.0
+    assert event.parameters["mean_fresh_weight_g_per_plant"] == 200.0
+    assert event.parameters["mean_red_fresh_weight_g_per_plant"] == (250 + 80 + 150 + 210) / 4
+    assert event.parameters["plants_weighed_for_red_fruit"] == 4
+    assert event.parameters["mean_red_fruit_count_per_plant"] == (30 + 15 + 25) / 3
+    assert event.parameters["plants_counted_for_red_fruit"] == 3

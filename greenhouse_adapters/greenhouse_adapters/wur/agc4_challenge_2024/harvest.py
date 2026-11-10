@@ -14,11 +14,18 @@ outcome ground truth, not something a controller could have seen.
   series records the harvest day, so the caller supplies that instant (or,
   if a file lacks it, the last recorded timestamp) and the event says which
   in `date_source`.
+
+A final harvest's sheet weighs some plants whole, their fruit sorted green
+and red (30 of 50, 21 in 3.06), and the rest for their red fruit alone,
+counted on some sheets. The event's sums and means of all fruit are over the
+plants weighed whole; its means of red fruit are over every plant weighed,
+or counted, for it, as the paper's Table 1 takes them, and it says how many
+plants each is over.
 """
 
 import re
 from collections.abc import Callable, Iterator, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
 from statistics import mean
@@ -55,6 +62,17 @@ class SampledPlant:
 
 
 @dataclass(frozen=True)
+class RedFruitPlant:
+    """A final harvest's plant weighed for its red fruit alone, with their
+    count where the sheet gives it."""
+
+    compartment_code: str
+    label: str
+    red_fresh_weight_g: float
+    red_fruit_count: int | None
+
+
+@dataclass(frozen=True)
 class Sampling:
     day: date
     plants: list[SampledPlant]
@@ -66,7 +84,9 @@ class Sampling:
 @dataclass(frozen=True)
 class FinalHarvest:
     compartment_code: str
+    # Weighed whole.
     plants: list[SampledPlant]
+    red_fruit_alone: list[RedFruitPlant] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -83,12 +103,11 @@ def read_harvest_workbook(source: Path | IO[bytes]) -> HarvestWorkbook:
         rows = list(workbook[sheet_name].iter_rows(values_only=True))
         if match := _SAMPLING_SHEET.match(sheet_name.strip()):
             day_, month, year = (int(g) for g in match.groups())
-            samplings.append(
-                Sampling(date(_SHEET_CENTURY + year, month, day_), _sampled_plants(rows))
-            )
+            whole, _ = _plants(rows)
+            samplings.append(Sampling(date(_SHEET_CENTURY + year, month, day_), whole))
         elif match := _FINAL_SHEET.match(sheet_name):
             code = match.group(1).replace(".", "")
-            finals.append(FinalHarvest(code, _sampled_plants(rows)))
+            finals.append(FinalHarvest(code, *_plants(rows)))
     workbook.close()
     samplings.sort(key=lambda s: s.day)
     return HarvestWorkbook(samplings=samplings, final_harvests=finals)
@@ -134,8 +153,15 @@ def final_harvest_event(
     if final is None or not final.plants:
         return None
     plants = final.plants
-    red_counts = [p.red_fruit_count for p in plants if p.red_fruit_count is not None]
-    red_weights = [p.red_fresh_weight_g for p in plants if p.red_fresh_weight_g is not None]
+    red_counts = [
+        count
+        for count in [p.red_fruit_count for p in plants]
+        + [p.red_fruit_count for p in final.red_fruit_alone]
+        if count is not None
+    ]
+    red_weights = [p.red_fresh_weight_g for p in plants if p.red_fresh_weight_g is not None] + [
+        p.red_fresh_weight_g for p in final.red_fruit_alone
+    ]
     return Event(
         event_id=f"wur24_c{compartment.code}_final_harvest",
         greenhouse_id=GREENHOUSE_ID,
@@ -151,7 +177,9 @@ def final_harvest_event(
             "mean_fresh_weight_g_per_plant": mean(p.fresh_weight_g for p in plants),
             "mean_fruit_count_per_plant": mean(p.fruit_count for p in plants),
             "mean_red_fruit_count_per_plant": mean(red_counts) if red_counts else None,
+            "plants_counted_for_red_fruit": len(red_counts),
             "mean_red_fresh_weight_g_per_plant": mean(red_weights) if red_weights else None,
+            "plants_weighed_for_red_fruit": len(red_weights),
             "date_source": date_source,
         },
     )
@@ -160,9 +188,11 @@ def final_harvest_event(
 _Row = tuple[object, ...]
 
 
-def _sampled_plants(rows: Sequence[_Row]) -> list[SampledPlant]:
+def _plants(rows: Sequence[_Row]) -> tuple[list[SampledPlant], list[RedFruitPlant]]:
+    """A sheet's plants weighed whole, and those weighed for their red fruit
+    alone."""
     if not rows:
-        return []
+        return [], []
     header = [str(cell).strip().lower() if cell is not None else "" for cell in rows[0]]
     plant_col = _find(header, ("plant",))
     weight_col = _find(header, ("fw tot", "fw"))
@@ -171,6 +201,7 @@ def _sampled_plants(rows: Sequence[_Row]) -> list[SampledPlant]:
     red_weight_col = _find(header, ("fw red", "fw tom red"), required=False)
 
     plants: list[SampledPlant] = []
+    red_alone: list[RedFruitPlant] = []
     for row in rows[1:]:
         label = _cell(row, plant_col)
         match = _PLANT_LABEL.match(str(label).strip()) if label is not None else None
@@ -181,10 +212,20 @@ def _sampled_plants(rows: Sequence[_Row]) -> list[SampledPlant]:
             continue
         weight = _number(_cell(row, weight_col))
         count = _number(_cell(row, count_col))
-        if weight is None or count is None:
-            continue
         red_count = _number(_cell(row, red_count_col)) if red_count_col is not None else None
         red_weight = _number(_cell(row, red_weight_col)) if red_weight_col is not None else None
+        if weight is None and red_weight is not None:
+            red_alone.append(
+                RedFruitPlant(
+                    compartment_code=code,
+                    label=str(label).strip(),
+                    red_fresh_weight_g=red_weight,
+                    red_fruit_count=round(red_count) if red_count is not None else None,
+                )
+            )
+            continue
+        if weight is None or count is None:
+            continue
         plants.append(
             SampledPlant(
                 compartment_code=code,
@@ -195,7 +236,7 @@ def _sampled_plants(rows: Sequence[_Row]) -> list[SampledPlant]:
                 red_fresh_weight_g=red_weight,
             )
         )
-    return plants
+    return plants, red_alone
 
 
 def _find(header: list[str], names: tuple[str, ...], *, required: bool = True) -> int | None:
