@@ -65,6 +65,7 @@ def test_vanthoor_starts_from_the_transplants_with_the_buffer_it_is_given() -> N
         VanthoorParameters().sla * 0.068 * harness.MG_A_G * 56
     )
     assert first.nodes is None and first.mature_fruit_dry_g is None
+    assert (first.dry_leaves_g, first.dry_stem_g) == (pytest.approx(0.068), pytest.approx(0.043))
     assert len(midnights) == 2
 
 

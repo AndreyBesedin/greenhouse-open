@@ -19,7 +19,8 @@ run's does not:
 - **its readings:** at each midnight, per plant at the density in force:
   the fruit's dry weight (Vanthoor's standing plus harvested), the mature
   fruit's (Reduced-State TOMGRO's alone), the dry weight above ground, and
-  the leaf area index, with Reduced-State TOMGRO's nodes.
+  the leaf area index, with Reduced-State TOMGRO's nodes and Vanthoor's
+  leaves' and stem's dry weights.
 
 Nothing here compares a run with a measurement: the calibration and the
 test do (decision 0076).
@@ -91,6 +92,9 @@ class Midnight:
     # Reduced-State TOMGRO's alone.
     mature_fruit_dry_g: float | None = None
     nodes: float | None = None
+    # Vanthoor's model's alone: Reduced-State TOMGRO does not split them.
+    dry_leaves_g: float | None = None
+    dry_stem_g: float | None = None
 
 
 def transplants(archive: Path) -> Transplant:
@@ -243,6 +247,8 @@ def _vanthoor_midnight(
         fruit_dry_g=fruit / MG_A_G / density,
         dry_weight_g=above_ground / MG_A_G / density,
         leaf_area_index=state.leaf_area_index(parameters),
+        dry_leaves_g=state.c_leaf / MG_A_G / density,
+        dry_stem_g=state.c_stem / MG_A_G / density,
     )
 
 
