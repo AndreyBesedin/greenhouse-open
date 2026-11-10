@@ -405,9 +405,11 @@ and `tiny` builds compartment 3.06 only (`cli.py`). Paths below are under
   `sampling_observations` writes, per sampling and compartment, the mean
   fruit count and mean fruit fresh weight per sampled plant, at local noon;
   `final_harvest_event` writes one `HARVEST` event per compartment with the
-  sampled plants' summed fruit fresh weight (`harvested_mass_g`) and count,
-  their number, and the means per plant of total and red fruit count and
-  weight.
+  summed fruit fresh weight (`harvested_mass_g`) and count of the plants
+  weighed whole, their number, and their means per plant; and the means per
+  plant of red fruit count and weight over every plant counted or weighed
+  for it, with the number of plants each is over. Those means are Table
+  1's: 219 to 283 g of red fruit per plant, over 50 plants.
 
 Left out:
 
@@ -421,12 +423,7 @@ Left out:
   and `dwarf_tomato/pot_area`;
 - of `Harvest.xlsx`: the per-plant values (only means and sums are
   written), the green and red split at the three intermediate samplings,
-  the standard errors, the dried batches, and the information sheet;
-- of each final harvest, the 20 plants (29 in 3.06) weighed for their red
-  fruit alone: `_sampled_plants` keeps a plant only with a total fresh
-  weight and count, so the `HARVEST` event's sums and means are over the
-  30 (21) plants sorted by colour, and its mean red fruit per plant is not
-  Table 1's (the profile).
+  the standard errors, the dried batches, and the information sheet.
 
 `harvested_mass_g` is the total fruit, ripe and unripe, of the plants
 sorted by colour on the final-harvest sheet: neither the compartment's
@@ -690,8 +687,8 @@ metadata only, and the tests build miniature workbooks of their own.
 5. Extend the adapters only for what that model reads: likely the
    per-plant values and the red and green split of `Harvest.xlsx`, its
    dried batches, and the pre-trial's `par1` to `par4` with the zone each
-   belongs to. Before any of it, the final harvest's plants weighed for red
-   fruit alone, which the `HARVEST` event leaves out (§2).
+   belongs to. The final harvest's plants weighed for red fruit alone are
+   read already, in the `HARVEST` event's means of red fruit (§2).
 6. Build the drivers per compartment, calibrate on the calibration data,
    run the test once, and report the metrics, sample counts, missing data,
    run times and differences of definition, as the priorities ask.
