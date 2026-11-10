@@ -108,8 +108,8 @@ data.
    rows, spans and gaps per channel, and the fruit weighed and dried; and
    each model's drivers and outputs mapped to its columns and measurements
    ([the mapping memo](../research/agc4-model-mapping.md)); and the hourly
-   drivers of each 2024 compartment and 2023 light zone built, as decision
-   0076 fixes them.
+   drivers of each 2024 compartment and 2023 light zone built, and the
+   harness that runs either model on them, as decision 0076 fixes them.
 6. **Compare with Modelica, bounded.** As the roadmap's greenhouse R&D
    workflows and Modelica comparison plan it: one documented, measured
    interval of TiGwerLib reproduced in OpenModelica, then compared on
