@@ -30,12 +30,14 @@
   border-collapse: collapse;
 }
 
-.field-probes th {
+/* Through the table, so that they come after the info panel's own cells, which
+ * set every side, whatever the order the stylesheets are imported in. */
+.field-probes table th {
   padding-right: var(--space-3);
   vertical-align: top;
 }
 
-.field-probes td {
+.field-probes table td {
   padding-bottom: var(--space-2);
 }
 
