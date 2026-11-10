@@ -19,7 +19,7 @@ const STRIPES: Record<Foldable, { panels: string; fold: string; open: string }> 
  * of their upper edge (P22.9).
  * Pressed, it folds them down to the stripe alone, at the screen's edge, its
  * arrow turned the other way, and pressed again, it opens them as they were. A
- * docked, narrow window shows no side's stripe (styles.css).
+ * docked, narrow window shows no side's stripe (viewer.css).
  */
 export function PanelStripe({
   side,

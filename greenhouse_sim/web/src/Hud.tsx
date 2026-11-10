@@ -24,7 +24,7 @@ const PENDING = "…";
 // After an idle view's frame time, which is that of the last frames it drew.
 const IDLE_FRAME_TIME_NOTE = " (last drawn)";
 
-// A narrow window docks the panels under the view (styles.css), where the
+// A narrow window docks the panels under the view (viewer.css), where the
 // HUD keeps its place among them.
 const DOCKED = "(max-width: 840px)";
 // How far the pointer moves, pressed on the HUD's header, before it drags
