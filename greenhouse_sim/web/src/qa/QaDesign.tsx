@@ -24,6 +24,8 @@ const COLOURS = [
   "border-control",
   "action",
   "warn",
+  "danger",
+  "go",
   "mark",
   "chart-face",
   "chart-ring",
@@ -59,7 +61,7 @@ const LENGTHS = [
   "focus-offset",
 ];
 
-const TONES: readonly ButtonTone[] = ["plain", "primary", "danger"];
+const TONES: readonly ButtonTone[] = ["plain", "primary", "danger", "go"];
 const SIZES: readonly ButtonSize[] = ["target", "compact"];
 const STATUS_TONES: readonly StatusTone[] = ["plain", "active", "problem"];
 

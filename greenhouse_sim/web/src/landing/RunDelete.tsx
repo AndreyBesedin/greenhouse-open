@@ -67,8 +67,9 @@ export function useRunDeletion(
   };
 }
 
-/** A run's Delete, in two steps, on every list of runs: pressed, it asks on a line
- * of its own, with the keyboard on the answer that loses nothing. `name` says which
+/** A run's Delete, in two steps, on every list of runs and the replay's header,
+ * each step in `danger`'s red: pressed, it asks on a line of its own, with the
+ * keyboard on the answer that loses nothing. `name` says which
  * run, for whoever hears the button. A run `computing` is stopped before it is
  * deleted, as the question says first. `onDelete` says whether the run went: if it
  * did, its row goes with it, and the keyboard to `whenGone`, the list's heading,
@@ -139,6 +140,7 @@ export function RunDelete({
   ) : (
     <Button
       ref={pressed}
+      tone="danger"
       className="landing-run-action landing-run-delete"
       aria-label={`Delete ${name}`}
       title={computing ? STOP_AND_DELETE_NOTE : DELETE_NOTE}
