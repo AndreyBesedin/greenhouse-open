@@ -86,10 +86,6 @@ class PositionState(BaseModel):
     # (decision 0075). The viewer draws the scene under it.
     weather: str | None = None
     status: Status
-    # Once said when a playback of the API's held its epoch's clock, which no
-    # playback does now (decision 0074): always false, until the viewer no
-    # longer reads it.
-    paused: bool = False
     started_at: datetime
     simulated_now: datetime
     time_s: float

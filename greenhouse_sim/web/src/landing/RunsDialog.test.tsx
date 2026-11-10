@@ -30,7 +30,6 @@ function run(more: Partial<StoredRun>): StoredRun {
     layout: "default",
     weather: null,
     status: "finished",
-    paused: false,
     frontier_s: 120 * DAY_S,
     duration_s: 120 * DAY_S,
     progress: 1,
@@ -145,7 +144,6 @@ describe("the runs of a scenario, in a dialog", () => {
       epoch: 2,
       seed: 2,
       status: "running",
-      paused: false,
       frontier_s: 41 * DAY_S,
       progress: 41 / 120,
       layout: "default~heater:-1:0.5",
@@ -532,11 +530,6 @@ describe("the runs of a scenario, in a dialog", () => {
 
     it.each([
       [
-        "paused, not over: stop it",
-        run({ status: "running", paused: true }),
-        "The run with seed 1, epoch 0 is paused, not over: stop it, then delete it.",
-      ],
-      [
         "stopping",
         run({ status: "running", stopping: true }),
         "The run with seed 1, epoch 0 is stopping: delete it once it reads Interrupted.",
@@ -669,16 +662,6 @@ describe("the runs of a scenario, in a dialog", () => {
 
     await vi.waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
     expect(asked).toEqual([{ url: `/api/runs/${RUN_ID}/epochs/3/resume`, method: "POST" }]);
-  });
-
-  it("calls a run paused while its playback holds it, and running once it plays", () => {
-    const { rows } = shown([
-      run({ epoch: 1, status: "running", paused: true }),
-      run({ epoch: 0, status: "running" }),
-    ]);
-    const statuses = rows().map((row) => row.querySelector(".landing-status")?.textContent);
-
-    expect(statuses).toEqual(["Paused", "Running"]);
   });
 
   it("asks once for two presses while the first is answered", async () => {

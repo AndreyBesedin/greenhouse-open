@@ -17,7 +17,6 @@ function state(more: Partial<PositionState> = {}): PositionState {
     seed: 1,
     weather: null,
     status: "finished",
-    paused: false,
     started_at: "2026-03-01T00:00:00Z",
     simulated_now: "2026-03-01T00:00:00Z",
     time_s: 0,

@@ -137,11 +137,6 @@ export const POSITION_SCHEMA = {
     "status": {
       "$ref": "#/$defs/Status"
     },
-    "paused": {
-      "default": false,
-      "title": "Paused",
-      "type": "boolean"
-    },
     "started_at": {
       "format": "date-time",
       "title": "Started At",
@@ -284,7 +279,6 @@ export const POSITION_SCHEMA = {
     "seed",
     "weather",
     "status",
-    "paused",
     "started_at",
     "simulated_now",
     "time_s",

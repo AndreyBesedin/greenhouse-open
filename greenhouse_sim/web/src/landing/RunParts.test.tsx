@@ -16,7 +16,6 @@ function run(more: Partial<StoredRun>): StoredRun {
     layout: "default",
     weather: null,
     status: "finished",
-    paused: false,
     frontier_s: 120 * DAY_S,
     duration_s: 120 * DAY_S,
     progress: 1,
@@ -68,14 +67,6 @@ describe("a run's status", () => {
     expect(chip(run({ status: "interrupted" })).classes).toBe(
       "ds-status-chip ds-status-chip-problem landing-status landing-status-interrupted",
     );
-  });
-
-  it("says Paused of a run whose playback holds its clock, in its status's tone", () => {
-    expect(chip(run({ status: "running", paused: true }))).toEqual({
-      classes: "ds-status-chip ds-status-chip-active landing-status landing-status-running",
-      words: "Paused",
-      title: "",
-    });
   });
 
   it("says Stopping, and why, of a run asked to stop", () => {

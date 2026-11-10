@@ -26,10 +26,6 @@ export function canFollow(position: PositionState): boolean {
   return position.status === "queued" || position.status === "running";
 }
 
-/** What is said of a run a playback in the viewer holds: nothing here moves it. */
-export const HELD_NOTE =
-  "A playback in the viewer holds this run's clock: nothing more of it is kept until that plays on. Stop it from Other runs to carry it on with a worker.";
-
 /** What is said while a fork's replay is held back by the fork's frontier, or
  * null. A fork's position is bound for the moment it was made from, and stands
  * at the newest moment computed until the fork is computed that far; then it
@@ -79,10 +75,9 @@ export function ReplayTransport({
 }) {
   const span = spanOf(position);
   const from = heading ?? position.time_s;
-  // At the frontier of a run a playback holds, or one interrupted or failed, nothing
-  // comes for it to play over.
+  // At the frontier of a run interrupted or failed, nothing comes for it to play over.
   const nothingToCome =
-    (position.paused || position.status === "interrupted" || position.status === "failed") &&
+    (position.status === "interrupted" || position.status === "failed") &&
     position.time_s >= position.frontier_s;
   const atItsEnd = position.duration_s !== null && position.time_s >= position.duration_s;
   const forkWait = forkWaitNote(position);
@@ -95,11 +90,6 @@ export function ReplayTransport({
       {refused !== null && (
         <p role="alert" className="replay-refused">
           That did not reach the run: {refused}. Reload the page to open it again.
-        </p>
-      )}
-      {position.paused && (
-        <p role="status" className="replay-refused" data-testid="replay-held">
-          {HELD_NOTE}
         </p>
       )}
       {forkWait !== null && (
@@ -124,7 +114,8 @@ export function ReplayTransport({
             className="replay-button replay-play"
             aria-label={position.playing ? "Pause" : "Play"}
             // At the run's end there is nothing to play: it would stop at once. One
-            // already waiting at a frontier held can still be told to stop waiting.
+            // already waiting at a frontier with nothing to come can still be told
+            // to stop waiting.
             disabled={atItsEnd || (nothingToCome && !position.playing)}
             onClick={position.playing ? onPause : onPlay}
           >

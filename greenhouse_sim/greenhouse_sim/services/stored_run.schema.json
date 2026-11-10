@@ -133,11 +133,6 @@
     "status": {
       "$ref": "#/$defs/Status"
     },
-    "paused": {
-      "default": false,
-      "title": "Paused",
-      "type": "boolean"
-    },
     "frontier_s": {
       "title": "Frontier S",
       "type": "number"
@@ -273,7 +268,6 @@
     "layout",
     "weather",
     "status",
-    "paused",
     "frontier_s",
     "duration_s",
     "progress",

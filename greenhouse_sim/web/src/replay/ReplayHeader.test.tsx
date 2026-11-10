@@ -29,7 +29,6 @@ function position(more: Partial<PositionState> = {}): PositionState {
     seed: 2,
     weather: null,
     status: "running",
-    paused: false,
     started_at: "2026-03-01T00:00:00Z",
     simulated_now: "2026-03-01T00:00:00Z",
     time_s: 0,
@@ -108,19 +107,6 @@ describe("the replay's header", () => {
       expect(said(rendered.container, "replay-status")).toBe(word);
       rendered.unmount();
     }
-  });
-
-  it("calls a run a playback holds paused, as the runs listed do, not running", () => {
-    rendered = render(
-      <ReplayHeader
-        name={null}
-        position={position({ paused: true })}
-        otherRunsHref="/"
-        onFork={noFork}
-      />,
-    );
-
-    expect(said(rendered.container, "replay-status")).toBe("Paused");
   });
 
   it("says a run of the scenario's own seed without a number", () => {

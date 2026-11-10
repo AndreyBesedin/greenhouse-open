@@ -15,7 +15,6 @@ const RUN = {
   layout: "default",
   weather: null,
   status: "queued",
-  paused: false,
   frontier_s: DAY_S,
   duration_s: 3 * DAY_S,
   progress: 1 / 3,

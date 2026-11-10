@@ -72,9 +72,6 @@ export const STATUS_LABEL: Record<Status, string> = {
   interrupted: "Interrupted",
 };
 
-/** What a run is called whose playback holds its clock: its status is running. */
-export const PAUSED_LABEL = "Paused";
-
 /** How far a run is computed, in whole days: "41 of 120 days", or "41
  * days" if its length is not known. */
 export function progressText(run: StoredRun): string {

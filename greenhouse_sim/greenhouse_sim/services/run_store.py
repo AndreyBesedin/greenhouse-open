@@ -1414,10 +1414,6 @@ class StoredRun(BaseModel):
     # The weather it is under, by name: none for its scenario's own.
     weather: str | None = None
     status: Status
-    # Once said when a playback of the API's held its clock, which no playback
-    # does now (decision 0074): always false, until the viewer no longer reads
-    # it.
-    paused: bool = False
     frontier_s: float
     duration_s: float | None
     progress: float | None
