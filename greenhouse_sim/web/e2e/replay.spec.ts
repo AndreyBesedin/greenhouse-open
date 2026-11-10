@@ -499,8 +499,9 @@ test("a replay's buttons say what each does on hover, Fork first (P22.9)", async
   const says = async (name: string | RegExp, within = page.locator(".replay")) =>
     within.getByRole("button", { name, exact: true }).getAttribute("title");
   expect(await says("Fork from here", header)).toBe("Make a new run from this moment; asks first");
-  expect(await says("Delete this run", header)).toBe(
-    "Delete this run and what it kept; asks first",
+  // Being computed, it is stopped before it is deleted, and says so.
+  expect(await says("Delete this run", header)).toMatch(
+    /^(Stop this run, then delete it|Delete this run) and what it kept; asks first$/,
   );
   expect(await header.getByRole("link", { name: "Home" }).getAttribute("title")).toBe(
     "Go to the start page",
@@ -513,30 +514,26 @@ test("a replay's buttons say what each does on hover, Fork first (P22.9)", async
   await expect(page.getByRole("link", { name: "Other runs" })).toHaveCount(0);
 });
 
-test("a replay's Delete asks again, then deletes the run, and lands on the start page (P22.9)", async ({
+test("a replay's Delete stops a run being computed first, deletes it, and lands on the start page (P22.9)", async ({
   page,
 }) => {
   await replayOfANewRun(page, "46");
   const replayed = replayTarget(new URL(page.url()).search);
   const header = page.getByRole("banner");
 
-  await test.step("while the run is computed, it is not deleted, and says why", async () => {
+  await test.step("asked, it says it stops the run first; kept, nothing changes", async () => {
     await header.getByRole("button", { name: "Delete this run" }).click();
-    await expect(header.getByRole("button", { name: "Keep it" })).toBeFocused();
-    await header.getByRole("button", { name: "Delete this run" }).click();
-    await expect(page.getByTestId("replay-delete-refused")).toHaveText(
-      /^This run is (still being computed|waiting for a worker): stop it, then delete it\.$/,
+    await expect(header.locator(".landing-confirm-note")).toHaveText(
+      "This run is being computed: deleting it stops it first, then deletes it and what it kept.",
     );
-  });
-
-  await test.step("stopped, it is deleted once asked again, and the page goes home", async () => {
-    await stopReplayed(page);
-    await expect(page.getByTestId("replay-delete-refused")).toHaveCount(0);
-    await header.getByRole("button", { name: "Delete this run" }).click();
+    await expect(header.getByRole("button", { name: "Keep it" })).toBeFocused();
     await header.getByRole("button", { name: "Keep it" }).click();
     await expect(header.getByRole("button", { name: "Delete this run" })).toBeFocused();
+  });
+
+  await test.step("asked again, it is stopped, deleted, and the page goes home", async () => {
     await header.getByRole("button", { name: "Delete this run" }).click();
-    await header.getByRole("button", { name: "Delete this run" }).click();
+    await header.getByRole("button", { name: "Stop and delete this run" }).click();
     await expect(page).toHaveURL(new RegExp(`${LANDING_PATH}$`));
     const runs = (await (await page.request.get("/api/runs")).json()) as {
       run_id: string;

@@ -214,7 +214,7 @@ test("a dialog closed by Escape gives focus back to the search, with its list sh
   await expect(page.getByRole("option").first()).toBeVisible();
 });
 
-test("a run is started at a seed from a scenario's dialog, listed, and not removed while it computes", async ({
+test("a run is started at a seed from a scenario's dialog, listed, and stopped before it is removed while it computes", async ({
   page,
 }) => {
   await page.goto(LANDING_PATH);
@@ -240,14 +240,19 @@ test("a run is started at a seed from a scenario's dialog, listed, and not remov
       .first();
     await expect(row).toBeVisible();
     // The seed whole, and the row's own: other specs leave runs at other seeds.
+    // Whether a worker computes it or it waits for one, as it does while the runs
+    // of the specs beside this one have both workers, it says it stops it first.
     await row.getByRole("button", { name: /^Delete the run with seed 7,/ }).click();
-    await row.getByRole("button", { name: /^Delete the run with seed 7,/ }).click();
-    // Refused whether a worker computes it or it waits for one, as it does
-    // while the runs of the specs beside this one have both workers.
-    await expect(dialog.getByRole("alert")).toContainText(
-      /still being computed|waiting for a worker/,
+    await expect(row.locator(".landing-confirm-note")).toHaveText(
+      "This run is being computed: deleting it stops it first, then deletes it and what it kept.",
     );
+    await row.getByRole("button", { name: "Keep it" }).click();
     await expect(row).toBeVisible();
+
+    await row.getByRole("button", { name: /^Delete the run with seed 7,/ }).click();
+    await row.getByRole("button", { name: /^Stop and delete the run with seed 7,/ }).click();
+    await expect(row).toHaveCount(0);
+    await expect(dialog.getByRole("alert")).toHaveCount(0);
 
     await dialog.getByRole("button", { name: "Close" }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);

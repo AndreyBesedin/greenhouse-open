@@ -8,7 +8,7 @@ import { replayAddress } from "../landing/paths";
 import { RunDelete } from "../landing/RunDelete";
 import { STATUS_TONE } from "../landing/RunParts";
 import { deleteRun, notDeleted } from "../landing/runActions";
-import { STATUS_LABEL, type Status } from "../landing/storedRuns";
+import { isComputing, STATUS_LABEL, type Status } from "../landing/storedRuns";
 import { failedText } from "./failure";
 import { whyNoFork } from "./fork";
 import type { PositionState } from "./position";
@@ -70,16 +70,12 @@ export function ReplayHeader({
 
   async function remove(): Promise<boolean> {
     const answer = await deleteRun(position);
-    if (answer !== "being computed" && answer.ok) {
+    if (answer !== "stopping" && answer.ok) {
       setNotGone(null);
       onDeleted();
       return true;
     }
-    // A position has no `stopping` to tell: one asked to stop reads as computed.
-    const why =
-      answer === "being computed"
-        ? notDeleted({ status: position.status, stopping: false }, "this run")
-        : answer.problem;
+    const why = answer === "stopping" ? notDeleted(position, "this run") : answer.problem;
     setNotGone({ why, status: position.status });
     return false;
   }
@@ -125,7 +121,12 @@ export function ReplayHeader({
       >
         {forking ? "Forking…" : "Fork from here"}
       </Button>
-      <RunDelete name="this run" onDelete={remove} whenGone={heading} />
+      <RunDelete
+        name="this run"
+        computing={isComputing(position)}
+        onDelete={remove}
+        whenGone={heading}
+      />
       {question}
     </header>
   );

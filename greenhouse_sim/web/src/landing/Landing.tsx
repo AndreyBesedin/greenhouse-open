@@ -321,7 +321,12 @@ function RunRow({
           onChanged();
         }}
       />
-      <RunDelete name={named} onDelete={() => deletion.remove(run)} whenGone={heading} />
+      <RunDelete
+        name={named}
+        computing={isComputing(run)}
+        onDelete={() => deletion.remove(run)}
+        whenGone={heading}
+      />
       <RunUsage run={run} />
       <RunFailure run={run} />
       {refusal !== null && (

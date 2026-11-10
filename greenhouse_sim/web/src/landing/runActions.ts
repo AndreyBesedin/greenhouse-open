@@ -79,11 +79,9 @@ export function resumeRun(run: Epoch, fetchFn: typeof fetch = fetch): Promise<An
   );
 }
 
-/** Deletes a run the simulator keeps. Its refusal of one being computed has no
- * words for a person: those are read off the run's row, by `notDeleted`. */
-export async function deleteRun(
+async function deleteOnce(
   { run_id, epoch }: Epoch,
-  fetchFn: typeof fetch = fetch,
+  fetchFn: typeof fetch,
 ): Promise<Answered<null> | "being computed"> {
   const url = `/api/runs/${encodeURIComponent(run_id)}/epochs/${epoch}/delete`;
   const response = await fetchFn(url, { method: "POST" }).catch(() => null);
@@ -96,18 +94,40 @@ export async function deleteRun(
   return response.ok ? { ok: true, value: null } : { ok: false, problem: await refusal(response) };
 }
 
+/** Deletes a run the simulator keeps, and one being computed too: it is stopped
+ * first, then deleted. A worker of this simulator has stopped by the time it
+ * answers; one it cannot signal stops at its next look at the store, and until
+ * then the run is `stopping`, which a person reads off its row, by `notDeleted`. */
+export async function deleteRun(
+  run: Epoch,
+  fetchFn: typeof fetch = fetch,
+): Promise<Answered<null> | "stopping"> {
+  const first = await deleteOnce(run, fetchFn);
+  if (first !== "being computed") {
+    return first;
+  }
+  const stopped = await stopRun(run, fetchFn);
+  if (!stopped.ok && stopped.problem === GONE) {
+    return { ok: true, value: null };
+  }
+  if (stopped.ok && isComputing(stopped.value)) {
+    return "stopping";
+  }
+  // Stopped, or ended between the two asks: over, it is deleted all the same.
+  const after = await deleteOnce(run, fetchFn);
+  if (after !== "being computed") {
+    return after;
+  }
+  return stopped.ok ? "stopping" : stopped;
+}
+
 /** Why a run is not deleted yet, as its row reads: `name` is what the row calls
- * it. One over by its status was being computed as it was asked, taken up again
- * since its row was read. */
-export function notDeleted(run: Pick<StoredRun, "status" | "stopping">, name: string): string {
+ * it. One being computed was asked to stop, and its worker has not looked yet; one
+ * over by its status was being computed as it was asked, taken up again since its
+ * row was read. */
+export function notDeleted(run: Pick<StoredRun, "status">, name: string): string {
   const named = `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
-  if (!isComputing(run)) {
-    return `${named} is still being written: try again.`;
-  }
-  if (run.stopping) {
-    return `${named} is stopping: delete it once it reads Interrupted.`;
-  }
-  return run.status === "queued"
-    ? `${named} is waiting for a worker: stop it, then delete it.`
-    : `${named} is still being computed: stop it, then delete it.`;
+  return isComputing(run)
+    ? `${named} is stopping: it can be deleted once it reads Interrupted.`
+    : `${named} is still being written: try again.`;
 }

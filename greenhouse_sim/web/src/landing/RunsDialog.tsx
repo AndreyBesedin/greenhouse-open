@@ -13,7 +13,7 @@ import { RunDelete, useRunDeletion } from "./RunDelete";
 import { ReplayLink, RunFailure, RunProgress, RunStatus, RunUsage } from "./RunParts";
 import { notDoneText } from "./runActions";
 import { DEFAULT_PACE_S, startRun } from "./startRun";
-import { type StoredRun, startedText, whoIs } from "./storedRuns";
+import { isComputing, type StoredRun, startedText, whoIs } from "./storedRuns";
 
 /** A run, as a list of one scenario's calls it. */
 function nameOf(run: StoredRun): string {
@@ -303,6 +303,7 @@ export function RunsDialog({
                 />
                 <RunDelete
                   name={nameOf(run)}
+                  computing={isComputing(run)}
                   onDelete={() => deletion.remove(run)}
                   whenGone={title}
                 />
