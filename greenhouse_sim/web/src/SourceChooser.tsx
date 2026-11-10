@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { Fold } from "./design/Fold";
 import { FIRST_LAB_RUN } from "./plants/lab";
 import { DEFAULT_STRESS_PLANTS } from "./qa/stressScene";
 import { ScenarioList } from "./ScenarioList";
@@ -66,15 +67,17 @@ export function SourceChooser({
   const labs = matching(LABS, filter);
 
   return (
-    <details
+    <Fold
       className="source-chooser"
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
+      summary={
+        <>
+          <span className="chooser-label">Choose what to show</span>
+          <SceneStatus source={source} state={scene} />
+        </>
+      }
     >
-      <summary>
-        <span className="chooser-label">Choose what to show</span>
-        <SceneStatus source={source} state={scene} />
-      </summary>
       <input
         type="search"
         aria-label="Filter scenarios and scenes"
@@ -130,7 +133,7 @@ export function SourceChooser({
       <p className="chooser-note">
         Open: its run here, from its start or its opening day. Back returns to the view before.
       </p>
-    </details>
+    </Fold>
   );
 }
 

@@ -6,6 +6,7 @@ import { BranchComparison } from "./checkpoints/BranchComparison";
 import { checkpointRun, comparable } from "./checkpoints/branches";
 import { CheckpointsPanel } from "./checkpoints/CheckpointsPanel";
 import { type CheckpointSummary, restored } from "./checkpoints/checkpoints";
+import { Fold } from "./design/Fold";
 import { EquipmentControls, equipmentIn } from "./EquipmentControls";
 import { ClimateSchedule } from "./fields/ClimateSchedule";
 import { ClimateTime, describeClimateRun, describeTime } from "./fields/ClimateTime";
@@ -287,15 +288,20 @@ export function ScenarioPanels({
         <PanelCard title="Simulation">
           {children}
           {climate && (
-            <details className="moment-fold" {...fold("moment")}>
-              <summary data-testid="moment-summary">
-                {describeClimateRun(
-                  time,
-                  shownTime,
-                  momentFailed,
-                  replayed ? dayLabel : describeTime,
-                )}
-              </summary>
+            <Fold
+              className="moment-fold"
+              {...fold("moment")}
+              summary={
+                <span data-testid="moment-summary">
+                  {describeClimateRun(
+                    time,
+                    shownTime,
+                    momentFailed,
+                    replayed ? dayLabel : describeTime,
+                  )}
+                </span>
+              }
+            >
               <ClimateTime
                 time={time}
                 shown={shownTime}
@@ -307,7 +313,7 @@ export function ScenarioPanels({
                 onTime={setTime}
                 onPlaying={onPlayingClimate}
               />
-            </details>
+            </Fold>
           )}
           {climate && (
             <TimelinePanel
@@ -349,10 +355,15 @@ export function ScenarioPanels({
         </PanelCard>
       )}
       <PanelCard title="House">
-        <details className="field-fold" {...fold("field")}>
-          <summary data-testid="field-summary">
-            {describeAirField(source.field ?? null, fieldView, source.cfdBoundaries === true)}
-          </summary>
+        <Fold
+          className="field-fold"
+          {...fold("field")}
+          summary={
+            <span data-testid="field-summary">
+              {describeAirField(source.field ?? null, fieldView, source.cfdBoundaries === true)}
+            </span>
+          }
+        >
           <FieldControls
             fields={fields}
             chosen={source.field ?? null}
@@ -368,12 +379,15 @@ export function ScenarioPanels({
             state={cfd}
             onShow={(show) => onSource(withCfdBoundaries(source, show))}
           />
-        </details>
+        </Fold>
         {climate && (
-          <details className="house-fold" {...fold("house")}>
-            <summary data-testid="house-summary">{describeHouseAir(houseAir)}</summary>
+          <Fold
+            className="house-fold"
+            {...fold("house")}
+            summary={<span data-testid="house-summary">{describeHouseAir(houseAir)}</span>}
+          >
             <HouseAir state={houseAir} />
-          </details>
+          </Fold>
         )}
         {climate && setpoints !== undefined && onTargets !== undefined && (
           <TargetsPanel
@@ -404,10 +418,15 @@ export function ScenarioPanels({
       {(probing || climate || openings.length > 0 || equipped) && (
         <PanelCard title="Equipment">
           {(probing || climate) && (
-            <details className="probes-fold" {...fold("probes")}>
-              <summary data-testid="probes-summary">
-                {describeProbes(probes.length, source.compare ?? null)}
-              </summary>
+            <Fold
+              className="probes-fold"
+              {...fold("probes")}
+              summary={
+                <span data-testid="probes-summary">
+                  {describeProbes(probes.length, source.compare ?? null)}
+                </span>
+              }
+            >
               {probing && (
                 <FieldProbes
                   names={fields.names}
@@ -425,7 +444,7 @@ export function ScenarioPanels({
                 />
               )}
               {climate && <ProbeCharts state={probeCharts} time={time} />}
-            </details>
+            </Fold>
           )}
           {snapshot !== null && (
             <OpeningControls

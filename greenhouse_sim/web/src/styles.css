@@ -133,8 +133,8 @@
 }
 
 /* Every group of the info panel a section folded to the line that says how
- * it stands (#206, #273), with room below it; and what the viewer was built
- * from, last. */
+ * it stands (#206, #273), a `Fold`, with room below it; and what the viewer was
+ * built from, last. */
 .display-fold,
 .field-fold,
 .moment-fold,
@@ -144,17 +144,6 @@
 .openings-fold,
 .probes-fold {
   margin: 0 0 var(--space-4);
-}
-
-.display-fold > summary,
-.field-fold > summary,
-.moment-fold > summary,
-.house-fold > summary,
-.targets-fold > summary,
-.equipment-fold > summary,
-.openings-fold > summary,
-.probes-fold > summary {
-  cursor: pointer;
 }
 
 .build-line {
@@ -170,24 +159,9 @@
   margin: 0 0 var(--space-4);
 }
 
-.source-chooser > summary {
-  cursor: pointer;
-}
-
+/* Open, its line stands further from the filter than a fold's does. */
 .source-chooser[open] > summary {
   margin: 0 0 var(--space-3);
-}
-
-/* Open, a section's line stands apart from its first control. */
-.display-fold[open] > summary,
-.field-fold[open] > summary,
-.moment-fold[open] > summary,
-.house-fold[open] > summary,
-.targets-fold[open] > summary,
-.equipment-fold[open] > summary,
-.openings-fold[open] > summary,
-.probes-fold[open] > summary {
-  margin-bottom: var(--space-2);
 }
 
 .source-chooser input[type="search"] {

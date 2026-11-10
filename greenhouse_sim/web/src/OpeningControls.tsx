@@ -1,4 +1,5 @@
-import type { Fold } from "./folds";
+import { Fold } from "./design/Fold";
+import type { Fold as FoldState } from "./folds";
 import { formatValue, onAndRest, setBeside } from "./readouts";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
 import { PERCENT } from "./units";
@@ -64,7 +65,7 @@ export function OpeningControls({
   /** Those of them no scene will catch up with, as in a stored run: the reading,
    * still of the scene, says them beside it. */
   notDrawn?: Readonly<Record<string, number>> | undefined;
-  fold: Fold;
+  fold: FoldState;
   onChange: (openings: Record<string, number>) => void;
 }) {
   const openings = openingsIn(snapshot);
@@ -72,8 +73,12 @@ export function OpeningControls({
     return null;
   }
   return (
-    <details className="openings-fold" open={fold.open} onToggle={fold.onToggle}>
-      <summary data-testid="openings-summary">{describeOpenings(openings)}</summary>
+    <Fold
+      className="openings-fold"
+      open={fold.open}
+      onToggle={fold.onToggle}
+      summary={<span data-testid="openings-summary">{describeOpenings(openings)}</span>}
+    >
       <fieldset className="opening-controls" aria-label="Openings">
         {openings.map(({ openingId, label, fraction, apertureM2 }) => {
           const shown = requested[openingId] ?? fraction;
@@ -98,6 +103,6 @@ export function OpeningControls({
           );
         })}
       </fieldset>
-    </details>
+    </Fold>
   );
 }

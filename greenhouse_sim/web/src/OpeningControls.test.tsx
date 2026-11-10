@@ -48,8 +48,8 @@ describe("a scene's openings", () => {
       <OpeningControls snapshot={EXAMPLE} requested={{}} fold={OPEN} onChange={ignore} />,
     );
 
-    expect(html).toContain('<details class="openings-fold" open="">');
-    expect(html).toContain('data-testid="openings-summary">Openings: all shut</summary>');
+    expect(html).toContain('<details class="ds-fold openings-fold" open="">');
+    expect(html).toContain('data-testid="openings-summary">Openings: all shut</span></summary>');
     expect(describeOpenings([vent, { ...vent, label: "roof vent 2", fraction: 0.5 }, door])).toBe(
       "Openings: roof vent 1 100%, roof vent 2 50%; door shut",
     );

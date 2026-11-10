@@ -1,5 +1,5 @@
 import { useState } from "react";
-
+import { Fold } from "../design/Fold";
 import { useFolds } from "../folds";
 import { formatValue } from "../readouts";
 import { useForkQuestion } from "../replay/useForkQuestion";
@@ -66,8 +66,11 @@ export function TargetsPanel({
 }) {
   const fold = useFolds<"targets">();
   return (
-    <details className="targets-fold" {...fold("targets")}>
-      <summary data-testid="targets-summary">{describeTargets(thermostat)}</summary>
+    <Fold
+      className="targets-fold"
+      {...fold("targets")}
+      summary={<span data-testid="targets-summary">{describeTargets(thermostat)}</span>}
+    >
       {thermostat === null ? (
         <p className="targets-note">The run's setpoints are on their way.</p>
       ) : (
@@ -84,7 +87,7 @@ export function TargetsPanel({
           onSet={onSet}
         />
       )}
-    </details>
+    </Fold>
   );
 }
 

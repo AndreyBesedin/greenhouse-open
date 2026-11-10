@@ -1,4 +1,5 @@
-import type { Fold } from "./folds";
+import { Fold } from "./design/Fold";
+import type { Fold as FoldState } from "./folds";
 import { formatValue, onAndRest, setBeside } from "./readouts";
 import type { ThermostatAt } from "./scene/equipment";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
@@ -103,7 +104,7 @@ export function EquipmentControls({
   notDrawn?: Readonly<Record<string, number>> | undefined;
   /** The thermostat that runs its heater at the moment drawn, if one does. */
   thermostat?: ThermostatAt | null;
-  fold: Fold;
+  fold: FoldState;
   onChange: (levels: Record<string, number>) => void;
 }) {
   const equipment = equipmentIn(snapshot);
@@ -111,8 +112,12 @@ export function EquipmentControls({
     return null;
   }
   return (
-    <details className="equipment-fold" open={fold.open} onToggle={fold.onToggle}>
-      <summary data-testid="equipment-summary">{describeEquipment(equipment)}</summary>
+    <Fold
+      className="equipment-fold"
+      open={fold.open}
+      onToggle={fold.onToggle}
+      summary={<span data-testid="equipment-summary">{describeEquipment(equipment)}</span>}
+    >
       <fieldset className="equipment-controls" aria-label="Equipment">
         {equipment.map((piece) => {
           const shown = requested[piece.actuatorId] ?? piece.level;
@@ -144,6 +149,6 @@ export function EquipmentControls({
           );
         })}
       </fieldset>
-    </details>
+    </Fold>
   );
 }
