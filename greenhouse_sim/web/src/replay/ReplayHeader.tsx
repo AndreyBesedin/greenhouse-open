@@ -1,6 +1,6 @@
 import { HomeButton } from "../landing/HomeButton";
 import { replayAddress } from "../landing/paths";
-import { PAUSED_LABEL, STATUS_LABEL } from "../landing/storedRuns";
+import { STATUS_LABEL } from "../landing/storedRuns";
 import { failedText } from "./failure";
 import { whyNoFork } from "./fork";
 import type { PositionState } from "./position";
@@ -64,7 +64,7 @@ export function ReplayHeader({
         className={`landing-status landing-status-${position.status}`}
         data-testid="replay-status"
       >
-        {position.paused ? PAUSED_LABEL : STATUS_LABEL[position.status]}
+        {STATUS_LABEL[position.status]}
       </span>
       <span className="replay-spacer" />
       {position.fork !== null && position.parent_kept && (

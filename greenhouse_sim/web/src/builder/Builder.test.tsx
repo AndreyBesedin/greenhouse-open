@@ -154,7 +154,6 @@ const STARTED = {
   layout: "default",
   weather: null,
   status: "queued",
-  paused: false,
   frontier_s: 0,
   duration_s: 86400,
   progress: 0,

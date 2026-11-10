@@ -12,7 +12,6 @@ const FAILED = {
   layout: "default",
   weather: null,
   status: "failed",
-  paused: false,
   frontier_s: DAY_S,
   duration_s: 3 * DAY_S,
   progress: 1 / 3,

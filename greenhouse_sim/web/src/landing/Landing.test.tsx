@@ -60,7 +60,6 @@ function run(more: Partial<StoredRun>): StoredRun {
     layout: "default",
     weather: null,
     status: "finished",
-    paused: false,
     frontier_s: 120 * DAY_S,
     duration_s: 120 * DAY_S,
     progress: 1,
@@ -463,7 +462,6 @@ describe("the page where a person decides what to do", () => {
       epoch: 1,
       seed: 2,
       status: "running",
-      paused: false,
       frontier_s: 41 * DAY_S,
       progress: 41 / 120,
     });
@@ -476,7 +474,6 @@ describe("the page where a person decides what to do", () => {
             scenario_id: "tomgro_house",
             seed: null,
             status: "interrupted",
-            paused: false,
             frontier_s: 63 * DAY_S,
           }),
           run({ epoch: 3, status: "failed", frontier_s: 5 * DAY_S, created_at: null }),
@@ -703,11 +700,6 @@ describe("the page where a person decides what to do", () => {
 
     it.each([
       [
-        "paused",
-        { paused: true },
-        "The run of Reference greenhouse with seed 9, epoch 4 is paused, not over: stop it, then delete it.",
-      ],
-      [
         "stopping",
         { stopping: true },
         "The run of Reference greenhouse with seed 9, epoch 4 is stopping: delete it once it reads Interrupted.",
@@ -728,16 +720,6 @@ describe("the page where a person decides what to do", () => {
       await vi.waitFor(() => expect(alert()?.textContent).toBe(said), {
         timeout: RUNS_ASKED_EVERY_MS * 2,
       });
-    });
-
-    it("says a row that reads paused is paused as the deletion is refused", async () => {
-      const { alert } = await refused(run({ epoch: 4, seed: 9, status: "running", paused: true }));
-
-      await vi.waitFor(() =>
-        expect(alert()?.textContent).toBe(
-          "The run of Reference greenhouse with seed 9, epoch 4 is paused, not over: stop it, then delete it.",
-        ),
-      );
     });
 
     it("says a run over by its status is being written still, and asks for the runs again", async () => {

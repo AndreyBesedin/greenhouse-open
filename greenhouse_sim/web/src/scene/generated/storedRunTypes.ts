@@ -15,7 +15,6 @@ export interface StoredRun {
   layout: string;
   weather: string | null;
   status: Status;
-  paused: boolean;
   frontier_s: number;
   duration_s: number | null;
   progress: number | null;

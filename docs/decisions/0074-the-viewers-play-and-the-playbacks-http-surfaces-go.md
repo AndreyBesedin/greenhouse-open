@@ -1,6 +1,6 @@
 # 0074: The viewer's own play goes, and the playbacks' HTTP surfaces with it
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-11-08
 
 ## Context

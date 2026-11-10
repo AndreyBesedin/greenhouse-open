@@ -3,7 +3,6 @@ import { failedText, NO_REASON_KEPT } from "../replay/failure";
 import { replayAddress } from "./paths";
 import {
   isComputing,
-  PAUSED_LABEL,
   progressShare,
   progressText,
   STATUS_LABEL,
@@ -37,7 +36,7 @@ export function RunStatus({ run }: { run: StoredRun }) {
     ? ["Damaged", DAMAGED_NOTE]
     : run.stopping
       ? ["Stopping", STOPPING_NOTE]
-      : [run.paused ? PAUSED_LABEL : STATUS_LABEL[run.status], undefined];
+      : [STATUS_LABEL[run.status], undefined];
   return (
     <StatusChip
       tone={STATUS_TONE[status]}

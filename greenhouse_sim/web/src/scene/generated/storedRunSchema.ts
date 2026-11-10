@@ -134,11 +134,6 @@ export const STORED_RUN_SCHEMA = {
     "status": {
       "$ref": "#/$defs/Status"
     },
-    "paused": {
-      "default": false,
-      "title": "Paused",
-      "type": "boolean"
-    },
     "frontier_s": {
       "title": "Frontier S",
       "type": "number"
@@ -274,7 +269,6 @@ export const STORED_RUN_SCHEMA = {
     "layout",
     "weather",
     "status",
-    "paused",
     "frontier_s",
     "duration_s",
     "progress",

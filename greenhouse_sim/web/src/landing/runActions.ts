@@ -97,7 +97,8 @@ export async function deleteRun(
 }
 
 /** Why a run is not deleted yet, as its row reads: `name` is what the row calls
- * it. One over by its status is being written still, by a playback replaced. */
+ * it. One over by its status was being computed as it was asked, taken up again
+ * since its row was read. */
 export function notDeleted(run: StoredRun, name: string): string {
   const named = `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
   if (!isComputing(run)) {
@@ -105,9 +106,6 @@ export function notDeleted(run: StoredRun, name: string): string {
   }
   if (run.stopping) {
     return `${named} is stopping: delete it once it reads Interrupted.`;
-  }
-  if (run.paused) {
-    return `${named} is paused, not over: stop it, then delete it.`;
   }
   return run.status === "queued"
     ? `${named} is waiting for a worker: stop it, then delete it.`

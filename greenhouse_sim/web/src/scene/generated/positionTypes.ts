@@ -20,7 +20,6 @@ export interface PositionState {
   seed: number | null;
   weather: string | null;
   status: Status;
-  paused: boolean;
   started_at: string;
   simulated_now: string;
   time_s: number;

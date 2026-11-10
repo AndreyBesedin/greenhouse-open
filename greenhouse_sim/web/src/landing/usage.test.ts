@@ -13,7 +13,6 @@ function run(more: Partial<StoredRun>): StoredRun {
     layout: "default",
     weather: null,
     status: "finished",
-    paused: false,
     frontier_s: 120 * DAY_S,
     duration_s: 120 * DAY_S,
     progress: 1,
