@@ -325,6 +325,8 @@ test("each side's panels fold to a stripe at the view's edge, and open as they w
     expect(stripe?.x).toBeLessThan(20);
     // Folded, nothing of the side but its stripe covers the view.
     expect(stripe?.width).toBeLessThan(20);
+    // Its stripe takes the side's whole height, the window's but for its margins (P22.9).
+    expect(stripe?.height).toBe(420 - 2 * 12);
     await expect(hud).toBeVisible();
   });
 
@@ -334,6 +336,7 @@ test("each side's panels fold to a stripe at the view's edge, and open as they w
     await expect(hud).toBeHidden();
     const stripe = await viewStripe.boundingBox();
     expect((stripe?.x ?? 0) + (stripe?.width ?? 0)).toBeGreaterThan(1260);
+    expect(stripe?.height).toBe(420 - 2 * 12);
   });
 
   await test.step("the view's controls, asked for by their key, open the View panel to be seen", async () => {

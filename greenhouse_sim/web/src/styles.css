@@ -1286,13 +1286,12 @@
   bottom: 0;
 }
 
-/* A tab at the top of the side's inner edge, beside its panel's head: no
- * taller, so that it never stands over the view a click is meant for. */
+/* A stripe the whole height of the side's inner edge (P22.9), so that it is
+ * found anywhere along the panels it folds. */
 .panel-stripe {
   flex: none;
-  align-self: flex-start;
+  align-self: stretch;
   width: 14px;
-  height: 96px;
   padding: 0;
   border: none;
   border-radius: var(--radius-sm);
@@ -1308,6 +1307,13 @@
 .panel-stripe:focus-visible {
   background: var(--mark);
   opacity: 1;
+}
+
+/* A replay's controls under the view fold to a stripe the whole width of their
+ * upper edge (P22.9). */
+.panel-stripe-across {
+  width: auto;
+  height: 14px;
 }
 
 /* The HUD's column keeps its width, so that its readings stay on one line

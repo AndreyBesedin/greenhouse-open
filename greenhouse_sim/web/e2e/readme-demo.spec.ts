@@ -1,6 +1,12 @@
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { dayCount } from "../src/clock.ts";
-import { BUILDER_PATH, LANDING_PATH, replayTarget, VIEWER_PATH } from "../src/landing/paths";
+import {
+  BUILDER_PATH,
+  LANDING_PATH,
+  replayTarget,
+  runsAddress,
+  VIEWER_PATH,
+} from "../src/landing/paths";
 import { caption, linger, markOpening, say } from "./demoSteps";
 import { unfold } from "./folds";
 
@@ -167,7 +173,7 @@ test("the README's demo shows the simulator's main features, each under its capt
   await say(page, "A worker computes it, beside the others; its replay follows the newest day");
 
   // The replay of the run computed before: its timeline, and its days.
-  await page.getByRole("link", { name: "Other runs" }).click();
+  await page.goto(runsAddress(SCENARIO));
   await page
     .getByRole("dialog")
     .getByRole("link", { name: `Replay the run with the scenario's seed, epoch ${prepared.epoch}` })
@@ -211,7 +217,7 @@ test("the README's demo shows the simulator's main features, each under its capt
   await expect(page.getByTestId("replay-subtitle")).toContainText(/forked from epoch/, ARRIVES);
   await say(page, "The fork, a run of its own from that moment; the run it came from stays", 0.7);
 
-  await page.getByRole("link", { name: "Other runs" }).click();
+  await page.goto(runsAddress(SCENARIO));
   const who = `the run with the scenario's seed, epoch ${newRun?.epoch}`;
   const shown = page.getByRole("dialog");
   await shown.getByRole("button", { name: `Stop ${who}` }).click();

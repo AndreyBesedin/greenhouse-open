@@ -2,7 +2,7 @@
 import { act } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { PanelStripe } from "./PanelStripe";
-import { type PanelSide, storedFolds, usePanelFolds } from "./panelFolds";
+import { type PanelSide, storedFolds, usePanelFolds, useTransportFold } from "./panelFolds";
 import { button, type Rendered, render } from "./testing/render";
 
 /** Both sides' stripes, as the viewer lays them out, folding what they say. */
@@ -17,6 +17,12 @@ function Sides() {
       ))}
     </>
   );
+}
+
+/** A replay's stripe under the view, folding its controls (P22.9). */
+function Transport() {
+  const [folded, toggle] = useTransportFold();
+  return <PanelStripe side="transport" folded={folded} onToggle={toggle} />;
 }
 
 describe("the panels' stripes (#304)", () => {
@@ -45,6 +51,32 @@ describe("the panels' stripes (#304)", () => {
 
     act(() => opener.click());
     expect(button(shown.container, "Fold the info panel").textContent).toBe("◀");
+    expect(storedFolds()).toEqual(new Set());
+  });
+
+  it("keep a replay's controls folded beside the viewer's sides, neither losing the other's", () => {
+    shown = render(
+      <>
+        <Sides />
+        <Transport />
+      </>,
+    );
+    act(() => button(shown?.container as HTMLElement, "Fold the info panel").click());
+    act(() => button(shown?.container as HTMLElement, "Fold the controls under the view").click());
+    expect(storedFolds()).toEqual(new Set(["info", "transport"]));
+
+    // The viewer's side opened again leaves the replay's controls folded.
+    act(() => button(shown?.container as HTMLElement, "Open the info panel").click());
+    expect(storedFolds()).toEqual(new Set(["transport"]));
+    shown.unmount();
+
+    shown = render(<Transport />);
+    const open = button(shown.container, "Open the controls under the view");
+    // Folded, its arrow points up, the way it opens; open, down, the way it folds.
+    expect(open.textContent).toBe("▲");
+    expect(open.title).toBe("Open the controls under the view");
+    act(() => open.click());
+    expect(button(shown.container, "Fold the controls under the view").textContent).toBe("▼");
     expect(storedFolds()).toEqual(new Set());
   });
 

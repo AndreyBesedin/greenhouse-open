@@ -2,7 +2,9 @@ import { useMemo, useRef } from "react";
 
 import { App } from "../App";
 import { HomeButton } from "../landing/HomeButton";
-import { replayTarget, runsAddress } from "../landing/paths";
+import { LANDING_PATH, replayTarget } from "../landing/paths";
+import { PanelStripe } from "../PanelStripe";
+import { useTransportFold } from "../panelFolds";
 import { loadScenarios, SCENARIOS_URL } from "../scenarios";
 import { replayedMoment } from "../scene/useReplayMoment";
 import { useLoad } from "../useLoad";
@@ -49,6 +51,7 @@ function ReplayOf({
   following: boolean;
 }) {
   const { load, refused, heading, command, seek, pace } = useReplay(runId, epoch, fetch, following);
+  const [transportFolded, toggleTransport] = useTransportFold();
   const scenarios = useLoad(SCENARIOS_URL, (_url, fetchFn) => loadScenarios(fetchFn));
   const position = load.status === "loaded" ? load.position : null;
   // A position says that its epoch failed, and the epoch, as the runs list it, why.
@@ -110,11 +113,12 @@ function ReplayOf({
       <ReplayHeader
         name={name}
         position={position}
-        otherRunsHref={runsAddress(position.scenario_id)}
         forking={forking}
         forkRefused={forkRefused}
         failure={failure.status === "loaded" ? failure.reason : null}
         onFork={() => void fork({ timeS: position.time_s })}
+        // Its page is gone with it: home, where the runs left are listed.
+        onDeleted={() => location.assign(LANDING_PATH)}
       />
       <div className="replay-scene">
         <App
@@ -133,6 +137,8 @@ function ReplayOf({
           }}
         />
       </div>
+      {/* The panel under the view folds as the side panels do (P22.9). */}
+      <PanelStripe side="transport" folded={transportFolded} onToggle={toggleTransport} />
       <ReplayTransport
         position={position}
         refused={refused}
@@ -142,6 +148,7 @@ function ReplayOf({
         onFollow={() => command("follow")}
         onSeek={seek}
         onPace={pace}
+        folded={transportFolded}
       />
     </div>
   );

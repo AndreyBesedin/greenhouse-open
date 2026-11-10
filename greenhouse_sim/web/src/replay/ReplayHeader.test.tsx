@@ -3,9 +3,11 @@ import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DAY_S } from "../clock";
+import { HOME_NOTE } from "../landing/HomeButton";
+import { DELETE_NOTE } from "../landing/RunDelete";
 import { click, button as named, type Rendered, render, said } from "../testing/render";
 import type { PositionState } from "./position";
-import { ReplayHeader, runSubtitle, STATUS_NAME } from "./ReplayHeader";
+import { FORK_NOTE, PARENT_NOTE, ReplayHeader, runSubtitle, STATUS_NAME } from "./ReplayHeader";
 import { WHAT_A_FORK_DOES } from "./useForkQuestion";
 
 const FORK: PositionState["fork"] = {
@@ -49,6 +51,7 @@ function position(more: Partial<PositionState> = {}): PositionState {
 }
 
 const noFork = () => undefined;
+const stays = () => undefined;
 
 /** The run's status, as whoever hears the page finds it: by its role and name. */
 function statusChip(within: ParentNode): Element | null {
@@ -68,7 +71,7 @@ describe("the replay's header", () => {
       <ReplayHeader
         name="Reference greenhouse"
         position={position()}
-        otherRunsHref="/#runs"
+        onDeleted={stays}
         onFork={noFork}
       />,
     );
@@ -81,22 +84,108 @@ describe("the replay's header", () => {
     expect(container.textContent).not.toContain("Scenarios");
   });
 
-  it("links to the run's other runs", () => {
+  it("names the scenario by its identifier until the scenarios say its name", () => {
+    rendered = render(
+      <ReplayHeader name={null} position={position()} onDeleted={stays} onFork={noFork} />,
+    );
+    expect(rendered.container.querySelector("h1")?.textContent).toBe("reference_greenhouse");
+  });
+
+  it("says what each of its buttons does on hover, Fork first", () => {
     rendered = render(
       <ReplayHeader
         name={null}
-        position={position()}
-        otherRunsHref="/#runs=reference_greenhouse"
+        position={position({ fork: FORK, parent_kept: true })}
+        onDeleted={stays}
         onFork={noFork}
       />,
     );
-    const other = [...rendered.container.querySelectorAll("a")].find(
-      (link) => link.textContent === "Other runs",
+    const { container } = rendered;
+    expect(container.querySelector('[data-testid="replay-fork"]')?.getAttribute("title")).toBe(
+      FORK_NOTE,
     );
+    expect(named(container, "Delete this run").title).toBe(DELETE_NOTE);
+    expect(container.querySelector('[data-testid="home-button"]')?.getAttribute("title")).toBe(
+      HOME_NOTE,
+    );
+    const parent = [...container.querySelectorAll("a")].find(
+      (link) => link.textContent === "The run it came from",
+    );
+    expect(parent?.title).toBe(PARENT_NOTE);
+  });
 
-    expect(other?.getAttribute("href")).toBe("/#runs=reference_greenhouse");
-    // Until the scenarios say its name, the scenario's identifier stands for it.
-    expect(rendered.container.querySelector("h1")?.textContent).toBe("reference_greenhouse");
+  describe("its Delete, in place of the way to its other runs", () => {
+    afterEach(() => vi.unstubAllGlobals());
+
+    /** The header over a run of `status`, the simulator answering a delete with `answer`. */
+    function shown(status: PositionState["status"], answer: Response) {
+      const asked = vi.fn(async (_url: string, _init?: RequestInit) => answer);
+      vi.stubGlobal("fetch", asked);
+      const onDeleted = vi.fn();
+      rendered = render(
+        <ReplayHeader
+          name="Reference greenhouse"
+          position={position({ status })}
+          onDeleted={onDeleted}
+          onFork={noFork}
+        />,
+      );
+      return { container: rendered.container, asked, onDeleted };
+    }
+
+    async function confirmed(container: HTMLElement): Promise<void> {
+      click(named(container, "Delete this run"));
+      // Asked again, with the keyboard on the answer that loses nothing.
+      expect(document.activeElement).toBe(named(container, "Keep it"));
+      await act(async () => named(container, "Delete this run").click());
+    }
+
+    it("asks again, then deletes the run, and the page goes with it", async () => {
+      const { container, asked, onDeleted } = shown("finished", new Response(null));
+
+      click(named(container, "Delete this run"));
+      expect(asked).not.toHaveBeenCalled();
+      click(named(container, "Keep it"));
+      expect(asked).not.toHaveBeenCalled();
+      await confirmed(container);
+
+      expect(asked).toHaveBeenCalledWith("/api/runs/run-1/epochs/3/delete", { method: "POST" });
+      expect(onDeleted).toHaveBeenCalledOnce();
+      expect(container.querySelector('[data-testid="replay-delete-refused"]')).toBeNull();
+    });
+
+    it("says why a run being computed is not deleted, and stays", async () => {
+      const { container, onDeleted } = shown("running", new Response(null, { status: 409 }));
+
+      await confirmed(container);
+
+      expect(onDeleted).not.toHaveBeenCalled();
+      expect(said(container, "replay-delete-refused")).toBe(
+        "This run is still being computed: stop it, then delete it.",
+      );
+      // Once the run reads otherwise, what was said of it goes.
+      rendered?.rerender(
+        <ReplayHeader
+          name="Reference greenhouse"
+          position={position({ status: "interrupted" })}
+          onDeleted={onDeleted}
+          onFork={noFork}
+        />,
+      );
+      expect(container.querySelector('[data-testid="replay-delete-refused"]')).toBeNull();
+    });
+
+    it("says the simulator's refusal, and stays", async () => {
+      const { container, onDeleted } = shown(
+        "finished",
+        Response.json({ error: "the store is read-only" }, { status: 500 }),
+      );
+
+      await confirmed(container);
+
+      expect(onDeleted).not.toHaveBeenCalled();
+      expect(said(container, "replay-delete-refused")).toContain("the store is read-only");
+    });
   });
 
   it("says each state of a run as a word, in the chip of the start page's runs", () => {
@@ -110,7 +199,7 @@ describe("the replay's header", () => {
         <ReplayHeader
           name={null}
           position={position({ status })}
-          otherRunsHref="/"
+          onDeleted={stays}
           onFork={noFork}
         />,
       );
@@ -131,7 +220,7 @@ describe("the replay's header", () => {
       <ReplayHeader
         name={null}
         position={position({ status: "failed" })}
-        otherRunsHref="/"
+        onDeleted={stays}
         failure="its worker ran out of memory"
         onFork={noFork}
       />,
@@ -147,7 +236,7 @@ describe("the replay's header", () => {
       <ReplayHeader
         name={null}
         position={position({ status: "failed" })}
-        otherRunsHref="/"
+        onDeleted={stays}
         onFork={noFork}
       />,
     );
@@ -158,7 +247,7 @@ describe("the replay's header", () => {
       <ReplayHeader
         name={null}
         position={position()}
-        otherRunsHref="/"
+        onDeleted={stays}
         failure="ignored"
         onFork={noFork}
       />,
@@ -169,7 +258,7 @@ describe("the replay's header", () => {
   describe("a fork from the moment shown", () => {
     function shown(onFork: () => void) {
       rendered = render(
-        <ReplayHeader name={null} position={position()} otherRunsHref="/" onFork={onFork} />,
+        <ReplayHeader name={null} position={position()} onDeleted={stays} onFork={onFork} />,
       );
       const { container } = rendered;
       const pressed = container.querySelector('[data-testid="replay-fork"]') as HTMLButtonElement;
@@ -237,7 +326,7 @@ describe("the replay's header", () => {
         <ReplayHeader
           name={null}
           position={position({ time_s: 2 * DAY_S })}
-          otherRunsHref="/"
+          onDeleted={stays}
           onFork={fromNow}
         />,
       );
@@ -253,7 +342,7 @@ describe("the replay's header", () => {
       <ReplayHeader
         name={null}
         position={position({ time_s: 120 * DAY_S })}
-        otherRunsHref="/"
+        onDeleted={stays}
         onFork={noFork}
       />,
     );
@@ -270,7 +359,7 @@ describe("the replay's header", () => {
       <ReplayHeader
         name={null}
         position={position()}
-        otherRunsHref="/"
+        onDeleted={stays}
         forking
         forkRefused="no room"
         onFork={noFork}
@@ -289,7 +378,7 @@ describe("the replay's header", () => {
       <ReplayHeader
         name={null}
         position={position({ fork: FORK, parent_kept: true })}
-        otherRunsHref="/"
+        onDeleted={stays}
         onFork={noFork}
       />,
     );
@@ -309,7 +398,7 @@ describe("the replay's header", () => {
       <ReplayHeader
         name={null}
         position={position({ fork: FORK, parent_kept: false })}
-        otherRunsHref="/"
+        onDeleted={stays}
         onFork={noFork}
       />,
     );
