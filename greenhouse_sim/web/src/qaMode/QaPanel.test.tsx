@@ -7,7 +7,7 @@ import type { RunManifest } from "./manifest";
 import { QaPanel } from "./QaPanel";
 import type { RunState } from "./state";
 
-const BUILD = { simulatorVersion: "0.1.0", sourceCommit: "c1964e9" };
+const BUILD = { simulatorVersion: "0.1.0", sourceCommit: "c1964e9", sourceBranch: "main" };
 // The reference greenhouse's run.
 const MANIFEST: RunManifest = {
   scenarioId: "reference_greenhouse",

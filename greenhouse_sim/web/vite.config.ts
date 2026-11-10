@@ -38,10 +38,10 @@ const COVERED_BRANCHES_PCT = 55;
 const COVERED_FUNCTIONS_PCT = 60;
 const COVERED_LINES_PCT = 66;
 
-// The commit the viewer was built from, when built inside a git checkout.
-function sourceCommit(): string {
+// What git says of the checkout the viewer was built in, or "unknown" outside one.
+function fromGit(command: string): string {
   try {
-    return execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+    return execSync(command, { encoding: "utf8" }).trim();
   } catch {
     return "unknown";
   }
@@ -60,7 +60,9 @@ export default defineConfig({
   preview: { proxy: SIMULATOR_ROUTES },
   define: {
     __SIMULATOR_VERSION__: JSON.stringify(simulatorVersion()),
-    __SOURCE_COMMIT__: JSON.stringify(sourceCommit()),
+    __SOURCE_COMMIT__: JSON.stringify(fromGit("git rev-parse --short HEAD")),
+    // "HEAD" when no branch is checked out, as at a release's tag.
+    __SOURCE_BRANCH__: JSON.stringify(fromGit("git rev-parse --abbrev-ref HEAD")),
   },
   test: {
     environment: "node",

@@ -5,7 +5,7 @@ import { InfoPanel } from "../InfoPanel";
 import { checkbox, click, type Rendered, render } from "../testing/render";
 import { showTheme, storedTheme, useTheme } from "./theme";
 
-const BUILD = { simulatorVersion: "0.2.0", sourceCommit: "abc1234" };
+const BUILD = { simulatorVersion: "0.2.0", sourceCommit: "abc1234", sourceBranch: "main" };
 
 function Themed() {
   const [theme, setTheme] = useTheme();
@@ -80,7 +80,7 @@ describe("the theme (#208)", () => {
     expect(localStorage.getItem("greenhouse-sim.panels")).toBe("light");
     // The build line says what it said, the switch beside it.
     expect(shown.container.querySelector('[data-testid="build-line"]')?.textContent).toBe(
-      "simulator 0.2.0 · commit abc1234",
+      "simulator 0.2.0",
     );
 
     shown.unmount();
