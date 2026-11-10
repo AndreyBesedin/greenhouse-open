@@ -1,6 +1,6 @@
 # 0076: The tomato models are calibrated on AGC4's pre-trial and tested once on its challenge
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-11-10
 
 ## Context
