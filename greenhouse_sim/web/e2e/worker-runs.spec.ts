@@ -193,13 +193,13 @@ test("a run is stopped with what it computed, resumed as the same epoch, and del
     await expect(row).toContainText("Running", WORKS);
     await expect.poll(() => daysIn(row), WORKS).toBeGreaterThan(0);
 
-    // Deleting it now says which, and what to do, in words, with the control there.
+    // Deleting it now would stop it first, and says so before it is asked: kept.
     await row.getByRole("button", { name: /^Delete the run with seed/ }).click();
-    await row.getByRole("button", { name: /^Delete the run with seed/ }).click();
-    const refused = dialog.getByRole("alert");
-    await expect(refused).toContainText(`seed ${seed}, epoch ${started.epoch}`);
-    await expect(refused).toContainText("stop it, then delete it");
-    await expect(refused).not.toContainText(started.runId);
+    await expect(row.locator(".landing-confirm-note")).toHaveText(
+      "This run is being computed: deleting it stops it first, then deletes it and what it kept.",
+    );
+    await row.getByRole("button", { name: "Keep it" }).click();
+    await expect(row.locator(".landing-confirm-note")).toHaveCount(0);
 
     await stop.click();
     await expect(row).toContainText("Interrupted", WORKS);

@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DAY_S } from "../clock";
 import { HOME_NOTE } from "../landing/HomeButton";
-import { DELETE_NOTE } from "../landing/RunDelete";
+import { STOP_AND_DELETE_NOTE, STOPS_FIRST } from "../landing/RunDelete";
+import type { StoredRun } from "../landing/storedRuns";
 import { click, button as named, type Rendered, render, said } from "../testing/render";
 import type { PositionState } from "./position";
 import { FORK_NOTE, PARENT_NOTE, ReplayHeader, runSubtitle, STATUS_NAME } from "./ReplayHeader";
@@ -20,6 +21,35 @@ const FORK: PositionState["fork"] = {
   inherited: 0,
   layout: null,
 };
+
+/** The run as the simulator answers a stop of it. */
+function stored(more: Partial<StoredRun>): StoredRun {
+  return {
+    run_id: "run-1",
+    epoch: 3,
+    scenario_id: "reference_greenhouse",
+    seed: 2,
+    layout: "default",
+    weather: null,
+    status: "interrupted",
+    frontier_s: DAY_S,
+    duration_s: 120 * DAY_S,
+    progress: 1 / 120,
+    created_at: "2026-03-01T00:00:00Z",
+    size_bytes: 1024,
+    start_s: 0,
+    fork: null,
+    stopping: false,
+    damaged: false,
+    days_computed: 1,
+    cpu_s: null,
+    peak_memory_bytes: null,
+    wall_s: null,
+    past_limit: false,
+    reason: null,
+    ...more,
+  };
+}
 
 function position(more: Partial<PositionState> = {}): PositionState {
   return {
@@ -104,7 +134,8 @@ describe("the replay's header", () => {
     expect(container.querySelector('[data-testid="replay-fork"]')?.getAttribute("title")).toBe(
       FORK_NOTE,
     );
-    expect(named(container, "Delete this run").title).toBe(DELETE_NOTE);
+    // A run being computed is stopped before it is deleted, and says so.
+    expect(named(container, "Delete this run").title).toBe(STOP_AND_DELETE_NOTE);
     expect(container.querySelector('[data-testid="home-button"]')?.getAttribute("title")).toBe(
       HOME_NOTE,
     );
@@ -117,9 +148,12 @@ describe("the replay's header", () => {
   describe("its Delete, in place of the way to its other runs", () => {
     afterEach(() => vi.unstubAllGlobals());
 
-    /** The header over a run of `status`, the simulator answering a delete with `answer`. */
-    function shown(status: PositionState["status"], answer: Response) {
-      const asked = vi.fn(async (_url: string, _init?: RequestInit) => answer);
+    /** The header over a run of `status`, the simulator answering a delete with
+     * `answer`, and a stop with `stopped`. */
+    function shown(status: PositionState["status"], answer: Response, stopped?: Response) {
+      const asked = vi.fn(async (url: string, _init?: RequestInit) =>
+        url.endsWith("/stop") && stopped !== undefined ? stopped : answer.clone(),
+      );
       vi.stubGlobal("fetch", asked);
       const onDeleted = vi.fn();
       rendered = render(
@@ -154,14 +188,50 @@ describe("the replay's header", () => {
       expect(container.querySelector('[data-testid="replay-delete-refused"]')).toBeNull();
     });
 
-    it("says why a run being computed is not deleted, and stays", async () => {
-      const { container, onDeleted } = shown("running", new Response(null, { status: 409 }));
+    it("says first that a run being computed is stopped, then stops and deletes it", async () => {
+      const deletes = [new Response(null, { status: 409 }), new Response(null)];
+      const asked = vi.fn(async (url: string, _init?: RequestInit) =>
+        url.endsWith("/stop")
+          ? Response.json(stored({ status: "interrupted" }))
+          : (deletes.shift() ?? new Response(null)),
+      );
+      vi.stubGlobal("fetch", asked);
+      const onDeleted = vi.fn();
+      rendered = render(
+        <ReplayHeader
+          name="Reference greenhouse"
+          position={position({ status: "running" })}
+          onDeleted={onDeleted}
+          onFork={noFork}
+        />,
+      );
+      const { container } = rendered;
 
-      await confirmed(container);
+      click(named(container, "Delete this run"));
+      expect(container.querySelector(".landing-confirm-note")?.textContent).toBe(STOPS_FIRST);
+      await act(async () => named(container, "Stop and delete this run").click());
+
+      expect(asked.mock.calls.map(([url]) => url)).toEqual([
+        "/api/runs/run-1/epochs/3/delete",
+        "/api/runs/run-1/epochs/3/stop",
+        "/api/runs/run-1/epochs/3/delete",
+      ]);
+      expect(onDeleted).toHaveBeenCalledOnce();
+    });
+
+    it("says a run whose worker has not stopped yet is stopping, and stays", async () => {
+      const { container, onDeleted } = shown(
+        "running",
+        new Response(null, { status: 409 }),
+        Response.json(stored({ status: "running", stopping: true })),
+      );
+
+      click(named(container, "Delete this run"));
+      await act(async () => named(container, "Stop and delete this run").click());
 
       expect(onDeleted).not.toHaveBeenCalled();
       expect(said(container, "replay-delete-refused")).toBe(
-        "This run is still being computed: stop it, then delete it.",
+        "This run is stopping: it can be deleted once it reads Interrupted.",
       );
       // Once the run reads otherwise, what was said of it goes.
       rendered?.rerender(

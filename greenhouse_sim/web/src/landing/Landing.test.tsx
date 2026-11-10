@@ -8,7 +8,7 @@ import { type Rendered, render } from "../testing/render";
 import { BUILDER_NOTE, CONTRIBUTE_NOTE, Landing, START_TITLE } from "./Landing";
 import { REPOSITORY_URL, replayAddress } from "./paths";
 import { RESUME_NOTE, STOP_NOTE } from "./RunControls";
-import { DELETE_NOTE } from "./RunDelete";
+import { DELETE_NOTE, STOP_AND_DELETE_NOTE, STOPS_FIRST } from "./RunDelete";
 import type { Room } from "./room";
 import { RUNS_ASKED_EVERY_MS, type StoredRun } from "./storedRuns";
 
@@ -175,14 +175,19 @@ describe("the page where a person decides what to do", () => {
       },
       "Interrupted",
     );
-    const said = (label: string) =>
+    const said = (label: string, epoch = "") =>
       [...container.querySelectorAll("button, a")]
-        .find((each) => each.getAttribute("aria-label")?.startsWith(label))
+        .find((each) => {
+          const name = each.getAttribute("aria-label") ?? "";
+          return name.startsWith(label) && name.endsWith(epoch);
+        })
         ?.getAttribute("title");
 
     expect(said("Stop ")).toBe(STOP_NOTE);
     expect(said("Resume ")).toBe(RESUME_NOTE);
-    expect(said("Delete ")).toBe(DELETE_NOTE);
+    // One being computed is stopped first, and says so.
+    expect(said("Delete ", "epoch 1")).toBe(STOP_AND_DELETE_NOTE);
+    expect(said("Delete ", "epoch 0")).toBe(DELETE_NOTE);
   });
 
   const draft = (id: string, saved: string) => ({
@@ -648,9 +653,15 @@ describe("the page where a person decides what to do", () => {
   describe("deleting from the list of recent runs", () => {
     const DELETE = "Delete the run of Reference greenhouse with seed 9, epoch 4";
     const DELETE_URL = "/api/runs/reference_greenhouse-climate-abc/epochs/4/delete";
+    const STOP_AND_DELETE = "Stop and delete the run of Reference greenhouse with seed 9, epoch 4";
 
-    /** The page with one run in its list, the deletion answered as `answer`. */
-    async function listed(mine: StoredRun, answer: () => Response) {
+    /** The page with one run in its list, the deletion answered as `answer`, and
+     * a stop as the run stood with `stopped`. */
+    async function listed(
+      mine: StoredRun,
+      answer: () => Response,
+      stopped: Partial<StoredRun> = { stopping: true },
+    ) {
       const asked: string[] = [];
       vi.stubGlobal(
         "fetch",
@@ -661,7 +672,7 @@ describe("the page where a person decides what to do", () => {
             return answer();
           }
           if (url.endsWith("/stop")) {
-            return new Response(JSON.stringify({ ...mine, stopping: true }));
+            return new Response(JSON.stringify({ ...mine, ...stopped }));
           }
           const body = url === "/api/scenarios" ? SCENARIOS : [mine];
           return new Response(JSON.stringify(body));
@@ -721,57 +732,59 @@ describe("the page where a person decides what to do", () => {
       expect(document.activeElement).toBe(named(DELETE));
     });
 
-    /** The page with `mine` in its list, its deletion refused as being computed. */
+    /** The page with `mine` in its list, its deletion refused as being computed,
+     * and its stop answered as asked of a worker that has not looked yet. */
     async function refused(mine: StoredRun) {
       const page = await listed(
         mine,
         () => new Response(JSON.stringify({ error: "being computed" }), { status: 409 }),
       );
       act(() => page.named(DELETE)?.click());
-      act(() => page.named(DELETE)?.click());
+      act(() => (page.named(STOP_AND_DELETE) ?? page.named(DELETE))?.click());
       const alert = () => page.container.querySelector('.landing-run [role="alert"]');
       return { ...page, alert };
     }
 
-    it("says on the row why a run is not removed, until it is over", async () => {
+    it("stops a run being computed first, as it says when it asks, then removes it", async () => {
+      const answers = [
+        new Response(JSON.stringify({ error: "being computed" }), { status: 409 }),
+        new Response(JSON.stringify({ deleted: "x" })),
+      ];
+      const { container, asked, named } = await listed(
+        run({ epoch: 4, seed: 9, status: "running" }),
+        () => answers.shift() ?? new Response(),
+        { status: "interrupted" },
+      );
+
+      act(() => named(DELETE)?.click());
+      expect(container.querySelector(".landing-confirm-note")?.textContent).toBe(STOPS_FIRST);
+      act(() => named(STOP_AND_DELETE)?.click());
+
+      await vi.waitFor(() => expect(answers).toHaveLength(0));
+      expect(asked.filter((url) => url.includes("/epochs/4/"))).toEqual([
+        DELETE_URL,
+        "/api/runs/reference_greenhouse-climate-abc/epochs/4/stop",
+        DELETE_URL,
+      ]);
+      await vi.waitFor(() => expect(asked.filter((url) => url === "/api/runs")).toHaveLength(2));
+      expect(container.querySelector('.landing-run [role="alert"]')).toBeNull();
+    });
+
+    it("says on the row a run is stopping while its worker has not looked, until it is over", async () => {
       const mine = run({ epoch: 4, seed: 9, status: "running" });
       const { named, asked, alert } = await refused(mine);
 
       await vi.waitFor(() =>
         expect(alert()?.textContent).toBe(
-          "The run of Reference greenhouse with seed 9, epoch 4 is still being computed: stop it, then delete it.",
+          "The run of Reference greenhouse with seed 9, epoch 4 is stopping: it can be deleted once it reads Interrupted.",
         ),
       );
       expect(document.activeElement).toBe(named(DELETE));
 
-      // The list is asked for again while a run is computed, and it has finished.
-      mine.status = "finished";
+      // The list is asked for again while a run is computed, and it has stopped.
+      mine.status = "interrupted";
       await vi.waitFor(() => expect(alert()).toBeNull(), { timeout: RUNS_ASKED_EVERY_MS * 2 });
       expect(asked).toContain(DELETE_URL);
-    });
-
-    it.each([
-      [
-        "stopping",
-        { stopping: true },
-        "The run of Reference greenhouse with seed 9, epoch 4 is stopping: delete it once it reads Interrupted.",
-      ],
-      [
-        "queued",
-        { status: "queued" },
-        "The run of Reference greenhouse with seed 9, epoch 4 is waiting for a worker: stop it, then delete it.",
-      ],
-    ] as const)("reads a refusal off the row, now it is %s", async (_, now, said) => {
-      const mine = run({ epoch: 4, seed: 9, status: "running" });
-      const { alert } = await refused(mine);
-      await vi.waitFor(() => expect(alert()?.textContent).toContain("still being computed"));
-
-      // The row's status has not moved on, or not to anything over: the words do.
-      Object.assign(mine, now);
-
-      await vi.waitFor(() => expect(alert()?.textContent).toBe(said), {
-        timeout: RUNS_ASKED_EVERY_MS * 2,
-      });
     });
 
     it("says a run over by its status is being written still, and asks for the runs again", async () => {
