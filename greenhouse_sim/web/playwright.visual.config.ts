@@ -39,7 +39,13 @@ export default defineConfig({
   workers: 1,
   forbidOnly: IN_CI,
   reporter: IN_CI ? "github" : "list",
-  use: { baseURL: `http://localhost:${PREVIEW_PORT}` },
+  use: {
+    baseURL: `http://localhost:${PREVIEW_PORT}`,
+    // A system that says dark, so that a first visit opens dark, as every page
+    // did before it followed the system's (P19.12); a spec that wants light
+    // chooses it, or asks for a light system.
+    colorScheme: "dark",
+  },
   // Desktop Chrome is a 1280 by 720 view at one device pixel per CSS pixel.
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
