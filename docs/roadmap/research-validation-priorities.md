@@ -105,7 +105,9 @@ data.
    Done: the AGC4 inventory, checked against the publisher's own files,
    and its two time-series archives profiled
    ([`research/validation/agc4`](../../research/validation/agc4/README.md)):
-   rows, spans and gaps per channel, and the fruit weighed and dried.
+   rows, spans and gaps per channel, and the fruit weighed and dried; and
+   each model's drivers and outputs mapped to its columns and measurements
+   ([the mapping memo](../research/agc4-model-mapping.md)).
 6. **Compare with Modelica, bounded.** As the roadmap's greenhouse R&D
    workflows and Modelica comparison plan it: one documented, measured
    interval of TiGwerLib reproduced in OpenModelica, then compared on

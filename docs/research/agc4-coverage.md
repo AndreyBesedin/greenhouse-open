@@ -678,9 +678,10 @@ metadata only, and the tests build miniature workbooks of their own.
    per file and column, the rows, the span and the share missing; per
    `Harvest.xlsx` sheet, the plants per compartment, the columns and the
    fruit dried. The numbers, not the data.
-3. With the model chosen (item 4 of the priorities), write its inputs and
-   outputs against this inventory: each driver's column, aggregation and
-   unit, and each output's measured counterpart and conversion.
+3. Done, 2026-11-10: each model's inputs and outputs against this
+   inventory, in [their own memo](agc4-model-mapping.md): each driver's
+   column, aggregation and unit, and each output's measured counterpart
+   and conversion.
 4. Fix the split, the metrics and the conversions (dry matter, per plant
    or per m², which PAR) in a decision record, before any run is compared
    with 2024's fruit.
