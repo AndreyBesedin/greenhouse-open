@@ -39,8 +39,13 @@
 }
 
 .ds-button-danger {
-  border-color: var(--warn);
-  color: var(--warn);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.ds-button-go {
+  border-color: var(--go);
+  color: var(--go);
 }
 
 .ds-button-compact {

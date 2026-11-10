@@ -137,7 +137,7 @@
   box-sizing: border-box;
   min-height: var(--target);
   padding: 0 var(--space-5);
-  border: 1px solid var(--text-muted);
+  border: 1px solid var(--border-control);
   border-radius: var(--radius-lg);
   background: var(--surface-page);
   color: var(--text);

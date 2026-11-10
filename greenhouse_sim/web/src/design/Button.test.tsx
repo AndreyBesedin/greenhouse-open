@@ -28,6 +28,14 @@ describe("what is drawn as a button", () => {
       "ds-button ds-button-danger ds-button-compact landing-go",
     );
   });
+
+  it("names each tone by what it does: danger red, go green, each its own class", () => {
+    expect(buttonClass({ tone: "danger" })).toBe("ds-button ds-button-danger");
+    expect(buttonClass({ tone: "go" })).toBe("ds-button ds-button-go");
+    expect(buttonClass({ tone: "go", size: "compact" }, "replay-play")).toBe(
+      "ds-button ds-button-go ds-button-compact replay-play",
+    );
+  });
 });
 
 describe("Button", () => {
