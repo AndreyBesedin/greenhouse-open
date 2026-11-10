@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import { CategoryLegend } from "../debug/CategoryLegend";
 import { categoriesIn } from "../debug/categories";
+import { Notice } from "../design/Notice";
 import { Viewport } from "../Viewport";
 import { greenhouseExtent } from "./greenhouseViews";
 import {
@@ -42,9 +43,9 @@ export function QaLayout({ search }: { search: string }) {
 
   if (view === null) {
     return (
-      <p className="qa-caption" role="alert">
+      <Notice kind="problem" className="qa-caption">
         The view must be {QA_LAYOUT_VIEWS.join(" or ")}.
-      </p>
+      </Notice>
     );
   }
   if (snapshot === null || pose === null) {

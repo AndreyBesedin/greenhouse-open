@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { ALL_OVERLAYS, selectionOverlays } from "../debug/overlays";
 import { ScalarLegend } from "../debug/ScalarLegend";
 import { colouringBy } from "../debug/scalar";
+import { Notice } from "../design/Notice";
 import { selectedEntity } from "../selection";
 import { Viewport } from "../Viewport";
 import { QA_COLOUR_PROPERTY, QA_SELECTED_ID, qaSeed } from "./qaPage";
@@ -31,9 +32,9 @@ export function QaRenderer({ search }: { search: string }) {
 
   if (seed === null || snapshot === null) {
     return (
-      <p className="qa-caption" role="alert">
+      <Notice kind="problem" className="qa-caption">
         The seed must be a whole number, such as ?seed=42.
-      </p>
+      </Notice>
     );
   }
   return (

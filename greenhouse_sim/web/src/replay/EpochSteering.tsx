@@ -1,3 +1,4 @@
+import { Notice } from "../design/Notice";
 import { dayLabel } from "./timeline";
 
 /** What steering a running epoch from its replay does, said before a change. */
@@ -51,9 +52,9 @@ export function EpochSteering({
         {refused === null ? standing : null}
       </p>
       {refused !== null && (
-        <p className="targets-note" role="alert" data-testid="epoch-steering-refused">
+        <Notice kind="problem" className="targets-note" data-testid="epoch-steering-refused">
           Not changed: {refused}.
-        </p>
+        </Notice>
       )}
     </div>
   );

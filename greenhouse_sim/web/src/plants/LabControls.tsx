@@ -1,5 +1,6 @@
 import { dayCount } from "../clock";
 import { Button } from "../design/Button";
+import { Notice } from "../design/Notice";
 import { useLoad } from "../useLoad";
 import {
   describeEnvironment,
@@ -131,7 +132,9 @@ export function LabControls({
         </Button>
       </label>
       {environments.status === "unavailable" && (
-        <p role="alert">The lab's environments are not available: {environments.reason}.</p>
+        <Notice kind="problem">
+          The lab's environments are not available: {environments.reason}.
+        </Notice>
       )}
       {names.length > 0 && (
         <>

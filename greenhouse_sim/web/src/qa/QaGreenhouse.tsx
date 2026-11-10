@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import { CategoryLegend } from "../debug/CategoryLegend";
 import { categoriesIn } from "../debug/categories";
+import { Notice } from "../design/Notice";
 import { Viewport } from "../Viewport";
 import {
   greenhouseExtent,
@@ -37,9 +38,9 @@ export function QaGreenhouse({ search }: { search: string }) {
 
   if (view === null) {
     return (
-      <p className="qa-caption" role="alert">
+      <Notice kind="problem" className="qa-caption">
         The view must be outside, aisle, top or section.
-      </p>
+      </Notice>
     );
   }
   if (snapshot === null || pose === null) {

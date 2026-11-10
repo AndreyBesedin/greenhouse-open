@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./design/Button";
 import { Fold } from "./design/Fold";
+import { Notice } from "./design/Notice";
 import { type Offset, SNAP_DECIMALS, SNAP_M } from "./scene/moves";
 
 /** A distance moved along an axis, signed, to the snap. */
@@ -180,9 +181,9 @@ function Session({
         </ul>
       )}
       {failure !== null && (
-        <p role="alert" data-testid="move-failure">
+        <Notice kind="problem" data-testid="move-failure">
           The run could not be forked: {failure}.
-        </p>
+        </Notice>
       )}
       {asking ? (
         <fieldset className="move-confirm" aria-describedby="move-confirm-question">

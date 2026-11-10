@@ -102,9 +102,9 @@ describe("a scenario handed on as a file (P17.11)", () => {
     shown = render(<ShareScenario scenarioId="x" />);
     await settled();
 
-    expect(shown.container.querySelector('[role="alert"]')?.textContent).toBe(
-      "The file cannot be made: gone",
-    );
+    const problem = shown.container.querySelector('[role="alert"]');
+    expect(problem?.textContent).toBe("The file cannot be made: gone");
+    expect(problem?.className).toContain("ds-notice-problem");
     expect(button(shown.container, "Download scenario file").disabled).toBe(true);
   });
 });

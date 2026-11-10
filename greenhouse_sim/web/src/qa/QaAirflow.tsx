@@ -1,3 +1,4 @@
+import { Notice } from "../design/Notice";
 import { quantityScale } from "../fields/drawing";
 import { FieldArrows } from "../fields/FieldArrows";
 import { FieldLegend } from "../fields/FieldLegend";
@@ -30,9 +31,9 @@ export function QaAirflow({ search }: { search: string }) {
 
   if (view === null) {
     return (
-      <p className="qa-caption" role="alert">
+      <Notice kind="problem" className="qa-caption">
         The view must be vectors or slice.
-      </p>
+      </Notice>
     );
   }
   if (scene.status !== "loaded" || field.status !== "loaded") {

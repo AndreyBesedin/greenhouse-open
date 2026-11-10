@@ -1,4 +1,5 @@
 import { CHART_WIDTH, polylinePoints } from "../charts/chart";
+import { Notice } from "../design/Notice";
 import type { CropPlant, CropPlantState, PlantDay } from "./crop";
 import { PlantHistory, PlantTree } from "./PlantStructure";
 
@@ -105,9 +106,9 @@ export function PlantDays({
       );
     case "unavailable":
       return (
-        <p className="plant-days" data-testid="plant-days" role="alert">
+        <Notice kind="problem" className="plant-days" data-testid="plant-days">
           The plant's days are not available: {state.reason}.
-        </p>
+        </Notice>
       );
     case "loaded": {
       const { plant } = state;

@@ -1,4 +1,5 @@
 import { Button } from "./design/Button";
+import { Notice } from "./design/Notice";
 import { DEFAULT_LAYOUT, type ScenarioSummary, type ScenariosState } from "./scenarios";
 
 /** The scenarios whose name, identifier or description holds `filter`,
@@ -37,10 +38,10 @@ export function ScenarioList({
       return <p>Loading scenarios from the simulator…</p>;
     case "unavailable":
       return (
-        <p role="alert">
+        <Notice kind="problem">
           The simulator API is not reachable ({state.reason}). Start it with{" "}
           <code>python -m greenhouse_sim.api</code>.
-        </p>
+        </Notice>
       );
     case "loaded": {
       const choosing = onShow && state.scenarios.some((scenario) => scenario.layouts.length > 1);

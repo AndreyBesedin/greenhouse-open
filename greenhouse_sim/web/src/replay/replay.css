@@ -63,6 +63,10 @@
 .replay-title p {
   margin: 0;
   font-size: var(--font-sm);
+}
+
+/* The title's words come second to its heading; a problem keeps `Notice`'s colour. */
+.replay-title p:not([role="alert"]) {
   color: var(--text-soft);
 }
 

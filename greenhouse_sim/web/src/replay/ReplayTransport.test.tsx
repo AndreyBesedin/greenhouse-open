@@ -130,9 +130,9 @@ describe("what moves a position over a stored run", () => {
         onPace={vi.fn()}
       />,
     );
-    expect(rendered.container.querySelector('[role="alert"]')?.textContent).toContain(
-      "no position 'p1'",
-    );
+    const refused = rendered.container.querySelector('[role="alert"]');
+    expect(refused?.textContent).toContain("no position 'p1'");
+    expect(refused?.className).toBe("ds-notice ds-notice-problem replay-refused");
   });
 
   it("has nothing to play at the run's end, and plays from anywhere before it", () => {

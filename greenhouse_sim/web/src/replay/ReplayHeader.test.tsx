@@ -438,6 +438,9 @@ describe("the replay's header", () => {
     const { container } = rendered;
 
     expect(said(container, "replay-fork-refused")).toBe("This run could not be forked: no room.");
+    const refused = container.querySelector('[data-testid="replay-fork-refused"]');
+    expect(refused?.getAttribute("role")).toBe("alert");
+    expect(refused?.className).toContain("ds-notice-problem");
     const button = container.querySelector<HTMLButtonElement>('[data-testid="replay-fork"]');
     expect(button?.disabled).toBe(true);
     expect(button?.textContent).toBe("Forking…");

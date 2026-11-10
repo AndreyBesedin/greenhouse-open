@@ -34,6 +34,26 @@ describe("Notice", () => {
     expect(status.className).toBe("ds-notice ds-notice-status landing-note");
   });
 
+  it("takes a test's id and a paragraph's attributes, but not a role of a page's", () => {
+    const problem = drawn(
+      <Notice kind="problem" data-testid="move-failure" id="why" className="move-note">
+        Not forked: no room.
+      </Notice>,
+    );
+    expect(problem.dataset.testid).toBe("move-failure");
+    expect(problem.id).toBe("why");
+    expect(problem.className).toBe("ds-notice ds-notice-problem move-note");
+    drawn(
+      <Notice
+        kind="problem"
+        // @ts-expect-error its kind sets its role
+        role="status"
+      >
+        Not forked.
+      </Notice>,
+    );
+  });
+
   it("needs its kind and what it says", () => {
     // @ts-expect-error a notice's kind sets its role
     drawn(<Notice>Saved.</Notice>);
