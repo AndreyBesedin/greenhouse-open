@@ -31,25 +31,27 @@
 }
 
 .landing-main h2 {
-  margin: 0 0 var(--space-3);
+  margin: 0 0 var(--space-7);
   font-size: var(--font-4xl);
 }
 
-.landing-lead {
-  margin: 0 0 var(--space-7);
-  color: var(--text-soft);
+/* The two ways in (P22.7): equal, one under the other, "or" between them. */
+.landing-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 720px;
+  margin-bottom: var(--space-8);
 }
 
-.landing-cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-7);
-  margin-bottom: var(--space-8);
+.landing-or {
+  margin: 0;
+  text-align: center;
+  color: var(--text-soft);
 }
 
 .landing-card {
   display: flex;
-  flex: 1 1 320px;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
@@ -59,14 +61,17 @@
   background: var(--surface-panel);
 }
 
-.landing-card-wide {
-  flex: 3 1 480px;
-}
-
 .landing-card h3,
 .landing-main section > h3 {
   margin: 0;
   font-size: var(--font-2xl);
+}
+
+/* A way in's icon, before its words. */
+.landing-choices .landing-card > h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
 }
 
 .landing-card p {
@@ -78,7 +83,15 @@
   color: var(--text-soft);
 }
 
-/* A button in a card's column, as wide as its words. */
+/* A card's buttons on a line, as wide as their words, and the upload's notes
+ * under its own. */
+.landing-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
 .landing-card-action {
   align-self: flex-start;
 }

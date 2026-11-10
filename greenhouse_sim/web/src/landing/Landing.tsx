@@ -2,7 +2,7 @@ import { type RefObject, useEffect, useRef, useState } from "react";
 import { BUILDER_PATH } from "../builder/Builder";
 import { LinkButton } from "../design/LinkButton";
 import { Notice } from "../design/Notice";
-import { GithubMark } from "../icons";
+import { GithubMark, PencilIcon, SearchIcon } from "../icons";
 import { forkedText } from "../replay/timeline";
 import { loadScenarios, SCENARIOS_URL, type ScenariosState } from "../scenarios";
 import { useLoad } from "../useLoad";
@@ -28,6 +28,14 @@ import {
   whoIs,
 } from "./storedRuns";
 import { UploadScenario } from "./UploadScenario";
+
+/** What the start page is for, as its title says it (P22.7). */
+export const START_TITLE = "Simulate a greenhouse's climate and crop";
+/** What the start page's buttons say on hover: the page itself keeps few words. */
+export const CONTRIBUTE_NOTE =
+  "The simulator's code, on GitHub: report a problem, or propose a change.";
+export const BUILDER_NOTE =
+  "Lay out a house, its rows, its weather and its crop models, then run it.";
 
 /** How many of the latest runs the page lists, besides any being computed. */
 const RECENT_RUNS = 5;
@@ -91,20 +99,20 @@ export function Landing({
     <div className="landing">
       <header className="landing-header">
         <h1>Greenhouse simulator</h1>
-        <LinkButton href={REPOSITORY_URL} target="_blank" rel="noopener">
+        <LinkButton href={REPOSITORY_URL} target="_blank" rel="noopener" title={CONTRIBUTE_NOTE}>
           <GithubMark />
           Contribute
         </LinkButton>
       </header>
       <main className="landing-main">
-        <h2>What would you like to do?</h2>
-        <p className="landing-lead">
-          Open a scenario to look at it or follow a run of it, or build a new scenario.
-        </p>
-        <div className="landing-cards">
-          <section className="landing-card landing-card-wide" aria-labelledby="landing-open">
-            <h3 id="landing-open">Open a scenario</h3>
-            <p>Search by name, identifier or description.</p>
+        <h2>{START_TITLE}</h2>
+        {/* The two ways in, equal, one under the other. */}
+        <div className="landing-choices">
+          <section className="landing-card" aria-labelledby="landing-open">
+            <h3 id="landing-open">
+              <SearchIcon />
+              Open a scenario
+            </h3>
             <ScenarioChoice
               scenarios={scenarios}
               counts={counts}
@@ -118,13 +126,18 @@ export function Landing({
               </Notice>
             )}
           </section>
+          <p className="landing-or">or</p>
           <section className="landing-card" aria-labelledby="landing-build">
-            <h3 id="landing-build">Build a scenario</h3>
-            <p>Lay out a house, its rows, weather and crop models, then run it.</p>
-            <LinkButton href={BUILDER_PATH} tone="primary" className="landing-card-action">
-              Open the builder
-            </LinkButton>
-            <UploadScenario navigate={navigate} />
+            <h3 id="landing-build">
+              <PencilIcon />
+              Build a scenario
+            </h3>
+            <div className="landing-card-actions">
+              <LinkButton href={BUILDER_PATH} tone="primary" title={BUILDER_NOTE}>
+                Open the builder
+              </LinkButton>
+              <UploadScenario navigate={navigate} />
+            </div>
             <SavedDrafts />
           </section>
         </div>

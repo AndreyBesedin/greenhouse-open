@@ -4,6 +4,9 @@ import { Button } from "../design/Button";
 import { deleteRun, notDeleted } from "./runActions";
 import { isComputing, runKey, type StoredRun } from "./storedRuns";
 
+/** What Delete says on hover (P22.7). */
+export const DELETE_NOTE = "Removes the run and everything kept of it, once asked again.";
+
 /** A list's deletions and what it says of one refused. Why a run not over is not
  * deleted is read off its row, as `runs` has it now: it follows the row, and goes
  * once the row is over or gone. `problem` stays until something clears it, and is
@@ -114,6 +117,7 @@ export function RunDelete({
       ref={pressed}
       className="landing-run-action landing-run-delete"
       aria-label={`Delete ${name}`}
+      title={DELETE_NOTE}
       onClick={() => setConfirming(true)}
     >
       Delete

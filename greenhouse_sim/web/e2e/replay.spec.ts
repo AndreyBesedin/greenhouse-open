@@ -453,7 +453,9 @@ test("an address that names no run, or a run that is not kept, says so and offer
   await page.goto(`${REPLAY_PATH}?run=there-is-no-such-run&epoch=0`);
   await expect(page.getByTestId("replay-notice")).toContainText("cannot be replayed");
   await page.getByRole("link", { name: "Home" }).click();
-  await expect(page.getByRole("heading", { name: "What would you like to do?" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Simulate a greenhouse's climate and crop" }),
+  ).toBeVisible();
 });
 
 test("a replay's other runs are the scenario's, on the landing page", async ({ page }) => {

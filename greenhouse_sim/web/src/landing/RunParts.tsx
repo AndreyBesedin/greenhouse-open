@@ -59,6 +59,9 @@ export function RunProgress({ run, name }: { run: StoredRun; name: string }) {
 export const FOLLOWS_NOTE =
   "Opens at the newest day computed, and stays at it as the run computes. Play from an earlier day moves on as days arrive.";
 
+/** What is said of the replay of a run computed no longer, on its link (P22.7). */
+export const REPLAY_NOTE = "Opens at its first day, to play it day by day.";
+
 /** The one way to watch a run: its replay (P22.2), unless it has files missing.
  * A run still computed opens following its newest day, and one computed no
  * longer at its start. `label` names the run for whoever hears the link, if
@@ -71,7 +74,7 @@ export function ReplayLink({ run, label }: { run: StoredRun; label?: string }) {
         href={replayAddress(run.run_id, run.epoch, computing)}
         className="landing-run-action landing-run-replay"
         aria-label={label}
-        title={computing ? FOLLOWS_NOTE : undefined}
+        title={computing ? FOLLOWS_NOTE : REPLAY_NOTE}
       >
         Replay
       </LinkButton>

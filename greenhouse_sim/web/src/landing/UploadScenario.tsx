@@ -1,9 +1,13 @@
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { installationFile } from "../builder/api";
 import { Button } from "../design/Button";
 import { Notice } from "../design/Notice";
 import { missingWeatherProblem, type PickedFile, uploadFile } from "./sendScenarioFile";
 import { keepHouse, keepSettings, uploadedAddress, uploadedHouseAddress } from "./uploaded";
+
+/** What the button says on hover, and to whoever hears it, of what a file does. */
+export const UPLOAD_NOTE =
+  "A scenario file, or a house file from the builder, opens in the builder, where it can be changed before it is run.";
 
 /**
  * A file sent in (P17.11): the simulator says which kind it is, and the builder
@@ -13,7 +17,6 @@ import { keepHouse, keepSettings, uploadedAddress, uploadedHouseAddress } from "
  */
 export function UploadScenario({ navigate }: { navigate: (address: string) => void }) {
   const input = useRef<HTMLInputElement>(null);
-  const hint = useId();
   const [reading, setReading] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -52,7 +55,7 @@ export function UploadScenario({ navigate }: { navigate: (address: string) => vo
       <Button
         className="landing-card-action"
         disabled={reading}
-        aria-describedby={hint}
+        title={UPLOAD_NOTE}
         onClick={() => input.current?.click()}
       >
         Upload a scenario or house file
@@ -72,10 +75,6 @@ export function UploadScenario({ navigate }: { navigate: (address: string) => vo
           }
         }}
       />
-      <p id={hint} className="landing-note">
-        A scenario file, or a house file from the builder, opens in the builder, where it can be
-        changed before it is run.
-      </p>
       <Notice kind="status" className="landing-note">
         {reading ? "Reading the file…" : ""}
       </Notice>
