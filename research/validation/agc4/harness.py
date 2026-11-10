@@ -24,7 +24,11 @@ run's does not:
   the fruit's dry weight (Vanthoor's standing plus harvested), the mature
   fruit's (Reduced-State TOMGRO's alone), the dry weight above ground, and
   the leaf area index, with Reduced-State TOMGRO's nodes and Vanthoor's
-  leaves' and stem's dry weights.
+  leaves' and stem's dry weights. Vanthoor's model also gives the leaves
+  it has pruned so far, which no state keeps: its pruning is a smooth
+  switch that removes some leaf well below its most leaf area index, and
+  AGC4 pruned none. The harness estimates it, each hour, as the mean of
+  the pruning rate at the hour's start and at its end, times the hour.
 
 Nothing here compares a run with a measurement: the calibration and the
 test do (decision 0076).
@@ -43,12 +47,14 @@ from typing import Final
 import openpyxl
 from greenhouse_sim.biology.area_contract import HourDrivers, StepCourse
 from greenhouse_sim.biology.tomato.tomgro.parameters import TomgroParameters, TomgroState
+from greenhouse_sim.biology.tomato.vanthoor.growth import leaf_pruning
 from greenhouse_sim.biology.tomato.vanthoor.parameters import (
     INITIAL_STATE as VANTHOOR_PUBLISHED,
 )
 from greenhouse_sim.biology.tomato.vanthoor.parameters import VanthoorParameters, VanthoorState
 from greenhouse_sim.core.tomgro_crop import TomgroRung
 from greenhouse_sim.core.vanthoor_crop import VanthoorRung
+from greenhouse_sim.units import HOUR_S
 
 from research.validation.agc4.archives import holds, members
 from research.validation.agc4.drivers import HEADER, Hour
@@ -96,9 +102,11 @@ class Midnight:
     # Reduced-State TOMGRO's alone.
     mature_fruit_dry_g: float | None = None
     nodes: float | None = None
-    # Vanthoor's model's alone: Reduced-State TOMGRO does not split them.
+    # Vanthoor's model's alone: Reduced-State TOMGRO does not split them,
+    # nor prunes.
     dry_leaves_g: float | None = None
     dry_stem_g: float | None = None
+    pruned_leaves_g: float | None = None
 
 
 def transplants(archive: Path) -> Transplant:
@@ -187,16 +195,22 @@ def run_vanthoor(
     )
     rung = VanthoorRung(parameters, CANOPY_HEIGHT_M)
     midnights: list[Midnight] = []
+    pruned_g = 0.0
     for day in days:
         for hour in day:
             if hour.plants_per_m2 != density:
                 state = spaced_vanthoor(state, density, hour.plants_per_m2)
                 density = hour.plants_per_m2
             if hour is day[0]:
-                midnights.append(_vanthoor_midnight(hour.start, state, density, parameters))
+                midnights.append(
+                    _vanthoor_midnight(hour.start, state, density, parameters, pruned_g)
+                )
+            before = leaf_pruning(state.c_leaf, parameters)
             state = rung.live_step(state, StepCourse(hours=(_drivers(hour),)))
+            pruning = (before + leaf_pruning(state.c_leaf, parameters)) / 2
+            pruned_g += pruning * HOUR_S / MG_A_G / density
     end = days[-1][-1].start + (days[-1][-1].start - days[-1][-2].start)
-    midnights.append(_vanthoor_midnight(end, state, density, parameters))
+    midnights.append(_vanthoor_midnight(end, state, density, parameters, pruned_g))
     return midnights
 
 
@@ -243,7 +257,11 @@ def _tomgro_midnight(at: datetime, state: TomgroState, density: float) -> Midnig
 
 
 def _vanthoor_midnight(
-    at: datetime, state: VanthoorState, density: float, parameters: VanthoorParameters
+    at: datetime,
+    state: VanthoorState,
+    density: float,
+    parameters: VanthoorParameters,
+    pruned_leaves_g: float = 0.0,
 ) -> Midnight:
     # Carbohydrate is taken for dry matter, one for one (decision 0076).
     fruit = state.c_fruit + state.harvested_fruit
@@ -256,6 +274,7 @@ def _vanthoor_midnight(
         leaf_area_index=state.leaf_area_index(parameters),
         dry_leaves_g=state.c_leaf / MG_A_G / density,
         dry_stem_g=state.c_stem / MG_A_G / density,
+        pruned_leaves_g=pruned_leaves_g,
     )
 
 

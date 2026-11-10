@@ -11,6 +11,7 @@ import openpyxl
 import pytest
 from greenhouse_sim.biology.area_contract import StepCourse
 from greenhouse_sim.biology.tomato.tomgro.parameters import TomgroParameters, TomgroState
+from greenhouse_sim.biology.tomato.vanthoor.growth import leaf_pruning
 from greenhouse_sim.biology.tomato.vanthoor.parameters import (
     INITIAL_STATE as VANTHOOR_PUBLISHED,
 )
@@ -188,7 +189,11 @@ def test_vanthoor_is_spaced_at_the_hour_the_density_changes() -> None:
             state = harness.spaced_vanthoor(state, 56.0, 42.0)
         state = rung.live_step(state, StepCourse(hours=(harness._drivers(hour),)))
     assert midnights[1].plants_per_m2 == 42.0
-    assert midnights[-1] == harness._vanthoor_midnight(midnights[-1].at, state, 42.0, parameters)
+    pruned = midnights[-1].pruned_leaves_g
+    assert pruned is not None
+    assert midnights[-1] == harness._vanthoor_midnight(
+        midnights[-1].at, state, 42.0, parameters, pruned
+    )
 
 
 def test_tomgro_is_spaced_at_the_midnight_of_its_day() -> None:
@@ -196,3 +201,43 @@ def test_tomgro_is_spaced_at_the_midnight_of_its_day() -> None:
     at_23 = harness.run_tomgro(TomgroParameters(), TRANSPLANT, _spaced_at_23(_hours([56.0, 42.0])))
 
     assert at_23 == harness.run_tomgro(TomgroParameters(), TRANSPLANT, _hours([56.0, 42.0]))
+
+
+def test_vanthoor_reads_the_leaves_it_has_pruned_per_plant() -> None:
+    """Transplants with leaves short of the most by 15 g m⁻², a leaf area
+    index of 2.6: each hour, the mean of the pruning rate at its start and
+    at its end, per plant."""
+    parameters = VanthoorParameters()
+    leaves_mg_m2 = parameters.c_leaf_max - 15e3
+    leafy = replace(TRANSPLANT, dry_leaves_g=leaves_mg_m2 / harness.MG_A_G / 56)
+    hours = _hours([56.0])
+
+    midnights = harness.run_vanthoor(parameters, leafy, hours, parameters.c_buf_min)
+
+    rung = VanthoorRung(parameters, harness.CANOPY_HEIGHT_M)
+    state = VANTHOOR_PUBLISHED.model_copy(
+        update={
+            "c_buf": parameters.c_buf_min,
+            "c_fruit": 0.0,
+            "c_leaf": leaves_mg_m2,
+            "c_stem": 0.043 * harness.MG_A_G * 56,
+            "harvested_fruit": 0.0,
+        }
+    )
+    pruned_mg_m2 = 0.0
+    for hour in hours:
+        before = leaf_pruning(state.c_leaf, parameters)
+        state = rung.live_step(state, StepCourse(hours=(harness._drivers(hour),)))
+        pruned_mg_m2 += (before + leaf_pruning(state.c_leaf, parameters)) / 2 * 3600
+    pruned = midnights[-1].pruned_leaves_g
+    assert midnights[0].pruned_leaves_g == 0.0
+    assert pruned == pytest.approx(pruned_mg_m2 / harness.MG_A_G / 56)
+    # Short of the most, the smooth switch prunes a share of the leaves a day.
+    assert pruned is not None
+    assert pruned > 0.01 * leafy.dry_leaves_g
+
+
+def test_tomgro_prunes_nothing() -> None:
+    midnights = harness.run_tomgro(TomgroParameters(), TRANSPLANT, _hours([56.0]))
+
+    assert {m.pruned_leaves_g for m in midnights} == {None}

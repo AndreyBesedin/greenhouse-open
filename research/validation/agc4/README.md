@@ -113,6 +113,9 @@ and the run's does not:
 - **the readings:** at each midnight, per plant, the fruit's dry weight
   (Vanthoor's standing plus harvested), the mature fruit's (Reduced-State
   TOMGRO's alone), the dry weight above ground and the leaf area index.
+  Vanthoor's model also gives the leaves it has pruned so far, which no
+  state keeps: the harness takes each hour's pruning as the mean of its
+  rate at the hour's start and end, times the hour.
 
 It compares nothing with a measurement: that is the calibration's and the
 test's, in that order. A 2023 zone's 65 days run in under a second for
@@ -165,4 +168,93 @@ two that move the objective the same way:
 Each says why it is chosen, which strong ones are left and why, and the
 method: scipy's Powell from the published values, each parameter scaled to
 its bounds. Vanthoor's buffer starts at its `c_buf_min`, the least below
-which its growth stops. No calibration has run.
+which its growth stops.
+
+## The calibration
+
+[`calibrate.py`](calibrate.py) runs a model's calibration as its manifest
+names it, on the 2023 data alone, and writes its report,
+[`calibrated/tomgro.json`](calibrated/tomgro.json) and
+[`calibrated/vanthoor_katzin.json`](calibrated/vanthoor_katzin.json):
+
+```bash
+python -m research.validation.agc4.calibrate tomgro /tmp/agc4-drivers > research/validation/agc4/calibrated/tomgro.json
+python -m research.validation.agc4.calibrate vanthoor_katzin /tmp/agc4-drivers > research/validation/agc4/calibrated/vanthoor_katzin.json
+```
+
+It refuses a 2023 series whose sha256 is not the one `drivers.json`
+records. Each report holds the calibrated parameters beside the
+published, the objective at both, the optimizer's evaluations, message
+and run time, and the fit: each target's prediction at the midnight that
+begins its day, its error and relative error, and whether it falls within
+two standard errors of its measurement, with the same measures per
+quantity. The fruit not yet set on 18 September, a mean of zero, has no
+relative error and, every plant weighing the same, no spread to judge an
+error by. A calibrated set is a research result kept here, never one of the
+models' published defaults (decision 0076). Powell is deterministic: the
+same data, code and scipy give the same parameters.
+
+The report of Vanthoor's model also gives the leaves it has pruned per
+plant by each date.
+
+| Model | Objective, published → calibrated | Evaluations | Run time |
+| --- | --- | --- | --- |
+| Reduced-State TOMGRO | 89.5 → 4.2 | 163 | 2 s |
+| Vanthoor's model | 173.3 → 19.8 | 464 | 10 min |
+
+| Model | Parameter | Published | Calibrated | Bounds |
+| --- | --- | --- | --- | --- |
+| Reduced-State TOMGRO | `n_ff` | 22 | 10.1 | 6 to 22 |
+| | `delta` | 0.038 | 0.0195 | 0.004 to 0.05 |
+| | `qe` | 0.08 | 0.0998, at its upper bound | 0.04 to 0.1 |
+| | `alpha_f` | 0.8 | 0.998, at its upper bound | 0.4 to 1.0 |
+| Vanthoor's model | `sla` | 2.66 × 10⁻⁵ | 4.26 × 10⁻⁵ | 2.0 to 6.0 × 10⁻⁵ |
+| | `alpha` | 0.385 | 0.384 | 0.25 to 0.5 |
+| | `t_end_sum` | 1,035 | 1,388 | 200 to 1,500 |
+| | `rg_fruit` | 0.328 | 0.254 | 0.15 to 0.8 |
+
+The fit on the calibration data: the bias is the mean relative error, and
+the share within two standard errors counts the targets that have a
+spread.
+
+| Model | Quantity | Bias | RMS relative error | Within 2 SE |
+| --- | --- | --- | --- | --- |
+| Reduced-State TOMGRO | dry weight above ground | −6 % | 22 % | 14 of 24 |
+| | fruit | −7 % | 26 % | 12 of 16 |
+| | leaf area index | +10 % | 42 % | 4 of 24 |
+| Vanthoor's model | dry weight above ground | −18 % | 28 % | 8 of 24 |
+| | fruit | +23 % | 68 % | 1 of 16 |
+| | leaves | −38 % | 43 % | 3 of 24 |
+| | stem | +26 % | 64 % | 5 of 24 |
+| | leaf area index | −13 % | 40 % | 8 of 24 |
+
+What it shows:
+
+- **Reduced-State TOMGRO grows less than the crop did.** Two of its four
+  parameters end at their upper bounds: the leaves' quantum efficiency and
+  the fruit's share of growth. On 9 November its dry weight above ground
+  is 11.0 to 21.8 g per plant, against 17.3 to 30.9 g measured, short in
+  every treatment; its fruit is 10.0 to 16.0 g, against 12.0 to 21.0 g.
+- **Its leaf area does not see the light.** It follows the nodes, which
+  follow temperature, and the four zones shared one compartment's air: the
+  leaf area index is the same in every zone, and reaches the model's most,
+  4.0, by 9 November, where 2.1 to 3.0 were measured. `lai_max` is not
+  among the parameters calibrated.
+- **Vanthoor's model keeps its light use and moves its organs.** Its
+  `alpha` stays within 0.3 % of the published value; the leaf area per
+  carbohydrate rises by 60 %, the fruit's growth takes a larger
+  temperature sum to come to its full, and its sink is smaller. Its fruit
+  is 29 to 166 % over the measurement on 29 September, and 7.7 to 13.6 g
+  on 9 November, against 12.0 to 21.0 g. Its stem, 3.4 to 6.1 g on 9
+  November, is about twice the 1.5 to 3.4 g measured.
+- **Vanthoor's model prunes.** Its leaf area index never passes 2.31,
+  short of its most, 3, but its pruning is a smooth switch: by 9 November
+  it has pruned 4.7, 3.9, 1.9 and 0.8 g of leaf per plant in the high,
+  medium, low and unlit zones, where 2.6 to 2.7 g stand in each. AGC4
+  pruned none, and measured 3.8 to 6.7 g of leaves. The fit holds the
+  leaves standing, as decision 0076 has it. The pruning, heavier where
+  more grows, leaves about the same standing in every zone.
+
+Each limit is reported, not corrected: decision 0076 has a calibration
+change nothing outside its manifest. The test on 2024 runs these
+parameters once.
