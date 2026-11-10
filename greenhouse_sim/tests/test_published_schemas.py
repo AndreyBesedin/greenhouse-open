@@ -48,7 +48,6 @@ from greenhouse_sim.services.drafts import DraftListed
 from greenhouse_sim.services.fields import FieldNames
 from greenhouse_sim.services.interventions import ChangeAsked, EpochChanges
 from greenhouse_sim.services.plants import LabChecks
-from greenhouse_sim.services.playback import PlaybackState
 from greenhouse_sim.services.run_state import RunState
 from greenhouse_sim.services.run_store import StoredRun
 from greenhouse_sim.services.scenario_files import ScenarioDownload
@@ -81,7 +80,6 @@ ANSWERS: Final[dict[Path, type[object]]] = {
     SERVICES / "field_names.schema.json": FieldNames,
     SERVICES / "timeline.schema.json": TimelineDocument,
     SERVICES / "checkpoint.schema.json": CheckpointSummary,
-    SERVICES / "playback.schema.json": PlaybackState,
     # A stored run as a list of them shows it, and a position over its epoch
     # (P17.4).
     SERVICES / "stored_run.schema.json": StoredRun,

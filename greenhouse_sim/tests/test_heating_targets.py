@@ -286,24 +286,22 @@ def test_a_run_started_over_with_moves_keeps_its_target_changes(
     moment in the new run too (decision 0049). Started over as it is, the
     run drops its changes, as decision 0043 has it."""
     clock = Clock()
-    path = f"/api/scenarios/{SCENARIO}/playback"
     playback.start(played_on, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
     change = (60.0, "heating_day", 24.0)
     assert playback.set_targets(played_on, SCENARIO, {"heating_day": 24.0}).targets == [change]
 
-    moved = respond(played_on, "POST", f"{path}/restart?layout={FAN_MOVED}")
+    moved = playback.command(played_on, SCENARIO, PlaybackCommand.RESTART, FAN_MOVED)
 
-    assert moved.status == HTTPStatus.OK and isinstance(moved.body, dict)
     moved_layout = layout_name(FAN_MOVED)
-    assert (moved.body["layout"], moved.body["epoch"]) == (moved_layout, 0)
-    assert (moved.body["time_s"], moved.body["targets"]) == (0.0, [list(change)])
+    assert (moved.layout, moved.epoch) == (moved_layout, 0)
+    assert (moved.time_s, moved.targets) == (0.0, [change])
     # What it delivers is the rearranged run with the change: the same heat
     # through the night, more once the day's target holds.
     played = playback.playback(played_on, SCENARIO)
     assert played.wait_for(1, timeout_s=300)
     clock.now += 24.0
     delivered = {r.observation_id: r.value for r in played.records_after(0, ALL).records}
-    start, run_id = run_start(PACKAGED, SCENARIO), str(moved.body["run_id"])
+    start, run_id = run_start(PACKAGED, SCENARIO), moved.run_id
     with_change = RunRequest(
         SCENARIO, layout=moved_layout, plan=RunPlan.requested(targets=(change,))
     )
@@ -314,9 +312,8 @@ def test_a_run_started_over_with_moves_keeps_its_target_changes(
     assert [r.value for r in kept[:night]] == [r.value for r in dropped[:night]]
     assert sum(r.value for r in kept) > sum(r.value for r in dropped)
 
-    again = respond(played_on, "POST", f"{path}/restart")
-    assert isinstance(again.body, dict)
-    assert (again.body["layout"], again.body["targets"]) == (moved_layout, [])
+    again = playback.command(played_on, SCENARIO, PlaybackCommand.RESTART)
+    assert (again.layout, again.targets) == (moved_layout, [])
 
 
 def test_a_target_changed_while_moves_replace_the_playback_is_kept(

@@ -8,8 +8,10 @@ Part of [greenhouse-open](../README.md). Apache-2.0.
   `Observation`s of them, as its sensors and the people walking its crop
   would (decisions 0035 and 0059).
 - **Actions on the run.** A person, a policy or a schedule gives a run a
-  plan of `greenhouse_protocol` actions through its gateway (`/actuation/v1`),
-  and the run carries each out at its time, with an outcome (decision 0046).
+  plan of `greenhouse_protocol` actions through its gateway: asked of a
+  running epoch through its changes, or given through a policy's port
+  (decision 0061), and the run carries each out at its time, with an outcome
+  (decision 0046).
 - **Deterministic.** The same scenario, seed and actions always produce the
   same records.
 - **Ground truth for evaluation only.** `greenhouse_sim.ground_truth` reports
@@ -28,8 +30,10 @@ Part of [greenhouse-open](../README.md). Apache-2.0.
   models, from the simplest to the richest, and a scenario's manifest names
   one rung of each (decision 0054).
 
-A consumer reads a run as it reads any producer, through the local API's
-consumer interface (decision 0040); the repository's
+A client reads a run's records by a cursor through its epoch
+(`GET /api/runs/{run}/epochs/{n}/observations`, and its events and outcomes
+likewise), as the consumer interface's rules have it (decision 0040), and a
+policy reads them through its port; the repository's
 [examples](../examples/) play a scenario's run, store its records, score
 them against its truth and act on it:
 

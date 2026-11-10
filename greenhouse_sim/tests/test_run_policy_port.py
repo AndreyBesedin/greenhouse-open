@@ -628,8 +628,6 @@ def test_the_port_answers_policies_alone_and_none_of_the_local_apis_routes(
         assert _status(operators, "/policy/v1/run", held[LOCAL_OPERATOR]) == HTTPStatus.FORBIDDEN
         for route in (
             "/api/scenarios",
-            "/consumer/v1/runs",
-            f"/actuation/v1/runs/{port.run().run_id}/plans/x",
             "/policy/v2/run",
         ):
             assert _status(url, route, token) == HTTPStatus.NOT_FOUND, route

@@ -21,7 +21,6 @@ of its routes at its top:
 - `runs`: what a scenario's run holds at a moment, its fields, climate,
   crop and timeline;
 - `checkpoints`: a run's checkpoints, made, listed, downloaded and uploaded;
-- `playback`: a scenario's run played back against one clock;
 - `stored`: the runs kept in the run store, and the positions a viewer
   takes over them;
 - `lab`: the plant lab;
@@ -42,7 +41,6 @@ from greenhouse_sim.api.routes import (
     builder,
     checkpoints,
     lab,
-    playback,
     runs,
     scenarios,
     stored,
@@ -62,7 +60,6 @@ GETS: Final[tuple[Getting, ...]] = (
     scenarios.get,
     runs.get,
     checkpoints.get,
-    playback.get,
     stored.get,
     lab.get,
     builder.get,
@@ -70,7 +67,6 @@ GETS: Final[tuple[Getting, ...]] = (
 POSTS: Final[tuple[Posting, ...]] = (
     scenarios.post,
     checkpoints.post,
-    playback.post,
     stored.post,
     builder.post,
 )

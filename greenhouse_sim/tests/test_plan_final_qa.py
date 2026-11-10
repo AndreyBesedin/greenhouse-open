@@ -1,26 +1,24 @@
 """P13's final scenario, what of it holds without a person looking
 (`docs/roadmap/archive/p13-actions.md`): a plan on the reference greenhouse's playing
-run carried out, late, on time and refused, by the gateway's and the consumer's
-routes alone, and a principal who may set levels only, whose grant is withdrawn
-while the run plays."""
+run carried out, late, on time and refused, given through its gateway as the
+local operator and read from its logs by a cursor, as the protocol's documents
+alone, and a principal who may set levels only, whose grant is withdrawn while
+the run plays."""
 
-import json
 from collections.abc import Iterator
 from datetime import timedelta
-from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Final
 
 import pytest
 from greenhouse_protocol.actions import ActionKind
 from greenhouse_protocol.authorisation import AuthorisationConfig, AuthorisationGroup, Grant
-from greenhouse_protocol.contracts.consumer import EventBatch, OutcomeBatch
+from greenhouse_protocol.contracts.consumer import FIRST_CURSOR
 from greenhouse_protocol.contracts.gateway import PlanState, Receipt
+from greenhouse_protocol.event import Event
 from greenhouse_protocol.outcome import ActionOutcome, OutcomeStatus
-from greenhouse_protocol.plan import ActionState, Plan, Principal, PrincipalKind
+from greenhouse_protocol.plan import ActionKey, ActionState, Plan, Principal, PrincipalKind
 
-from greenhouse_sim.api.actuation import actuation_respond
-from greenhouse_sim.api.consumer import consumer_respond
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
@@ -34,6 +32,8 @@ START: Final = run_start(PACKAGED, SCENARIO)
 PLANT: Final = plant_ids(scenario(PACKAGED, SCENARIO))[29]
 ME: Final = LOCAL_OPERATOR.model_dump(mode="json")
 GROWER: Final = Principal(kind=PrincipalKind.PERSON, id="grower")
+# Every record there is, in one read.
+ALL: Final = 10**6
 OPERATORS: Final = AuthorisationGroup(
     group_id="local_operators",
     principals=frozenset({LOCAL_OPERATOR}),
@@ -56,8 +56,8 @@ def _authorisation(version: int, *grower: ActionKind) -> AuthorisationConfig:
 
 
 class _Played:
-    """A run played back and stepped by hand, read and given to through the
-    protocol's routes alone."""
+    """A run played back and stepped by hand, given plans as the local
+    operator and read by a cursor, each as the protocol's documents write it."""
 
     def __init__(self, simulator: Simulator, tmp_path: Path) -> None:
         self.simulator = simulator
@@ -70,11 +70,6 @@ class _Played:
         """Its clock moved on to `hours` into the run."""
         assert self.found.step_to(hours * HOUR_S).time_s == hours * HOUR_S
 
-    def _route(self, method: str, path: str, body: bytes = b"") -> Any:
-        answered = actuation_respond(self.simulator, method, f"/actuation/v1{path}", body)
-        assert answered is not None and answered.status == HTTPStatus.OK, answered
-        return answered.body
-
     def give(self, plan_id: str, *actions: dict[str, Any], revision: int = 1) -> Receipt:
         plan = {
             "plan_id": plan_id,
@@ -83,15 +78,10 @@ class _Played:
             "revision": revision,
             "actions": list(actions),
         }
-        return Receipt.model_validate(
-            self._route("POST", f"/runs/{self.state.run_id}/plans", json.dumps(plan).encode())
-        )
+        return self.found.submit(Plan.model_validate(plan), by=LOCAL_OPERATOR)
 
     def listed(self) -> list[ActionState]:
-        return [
-            ActionState.model_validate(each)
-            for each in self._route("GET", f"/runs/{self.state.run_id}/actions")
-        ]
+        return list(self.found.actions())
 
     def cancel(self, plan_id: str, *action_ids: str) -> Receipt:
         keys = [
@@ -103,30 +93,19 @@ class _Played:
             }
             for each in action_ids
         ]
-        return Receipt.model_validate(
-            self._route(
-                "POST", f"/runs/{self.state.run_id}/actions/cancel", json.dumps(keys).encode()
-            )
+        return self.found.cancel(
+            tuple(ActionKey.model_validate(each) for each in keys), by=LOCAL_OPERATOR
         )
 
     def plan(self, plan_id: str) -> PlanState:
-        return PlanState.model_validate(
-            self._route("GET", f"/runs/{self.state.run_id}/plans/{plan_id}")
-        )
-
-    def _read(self, log: str) -> Any:
-        answered = consumer_respond(
-            self.simulator, "GET", f"/consumer/v1/runs/{self.state.run_id}/{log}"
-        )
-        assert answered is not None and answered.status == HTTPStatus.OK, answered
-        return answered.body
+        return self.found.plan(plan_id)
 
     def outcomes(self) -> dict[str, ActionOutcome]:
-        batch = OutcomeBatch.model_validate(self._read("outcomes"))
+        batch, _ = self.found.outcomes_after(FIRST_CURSOR, ALL)
         return {f"{each.plan_id}/{each.ref}": each for each in batch.outcomes}
 
-    def events(self) -> EventBatch:
-        return EventBatch.model_validate(self._read("events"))
+    def events(self) -> tuple[Event, ...]:
+        return self.found.events_after(FIRST_CURSOR, ALL).records
 
 
 @pytest.fixture
@@ -209,7 +188,7 @@ def test_a_plan_is_carried_out_each_at_its_moment_and_read_by_a_consumer(played:
         OutcomeStatus.EXECUTED,
         OutcomeStatus.EXECUTED,
     ]
-    named = {event.event_id: event.parameters for event in played.events().events}
+    named = {event.event_id: event.parameters for event in played.events()}
     assert named[done["qa/harvest"].event_id or ""]["action"] == "harvest"
     assert named[done["qa/lower"].event_id or ""]["action"] == "lower"
 

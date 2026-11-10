@@ -25,7 +25,7 @@ from greenhouse_protocol.actions import (
     Water,
 )
 from greenhouse_protocol.assignment import Assignment, ReportStatus
-from greenhouse_protocol.contracts.consumer import OutcomeBatch, check_polls
+from greenhouse_protocol.contracts.consumer import FIRST_CURSOR, OutcomeBatch, check_polls
 from greenhouse_protocol.contracts.execution import AssignmentStatus, check_executor
 from greenhouse_protocol.enums import EventType
 from greenhouse_protocol.outcome import (
@@ -37,7 +37,6 @@ from greenhouse_protocol.outcome import (
 )
 from greenhouse_protocol.plan import At, Plan, PlannedAction
 
-from greenhouse_sim.api.consumer import consumer_respond
 from greenhouse_sim.biology.tomato.organ.actions import act, harvest_round
 from greenhouse_sim.biology.tomato.organ.topology import HarvestFruit
 from greenhouse_sim.core.clock import DAY_S
@@ -55,7 +54,7 @@ from greenhouse_sim.services.gateway import (
     run_kinds,
     run_unhonoured,
 )
-from greenhouse_sim.services.playback import Epochs, PlaybackCommand
+from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
 from greenhouse_sim.services.runs import PlannedAt, RunPlan, RunRequest
 from greenhouse_sim.services.scenarios import plant_ids, scenario
 from greenhouse_sim.services.sensors import run_start
@@ -296,9 +295,8 @@ def test_crop_actions_given_to_a_playback_end_in_outcomes_naming_their_events(
         event_id = ends[key].event_id
         assert event_id is not None and event_id in events
         assert events[event_id].timestamp == day_1
-    path = f"/consumer/v1/runs/{started.run_id}/outcomes"
-    polls = [_poll(played_on, path)]
-    polls.append(_poll(played_on, f"{path}?after={polls[-1].next}"))
+    polls = [_poll(played)]
+    polls.append(_poll(played, polls[-1].next))
     assert check_polls(polls) == []
 
 
@@ -372,10 +370,9 @@ def test_a_crop_action_waiting_for_another_at_its_day_start_is_carried_out_after
     assert [str(ends[key].event_id) for key in ("lower", "look")] == made[len(delivered) :]
 
 
-def _poll(simulator: Simulator, path: str) -> OutcomeBatch:
-    answer = consumer_respond(simulator, "GET", path)
-    assert answer is not None and answer.status == 200, answer
-    return OutcomeBatch.model_validate(answer.body)
+def _poll(played: Playback, after: int = FIRST_CURSOR) -> OutcomeBatch:
+    """The outcomes of the run's actions written after `after`, by its clock."""
+    return played.outcomes_after(after, ALL)[0]
 
 
 class _Clock:

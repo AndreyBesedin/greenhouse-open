@@ -13,13 +13,11 @@ import {
 // model.
 const PACKAGE = new URL("../../greenhouse_sim/", import.meta.url);
 // The schemas of the files a scenario, or an installation, is written in,
-// which the viewer does not read; and a playback's state, which it no longer
-// reads, its routes going next (P22.3, decision 0074).
+// which the viewer does not read.
 const NOT_READ = [
   "builder/installation.schema.json",
   "scenarios/layout.schema.json",
   "scenarios/scenario.schema.json",
-  "services/playback.schema.json",
 ];
 
 describe("the viewer's side of the simulator's contracts", () => {

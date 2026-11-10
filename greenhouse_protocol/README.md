@@ -104,9 +104,9 @@ description checks it.
   in delivery order and never from the client's future, and the outcomes of
   the actions a run's gateway carried out or not, as a third log. The rules a
   producer keeps (`check_batch`, `check_polls`) and a recorded exchange to
-  develop a client against (`tests/fixtures/consumer/exchange.json`). The
-  simulator is one producer of it; a gateway in front of real sensors is
-  another.
+  develop a client against (`tests/fixtures/consumer/exchange.json`). It
+  describes what a producer serves, such as a gateway in front of real
+  sensors; the simulator no longer serves it over HTTP (decision 0074).
 
 ## Dependencies
 

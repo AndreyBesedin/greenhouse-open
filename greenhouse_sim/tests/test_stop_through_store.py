@@ -65,7 +65,6 @@ WAIT_S: Final = 120.0
 LONG_AGO: Final = timedelta(seconds=leases.EXPIRES_AFTER_S * 10)
 # Time enough for a stop to find the claim written, and to see it expire.
 LEASE_LEFT_S: Final = 2.0
-START_HELD: Final = f"/api/scenarios/{BOX}/playback/start?hold=true"
 DELIVERED: Final = "greenhouse_sim.services.playback.delivered_between"
 # How long a request forced between two steps of another has to overlap it: it
 # takes this long where nothing keeps it out, and is held off where something does.
@@ -620,10 +619,8 @@ def test_a_playback_stopped_opens_no_epoch_no_one_could_end(server: Simulator) -
 def test_a_start_after_a_stop_of_its_playback_plays_the_run_as_its_next_epoch(
     server: Simulator,
 ) -> None:
-    started = respond(server, "POST", START_HELD)
-    assert started.status == HTTPStatus.OK and isinstance(started.body, dict)
-    run_id, number = started.body["run_id"], started.body["epoch"]
-    assert isinstance(run_id, str) and isinstance(number, int)
+    started = playback.start(server, BOX, hold=True)
+    run_id, number = started.run_id, started.epoch
     epoch = EpochStore(_store(server), run_id, number)
 
     # The answer waits for its thread, as long as a stop waits: past that it reads
@@ -632,9 +629,8 @@ def test_a_start_after_a_stop_of_its_playback_plays_the_run_as_its_next_epoch(
     _until(lambda: epoch.manifest().status == Status.INTERRUPTED, "its thread to say so")
     assert not epoch.worked()
 
-    again = respond(server, "POST", START_HELD)
-    assert again.status == HTTPStatus.OK and isinstance(again.body, dict)
-    assert (again.body["run_id"], again.body["epoch"]) == (run_id, number + 1)
+    again = playback.start(server, BOX, hold=True)
+    assert (again.run_id, again.epoch) == (run_id, number + 1)
     _until(
         lambda: respond(server, "POST", _delete_path(epoch)).status == HTTPStatus.OK,
         "the stopped epoch to be deleted",

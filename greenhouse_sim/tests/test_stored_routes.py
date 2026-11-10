@@ -18,6 +18,7 @@ from pydantic import JsonValue
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import playback
+from greenhouse_sim.services.playback import PlaybackCommand
 from greenhouse_sim.services.run_store import (
     EpochManifest,
     EpochStore,
@@ -337,9 +338,7 @@ def test_an_epoch_a_playback_is_working_on_is_refused_until_it_stops(
 ) -> None:
     assert simulator.runs is not None
     try:
-        started = respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true")
-        assert started.status == HTTPStatus.OK
-        working = playback.playback(simulator, SCENARIO).state()
+        working = playback.start(simulator, SCENARIO, hold=True)
         refused = _post(simulator, f"/api/runs/{working.run_id}/epochs/{working.epoch}/delete")
         no_playbacks()
         allowed = _post(simulator, f"/api/runs/{working.run_id}/epochs/{working.epoch}/delete")
@@ -355,9 +354,8 @@ def test_a_paused_playback_is_listed_as_paused_while_it_is_held(
     simulator: Simulator, no_playbacks: Callable[[], None]
 ) -> None:
     try:
-        started = respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start")
-        assert started.status == HTTPStatus.OK and isinstance(started.body, dict)
-        epoch_path = f"/api/runs/{started.body['run_id']}/epochs/{started.body['epoch']}"
+        started = playback.start(simulator, SCENARIO)
+        epoch_path = f"/api/runs/{started.run_id}/epochs/{started.epoch}"
 
         def said() -> tuple[StoredRun, StoredRun, StoredRun]:
             one = respond(simulator, "GET", epoch_path).body
@@ -373,10 +371,10 @@ def test_a_paused_playback_is_listed_as_paused_while_it_is_held(
 
         assert [(r.status, r.paused) for r in said()] == [(Status.RUNNING, False)] * 3
 
-        respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/pause")
+        playback.command(simulator, SCENARIO, PlaybackCommand.PAUSE)
         assert [(r.status, r.paused) for r in said()] == [(Status.RUNNING, True)] * 3
 
-        respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/play")
+        playback.command(simulator, SCENARIO, PlaybackCommand.PLAY)
         assert [(r.status, r.paused) for r in said()] == [(Status.RUNNING, False)] * 3
     finally:
         no_playbacks()
@@ -386,9 +384,8 @@ def test_a_position_says_a_playback_holds_its_epoch_as_the_list_does(
     simulator: Simulator, no_playbacks: Callable[[], None]
 ) -> None:
     try:
-        started = respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true")
-        assert started.status == HTTPStatus.OK and isinstance(started.body, dict)
-        epoch_path = f"/api/runs/{started.body['run_id']}/epochs/{started.body['epoch']}"
+        started = playback.start(simulator, SCENARIO, hold=True)
+        epoch_path = f"/api/runs/{started.run_id}/epochs/{started.epoch}"
         opened = respond(simulator, "POST", f"{epoch_path}/positions")
         assert opened.status == HTTPStatus.OK and isinstance(opened.body, dict)
         position_path = f"/api/positions/{opened.body['position_id']}"
@@ -405,10 +402,10 @@ def test_a_position_says_a_playback_holds_its_epoch_as_the_list_does(
         assert PositionState.model_validate(played.body).paused is True
         assert said() == (Status.RUNNING, True, True)
 
-        respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/play")
+        playback.command(simulator, SCENARIO, PlaybackCommand.PLAY)
         assert said() == (Status.RUNNING, False, True)
 
-        respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/pause")
+        playback.command(simulator, SCENARIO, PlaybackCommand.PAUSE)
         assert said() == (Status.RUNNING, True, True)
 
         stopped = respond(simulator, "POST", f"{epoch_path}/stop")
@@ -423,7 +420,7 @@ def test_a_position_over_another_run_is_not_paused_by_a_playback_held(
     simulator: Simulator, no_playbacks: Callable[[], None]
 ) -> None:
     try:
-        respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true")
+        playback.start(simulator, SCENARIO, hold=True)
         assert simulator.runs is not None
         EpochStore.create(
             simulator.runs,
@@ -449,71 +446,47 @@ def test_an_epoch_of_another_run_is_not_paused_by_a_playback_held(
     simulator: Simulator, no_playbacks: Callable[[], None]
 ) -> None:
     try:
-        respond(simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true")
+        playback.start(simulator, SCENARIO, hold=True)
         shown = respond(simulator, "GET", f"/api/runs/{RUN}/epochs/0").body
         assert StoredRun.model_validate(shown).paused is False
     finally:
         no_playbacks()
 
 
-def test_a_run_is_started_at_a_seed_and_a_seed_that_is_not_one_is_refused(
-    simulator: Simulator, no_playbacks: Callable[[], None]
-) -> None:
-    path = f"/api/scenarios/{SCENARIO}/playback/start?hold=true"
-    try:
-        plain = respond(simulator, "POST", path)
-        seeded = respond(simulator, "POST", f"{path}&seed=7")
-        refused = respond(simulator, "POST", f"{path}&seed=seven")
-    finally:
-        no_playbacks()
-
-    assert plain.status == seeded.status == HTTPStatus.OK
-    assert isinstance(plain.body, dict) and isinstance(seeded.body, dict)
-    assert plain.body["run_id"] != seeded.body["run_id"]
-    assert refused.status == HTTPStatus.BAD_REQUEST
-
-
-def test_a_run_started_over_the_api_is_kept_and_listed_with_its_seed(
+def test_a_playback_is_started_at_a_seed_and_kept_and_listed_with_it(
     simulator: Simulator, no_playbacks: Callable[[], None]
 ) -> None:
     try:
-        started = respond(
-            simulator, "POST", f"/api/scenarios/{SCENARIO}/playback/start?hold=true&seed=7"
-        )
-        assert started.status == HTTPStatus.OK
+        plain = playback.start(simulator, SCENARIO, hold=True)
+        seeded = playback.start(simulator, SCENARIO, hold=True, seed=7)
         status, listed = _get(simulator, f"/api/scenarios/{SCENARIO}/runs")
     finally:
         no_playbacks()
 
+    assert plain.run_id != seeded.run_id
     assert status == HTTPStatus.OK
     assert isinstance(listed, list)
-    seeded = [StoredRun.model_validate(each) for each in listed if each["seed"] == 7]
-    assert len(seeded) == 1
-    assert seeded[0].status in (Status.QUEUED, Status.RUNNING)
-    assert seeded[0].scenario_id == SCENARIO
+    kept = [StoredRun.model_validate(each) for each in listed if each["seed"] == 7]
+    assert len(kept) == 1
+    assert kept[0].status in (Status.QUEUED, Status.RUNNING)
+    assert kept[0].scenario_id == SCENARIO
 
 
-def test_a_run_is_started_at_the_scenarios_own_seed_after_another_seed_was_played(
+def test_a_playback_is_started_at_the_scenarios_own_seed_after_another_seed_was_played(
     simulator: Simulator, no_playbacks: Callable[[], None]
 ) -> None:
-    path = f"/api/scenarios/{SCENARIO}/playback/start?hold=true"
     try:
-        plain = respond(simulator, "POST", path)
-        seeded = respond(simulator, "POST", f"{path}&seed=7")
-        # No seed keeps the playback's, as a restart does; "default" asks for the own.
-        kept = respond(simulator, "POST", path)
-        back = respond(simulator, "POST", f"{path}&seed=default")
+        plain = playback.start(simulator, SCENARIO, hold=True)
+        seeded = playback.start(simulator, SCENARIO, hold=True, seed=7)
+        # No seed keeps the playback's, as a restart does; its own seed is asked for.
+        kept = playback.start(simulator, SCENARIO, hold=True)
+        back = playback.start(simulator, SCENARIO, hold=True, its_own_seed=True)
     finally:
         no_playbacks()
 
-    ids = [
-        each.body["run_id"] for each in (plain, seeded, kept, back) if isinstance(each.body, dict)
-    ]
-    assert len(ids) == 4
-    plain_id, seeded_id, kept_id, back_id = ids
-    assert seeded_id != plain_id
-    assert kept_id == seeded_id
-    assert back_id == plain_id
+    assert seeded.run_id != plain.run_id
+    assert kept.run_id == seeded.run_id
+    assert back.run_id == plain.run_id
 
 
 class Retiring:
