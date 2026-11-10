@@ -1,7 +1,7 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { type PointerEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { MathUtils, type PerspectiveCamera } from "three";
-
+import { Button } from "../design/Button";
 import { formatCount, formatMetres } from "../readouts";
 import type { SceneSnapshot } from "../scene/generated/snapshotTypes";
 import { SceneView } from "../scene/SceneView";
@@ -171,7 +171,8 @@ export function CameraView({
       </p>
       <div className="camera-tabs" role="tablist" aria-label="Camera passes">
         {PASS_ORDER.map((name) => (
-          <button
+          <Button
+            size="compact"
             key={name}
             type="button"
             role="tab"
@@ -179,7 +180,7 @@ export function CameraView({
             onClick={() => setPass(name)}
           >
             {PASS_LABELS[name]}
-          </button>
+          </Button>
         ))}
       </div>
       <div

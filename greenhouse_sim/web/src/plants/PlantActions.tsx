@@ -1,3 +1,4 @@
+import { Button } from "../design/Button";
 import type { SceneEntity } from "../scene/generated/snapshotTypes";
 import type { LabAction } from "./lab";
 
@@ -67,18 +68,18 @@ export function PlantActions({
   return (
     <fieldset className="plant-actions" aria-label="Plant actions">
       {choices.map(({ label, action }) => (
-        <button key={label} type="button" onClick={() => onAct(action)}>
+        <Button size="compact" key={label} type="button" onClick={() => onAct(action)}>
           {label}
-        </button>
+        </Button>
       ))}
       {scheduled > 0 && onUndo !== undefined && onClear !== undefined && (
         <>
-          <button type="button" onClick={onUndo}>
+          <Button size="compact" onClick={onUndo}>
             Take back the last action
-          </button>
-          <button type="button" onClick={onClear}>
+          </Button>
+          <Button size="compact" onClick={onClear}>
             Take back all {scheduled}
-          </button>
+          </Button>
         </>
       )}
     </fieldset>

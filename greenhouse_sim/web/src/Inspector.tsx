@@ -3,6 +3,7 @@ import { Quaternion, Vector3 } from "three";
 
 import { semanticType } from "./debug/categories";
 import type { OverlayToggles, SelectionToggles } from "./debug/overlays";
+import { Button } from "./design/Button";
 import { formatPoint, formatRotation, formatSize, formatValue } from "./readouts";
 import type { SceneEntity, Shape } from "./scene/generated/snapshotTypes";
 
@@ -132,9 +133,9 @@ export function Inspector({
           </label>
         ))}
       </fieldset>
-      <button type="button" onClick={onClear}>
+      <Button size="compact" onClick={onClear}>
         Clear selection
-      </button>
+      </Button>
     </section>
   );
 }

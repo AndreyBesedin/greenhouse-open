@@ -1,4 +1,5 @@
 import { dayCount } from "../clock";
+import { Button } from "../design/Button";
 import { useLoad } from "../useLoad";
 import {
   describeEnvironment,
@@ -82,13 +83,13 @@ export function LabControls({
         <span data-testid="plant-day">{shownDay === null ? "…" : `${dayCount(shownDay)} in`}</span>
       </label>
       <div className="lab-control">
-        <button
-          type="button"
+        <Button
+          size="compact"
           onClick={() => onPlaying(!playing)}
           disabled={!playing && run.day >= PLANT_LAB_LAST_DAY}
         >
           {playing ? "Pause the run" : "Play the run"}
-        </button>
+        </Button>
         <label>
           Growth speed{" "}
           <select
@@ -125,9 +126,9 @@ export function LabControls({
             }
           }}
         />
-        <button type="button" onClick={() => onChange({ seed: run.seed + 1 })}>
+        <Button size="compact" onClick={() => onChange({ seed: run.seed + 1 })}>
           Another seed
-        </button>
+        </Button>
       </label>
       {environments.status === "unavailable" && (
         <p role="alert">The lab's environments are not available: {environments.reason}.</p>

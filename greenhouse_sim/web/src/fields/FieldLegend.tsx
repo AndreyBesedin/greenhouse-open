@@ -1,4 +1,5 @@
 import { SCALAR_STOPS, type ScalarRange } from "../debug/scalar";
+import { Button } from "../design/Button";
 import { formatValue } from "../readouts";
 
 /** What a field's colours mean: the quantity, its unit, and the range the
@@ -49,9 +50,9 @@ export function FieldLegend({
         />
       </div>
       {changed && (
-        <button type="button" onClick={() => onRange(null)}>
+        <Button size="compact" onClick={() => onRange(null)}>
           The field's own range
-        </button>
+        </Button>
       )}
     </figure>
   );

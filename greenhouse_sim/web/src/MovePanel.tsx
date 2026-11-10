@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-
+import { Button } from "./design/Button";
+import { Fold } from "./design/Fold";
 import { type Offset, SNAP_DECIMALS, SNAP_M } from "./scene/moves";
 
 /** A distance moved along an axis, signed, to the snap. */
@@ -73,9 +74,9 @@ export function MovePanel({
       )}
       {draft === null ? (
         <div className="move-actions">
-          <button type="button" onClick={onMove}>
+          <Button size="compact" onClick={onMove}>
             Move
-          </button>
+          </Button>
         </div>
       ) : (
         <Session
@@ -152,14 +153,13 @@ function Session({
   return (
     <div className="move-session" ref={root}>
       <p data-testid="move-new-run">{newRun(forking)}</p>
-      <details className="move-details">
-        <summary>How moving works</summary>
+      <Fold className="move-details" summary={"How moving works"}>
         <p className="move-hint">
           Moving equipment changes the house's climate, so the moves make a new run, which keeps the
           heating targets changed in the run. An item moves as far as the pointer does, along the
           floor, in 10 cm steps, and stays inside the house. Escape cancels a drag, or the moves.
         </p>
-      </details>
+      </Fold>
       {moves.length === 0 ? (
         <p data-testid="move-list">Everything stands where its layout places it.</p>
       ) : (
@@ -167,14 +167,14 @@ function Session({
           {moves.map(({ item, label, by }) => (
             <li key={item}>
               {label}: {along(by.dx, "x")} and {along(by.dy, "y")}{" "}
-              <button
-                type="button"
+              <Button
+                size="compact"
                 aria-label={`Put the ${label} back`}
                 disabled={applying}
                 onClick={() => onPutBack(item)}
               >
                 Put back
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
@@ -193,7 +193,8 @@ function Session({
               : "The run starts again from its first day with these moves; the moment reached is left behind."}
           </p>
           <div className="move-actions">
-            <button
+            <Button
+              size="compact"
               ref={confirm}
               type="button"
               disabled={!changed}
@@ -203,15 +204,16 @@ function Session({
               }}
             >
               {forking ? "Make the fork" : "Start the new run"}
-            </button>
-            <button type="button" onClick={() => setConfirming(false)}>
+            </Button>
+            <Button size="compact" onClick={() => setConfirming(false)}>
               Back to the moves
-            </button>
+            </Button>
           </div>
         </fieldset>
       ) : (
         <div className="move-actions">
-          <button
+          <Button
+            size="compact"
             ref={apply}
             type="button"
             disabled={!changed || applying}
@@ -224,17 +226,17 @@ function Session({
               : applying
                 ? "Starting the new run…"
                 : "Start a new run with these moves"}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            size="compact"
             disabled={moves.length === 0 || applying}
             onClick={onPutEverythingBack}
           >
             Put everything back
-          </button>
-          <button type="button" disabled={applying} onClick={onCancel}>
+          </Button>
+          <Button size="compact" disabled={applying} onClick={onCancel}>
             Cancel
-          </button>
+          </Button>
         </div>
       )}
     </div>
