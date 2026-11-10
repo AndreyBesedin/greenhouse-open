@@ -110,9 +110,6 @@ interface Ahead {
  * position has reached it, when the simulator has its grid run and answers
  * it, and the glazing and openings that wait on that run, at once (P22.6).
  * The position going back, or no longer playing, leaves the moment ahead.
- *
- * The run's own play stands aside (`onClockMoved`), as it does for a run
- * followed as it is played back.
  */
 export function useReplayMoment({
   momentS,
@@ -122,7 +119,6 @@ export function useReplayMoment({
   field,
   fieldShownMoment,
   fieldFailed,
-  onClockMoved,
   fetchFn = fetch,
 }: {
   /** The position's moment, or null while there is none. */
@@ -135,7 +131,6 @@ export function useReplayMoment({
   field: string | null;
   fieldShownMoment: number | null;
   fieldFailed: boolean;
-  onClockMoved: () => void;
   fetchFn?: typeof fetch;
 }) {
   const waitsForField = field === CLIMATE_FIELD;
@@ -208,11 +203,10 @@ export function useReplayMoment({
       return;
     }
     setAhead(null);
-    onClockMoved();
     setSource((current) =>
       current.kind === "scenario" ? withTime(current, drawnAheadS) : current,
     );
-  }, [drawnAheadS, onClockMoved, setSource]);
+  }, [drawnAheadS, setSource]);
 
   // Otherwise, the position's own moment, once the one asked before has arrived.
   const followsPosition = !goesAhead || behind || (ahead === null && aheadS === null);
@@ -220,7 +214,6 @@ export function useReplayMoment({
     if (!followsPosition || momentS === null || asked === null || momentS === asked || !arrived) {
       return;
     }
-    onClockMoved();
     setSource((current) => (current.kind === "scenario" ? withTime(current, momentS) : current));
-  }, [followsPosition, momentS, asked, arrived, onClockMoved, setSource]);
+  }, [followsPosition, momentS, asked, arrived, setSource]);
 }

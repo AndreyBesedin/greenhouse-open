@@ -144,14 +144,6 @@ test("solar-day: the solar lab through its clear equinox day", async ({ page }) 
     await expect(page.getByTestId("plant-par")).toHaveText("1069 µmol/m²/s", ARRIVES);
   });
 
-  await test.step("played, the day moves on", async () => {
-    await at(page, LAB, NOON.seconds - 5 * 60, "12 h 45 min");
-    const run = page.getByRole("group", { name: "Climate run" });
-    await run.getByRole("button", { name: "Play" }).click();
-    await expect(page.getByTestId("climate-time")).toHaveText(NOON.shown, ARRIVES);
-    await run.getByRole("button", { name: "Pause" }).click();
-  });
-
   await test.step("the clouds move the light from the sun's beam to the sky's", async () => {
     await at(page, LAB, NOON.seconds, NOON.shown);
     await openWeather(page);

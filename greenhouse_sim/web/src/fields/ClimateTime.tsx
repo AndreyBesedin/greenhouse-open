@@ -4,23 +4,11 @@ import { DAY_S, dayNumber, dayStart, runDay } from "../clock";
 import { Button } from "../design/Button";
 
 // The time of day moves a minute at a time.
-export const CLIMATE_STEP_S = 60;
-// Playing moves a minute at a time through the first hour, and five minutes
-// at a time after it, so that a day plays in a few minutes.
-export const PLAY_LATER_STEP_S = 300;
+const CLIMATE_STEP_S = 60;
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3600;
 const MINUTE_DIGITS = 2;
-// Playing, the run moves on a step this long after each moment arrives.
-const PLAY_PAUSE_MS = 400;
 const MS_PER_S = 1000;
-/** How far each step of play moves, to choose from: the first, a day in a
- * few minutes; the last, the same time of day, day after day. */
-export const PACES: readonly { stepS: number; label: string }[] = [
-  { stepS: PLAY_LATER_STEP_S, label: "5 min a step" },
-  { stepS: SECONDS_PER_HOUR, label: "1 h a step" },
-  { stepS: DAY_S, label: "1 day a step" },
-];
 
 /** A moment of a climate run, as the viewer writes it: `10 min` in its
  * first hour, `5 h 05 min` after it, and, on a later day, its day before
@@ -58,12 +46,6 @@ export function describeClimateRun(
   return failed
     ? `Climate run: ${drawn}${describe(time)} cannot be drawn`
     : `Climate run: ${drawn}loading ${describe(time)}…`;
-}
-
-/** How far play moves on from a moment, at a pace (`PACES`): at the first,
- * a minute at a time through the run's first hour. */
-export function playStep(seconds: number, paceS: number = PLAY_LATER_STEP_S): number {
-  return paceS === PLAY_LATER_STEP_S && seconds < SECONDS_PER_HOUR ? CLIMATE_STEP_S : paceS;
 }
 
 /** The moment at a time of day on another day of a run. A later day begins
@@ -106,17 +88,16 @@ export const REPLAYED_NOTE = "The replay's timeline under the view moves this mo
 
 /**
  * How far into its climate run a scenario's climate is drawn: a slider over
- * the moment's day, a minute at a time; through a run of several days, a
- * slider over its days, with a step either way; and play, which moves on
- * once the last moment asked for has arrived (`playStep`), at the pace
- * chosen, until the run's end. The moment shown is the one drawn; while
- * another is on its way, it says which and for how long, so that a slow
- * step is never taken for one that does nothing (#198, #202). A moment
- * that cannot be drawn stops play.
+ * the moment's day, a minute at a time, and, through a run of several days,
+ * a slider over its days, with a step either way. It has no play of its
+ * own: a run computed and kept is watched in a replay (decision 0074). The
+ * moment shown is the one drawn; while another is on its way, it says which
+ * and for how long, so that a slow step is never taken for one that does
+ * nothing (#198, #202).
  *
  * Followed, as a replay's timeline moves the moment on (P17.6), the climate
- * run's play, sliders, day steps and pace stand aside, and say so, so that
- * none shows a state the run is not in (#270).
+ * run's sliders and day steps stand aside, and say so, so that none shows a
+ * state the run is not in (#270).
  */
 export function ClimateTime({
   time,
@@ -126,9 +107,7 @@ export function ClimateTime({
   followedNote = REPLAYED_NOTE,
   describe = describeTime,
   days,
-  playing,
   onTime,
-  onPlaying,
 }: {
   /** The moment asked for, in seconds. */
   time: number;
@@ -137,8 +116,7 @@ export function ClimateTime({
   /** Whether the moment asked for cannot be drawn, which the scene's status
    * says why. */
   failed?: boolean;
-  /** Whether something else moves the moment on in place of this play: a
-   * replay's timeline. */
+  /** Whether something else moves the moment on: a replay's timeline. */
   followed?: boolean;
   /** What is said in place of this moment's controls, when it is followed. */
   followedNote?: string;
@@ -146,36 +124,11 @@ export function ClimateTime({
   describe?: (seconds: number) => string;
   /** How many days the run lasts. */
   days: number;
-  playing: boolean;
   onTime: (seconds: number) => void;
-  onPlaying: (playing: boolean) => void;
 }) {
-  const [pace, setPace] = useState(PLAY_LATER_STEP_S);
-  const end = days * DAY_S;
   const arrived = shown === time;
   const waiting = !arrived && !failed;
   const waited = useSecondsWaited(time, waiting);
-  // Play stops at a moment that cannot be drawn, and once something else
-  // moves the moment on: two plays would move it at once.
-  useEffect(() => {
-    if (playing && (failed || followed)) {
-      onPlaying(false);
-    }
-  }, [playing, failed, followed, onPlaying]);
-  useEffect(() => {
-    if (!playing || !arrived || followed) {
-      return;
-    }
-    if (time >= end) {
-      onPlaying(false);
-      return;
-    }
-    const next = setTimeout(
-      () => onTime(Math.min(time + playStep(time, pace), end)),
-      PLAY_PAUSE_MS,
-    );
-    return () => clearTimeout(next);
-  }, [playing, arrived, followed, time, end, pace, onTime, onPlaying]);
 
   const day = runDay(time);
   const within = time - dayStart(time);
@@ -183,21 +136,16 @@ export function ClimateTime({
     <fieldset className="climate-time" aria-label="Climate run">
       <div className="climate-time-row">
         {!followed && (
-          <>
-            <Button size="compact" onClick={() => onPlaying(!playing)}>
-              {playing ? "Pause" : "Play"}
-            </Button>
-            <input
-              className="climate-time-slider"
-              type="range"
-              aria-label="Time of day"
-              min={day === 0 ? 0 : CLIMATE_STEP_S}
-              max={DAY_S}
-              step={CLIMATE_STEP_S}
-              value={within}
-              onChange={(event) => onTime(onDay(day, Number(event.target.value)))}
-            />
-          </>
+          <input
+            className="climate-time-slider"
+            type="range"
+            aria-label="Time of day"
+            min={day === 0 ? 0 : CLIMATE_STEP_S}
+            max={DAY_S}
+            step={CLIMATE_STEP_S}
+            value={within}
+            onChange={(event) => onTime(onDay(day, Number(event.target.value)))}
+          />
         )}
         <span data-testid="climate-time">{describe(shown ?? time)}</span>
       </div>
@@ -206,16 +154,16 @@ export function ClimateTime({
           {followedNote}
         </p>
       )}
-      {/* While the run plays, or the view follows it, the line keeps its place
-          between one moment's loading and the next's, so that the rows below
-          stay where they are (#301); only its words are shown or not. */}
-      {(waiting || ((playing || followed) && !failed)) && (
+      {/* While the view follows a replay, the line keeps its place between
+          one moment's loading and the next's, so that the rows below stay
+          where they are (#301); only its words are shown or not. */}
+      {(waiting || (followed && !failed)) && (
         <p
           className={waiting ? "climate-time-note" : "climate-time-note climate-time-idle"}
           data-testid={waiting ? "climate-pending" : undefined}
           aria-hidden={waiting ? undefined : true}
         >
-          {playing ? "Playing: waiting for" : "Loading"} {describe(time)}… {waited} s
+          Loading {describe(time)}… {waited} s
         </p>
       )}
       {failed && !arrived && (
@@ -253,17 +201,6 @@ export function ClimateTime({
           >
             ▶
           </Button>
-          <select
-            aria-label="Pace"
-            value={pace}
-            onChange={(event) => setPace(Number(event.target.value))}
-          >
-            {PACES.map(({ stepS, label }) => (
-              <option key={stepS} value={stepS}>
-                {label}
-              </option>
-            ))}
-          </select>
         </div>
       )}
     </fieldset>

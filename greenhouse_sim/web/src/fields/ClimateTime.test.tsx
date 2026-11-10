@@ -6,15 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DAY_S } from "../clock";
 import { dayLabel } from "../replay/timeline";
 import { searchFor, sourceFromSearch } from "../scene/source";
-import { button, render, said, select } from "../testing/render";
-import {
-  ClimateTime,
-  describeClimateRun,
-  describeTime,
-  onDay,
-  playStep,
-  REPLAYED_NOTE,
-} from "./ClimateTime";
+import { render, said } from "../testing/render";
+import { ClimateTime, describeClimateRun, describeTime, onDay, REPLAYED_NOTE } from "./ClimateTime";
 import { fieldUrl } from "./source";
 
 const ignore = () => undefined;
@@ -43,17 +36,6 @@ describe("a climate run's moment", () => {
     expect(describeTime(noon)).toBe("day 4, 12 h 00 min");
   });
 
-  it("plays a minute at a time through the first hour, and five after it", () => {
-    expect(playStep(600)).toBe(60);
-    expect(playStep(3600)).toBe(300);
-  });
-
-  it("plays at the pace chosen", () => {
-    expect(playStep(600, 3600)).toBe(3600);
-    expect(playStep(600, DAY_S)).toBe(DAY_S);
-    expect(playStep(DAY_S + 600)).toBe(300);
-  });
-
   it("keeps its time of day on another day, a later day's from a minute after midnight", () => {
     expect(onDay(3, 600)).toBe(3 * DAY_S + 600);
     expect(onDay(0, 0)).toBe(0);
@@ -61,16 +43,9 @@ describe("a climate run's moment", () => {
     expect(onDay(2, DAY_S)).toBe(3 * DAY_S);
   });
 
-  it("is chosen on a slider over the day, a minute at a time, and played", () => {
+  it("is chosen on a slider over the day, a minute at a time, with no play of its own", () => {
     const html = renderToStaticMarkup(
-      <ClimateTime
-        time={600}
-        shown={540}
-        days={1}
-        playing={false}
-        onTime={ignore}
-        onPlaying={ignore}
-      />,
+      <ClimateTime time={600} shown={540} days={1} onTime={ignore} />,
     );
 
     expect(html).toContain('aria-label="Climate run"');
@@ -79,21 +54,15 @@ describe("a climate run's moment", () => {
     );
     // Until the moment asked for arrives, the one drawn is shown.
     expect(html).toContain('data-testid="climate-time">9 min<');
-    expect(html).toContain(">Play</button>");
+    // A run computed and kept is watched in a replay (decision 0074).
+    expect(html).not.toContain("<button");
     // A run of a day has no days to choose.
     expect(html).not.toContain("Day of the run");
   });
 
-  it("is chosen on a day of a longer run, a day at a time, at a pace", () => {
+  it("is chosen on a day of a longer run, a day at a time", () => {
     const html = renderToStaticMarkup(
-      <ClimateTime
-        time={3 * DAY_S + 600}
-        shown={3 * DAY_S + 600}
-        days={14}
-        playing={false}
-        onTime={ignore}
-        onPlaying={ignore}
-      />,
+      <ClimateTime time={3 * DAY_S + 600} shown={3 * DAY_S + 600} days={14} onTime={ignore} />,
     );
 
     expect(html).toContain(
@@ -106,30 +75,15 @@ describe("a climate run's moment", () => {
     expect(html).toContain('data-testid="climate-time">day 4, 10 min<');
     expect(html).toContain('aria-label="Previous day">');
     expect(html).toContain('aria-label="Next day">');
-    expect(html).toContain('<select aria-label="Pace">');
-    expect(html).toContain(">1 day a step</option>");
+    expect(html).not.toContain("<select");
   });
 
   it("can go no day past its first or its last", () => {
     const first = renderToStaticMarkup(
-      <ClimateTime
-        time={600}
-        shown={600}
-        days={2}
-        playing={false}
-        onTime={ignore}
-        onPlaying={ignore}
-      />,
+      <ClimateTime time={600} shown={600} days={2} onTime={ignore} />,
     );
     const last = renderToStaticMarkup(
-      <ClimateTime
-        time={DAY_S + 600}
-        shown={DAY_S + 600}
-        days={2}
-        playing={false}
-        onTime={ignore}
-        onPlaying={ignore}
-      />,
+      <ClimateTime time={DAY_S + 600} shown={DAY_S + 600} days={2} onTime={ignore} />,
     );
 
     expect(first).toContain('aria-label="Previous day" disabled="">');
@@ -188,11 +142,9 @@ describe("a climate run's moment on its way", () => {
     time: number;
     shown: number | null;
     failed?: boolean;
-    playing?: boolean;
     followed?: boolean;
   }) {
-    const { playing = false, ...rest } = props;
-    return <ClimateTime {...rest} days={14} playing={playing} onTime={ignore} onPlaying={ignore} />;
+    return <ClimateTime {...props} days={14} onTime={ignore} />;
   }
 
   it("says which moment it is loading, and for how long, beside the one drawn", () => {
@@ -208,33 +160,31 @@ describe("a climate run's moment on its way", () => {
     view.unmount();
   });
 
-  it("says play is waiting for it, and counts afresh for the next", () => {
-    const view = render(clock({ time: DAY_S + 600, shown: 600, playing: true }));
+  it("counts afresh for the next moment asked for", () => {
+    const view = render(clock({ time: DAY_S + 600, shown: 600 }));
     act(() => {
       vi.advanceTimersByTime(5_000);
     });
 
-    view.rerender(clock({ time: 2 * DAY_S + 600, shown: DAY_S + 600, playing: true }));
+    view.rerender(clock({ time: 2 * DAY_S + 600, shown: DAY_S + 600 }));
 
-    expect(said(view.container, "climate-pending")).toBe("Playing: waiting for day 3, 10 min… 0 s");
+    expect(said(view.container, "climate-pending")).toBe("Loading day 3, 10 min… 0 s");
     view.unmount();
   });
 
-  it("keeps the loading line's place between loads while the run plays or is followed (#301)", () => {
+  it("keeps the loading line's place between loads while a replay is followed (#301)", () => {
     const notes = (container: HTMLElement) => container.querySelectorAll(".climate-time-note");
-    for (const way of [{ playing: true }, { followed: true }]) {
-      const view = render(clock({ time: DAY_S + 600, shown: 600, ...way }));
-      const loading = notes(view.container).length;
+    const view = render(clock({ time: DAY_S + 600, shown: 600, followed: true }));
+    const loading = notes(view.container).length;
 
-      view.rerender(clock({ time: DAY_S + 600, shown: DAY_S + 600, ...way }));
+    view.rerender(clock({ time: DAY_S + 600, shown: DAY_S + 600, followed: true }));
 
-      // The same lines, the loading one kept, unseen and unread.
-      expect(notes(view.container)).toHaveLength(loading);
-      const idle = view.container.querySelector(".climate-time-idle");
-      expect(idle?.getAttribute("aria-hidden")).toBe("true");
-      expect(said(view.container, "climate-pending")).toBeNull();
-      view.unmount();
-    }
+    // The same lines, the loading one kept, unseen and unread.
+    expect(notes(view.container)).toHaveLength(loading);
+    const idle = view.container.querySelector(".climate-time-idle");
+    expect(idle?.getAttribute("aria-hidden")).toBe("true");
+    expect(said(view.container, "climate-pending")).toBeNull();
+    view.unmount();
   });
 
   it("keeps no line for loading once a moment has arrived, at rest", () => {
@@ -252,23 +202,9 @@ describe("a climate run's moment on its way", () => {
     view.unmount();
   });
 
-  it("stops play when it cannot be drawn, and says which moment is drawn instead", () => {
-    // Play waits for the moment asked for, which a failure never brings:
-    // waiting on, it would look stuck (#202).
-    const onPlaying = vi.fn();
-    const view = render(
-      <ClimateTime
-        time={DAY_S + 600}
-        shown={600}
-        failed
-        days={14}
-        playing
-        onTime={ignore}
-        onPlaying={onPlaying}
-      />,
-    );
+  it("says, when it cannot be drawn, which moment is drawn instead", () => {
+    const view = render(clock({ time: DAY_S + 600, shown: 600, failed: true }));
 
-    expect(onPlaying).toHaveBeenCalledExactlyOnceWith(false);
     expect(said(view.container, "climate-pending")).toBeNull();
     expect(said(view.container, "climate-failed")).toBe(
       "Day 2, 10 min cannot be drawn; 10 min is shown.",
@@ -306,29 +242,12 @@ describe("a climate run's moment, in a view that follows the run played back", (
   });
 
   function followed(props: { time: number; shown: number | null; failed?: boolean }) {
-    return (
-      <ClimateTime
-        {...props}
-        followed
-        days={14}
-        playing={false}
-        onTime={ignore}
-        onPlaying={ignore}
-      />
-    );
+    return <ClimateTime {...props} followed days={14} onTime={ignore} />;
   }
 
   it("leaves its controls to a replay's timeline, and says that one in the run's place (P17.6)", () => {
     const view = render(
-      <ClimateTime
-        time={DAY_S}
-        shown={DAY_S}
-        followed
-        days={14}
-        playing={false}
-        onTime={ignore}
-        onPlaying={ignore}
-      />,
+      <ClimateTime time={DAY_S} shown={DAY_S} followed days={14} onTime={ignore} />,
     );
 
     expect(view.container.querySelectorAll("button, input, select")).toHaveLength(0);
@@ -336,29 +255,20 @@ describe("a climate run's moment, in a view that follows the run played back", (
     expect(REPLAYED_NOTE).not.toContain("Stop following");
   });
 
-  it("leaves play, the sliders, the day steps and the pace to what follows it, and gets them back", () => {
-    // A play of the climate run's own, or a slider over one day, would say a
-    // state the run is not in (#270).
+  it("leaves the sliders and the day steps to what follows it, and gets them back", () => {
+    // A slider over one day would say a state the run is not in (#270).
     const view = render(followed({ time: 3 * DAY_S + 600, shown: 3 * DAY_S + 600 }));
 
     expect(view.container.querySelectorAll("button, input, select")).toHaveLength(0);
     expect(said(view.container, "climate-time")).toBe("day 4, 10 min");
     expect(said(view.container, "climate-followed")).toBe(REPLAYED_NOTE);
-    // No longer followed, its own play and sliders are back.
+    // No longer followed, its sliders and day steps are back.
     view.rerender(
-      <ClimateTime
-        time={3 * DAY_S + 600}
-        shown={3 * DAY_S + 600}
-        days={14}
-        playing={false}
-        onTime={ignore}
-        onPlaying={ignore}
-      />,
+      <ClimateTime time={3 * DAY_S + 600} shown={3 * DAY_S + 600} days={14} onTime={ignore} />,
     );
 
-    expect(button(view.container, "Play")).toBeDefined();
     expect(view.container.querySelectorAll('input[type="range"]')).toHaveLength(2);
-    expect(select(view.container, "Pace")).toBeDefined();
+    expect(view.container.querySelectorAll("button")).toHaveLength(2);
     expect(said(view.container, "climate-followed")).toBeNull();
     view.unmount();
   });
@@ -377,26 +287,24 @@ describe("a climate run's moment, in a view that follows the run played back", (
     view.unmount();
   });
 
-  it("never plays on by itself: a play under way when following began stops, asking for nothing", () => {
-    const onTime = vi.fn();
-    const onPlaying = vi.fn();
-    const view = render(
-      <ClimateTime
-        time={DAY_S + 600}
-        shown={DAY_S + 600}
-        followed
-        days={14}
-        playing
-        onTime={onTime}
-        onPlaying={onPlaying}
-      />,
-    );
-    act(() => {
-      vi.advanceTimersByTime(5_000);
-    });
+  it("never moves the moment on by itself, followed or not", () => {
+    for (const followed of [true, false]) {
+      const onTime = vi.fn();
+      const view = render(
+        <ClimateTime
+          time={DAY_S + 600}
+          shown={DAY_S + 600}
+          followed={followed}
+          days={14}
+          onTime={onTime}
+        />,
+      );
+      act(() => {
+        vi.advanceTimersByTime(5_000);
+      });
 
-    expect(onPlaying).toHaveBeenCalledExactlyOnceWith(false);
-    expect(onTime).not.toHaveBeenCalled();
-    view.unmount();
+      expect(onTime).not.toHaveBeenCalled();
+      view.unmount();
+    }
   });
 });
