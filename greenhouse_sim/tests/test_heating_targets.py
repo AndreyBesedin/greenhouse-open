@@ -3,8 +3,7 @@ heats to them from then, the house's air within its band; the changes are
 part of the run, so that another target makes another run and the same
 targets the same run; a checkpoint keeps those before its day; a
 playback's run, steered while it plays, keeps its identity and epoch and
-rewrites nothing it delivered (decision 0043); and started over with its
-equipment moved, it keeps them (decision 0049)."""
+rewrites nothing it delivered (decision 0043)."""
 
 import sys
 from collections.abc import Callable, Iterator
@@ -21,15 +20,14 @@ from greenhouse_sim.climate.thermostat import Thermostat
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.equipment import Target
 from greenhouse_sim.scenarios.catalogue import PACKAGED
-from greenhouse_sim.services import checkpoints, playback
+from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.climate_readings import house_air_at
 from greenhouse_sim.services.climate_runs import climate_run
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.fields import air_through_a_run
 from greenhouse_sim.services.heat_log import heat_records
-from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
+from greenhouse_sim.services.playback import Playback, PlaybackCommand
 from greenhouse_sim.services.runs import RunPlan, RunRequest
-from greenhouse_sim.services.scenarios import layout_name
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import HOUR_S
@@ -44,8 +42,6 @@ DAY_FROM_S: Final = 7 * HOUR_S
 WARMER: Final = ((DAY_FROM_S, "heating_day", 24.0),)
 EVERY_S: Final = 300.0
 ALL: Final = 10**6
-# Its right fan moved, as the viewer writes it (#271).
-FAN_MOVED: Final = "default~fan_right:-0.2:-2.9"
 
 
 class Clock:
@@ -276,63 +272,3 @@ def test_a_target_set_while_the_run_plays_steers_it_from_the_next_minute(
     assert [r.value for r in delivered_heat] == [warmer[6].value]
     # Started over, it is the scenario's own run again.
     assert played.command(PlaybackCommand.RESTART).targets == []
-
-
-def test_a_run_started_over_with_moves_keeps_its_target_changes(
-    played_on: Simulator, tmp_path: Path
-) -> None:
-    """Moving equipment while the run plays starts it over from its first
-    day, the same run rearranged: a target changed in it holds from its
-    moment in the new run too (decision 0049). Started over as it is, the
-    run drops its changes, as decision 0043 has it."""
-    clock = Clock()
-    playback.start(played_on, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
-    change = (60.0, "heating_day", 24.0)
-    assert playback.set_targets(played_on, SCENARIO, {"heating_day": 24.0}).targets == [change]
-
-    moved = playback.command(played_on, SCENARIO, PlaybackCommand.RESTART, FAN_MOVED)
-
-    moved_layout = layout_name(FAN_MOVED)
-    assert (moved.layout, moved.epoch) == (moved_layout, 0)
-    assert (moved.time_s, moved.targets) == (0.0, [change])
-    # What it delivers is the rearranged run with the change: the same heat
-    # through the night, more once the day's target holds.
-    played = playback.playback(played_on, SCENARIO)
-    assert played.wait_for(1, timeout_s=300)
-    clock.now += 24.0
-    delivered = {r.observation_id: r.value for r in played.records_after(0, ALL).records}
-    start, run_id = run_start(PACKAGED, SCENARIO), moved.run_id
-    with_change = RunRequest(
-        SCENARIO, layout=moved_layout, plan=RunPlan.requested(targets=(change,))
-    )
-    kept = heat_records(played_on, with_change, 0, start, run_id)
-    dropped = heat_records(played_on, RunRequest(SCENARIO, layout=moved_layout), 0, start, run_id)
-    assert [delivered[record.observation_id] for record in kept] == [r.value for r in kept]
-    night = int(DAY_FROM_S // HOUR_S)
-    assert [r.value for r in kept[:night]] == [r.value for r in dropped[:night]]
-    assert sum(r.value for r in kept) > sum(r.value for r in dropped)
-
-    again = playback.command(played_on, SCENARIO, PlaybackCommand.RESTART)
-    assert (again.layout, again.targets) == (moved_layout, [])
-
-
-def test_a_target_changed_while_moves_replace_the_playback_is_kept(
-    simulator: Simulator, tmp_path: Path, no_playbacks: Callable[[], None]
-) -> None:
-    """A request that found the playback before moves replaced it, and
-    changes its targets only once the replacement has taken them, is not
-    lost: the playback replaced hands the change to the one in its place,
-    which plays the moved run with it (decision 0049)."""
-    clock = Clock()
-    playback.start(simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
-    replaced = playback.playback(simulator, SCENARIO)
-    # A restart with moves has made the playback to put in its place, its
-    # targets taken, and not yet put it there.
-    replacing = replaced.rearranged(layout_name(FAN_MOVED))
-
-    late = replaced.set_targets({"heating_day": 24.0})
-
-    change = (60.0, "heating_day", 24.0)
-    assert (late.layout, late.targets) == (layout_name(FAN_MOVED), [change])
-    assert replacing.state().targets == [change]
-    assert replaced.state().targets == []

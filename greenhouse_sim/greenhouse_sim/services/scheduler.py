@@ -43,9 +43,7 @@ started it is gone is found at startup (`interrupted.mark`).
 A worker this scheduler started is stopped by a signal, and is gone when the
 answer is given. One it did not start, such as a worker left computing by a
 server that was killed, is out of reach of any signal and may be on another
-machine: it is asked through the store, and stops at its next look. An epoch a
-playback of this simulator plays has no worker: its playback is stopped
-(`cancel`), and it ends as if it had one.
+machine: it is asked through the store, and stops at its next look.
 """
 
 import logging
@@ -71,7 +69,6 @@ from greenhouse_sim.services.limits import (
     too_little_disk,
     too_many_waiting,
 )
-from greenhouse_sim.services.playback import stop_epoch
 from greenhouse_sim.services.resources import lower_priority, this_process
 from greenhouse_sim.services.run_store import (
     ENDED,
@@ -697,8 +694,5 @@ def fork(
 
 
 def cancel(simulator: Simulator, run_id: str, epoch: int) -> StoredRun:
-    """An epoch ended, or asked to end: by stopping the playback that has it, which
-    needs no scheduler, on a store of any kind (`playback.stop_epoch`), or else by
-    its scheduler (`Scheduler.cancel`)."""
-    stopped = stop_epoch(simulator, run_id, epoch)
-    return of(simulator).cancel(run_id, epoch) if stopped is None else stopped
+    """An epoch ended, or asked to end, by its scheduler (`Scheduler.cancel`)."""
+    return of(simulator).cancel(run_id, epoch)

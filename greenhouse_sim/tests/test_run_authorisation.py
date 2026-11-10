@@ -25,7 +25,6 @@ from greenhouse_protocol.plan import At, Plan, PlannedAction
 
 from greenhouse_sim.api import server
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.services import playback
 from greenhouse_sim.services.checkpoints import read_checkpoint
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.gateway import (
@@ -177,7 +176,7 @@ def test_one_change_of_a_simulators_authorisation_at_a_time(
     finishes_beside_held: Callable[[AbstractContextManager[bool], Callable[[], object]], bool],
 ) -> None:
     """A change waits while another is being made, so that the simulator's
-    authorisation and every playback's take the changes in one order."""
+    authorisation and every epoch's take the changes in one order."""
     with Simulator() as simulator:
         assert not finishes_beside_held(
             simulator.authorising, lambda: simulator.authorise(LEVELS_ONLY)
@@ -185,27 +184,25 @@ def test_one_change_of_a_simulators_authorisation_at_a_time(
         assert simulator.authorisation == LEVELS_ONLY
 
 
-def test_an_authorisation_changed_while_runs_play_holds_from_then_and_is_recorded(
+def test_an_authorisation_changed_while_a_run_plays_holds_from_then_and_is_recorded(
     tmp_path: Path,
 ) -> None:
     with Simulator() as simulator:
-        playback.start(
-            simulator, SCENARIO, 24.0, clock=_Clock(), hold=True, epochs=Epochs(tmp_path)
+        played = Playback(
+            simulator, SCENARIO, seconds_per_day=24.0, clock=_Clock(), epochs=Epochs(tmp_path)
         )
-        played = playback.playback(simulator, SCENARIO)
         played.set_targets({"heating_night": 22.0})
 
-        simulator.authorise(LEVELS_ONLY)
+        played.authorise(LEVELS_ONLY)
 
         changes = played.plan(TARGETS_PLAN).authorisation
         assert [change.version for change in changes] == [1, 2]
         with pytest.raises(InvalidRequest, match="not authorised to set_target"):
             played.set_targets({"heating_day": 24.0})
-        # A playback started from then on takes it from its start, and so
-        # does one started over: its record begins again there.
+        # Started over, it keeps the authorisation in force: its record begins
+        # again there.
         played.command(PlaybackCommand.RESTART)
-        assert simulator.authorisation == LEVELS_ONLY
-        simulator.authorise(EVERY_KIND)
+        played.authorise(EVERY_KIND)
         played.command(PlaybackCommand.RESTART)
         played.set_targets({"heating_day": 24.0})
         assert [(c.version, c.at) for c in played.plan(TARGETS_PLAN).authorisation] == [
@@ -222,14 +219,15 @@ def test_a_change_whose_rights_are_withdrawn_before_it_falls_due_is_refused_then
     is refused, and the run goes on without it."""
     clock = _Clock()
     with Simulator() as simulator:
-        playback.start(simulator, SCENARIO, 24.0, clock=clock, hold=True, epochs=Epochs(tmp_path))
-        played = playback.playback(simulator, SCENARIO)
+        played = Playback(
+            simulator, SCENARIO, seconds_per_day=24.0, clock=clock, epochs=Epochs(tmp_path)
+        )
         assert played.work_day(0)
         played.command(PlaybackCommand.PLAY)
         clock.now = 6.0 + 30.0 / HOUR_S
         assert played.set_targets({"heating_night": 22.0}).targets != []
 
-        simulator.authorise(LEVELS_ONLY)
+        played.authorise(LEVELS_ONLY)
         assert played.work_day(0)
         clock.now = 7.0
 

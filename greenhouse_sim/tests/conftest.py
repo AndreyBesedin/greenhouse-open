@@ -15,8 +15,7 @@ A test that needs what the services keep forgotten asks for it here, never
 of a store itself (W9): `afresh` (or `afresh_module`, for a module's
 fixtures) has the module's simulator forget everything it keeps, before the
 test and whenever it calls it, and keep the scenarios' opening days again
-after it; `no_playbacks` stops every run the module's simulator plays back,
-and leaves the runs kept."""
+after it."""
 
 import gzip
 import json
@@ -31,7 +30,6 @@ from greenhouse_sim.cfd import runner
 from greenhouse_sim.scenarios.manifest_files import opening_file
 from greenhouse_sim.services import checkpoints
 from greenhouse_sim.services.checkpoints import load_openings
-from greenhouse_sim.services.playback import stop_playbacks
 from greenhouse_sim.services.simulator import Simulator
 
 
@@ -112,18 +110,6 @@ def simulator() -> Iterator[Simulator]:
     with Simulator() as made:
         load_openings(made)
         yield made
-
-
-@pytest.fixture
-def no_playbacks(simulator: Simulator) -> Iterator[Callable[[], None]]:
-    def stop() -> None:
-        stop_playbacks(simulator)
-
-    stop()
-    try:
-        yield stop
-    finally:
-        stop()
 
 
 @pytest.fixture

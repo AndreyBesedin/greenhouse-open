@@ -8,8 +8,7 @@ playing at a pace, paused, seeking to any moment up to the frontier, or
 following the frontier as it advances. It is not a clock the epoch keeps: any
 number of positions read one epoch, none changes it, and a seek is never a new
 epoch (so a viewer that scrubs moves nothing a consumer reads). An epoch still
-computing is played over what is computed; a position waits at its frontier,
-and goes no further while a playback holds that epoch's clock, as it says (`paused`).
+computing is played over what is computed; a position waits at its frontier.
 
 The scene at a position is drawn on demand, as the viewer's by-moment services
 draw any moment of a run: for the run the epoch's manifest names (`run`).
@@ -87,8 +86,9 @@ class PositionState(BaseModel):
     # (decision 0075). The viewer draws the scene under it.
     weather: str | None = None
     status: Status
-    # Its status is running, and a playback holds its clock: the frontier stands
-    # still until that plays on, however this position plays.
+    # Once said when a playback of the API's held its epoch's clock, which no
+    # playback does now (decision 0074): always false, until the viewer no
+    # longer reads it.
     paused: bool = False
     started_at: datetime
     simulated_now: datetime
@@ -175,10 +175,6 @@ class StoredEpoch:
 
     def status(self) -> Status:
         return self.store.manifest().status
-
-    def held(self) -> bool:
-        """Whether a playback of the simulator's holds its clock."""
-        return (self.run_id, self.epoch) in self._simulator.playbacks.held()
 
     def commits(self) -> list[Commit]:
         """Its commits, those read before kept: they are written once."""
@@ -371,7 +367,6 @@ class Position:
             seed=epoch.seed,
             weather=epoch.weather,
             status=self._status,
-            paused=self._status == Status.RUNNING and epoch.held(),
             started_at=epoch.start,
             simulated_now=epoch.start + timedelta(seconds=self._time_s),
             time_s=self._time_s,

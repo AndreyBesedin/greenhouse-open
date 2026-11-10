@@ -3,7 +3,7 @@ decision 0061): what a control policy reads of the run and gives it, as
 its own principal, by the protocol's contract
 (`greenhouse_protocol.contracts.policy`).
 
-A port is opened on a playback for one principal (`policy_port`). Every
+A port is opened on a playback for one principal (`RunPolicyPort`). Every
 plan, revision and cancellation it gives goes to the run's gateway as that
 principal; the authorisation in force decides the rest. It reads:
 
@@ -21,8 +21,8 @@ principal; the authorisation in force decides the rest. It reads:
 
 Its logs are its own. Each holds what its principal may read of the
 run's log, in the run's order, so its positions are not the run's, and
-its cursors are given and checked apart from the consumer interface's
-(`consumer.Cursors`), by the same rules. A new epoch starts them again.
+its cursors are given and checked by the consumer interface's rules
+(`consumer.Cursors`). A new epoch starts them again.
 
 The port is trusted code in the simulator's process, held to the contract
 by `check_policy_port` and to its imports by the repository's dependency
@@ -61,7 +61,7 @@ from greenhouse_sim.services.consumer import (
 )
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.forecasts import PERSISTENCE, Forecaster
-from greenhouse_sim.services.playback import Playbacks, PlaybackState, RecordsAfter
+from greenhouse_sim.services.playback import PlaybackState, RecordsAfter
 
 # How many of the run's records a port reads at once, catching up.
 READ_AT_ONCE: Final = 5_000
@@ -396,15 +396,3 @@ class RunPolicyPort:
 
     def _owned(self, outcome: ActionOutcome, epoch: int) -> ActionOutcome | None:
         return outcome if self._played.owner_of(outcome) == self.principal else None
-
-
-def policy_port(
-    playbacks: Playbacks,
-    run_id: str,
-    principal: Principal,
-    *,
-    budget: InformationBudget = OBSERVATIONS_ONLY,
-) -> RunPolicyPort:
-    """A port for `principal` on the run `run_id` played back, under
-    `budget`; a run not played back is not found."""
-    return RunPolicyPort(playbacks.of_run(run_id), principal, budget=budget)

@@ -23,11 +23,10 @@ compressed JSON, read back as asked for.
 The run is the scenario's own: its weather and daily commands, as the
 viewer draws it when nothing is changed, and its own layout, or one of its
 layouts rearranged, its equipment and sensors moved (`world.moves`, #271).
-A playback started over with another layout plays that layout's run from
-its start: a new run, with an identity of its own, counting its own epochs.
-There is one playback a scenario, whose run a viewer following it can
-rearrange. A command given in the viewer makes another run, which the
-playback does not follow.
+Whoever plays a run makes its playback: a worker for each epoch it computes
+(`workers`), an experiment's runner (`experiment`), the policy's port's
+server (`api.policy_server`); the simulator keeps no book of them (decision
+0074).
 
 Its run carries out a plan (P13.3, decision 0046): it holds its run's
 plans in the protocol's gateway, on its clock, with the run as the executor
@@ -41,11 +40,9 @@ same until the change.
 Its run's targets, such as the heating setpoint by day, can be changed
 while it plays (#274, decision 0043): from the clock's next minute on, in
 the same run and epoch, as the local operator's plan of them, revised. They
-are part of its state, so that a viewer following it draws the same run. A
-restart, a new epoch of the scenario's own run, cancels what is pending and
-forgets the plans, and a run played to its end cancels what is left of
-them. Started over with its equipment moved, the run keeps its target
-changes, each at its moment: the same run, rearranged (decision 0049).
+are part of its state. A restart, a new epoch of the scenario's own run,
+cancels what is pending and forgets the plans, and a run played to its end
+cancels what is left of them.
 
 A change given to a run kept in the store is the epoch's own (P17.8, decision
 0065): it is written to the epoch's log, at the moment of the clock it is given
@@ -56,11 +53,6 @@ is the epoch's too (decision 0072): the authorisation it begins under, unless it
 is the local operator's, and each change of it, are entries of its log, so that
 the epoch carried on, or forked, decides every action under the rights in force
 when it was decided.
-
-An epoch it keeps is stopped as any other is (`stop_epoch`), whoever is watching
-and whether or not its clock moves: the playback goes, as if it had never been
-started, and the epoch reads interrupted with what it had committed, which is
-carried on, or deleted, as any is.
 """
 
 import gzip
@@ -151,22 +143,18 @@ from greenhouse_sim.services.interventions import (
 from greenhouse_sim.services.limits import LimitPassed
 from greenhouse_sim.services.policy_context import run_context
 from greenhouse_sim.services.run_store import (
-    ENDED,
     Answer,
     EpochManifest,
     EpochStore,
     FolderStore,
-    ForkOf,
     Kind,
     LogEntry,
     ObjectStore,
     Status,
-    StoredRun,
     compress,
     default_root,
     failure_reason,
     started_epochs,
-    stored_run,
 )
 from greenhouse_sim.services.runs import (
     Commanded,
@@ -177,10 +165,9 @@ from greenhouse_sim.services.runs import (
 )
 from greenhouse_sim.services.scenarios import SceneChanges, changed, layout_name, scenario
 from greenhouse_sim.services.sensors import Stopped, delivered_between, run_start
-from greenhouse_sim.services.stores import Store
 
 if TYPE_CHECKING:
-    # Typed only: the simulator owns the playbacks, and imports this module.
+    # Typed only: the simulator imports this module, through `stored_playback`.
     from greenhouse_sim.services.simulator import Simulator
 
 logger = logging.getLogger(__name__)
@@ -200,8 +187,8 @@ DAYS_READ_BACK: Final = 4
 READ_OUTCOMES_AT_ONCE: Final = 5_000
 # How often a wait for worked-out days looks again.
 WAIT_STEP_S: Final = 0.05
-# How long stopping waits for playbacks, in all: one stops at the moment it
-# is working out, which takes far less.
+# How long stopping waits for a playback: it stops at the moment it is
+# working out, which takes far less.
 STOP_WAIT_S: Final = 10.0
 # The local operator's plan of a run's target changes, revised at each.
 TARGETS_PLAN: Final = "targets"
@@ -263,8 +250,8 @@ def default_epochs() -> Epochs:
 
 class PlaybackFailed(Conflict):
     """Why a playback's run could not be worked out, as its epoch keeps it
-    (`failure_reason`), answered to whoever reads the playback until a start plays
-    the run again. The failure itself is logged once, as it happens."""
+    (`failure_reason`), answered to whoever reads the playback. The failure
+    itself is logged once, as it happens."""
 
 
 class PlaybackCommand(StrEnum):
@@ -298,10 +285,9 @@ class PlaybackState(BaseModel):
     seconds_per_day: float
     worked_out_s: float
     every_s: float
-    # The target changes its epoch's run has (#274, decision 0043), those
-    # given it and those of a run it was started over from with moves
-    # (decision 0049), as its plan holds them: each its moment in seconds,
-    # its target and its value in °C, as a run's `&targets=` writes them.
+    # The target changes its epoch's run has (#274, decision 0043), as its
+    # plan holds them: each its moment in seconds, its target and its value
+    # in °C, as a run's `&targets=` writes them.
     targets: list[tuple[float, str, float]] = []
     # The levels its epoch's run has been given, of its equipment, doors and
     # vents (P13.8), as its plan holds them: each its moment in seconds, its
@@ -431,8 +417,6 @@ class Playback:
         clock: Callable[[], float] = monotonic,
         epochs: Epochs | None = None,
         epoch: EpochStore | None = None,
-        fork: ForkOf | None = None,
-        first_epoch: int = FIRST_EPOCH,
     ) -> None:
         self._simulator = simulator
         config = scenario(simulator.catalogue, scenario_id)
@@ -470,10 +454,9 @@ class Playback:
         # The days worked out of both logs, appended together.
         self._worked: list[tuple[_Packed, _Packed]] = []
         # Counted on from the run's last epoch, if they are kept: a producer
-        # started again is a new epoch of its run, never its first again. With
-        # none kept, `first_epoch` is where the count stands.
+        # started again is a new epoch of its run, never its first again.
         self._epochs = epochs
-        self._epoch = first_epoch if epochs is None else epochs.next(self.run_id)
+        self._epoch = FIRST_EPOCH if epochs is None else epochs.next(self.run_id)
         if epoch is not None:
             # An epoch a worker was given, started already (`workers`): the
             # one this run is.
@@ -487,7 +470,7 @@ class Playback:
         # outcomes of it are written.
         self._store: EpochStore | None = epoch
         if epochs is not None:
-            self._store = self._open_epoch(epochs, fork)
+            self._store = self._open_epoch(epochs)
         self._stored_days = 0
         self._stored_outcomes = 0
         self._store_ended = False
@@ -554,15 +537,11 @@ class Playback:
             self._plan_targets(targets)
         self._stopped = threading.Event()
         self._failure: Exception | None = None
-        # The playback made to take its place, once one has taken its target
-        # changes (`rearranged`): every change asked of it from then on is
-        # that one's, so that none it acknowledges is lost.
-        self._successor: Playback | None = None
         self._worker = threading.Thread(
             target=self._work, name=f"playback of {self.run_id}", daemon=True
         )
 
-    def _open_epoch(self, epochs: Epochs, fork: ForkOf | None = None) -> EpochStore:
+    def _open_epoch(self, epochs: Epochs) -> EpochStore:
         """The epoch it is starting, in the run store, with its scenario's file,
         so that a worker can carry it on. A scenario that cannot be written as
         one still plays here, and its epoch says it keeps none."""
@@ -583,7 +562,6 @@ class Playback:
                 duration_s=self.end_s,
                 weather=self.weather,
                 created_at=datetime.now(UTC),
-                fork=fork,
                 scenario_file=scenario_file,
             )
         )
@@ -875,99 +853,16 @@ class Playback:
                 with self._lock:
                     return self._state()
 
-    def epoch_held(self) -> int | None:
-        """The epoch whose clock it holds, by a pause; none while it plays, once
-        its run has ended, or once it has said its epoch ended, which is then no
-        more its own: a worker may have taken it up."""
-        with self._lock:
-            over = self._playing or self._time_s >= self.end_s or self._store_ended
-            return None if over else self._epoch
-
-    def plays(self, layout: str | None, seed: int | None = None) -> bool:
-        """Whether it plays the run of `layout` at `seed`: its own layout,
-        when None, and the seed it has, when None."""
-        return (layout is None or layout_name(layout) == self.layout) and (
-            seed is None or seed == self.seed
-        )
-
-    def rearranged(self, layout: str, seed: int | None = None) -> Playback:
-        """A playback of the same scenario with `layout`, at the same pace and
-        cadence, on the same clock, with the same target changes, counting the
-        epochs of its own run where this one counts its: not begun. From then
-        on this one hands it every change asked of it, such as a target
-        changed by a request already under way, so that the run played next
-        has it. A layout refused makes none, and this one goes on as it was.
-        Asked for the run it plays, as of one that failed, it is that run's next
-        epoch without them, as a restart is."""
-        again = self.plays(layout, seed)
-        with self._lock:
-            replacing = Playback(
-                self._simulator,
-                self.scenario_id,
-                layout=layout,
-                seed=self.seed if seed is None else seed,
-                targets=() if again else self._executor.plan().targeted(),
-                seconds_per_day=self._seconds_per_day,
-                every_s=self.every_s,
-                clock=self._clock,
-                epochs=self._epochs,
-                fork=self._forked_as(layout, seed),
-                first_epoch=self._epoch + 1 if again else FIRST_EPOCH,
-            )
-            self._successor = replacing
-        return replacing
-
-    def _forked_as(self, layout: str, seed: int | None) -> ForkOf | None:
-        """What the run in its place is of it: a fork of its epoch, at its start,
-        if it is the same run rearranged (#271), which leaves this epoch in the
-        store as it was; nothing if it is at another seed, another run asked for."""
-        same_seed = seed is None or seed == self.seed
-        if self._epochs is None or not same_seed or layout_name(layout) == self.layout:
-            return None
-        return ForkOf(
-            run_id=self.run_id,
-            epoch=self._epoch,
-            at_s=0.0,
-            start_s=0.0,
-            # The authorisation it begins under, if its log says it, and the
-            # target changes it takes: the entries its log begins with.
-            inherited=int(started_under(self._simulator.authorisation) is not None)
-            + int(bool(self._executor.plan().targeted())),
-            layout=layout_name(layout),
-        )
-
-    def stop(self, *, wait: bool = True) -> None:
+    def stop(self) -> None:
         """Stops working days out, the one under way left at its next moment:
-        it returns when the worker has, `STOP_WAIT_S` at most, unless told
-        not to wait, so that nothing of the run goes on being worked out
-        beside whatever comes next, such as another run of the same crop."""
-        self.tell_to_stop()
-        if wait:
-            self.finish(monotonic() + STOP_WAIT_S)
-
-    def tell_to_stop(self) -> None:
-        """Works no other moment out."""
+        it returns when the worker has, `STOP_WAIT_S` at most, logged past
+        it, so that nothing of the run goes on being worked out beside
+        whatever comes next, such as another run of the same crop."""
         self._stopped.set()
-
-    @property
-    def failed(self) -> bool:
-        """Whether its work failed: it works no more out, and `state` says why.
-        Only a new playback plays its run again (`start`)."""
-        with self._lock:
-            return self._failure is not None
-
-    @property
-    def working(self) -> bool:
-        """Whether its worker is still working days out."""
-        return self._worker.is_alive()
-
-    def finish(self, deadline: float) -> None:
-        """Waits for the worker to end, until `deadline` (`time.monotonic`)
-        at most, logged past it."""
         worker = self._worker
         if not worker.is_alive() or worker is threading.current_thread():
             return
-        worker.join(max(0.0, deadline - monotonic()))
+        worker.join(STOP_WAIT_S)
         if worker.is_alive():
             logger.warning("%s did not stop within %g s", worker.name, STOP_WAIT_S)
 
@@ -1365,89 +1260,43 @@ class Playback:
             self._advance()
             return self._state()
 
-    def standing(self) -> PlaybackState | None:
-        """Where it stands, as `state` says, or None if it failed."""
-        with self._lock:
-            self._advance()
-            return None if self._failure is not None else self._state()
-
-    def has_epoch(self, run_id: str, epoch: int) -> bool:
-        """Whether this is the epoch it plays. Asked of every playback kept, and
-        so unlike `state`: it moves no clock and raises no failure of its own."""
-        with self._lock:
-            return (self.run_id, self._epoch) == (run_id, epoch)
-
-    def stop_if_working(self, run_id: str, epoch: int) -> bool:
-        """Tells it to stop if this is the epoch it works, and says whether it did:
-        one step, under the lock a restart moves its epoch under, so that a stop never
-        reaches the epoch after the one it was asked of. Not one it keeps none of, nor
-        one it has said ended, or the store has, which is no more its own: a worker
-        may have taken it up, whose status says nothing of this playback. Once told,
-        it starts nothing over, so the epoch it has stays the one asked of."""
-        with self._lock:
-            if (
-                (self.run_id, self._epoch) != (run_id, epoch)
-                or self._store is None
-                or self._store_ended
-                or self._store.manifest().status in ENDED
-            ):
-                return False
-            self._stopped.set()
-            return True
-
-    def stopped(self) -> StoredRun:
-        """Its epoch, as a stop answers with it, once it was told to stop: said to
-        have ended, or if its thread has not yet, as `finish` gave it up, asked
-        through the store, for it to read `stopping` until the thread says so."""
-        with self._lock:
-            store = self._store
-        assert store is not None  # one with none is not stopped: `stop_if_working`
-        if self.working:
-            store.ask_to_stop()
-        else:
-            self._say_how_it_ended()
-        return stored_run(store.objects, store.run_id, store.epoch)
-
     def command(self, command: PlaybackCommand) -> PlaybackState:
         """Plays on, holds the clock, or starts the run over as a new epoch,
-        playing; answers with the new state. Once replaced, the one in its
-        place does. One stopped that keeps its epochs starts nothing over: no
-        thread would work the epoch it opened, which no one could then end."""
+        playing; answers with the new state. One stopped that keeps its epochs
+        starts nothing over: no thread would work the epoch it opened, which
+        no one could then end."""
         with self._lock:
-            successor = self._successor
-            if successor is None:
-                self._advance()
-                match command:
-                    case PlaybackCommand.PLAY:
-                        self._playing = self._time_s < self.end_s
-                    case PlaybackCommand.PAUSE:
-                        self._playing = False
-                    case PlaybackCommand.RESTART:
-                        over = self._stopped.is_set() or self._failure is not None
-                        if over and self._epochs is not None:
-                            raise Conflict(f"the playback of {self.run_id} no longer works")
-                        self._epoch += 1
-                        if self._epochs is not None:
-                            if self._store is not None and not self._store_ended:
-                                self._store.set_status(Status.INTERRUPTED)
-                            self._store = self._open_epoch(self._epochs)
-                            self._store.set_status(Status.RUNNING)
-                            self._stored_days = self._stored_outcomes = 0
-                            self._store_ended = False
-                            self._logged = 0
-                            self._taken = None
-                        self._time_s = 0.0
-                        if self._epochs is not None:
-                            self._log_start()
-                        self._playing = True
-                        # The scenario's own run again: what was pending is
-                        # cancelled, as the first outcomes of the new epoch,
-                        # and the plans and their actions forgotten.
-                        self._gateway.restart(continue_clock=False)
-                        self._gateway.epoch = self._epoch
-                        self._executor.forget()
-                return self._state()
-        return successor.command(command)
+            self._advance()
+            match command:
+                case PlaybackCommand.PLAY:
+                    self._playing = self._time_s < self.end_s
+                case PlaybackCommand.PAUSE:
+                    self._playing = False
+                case PlaybackCommand.RESTART:
+                    over = self._stopped.is_set() or self._failure is not None
+                    if over and self._epochs is not None:
+                        raise Conflict(f"the playback of {self.run_id} no longer works")
+                    self._epoch += 1
+                    if self._epochs is not None:
+                        if self._store is not None and not self._store_ended:
+                            self._store.set_status(Status.INTERRUPTED)
+                        self._store = self._open_epoch(self._epochs)
+                        self._store.set_status(Status.RUNNING)
+                        self._stored_days = self._stored_outcomes = 0
+                        self._store_ended = False
+                        self._logged = 0
+                        self._taken = None
+                    self._time_s = 0.0
+                    if self._epochs is not None:
+                        self._log_start()
+                    self._playing = True
+                    # The scenario's own run again: what was pending is
+                    # cancelled, as the first outcomes of the new epoch,
+                    # and the plans and their actions forgotten.
+                    self._gateway.restart(continue_clock=False)
+                    self._gateway.epoch = self._epoch
+                    self._executor.forget()
+            return self._state()
 
     def set_targets(
         self, targets: Mapping[str, float], *, request: str | None = None
@@ -1456,28 +1305,25 @@ class Playback:
         same run and epoch (decision 0043): its records from then on are
         worked out again under them, the clock waiting at that minute until
         they are. Refused as a run's target changes are, or once the run has
-        ended. Once replaced, the one in its place changes them."""
+        ended."""
         if not targets:
             raise InvalidRequest("targets wants target:celsius pairs, and none was given")
         with self._lock:
-            successor = self._successor
-            if successor is None:
-                self._advance()
-                moment = (math.floor(self._time_s / TARGET_EVERY_S) + 1) * TARGET_EVERY_S
-                if moment > self.end_s:
-                    raise InvalidRequest("the run has ended: its targets change no more")
-                changes = tuple((moment, name, value) for name, value in targets.items())
-                # Checked as a run's target changes are; refused, nothing changes.
-                planned = self._executor.plan().actions
-                asked = RunPlan.requested(targets=changes).actions
-                run_schedule(
-                    self._simulator.catalogue,
-                    replace(self._run(), plan=RunPlan.model_construct(actions=(*planned, *asked))),
-                )
-                self._log(moment, TargetsChanged(changes=changes), request=request)
-                self._plan_targets(changes)
-                return self._state()
-        return successor.set_targets(targets, request=request)
+            self._advance()
+            moment = (math.floor(self._time_s / TARGET_EVERY_S) + 1) * TARGET_EVERY_S
+            if moment > self.end_s:
+                raise InvalidRequest("the run has ended: its targets change no more")
+            changes = tuple((moment, name, value) for name, value in targets.items())
+            # Checked as a run's target changes are; refused, nothing changes.
+            planned = self._executor.plan().actions
+            asked = RunPlan.requested(targets=changes).actions
+            run_schedule(
+                self._simulator.catalogue,
+                replace(self._run(), plan=RunPlan.model_construct(actions=(*planned, *asked))),
+            )
+            self._log(moment, TargetsChanged(changes=changes), request=request)
+            self._plan_targets(changes)
+            return self._state()
 
     def _work_again_from(self, moment_s: float) -> None:
         """Has its records from `moment_s` on worked out again, the clock
@@ -1495,16 +1341,12 @@ class Playback:
     ) -> Receipt:
         """Gives its gateway a plan, or a revision of one, by `by`, the local
         operator unless said: its actions from the clock's moment on are the
-        run's, each carried out or refused as the gateway and the run decide.
-        Once replaced, the one in its place takes it."""
+        run's, each carried out or refused as the gateway and the run decide."""
         with self._lock:
-            successor = self._successor
-            if successor is None:
-                self._advance()
-                if not self._gateway.finished:
-                    self._log(self._time_s, PlanGiven(plan=plan), by=by, request=request)
-                return self._given(plan, by=by)
-        return successor.submit(plan, by=by, request=request)
+            self._advance()
+            if not self._gateway.finished:
+                self._log(self._time_s, PlanGiven(plan=plan), by=by, request=request)
+            return self._given(plan, by=by)
 
     def cancel(
         self,
@@ -1516,18 +1358,12 @@ class Playback:
         """Cancels chosen actions of its plans, by `by`, by the keys they
         stood under when seen: what waits for one is cancelled too, unless
         its plan says to proceed. A stale key, or one `by` may not cancel,
-        cancels nothing, and its receipt lists it. Once replaced, the one in
-        its place does."""
+        cancels nothing, and its receipt lists it."""
         with self._lock:
-            successor = self._successor
-            if successor is None:
-                self._advance()
-                if not self._gateway.finished:
-                    self._log(
-                        self._time_s, ActionsCancelled(keys=tuple(keys)), by=by, request=request
-                    )
-                return self._written(lambda: self._gateway.cancel(keys, by=by))
-        return successor.cancel(keys, by=by, request=request)
+            self._advance()
+            if not self._gateway.finished:
+                self._log(self._time_s, ActionsCancelled(keys=tuple(keys)), by=by, request=request)
+            return self._written(lambda: self._gateway.cancel(keys, by=by))
 
     def cancel_plan(
         self,
@@ -1539,27 +1375,19 @@ class Playback:
         request: str | None = None,
     ) -> Receipt:
         """Cancels a whole plan, by `by`, as its `revision` in `epoch` stood:
-        every action of it not started. Once replaced, the one in its place
-        does."""
+        every action of it not started."""
         with self._lock:
-            successor = self._successor
-            if successor is None:
-                self._advance()
-                if not self._gateway.finished:
-                    self._log(
-                        self._time_s,
-                        PlanCancelled(plan_id=plan_id, revision=revision, epoch=epoch),
-                        by=by,
-                        request=request,
-                    )
-                return self._written(
-                    lambda: self._gateway.cancel_plan(
-                        plan_id, revision=revision, epoch=epoch, by=by
-                    )
+            self._advance()
+            if not self._gateway.finished:
+                self._log(
+                    self._time_s,
+                    PlanCancelled(plan_id=plan_id, revision=revision, epoch=epoch),
+                    by=by,
+                    request=request,
                 )
-        return successor.cancel_plan(
-            plan_id, revision=revision, epoch=epoch, by=by, request=request
-        )
+            return self._written(
+                lambda: self._gateway.cancel_plan(plan_id, revision=revision, epoch=epoch, by=by)
+            )
 
     def actions(
         self,
@@ -1614,26 +1442,17 @@ class Playback:
         """Who may do what on its run from its clock's moment on (decision
         0052): its gateway checks each action falling due by it from then,
         and records the change, which its epoch's log keeps at that moment
-        (decision 0072). Once replaced, the one in its place does."""
+        (decision 0072)."""
         with self._lock:
-            successor = self._successor
-            if successor is None:
-                self._advance()
-                if not self._gateway.finished:
-                    self._log(
-                        self._time_s,
-                        AuthorisationChanged(authorisation=authorisation),
-                        request=request,
-                    )
-                self._authorisation = authorisation
-                self._gateway.authorise(authorisation)
-                return
-        successor.authorise(authorisation, request=request)
-
-    def epoch_kept(self) -> tuple[str, int] | None:
-        """The epoch it keeps in the store, by its run and number, if it keeps one."""
-        with self._lock:
-            return None if self._store is None else (self.run_id, self._epoch)
+            self._advance()
+            if not self._gateway.finished:
+                self._log(
+                    self._time_s,
+                    AuthorisationChanged(authorisation=authorisation),
+                    request=request,
+                )
+            self._authorisation = authorisation
+            self._gateway.authorise(authorisation)
 
     def plan(self, plan_id: str, revision: int | None = None) -> PlanState:
         """A plan of its run's, as its gateway holds it: its revision in
@@ -1666,16 +1485,12 @@ class Playback:
             )
 
     def set_pace(self, seconds_per_day: float) -> PlaybackState:
-        """Plays a simulated day in `seconds_per_day` real seconds; once
-        replaced, the one in its place does."""
+        """Plays a simulated day in `seconds_per_day` real seconds."""
         check_pace(seconds_per_day)
         with self._lock:
-            successor = self._successor
-            if successor is None:
-                self._advance()
-                self._seconds_per_day = seconds_per_day
-                return self._state()
-        return successor.set_pace(seconds_per_day)
+            self._advance()
+            self._seconds_per_day = seconds_per_day
+            return self._state()
 
     def _cut(self, after: int, limit: int) -> tuple[PlaybackState, list[tuple[_Packed, _Packed]]]:
         if after < 0 or limit < 1:
@@ -1726,277 +1541,3 @@ def _ended_as(outcome: ActionOutcome, assignment: Assignment) -> bool:
 def check_pace(seconds_per_day: float) -> None:
     if not (math.isfinite(seconds_per_day) and seconds_per_day > 0):
         raise InvalidRequest("a day takes some time to play: seconds_per_day is above 0")
-
-
-class Playbacks:
-    """A simulator's playbacks (decision 0048): one a scenario, by its
-    identifier; one let go is stopped, at the moment it is working out. One
-    rearranged into another is stopped without being waited for, so that
-    the new run starts at once, and is waited for as they all are, when
-    they are stopped or closed. Once closed, it starts none."""
-
-    def __init__(self) -> None:
-        self._store: Store[str, Playback] = Store("playbacks", on_drop=self._let_go, label=str)
-        # Held while a playback is added, or put in another's place, so that
-        # two requests starting a scenario's playback over with a layout make
-        # one, and none is added once they are closed.
-        self.rearranging = threading.Lock()
-        # Those replaced still working, waited for when they all stop.
-        self._replaced: list[Playback] = []
-        # While they all stop: when, for every one let go meanwhile.
-        self._stopping_by: float | None = None
-        self._closed = False
-
-    def _let_go(self, _: str, found: Playback) -> None:
-        """Stops a playback let go: by the deadline of all of them, while
-        they all stop, or its own. One among those replaced is waited for by whoever
-        put it there, once `rearranging` is released (`stop_epoch`)."""
-        deadline = self._stopping_by
-        found.stop(wait=False)
-        if not any(found is held for held in self._replaced):
-            found.finish(monotonic() + STOP_WAIT_S if deadline is None else deadline)
-
-    def refuse_if_closed(self) -> None:
-        """Under `rearranging`: a playback is added to none closed."""
-        if self._closed:
-            raise RuntimeError("the playbacks are closed")
-
-    def made_once(self, scenario_id: str, begun: Callable[[object], Playback]) -> Playback:
-        with self.rearranging:
-            self.refuse_if_closed()
-            return self._store.made_once(scenario_id, begun)
-
-    def get(self, scenario_id: str) -> Playback | None:
-        return self._store.get(scenario_id)
-
-    def of_run(self, run_id: str) -> Playback:
-        """The playback of the run `run_id`, which a client names it by."""
-        for found in self.all():
-            if found.run_id == run_id:
-                return found
-        raise NotFound(f"no run {run_id!r}")
-
-    def all(self) -> list[Playback]:
-        """Every playback started, in the order they were."""
-        return [found for _, found in self._store.values()]
-
-    def kept(self) -> set[tuple[str, int]]:
-        """The epochs the playbacks in place keep, by run and number: each is
-        told of a change of the simulator's authorisation by its playback, and
-        not through the store. Those replaced or stopped are left out: a change
-        goes past one to the playback in its place (`Playback.authorise`), so
-        the epoch it leaves is asked through the store, and takes it when it
-        is carried on."""
-        with self.rearranging:
-            playing = self.all()
-        return {key for found in playing if (key := found.epoch_kept()) is not None}
-
-    def held(self) -> set[tuple[str, int]]:
-        """The epochs whose clocks they hold, by a pause, each by its run and its
-        number: the store calls those running, and they stand still."""
-        return {
-            (found.run_id, epoch)
-            for found in self.all()
-            if (epoch := found.epoch_held()) is not None
-        }
-
-    def retiring(self) -> list[Playback]:
-        """The playbacks replaced that are still working a run out: stopped,
-        but not waited for, so that their epochs are being written yet."""
-        with self.rearranging:
-            return [found for found in self._replaced if found.working]
-
-    def stop_epoch(self, run_id: str, epoch: int) -> Playback | None:
-        """The playback that works this epoch, if one does (`stop_if_working`): told
-        to stop, no longer kept, so that its scenario's next start is a new one, the
-        run's next epoch, and waited for `STOP_WAIT_S` at most. It stays among those
-        `retiring` until its thread has ended, for the epoch not to be deleted
-        under it."""
-        with self.rearranging:
-            found = next(
-                (
-                    held
-                    for held in (*self.all(), *self._replaced)
-                    if held.stop_if_working(run_id, epoch)
-                ),
-                None,
-            )
-            if found is None:
-                return None
-            others = [held for held in self._replaced if held.working and held is not found]
-            self._replaced = [*others, found]
-            # Under the lock, or a start would be given the one stopped.
-            self._store.drop(found.scenario_id, found)
-        # Outside it: a stop that takes its time holds up no other start.
-        found.finish(monotonic() + STOP_WAIT_S)
-        return found
-
-    def replace(self, scenario_id: str, replacing: Playback, replaced: Playback) -> None:
-        """Keeps `replacing` in `replaced`'s place, under `rearranging`; those
-        replaced before that have stopped are let go."""
-        self._store.keep(scenario_id, replacing)
-        self._replaced = [found for found in self._replaced if found.working]
-        self._replaced.append(replaced)
-
-    def stop(self) -> None:
-        """Stops and forgets every playback: each is told before any is
-        waited for, and all are waited for `STOP_WAIT_S` at most."""
-        with self.rearranging:
-            stopping = [*self.all(), *self._replaced]
-            self._replaced.clear()
-            deadline = monotonic() + STOP_WAIT_S
-            for found in stopping:
-                found.tell_to_stop()
-            self._stopping_by = deadline
-            try:
-                self._store.forget()
-            finally:
-                self._stopping_by = None
-        for found in stopping:
-            found.finish(deadline)
-
-    def close(self) -> None:
-        """Stops every playback, and starts none after."""
-        with self.rearranging:
-            self._closed = True
-        self.stop()
-
-
-def start(
-    simulator: Simulator,
-    scenario_id: str,
-    seconds_per_day: float | None = None,
-    *,
-    layout: str | None = None,
-    seed: int | None = None,
-    its_own_seed: bool = False,
-    hold: bool = False,
-    clock: Callable[[], float] = monotonic,
-    epochs: Epochs | None = None,
-) -> PlaybackState:
-    """The scenario's playback, started, at `seconds_per_day` if given: the
-    one already started, or a new one from the run's start, on `clock`, of
-    its own layout or `layout`; kept in the simulator's run store, if it has
-    one, unless `epochs` says where; playing, unless `hold`, when its clock waits
-    for a play command while the run is worked out ahead of it. One started
-    with another layout than `layout`, or another seed than `seed`, starts
-    over with them, as a restart with a layout does (`command`), keeping
-    its own layout or seed where none is given, or at the scenario's own seed
-    if `its_own_seed`. A pace or a layout refused starts nothing. One that failed
-    is not the one a start gets: a new one plays its run as its next epoch, and
-    the epoch that failed keeps why in the store."""
-    if seconds_per_day is not None:
-        check_pace(seconds_per_day)
-    if its_own_seed:
-        # No seed keeps the one a playback has; the scenario's own is asked for.
-        seed = scenario(simulator.catalogue, scenario_id).random_seed
-    if epochs is None and simulator.runs is not None:
-        # A simulator that keeps runs keeps those it starts.
-        epochs = Epochs(objects=simulator.runs)
-
-    def begun(_: object) -> Playback:
-        found = Playback(
-            simulator,
-            scenario_id,
-            layout=layout,
-            seed=seed,
-            seconds_per_day=DEFAULT_SECONDS_PER_DAY if seconds_per_day is None else seconds_per_day,
-            clock=clock,
-            epochs=epochs,
-        )
-        found.begin()
-        return found
-
-    # Looked at before one is made: one this request makes and fails at once has
-    # had its start.
-    kept = simulator.playbacks.get(scenario_id)
-    found = (
-        _rearranged(simulator, kept, layout or kept.layout, seed)
-        if kept is not None and kept.failed
-        else simulator.playbacks.made_once(scenario_id, begun)
-    )
-    if not found.plays(layout, seed):
-        # Asked for at a seed alone, it keeps its layout.
-        found = _rearranged(simulator, found, layout or found.layout, seed)
-    if seconds_per_day is not None:
-        found.set_pace(seconds_per_day)
-    return found.state() if hold else found.command(PlaybackCommand.PLAY)
-
-
-def _rearranged(
-    simulator: Simulator, found: Playback, layout: str, seed: int | None = None
-) -> Playback:
-    """The scenario's playback with `layout` in place of the one it has, as
-    `found` was: begun, and the one it replaces stopped, without waiting for
-    the day it is working out, so that the new run starts at once. One put
-    in its place meanwhile with `layout` is kept, unless it has failed; a layout
-    refused leaves the playback as it was."""
-    playbacks = simulator.playbacks
-    with playbacks.rearranging:
-        playbacks.refuse_if_closed()
-        current = playbacks.get(found.scenario_id) or found
-        if current.plays(layout, seed) and not current.failed:
-            return current
-        replacing = current.rearranged(layout, seed)
-        replacing.begin()
-        playbacks.replace(found.scenario_id, replacing, current)
-    current.stop(wait=False)
-    return replacing
-
-
-def playback(simulator: Simulator, scenario_id: str) -> Playback:
-    """The scenario's playback, if one was started."""
-    found = simulator.playbacks.get(scenario_id)
-    if found is None:
-        raise NotFound(f"no playback of {scenario_id!r} was started")
-    return found
-
-
-def state(simulator: Simulator, scenario_id: str) -> PlaybackState:
-    return playback(simulator, scenario_id).state()
-
-
-def command(
-    simulator: Simulator, scenario_id: str, command: PlaybackCommand, layout: str | None = None
-) -> PlaybackState:
-    """Tells the scenario's playback to play, pause or start over. Started
-    over with a layout it does not play, it plays that layout's run from its
-    start, a new run, as the epoch its own count gives it, with the target
-    changes the run had: so a viewer that follows it rearranges the run
-    played back (#271, decision 0049). Started over with its own layout, it
-    is the scenario's own run again, without them. One that failed is started
-    over by a new playback, as `start` does, its thread having ended. Only a
-    restart takes a layout."""
-    found = playback(simulator, scenario_id)
-    if layout is not None and command != PlaybackCommand.RESTART:
-        raise InvalidRequest(f"only a restart takes a layout, not {command.value}")
-    if not found.plays(layout) or (command == PlaybackCommand.RESTART and found.failed):
-        replacing = _rearranged(simulator, found, layout or found.layout)
-        return replacing.command(PlaybackCommand.PLAY)
-    return found.command(command)
-
-
-def set_pace(simulator: Simulator, scenario_id: str, seconds_per_day: float) -> PlaybackState:
-    return playback(simulator, scenario_id).set_pace(seconds_per_day)
-
-
-def set_targets(
-    simulator: Simulator, scenario_id: str, targets: Mapping[str, float]
-) -> PlaybackState:
-    """Changes the targets of the run the scenario's playback plays, from
-    its clock's next minute on (#274, decision 0043)."""
-    return playback(simulator, scenario_id).set_targets(targets)
-
-
-def stop_playbacks(simulator: Simulator) -> None:
-    """Stops and forgets every playback of the simulator's."""
-    simulator.playbacks.stop()
-
-
-def stop_epoch(simulator: Simulator, run_id: str, epoch: int) -> StoredRun | None:
-    """Stops the playback of the simulator's that has this epoch, one replaced
-    included, whoever is watching and whether it plays, holds its clock or has
-    failed: the epoch as it stands then, told how it ended with what it had
-    committed, or none if no playback has it or it has ended already."""
-    found = simulator.playbacks.stop_epoch(run_id, epoch)
-    return None if found is None else found.stopped()

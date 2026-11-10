@@ -6,7 +6,7 @@ import math
 import sys
 import threading
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from datetime import timedelta
 from pathlib import Path
 
@@ -14,12 +14,10 @@ import pytest
 from greenhouse_protocol.enums import ObservationType
 
 from greenhouse_sim.api.routes import respond
-from greenhouse_sim.api.server import create_server
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import heat_log, playback, run_state, sensors
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
-from greenhouse_sim.services.fields import air_through_a_run
-from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand, PlaybackFailed
+from greenhouse_sim.services.playback import Playback, PlaybackCommand, PlaybackFailed
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.simulator import Simulator
 
@@ -32,10 +30,6 @@ PACKAGED = "climate_box"
 SCENARIO = "climate_box_short"
 TENDED = "climate_box_tended"
 DAYS = 14
-# The box with its heater moved a metre along x and half one along y, as the viewer
-# writes it, and as a run knows it (#271).
-MOVED = "default~heater:-1:0.5"
-MOVED_NAME = "default~heater:-1.0:0.5"
 # Every other of the sensors' samples (`short_runs.READS_EVERY_S`), which is what a
 # consumer following at it is given and no others.
 EVERY_S = 2 * short_runs.READS_EVERY_S
@@ -181,75 +175,6 @@ def test_a_restart_is_a_new_epoch_of_the_same_run_from_its_start(
     assert again.records == before.records
 
 
-def test_a_restart_with_another_layout_plays_its_run_from_its_start_as_a_new_run(
-    simulator: Simulator, clock: Clock, tmp_path: Path, no_playbacks: Callable[[], None]
-) -> None:
-    # A viewer following the run rearranges the room (#271): the playback
-    # starts over with the layout, playing its run, whose epochs it counts
-    # as their own file does.
-    epochs = Epochs(tmp_path)
-    own = playback.start(simulator, SCENARIO, 10.0, clock=clock, epochs=epochs)
-    assert playback.playback(simulator, SCENARIO).wait_for(1, timeout_s=120)
-    clock.now += 5.0
-
-    moved = playback.command(simulator, SCENARIO, PlaybackCommand.RESTART, MOVED)
-
-    assert moved.layout == MOVED_NAME and own.layout == "default"
-    assert (
-        moved.run_id
-        == air_through_a_run(simulator, RunRequest(SCENARIO, layout=MOVED))[1]
-        != own.run_id
-    )
-    assert (moved.epoch, moved.time_s, moved.playing) == (0, 0.0, True)
-    assert [found.run_id for found in simulator.playbacks.all()] == [moved.run_id]
-    played = playback.playback(simulator, SCENARIO)
-    assert played.wait_for(1, timeout_s=120)
-    clock.now += 5.0
-    # Its records are its run's, from its start, as a consumer reads them.
-    cut = played.records_after(0, ALL)
-    expected, _ = sensors.delivered_between(
-        simulator,
-        RunRequest(SCENARIO, layout=MOVED_NAME),
-        None,
-        DAY_S / 2,
-        every_s=playback.CONSUMER_CADENCE_S,
-    )
-    assert [r for r in cut.records if r.sensor_id] == expected
-    assert {r.source.source_id for r in cut.records} == {moved.run_id}
-
-    # The same layout, however written, is a restart of the same run; its
-    # own layout again, a new epoch of the run played first.
-    again = playback.command(
-        simulator, SCENARIO, PlaybackCommand.RESTART, "default~heater:-1.0:0.50"
-    )
-    assert (again.run_id, again.epoch) == (moved.run_id, 1)
-    back = playback.command(simulator, SCENARIO, PlaybackCommand.RESTART, "default")
-    assert (back.run_id, back.layout, back.epoch, back.time_s) == (own.run_id, "default", 1, 0.0)
-    assert Epochs(tmp_path).next(moved.run_id) == 2
-
-
-def test_a_playback_started_over_with_a_layout_it_cannot_play_is_refused_and_plays_on(
-    simulator: Simulator,
-    no_playbacks: Callable[[], None],
-) -> None:
-    started = playback.start(simulator, SCENARIO, 600.0, layout=MOVED)
-    assert started.layout == MOVED_NAME
-    own = playback.command(simulator, SCENARIO, PlaybackCommand.RESTART, "default")
-    assert (own.layout, own.time_s) == ("default", 0.0)
-
-    for command, layout, refusal in [
-        (PlaybackCommand.RESTART, "default~boiler:1:0", InvalidRequest),
-        (PlaybackCommand.RESTART, "default~heater:99:0", InvalidRequest),
-        (PlaybackCommand.RESTART, "nowhere", NotFound),
-        (PlaybackCommand.PLAY, MOVED, InvalidRequest),
-    ]:
-        with pytest.raises(refusal):
-            playback.command(simulator, SCENARIO, command, layout)
-    # Refused, the run played back plays on.
-    assert playback.state(simulator, SCENARIO).run_id == own.run_id
-    assert [found.layout for found in simulator.playbacks.all()] == ["default"]
-
-
 def test_a_playback_stopped_works_out_nothing_more(simulator: Simulator, clock: Clock) -> None:
     run = Playback(simulator, SCENARIO, seconds_per_day=10.0, every_s=EVERY_S, clock=clock)
     run.begin()
@@ -279,20 +204,16 @@ def test_a_run_played_to_its_end_stops_there(simulator: Simulator, clock: Clock)
         run.stop()
 
 
-def test_a_playback_started_plays_and_is_paused_and_paced(
-    simulator: Simulator, no_playbacks: Callable[[], None]
-) -> None:
-    with pytest.raises(NotFound):
-        playback.state(simulator, SCENARIO)
-    started = playback.start(simulator, SCENARIO, 600.0)
+def test_a_playback_plays_and_is_paused_and_paced(played: Playback) -> None:
+    started = played.command(PlaybackCommand.PLAY)
     assert started.playing is True
     assert started.epoch == 0
     assert started.run_id.startswith(f"{SCENARIO}-climate-")
 
-    assert playback.command(simulator, SCENARIO, PlaybackCommand.PAUSE).playing is False
-    assert playback.set_pace(simulator, SCENARIO, 5.0).seconds_per_day == 5
+    assert played.command(PlaybackCommand.PAUSE).playing is False
+    assert played.set_pace(5.0).seconds_per_day == 5
     with pytest.raises(NotFound):
-        playback.start(simulator, "nowhere")
+        Playback(played._simulator, "nowhere")
 
 
 @pytest.mark.slow
@@ -373,24 +294,12 @@ def test_time_spent_waiting_for_a_day_is_not_banked(simulator: Simulator, clock:
     assert (ended.time_s, ended.day) == (2 * DAY_S, 1)
 
 
-def test_a_pace_is_a_finite_number_of_seconds(
-    simulator: Simulator, no_playbacks: Callable[[], None]
-) -> None:
-    playback.start(simulator, SCENARIO)
+def test_a_pace_is_a_finite_number_of_seconds(simulator: Simulator, played: Playback) -> None:
     for pace in (math.inf, math.nan, 0.0, -1.0):
         with pytest.raises(InvalidRequest):
-            playback.set_pace(simulator, SCENARIO, pace)
-
-
-def test_a_start_at_a_pace_refused_starts_nothing(
-    simulator: Simulator, no_playbacks: Callable[[], None]
-) -> None:
-    for pace in (0.0, -1.0, math.nan):
+            played.set_pace(pace)
         with pytest.raises(InvalidRequest):
-            playback.start(simulator, SCENARIO, pace)
-    assert simulator.playbacks.all() == []
-    with pytest.raises(NotFound):
-        playback.state(simulator, SCENARIO)
+            Playback(simulator, SCENARIO, seconds_per_day=pace)
 
 
 def test_a_run_that_cannot_be_worked_out_is_the_simulator_s_failure(
@@ -415,26 +324,6 @@ def test_a_run_that_cannot_be_worked_out_is_the_simulator_s_failure(
         other.state()
 
 
-def test_the_runs_played_back_go_with_the_server_that_played_them() -> None:
-    server = create_server(0)
-    playback.start(server.simulator, PACKAGED, 600.0)
-    assert playback.state(server.simulator, PACKAGED).playing
-    server.server_close()
-    with pytest.raises(NotFound):
-        playback.state(server.simulator, PACKAGED)
-    assert not _working(PACKAGED)
-
-
-def test_a_server_given_a_simulator_leaves_its_runs_played_back_to_its_giver(
-    simulator: Simulator, no_playbacks: Callable[[], None]
-) -> None:
-    server = create_server(0, simulator=simulator)
-    playback.start(simulator, SCENARIO, 600.0)
-    server.server_close()
-
-    assert playback.state(simulator, SCENARIO).playing
-
-
 def _working(scenario_id: str) -> bool:
     """Whether a playback of the scenario is still being worked out by a
     thread, in this process."""
@@ -450,11 +339,9 @@ STOPS_WITHIN_S = 2.0
 INTO_THE_DAY_S = 0.5
 
 
-def test_a_playback_stopped_leaves_the_day_it_was_working_out(
-    simulator: Simulator, no_playbacks: Callable[[], None]
-) -> None:
-    playback.start(simulator, "reference_greenhouse", 600.0, hold=True)
-    found = playback.playback(simulator, "reference_greenhouse")
+def test_a_playback_stopped_leaves_the_day_it_was_working_out(simulator: Simulator) -> None:
+    found = Playback(simulator, "reference_greenhouse", seconds_per_day=600.0)
+    found.begin()
     time.sleep(INTO_THE_DAY_S)
     assert not found.wait_for(1, timeout_s=0)
 
@@ -471,60 +358,26 @@ WAIT_S = 5.0
 QUICK_STOP_WAIT_S = 0.3
 
 
-def test_a_simulator_closed_while_a_playback_is_being_added_leaves_none_working(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    simulator = Simulator()
-    adding, added = threading.Event(), threading.Event()
-    made_once = simulator.playbacks._store.made_once
-
-    def held(*args: object, **kwargs: object) -> Playback:
-        adding.set()
-        added.wait(WAIT_S)
-        return made_once(*args, **kwargs)  # type: ignore[arg-type]
-
-    monkeypatch.setattr(simulator.playbacks._store, "made_once", held)
-    errors: list[BaseException] = []
-
-    def starting() -> None:
-        try:
-            playback.start(simulator, PACKAGED, 600.0, hold=True)
-        except RuntimeError as error:
-            errors.append(error)
-
-    start = threading.Thread(target=starting)
-    start.start()
-    assert adding.wait(WAIT_S)
-    close = threading.Thread(target=simulator.close)
-    close.start()
-    time.sleep(0.1)
-    added.set()
-    start.join(WAIT_S)
-    close.join(WAIT_S)
-
-    assert simulator.closed
-    assert simulator.playbacks.all() == []
-    assert not _working(PACKAGED)
-
-
-def test_closing_with_playbacks_stuck_in_a_moment_is_bounded_once_for_all(
-    monkeypatch: pytest.MonkeyPatch,
+def test_stopping_a_playback_stuck_in_a_moment_is_bounded(
+    simulator: Simulator, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(playback, "STOP_WAIT_S", QUICK_STOP_WAIT_S)
     release = threading.Event()
+    reached = threading.Event()
 
     def stuck(*args: object, **kwargs: object) -> object:
+        reached.set()
         release.wait(WAIT_S)
         raise RuntimeError("let go")
 
     monkeypatch.setattr(playback, "delivered_between", stuck)
-    simulator = Simulator()
-    for scenario_id in ("climate_box", "airflow_box", "sensor_lab"):
-        playback.start(simulator, scenario_id, 600.0, hold=True)
+    found = Playback(simulator, PACKAGED, seconds_per_day=600.0)
+    found.begin()
     try:
-        closing = time.monotonic()
-        simulator.close()
-        took = time.monotonic() - closing
+        assert reached.wait(WAIT_S)
+        stopping = time.monotonic()
+        found.stop()
+        took = time.monotonic() - stopping
     finally:
         release.set()
 
@@ -535,36 +388,16 @@ def test_a_playback_stopped_while_its_heat_is_worked_out_publishes_no_day(
     simulator: Simulator,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    simulator = Simulator()
+    # Its own scenario, which no other test here plays back.
+    found = Playback(simulator, "airflow_box", seconds_per_day=600.0)
 
     def stopped_meanwhile(*args: object, **kwargs: object) -> object:
-        for found in simulator.playbacks.all():
-            found.tell_to_stop()
+        # From its own worker's thread: told to stop, without waiting for itself.
+        found.stop()
         return heat_log.heat_records(*args, **kwargs)  # type: ignore[arg-type]
 
     monkeypatch.setattr(playback, "heat_records", stopped_meanwhile)
-    try:
-        # Its own scenario, which no other test here plays back.
-        playback.start(simulator, "airflow_box", 600.0, hold=True)
-        found = playback.playback(simulator, "airflow_box")
-        found.finish(time.monotonic() + WAIT_S)
+    found.begin()
+    found.stop()
 
-        assert found.state().worked_out_s == 0.0
-    finally:
-        simulator.close()
-
-
-def test_playbacks_replaced_are_let_go_once_they_have_stopped() -> None:
-    with Simulator() as simulator:
-        playback.start(simulator, PACKAGED, 600.0, hold=True)
-        for step in range(4):
-            playback.command(
-                simulator, PACKAGED, PlaybackCommand.RESTART, f"default~heater:-1:0.{step + 1}"
-            )
-            deadline = time.monotonic() + WAIT_S
-            while any(found.working for found in simulator.playbacks._replaced):
-                assert time.monotonic() < deadline
-                time.sleep(0.01)
-
-        # Each replaced one let go once it stopped, at the next replacement.
-        assert len(simulator.playbacks._replaced) == 1
+    assert found.state().worked_out_s == 0.0

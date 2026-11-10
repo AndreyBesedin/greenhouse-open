@@ -24,8 +24,9 @@ from greenhouse_protocol.contracts.conformance import check_observations
 from greenhouse_protocol.contracts.memory import InMemoryObservations
 from greenhouse_protocol.observation import Observation
 from greenhouse_sim.core.clock import DAY_S
-from greenhouse_sim.services import consumer, playback
+from greenhouse_sim.services.consumer import MOST_PER_BATCH
 from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
+from greenhouse_sim.services.scenarios import described_plants, scenario
 from greenhouse_sim.services.simulator import Simulator
 
 SCENARIO: Final = "climate_box"  # a small, shut house of 32 plants
@@ -66,39 +67,40 @@ def main() -> None:
     store: ObservationStore = records
     with tempfile.TemporaryDirectory() as kept, Simulator() as simulator:
         clock = Clock()
-        run_id = playback.start(
+        played = Playback(
             simulator,
             SCENARIO,
-            SECONDS_PER_DAY,
-            hold=True,
+            seconds_per_day=SECONDS_PER_DAY,
             clock=clock,
             epochs=Epochs(Path(kept)),
-        ).run_id
-        played = playback.playback(simulator, SCENARIO)
-        played.command(PlaybackCommand.PLAY)
-        described = consumer.run(simulator, run_id)
-        plant_id = consumer.greenhouse(simulator, run_id).plants[0].plant_id
-        seen: int | None = None
-        for day in range(1, DAYS + 1):
-            advance(played, clock, day * DAY_S)
-            observations: list[Observation] = []
-            while True:
-                delivered = consumer.observations(simulator, run_id, after=seen)
-                observations += delivered.observations
-                seen = delivered.next
-                if not delivered.has_more:
-                    break
-            # A consumer can check what it is given against the contract,
-            # as a producer can check its own output.
-            violations = check_observations(observations)
-            assert not violations, violations
-            store.save_many(observations)
-            print(f"day {day}: {len(observations)} observations delivered, checked and stored")
+        )
+        plant_id = described_plants(scenario(simulator.catalogue, SCENARIO))[0].plant_id
+        played.begin()
+        try:
+            played.command(PlaybackCommand.PLAY)
+            seen = 0
+            for day in range(1, DAYS + 1):
+                advance(played, clock, day * DAY_S)
+                observations: list[Observation] = []
+                while True:
+                    delivered = played.records_after(seen, MOST_PER_BATCH)
+                    observations += delivered.records
+                    seen = delivered.next
+                    if not delivered.has_more:
+                        break
+                # A consumer can check what it is given against the contract,
+                # as a producer can check its own output.
+                violations = check_observations(observations)
+                assert not violations, violations
+                store.save_many(observations)
+                print(f"day {day}: {len(observations)} observations delivered, checked and stored")
+        finally:
+            played.stop()
 
-    greenhouse_id = described.greenhouse_id
+    greenhouse_id = played.greenhouse_id
     query: ObservationQuery = records
     everything = query.list_for_greenhouse(greenhouse_id)
-    decided_at = described.started_at + timedelta(hours=DECIDED_AFTER_H)
+    decided_at = played.start + timedelta(hours=DECIDED_AFTER_H)
     known_then = query.list_for_greenhouse(greenhouse_id, up_to=decided_at)
     one_plant = query.list_for_greenhouse(greenhouse_id, plant_id=plant_id)
 
