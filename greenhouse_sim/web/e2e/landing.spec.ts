@@ -94,7 +94,9 @@ test("the bare address is the page where a person decides what to do", async ({ 
 
   await page.goto(LANDING_PATH);
 
-  await expect(page.getByRole("heading", { name: "What would you like to do?" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Simulate a greenhouse's climate and crop" }),
+  ).toBeVisible();
   await expect(page.locator("canvas")).toHaveCount(0);
   const contribute = page.getByRole("link", { name: "Contribute" });
   await expect(contribute).toHaveAttribute("href", REPOSITORY_URL);
@@ -169,7 +171,9 @@ test("the viewer is at its own address, and an address with a query is still the
 
   await page.goto("/?scenario=climate_box");
   await expect(page.getByTestId("scene-status")).toContainText("climate_box, 0 days in");
-  await expect(page.getByRole("heading", { name: "What would you like to do?" })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Simulate a greenhouse's climate and crop" }),
+  ).toHaveCount(0);
 });
 
 test("a dialog closed by its button gives focus back to the search, with its list shut", async ({

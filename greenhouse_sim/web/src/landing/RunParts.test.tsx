@@ -4,7 +4,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import { DAY_S } from "../clock";
 import { type Rendered, render } from "../testing/render";
 import { replayAddress } from "./paths";
-import { DAMAGED_NOTE, FOLLOWS_NOTE, ReplayLink, RunStatus, STOPPING_NOTE } from "./RunParts";
+import {
+  DAMAGED_NOTE,
+  FOLLOWS_NOTE,
+  REPLAY_NOTE,
+  ReplayLink,
+  RunStatus,
+  STOPPING_NOTE,
+} from "./RunParts";
 import type { StoredRun } from "./storedRuns";
 
 function run(more: Partial<StoredRun>): StoredRun {
@@ -107,11 +114,11 @@ describe("a run's replay, the one way to watch it", () => {
     }
   });
 
-  it("opens a run computed no longer at its start", () => {
+  it("opens a run computed no longer at its start, and says so", () => {
     for (const status of ["finished", "interrupted", "failed"] as const) {
       expect(link(run({ status }))).toEqual({
         href: replayAddress("reference_greenhouse-climate-abc", 0),
-        title: "",
+        title: REPLAY_NOTE,
       });
     }
   });

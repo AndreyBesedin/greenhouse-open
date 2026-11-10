@@ -232,9 +232,9 @@ test("builder: a draft saved and the start page reached in one step", async ({ p
   await page.getByRole("button", { name: "Save and go back" }).click();
 
   await expect(page).toHaveURL(/\/$/, ARRIVES);
-  await expect(page.getByRole("heading", { name: "What would you like to do?" })).toBeVisible(
-    ARRIVES,
-  );
+  await expect(
+    page.getByRole("heading", { name: "Simulate a greenhouse's climate and crop" }),
+  ).toBeVisible(ARRIVES);
   // The draft was saved: the builder lists it.
   await page.goto("/builder");
   await expect(page.getByRole("button", { name: "My greenhouse" }).first()).toBeVisible(ARRIVES);

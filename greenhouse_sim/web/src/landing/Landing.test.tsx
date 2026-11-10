@@ -5,8 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DAY_S } from "../clock";
 import type { ScenarioSummary } from "../scenarios";
 import { type Rendered, render } from "../testing/render";
-import { Landing } from "./Landing";
+import { BUILDER_NOTE, CONTRIBUTE_NOTE, Landing, START_TITLE } from "./Landing";
 import { REPOSITORY_URL, replayAddress } from "./paths";
+import { RESUME_NOTE, STOP_NOTE } from "./RunControls";
+import { DELETE_NOTE } from "./RunDelete";
 import type { Room } from "./room";
 import { RUNS_ASKED_EVERY_MS, type StoredRun } from "./storedRuns";
 
@@ -131,6 +133,56 @@ describe("the page where a person decides what to do", () => {
     expect(mark?.getAttribute("aria-hidden")).toBe("true");
     expect(contribute?.textContent).toBe("Contribute");
     expect(link(container, "Open the builder")?.getAttribute("href")).toBe("/builder");
+  });
+
+  it("says what the place is for, and offers its two ways in, equal, one under the other with or (P22.7)", async () => {
+    const { container } = await shown(
+      { "/api/scenarios": SCENARIOS, "/api/runs": [] },
+      "No run has been kept yet",
+    );
+
+    expect(container.querySelector("main h2")?.textContent).toBe(START_TITLE);
+    // No line under the title: the choices come next.
+    expect(container.querySelector("main h2")?.nextElementSibling?.className).toBe(
+      "landing-choices",
+    );
+    const choices = container.querySelector(".landing-choices");
+    expect(
+      [...(choices?.children ?? [])].map(
+        (each) => each.querySelector("h3")?.textContent ?? each.textContent,
+      ),
+    ).toEqual(["Open a scenario", "or", "Build a scenario"]);
+    // Each card drawn alike, each heading with its icon, decoration beside its words.
+    const cards = [...(choices?.querySelectorAll("section") ?? [])];
+    expect(cards.map((card) => card.className)).toEqual(["landing-card", "landing-card"]);
+    for (const card of cards) {
+      expect(card.querySelector("h3 svg")?.getAttribute("aria-hidden")).toBe("true");
+    }
+    // Fewer words on the page, more on hover.
+    expect(link(container, "Contribute")?.title).toBe(CONTRIBUTE_NOTE);
+    expect(link(container, "Open the builder")?.title).toBe(BUILDER_NOTE);
+    expect(container.textContent).not.toContain(BUILDER_NOTE);
+  });
+
+  it("says on hover what each of a run's buttons does (P22.7)", async () => {
+    const { container } = await shown(
+      {
+        "/api/scenarios": SCENARIOS,
+        "/api/runs": [
+          run({ epoch: 1, status: "running" }),
+          run({ epoch: 0, status: "interrupted" }),
+        ],
+      },
+      "Interrupted",
+    );
+    const said = (label: string) =>
+      [...container.querySelectorAll("button, a")]
+        .find((each) => each.getAttribute("aria-label")?.startsWith(label))
+        ?.getAttribute("title");
+
+    expect(said("Stop ")).toBe(STOP_NOTE);
+    expect(said("Resume ")).toBe(RESUME_NOTE);
+    expect(said("Delete ")).toBe(DELETE_NOTE);
   });
 
   const draft = (id: string, saved: string) => ({

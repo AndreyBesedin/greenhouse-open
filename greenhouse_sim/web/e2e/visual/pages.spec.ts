@@ -38,7 +38,9 @@ const PAGES: readonly Drawn[] = [
     name: "landing",
     address: LANDING_PATH,
     shown: async (page) => {
-      await expect(page.getByRole("heading", { name: "What would you like to do?" })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Simulate a greenhouse's climate and crop" }),
+      ).toBeVisible();
       await expect(page.getByText("Failed", { exact: true })).toBeVisible();
     },
   },

@@ -806,7 +806,9 @@ describe("the runs of a scenario, in a dialog", () => {
     expect(failed?.querySelector(".landing-run-reason")?.textContent).toBe(
       "This run failed: the simulator kept no reason for it.",
     );
-    expect(failed?.querySelector("[title]")?.getAttribute("title")).toContain("not zero");
+    expect(failed?.querySelector(".landing-run-usage [title]")?.getAttribute("title")).toContain(
+      "not zero",
+    );
 
     // Asked to resume while the limit stands, it says why on its row, without the run's name.
     click(button(limited as HTMLElement, "Resume the run with seed 1, epoch 0"));

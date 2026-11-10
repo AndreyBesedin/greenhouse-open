@@ -137,9 +137,9 @@ test("the README's demo shows the simulator's main features, each under its capt
 
   // The start page: a scenario searched for, its dialog, and a new run.
   await page.goto(LANDING_PATH);
-  await expect(page.getByRole("heading", { name: "What would you like to do?" })).toBeVisible(
-    ARRIVES,
-  );
+  await expect(
+    page.getByRole("heading", { name: "Simulate a greenhouse's climate and crop" }),
+  ).toBeVisible(ARRIVES);
   const search = page.getByRole("combobox", { name: "Scenario" });
   await search.pressSequentially("reference", { delay: 150 });
   const option = page.getByRole("option", { name: /^Reference greenhouse/ });
