@@ -121,6 +121,7 @@ function ForkLevels({
 
 export function ScenarioPanels({
   children,
+  display = null,
   source,
   snapshot,
   weathers,
@@ -152,6 +153,8 @@ export function ScenarioPanels({
   /** What leads the simulation's card: a replay's steering and a plant's
    * work. */
   children?: ReactNode;
+  /** The Display card, placed beside House. */
+  display?: ReactNode;
   source: ScenarioSource;
   snapshot: SceneSnapshot | null;
   /** The preset weathers it can be run under. */
@@ -417,6 +420,7 @@ export function ScenarioPanels({
           />
         )}
       </PanelCard>
+      {display}
       {(probing || climate || openings.length > 0 || equipped) && (
         <PanelCard title="Equipment">
           {(probing || climate) && (

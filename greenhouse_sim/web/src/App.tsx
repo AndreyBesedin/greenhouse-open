@@ -423,6 +423,26 @@ export function App({
     setPresetIn(source.kind === "scenario" ? source.scenarioId : null);
   }
 
+  // The Display card: beside House in a scenario's panels (P22.8), at the top of
+  // the others'.
+  const displayCard =
+    snapshot === null ? null : (
+      <DisplayOptions
+        colourProperties={display.colourProperties}
+        colourBy={display.colourBy}
+        onColourBy={display.setColourBy}
+        showDimensions={display.showDimensions}
+        onShowDimensions={display.setShowDimensions}
+        byCategory={display.byCategory}
+        onByCategory={display.setByCategory}
+        drawn={overlaysDrawn}
+        fieldView={fieldView}
+        overlays={display.toggles}
+        onOverlays={display.setToggles}
+        qaMode={qaMode}
+        onQaMode={setQaMode}
+      />
+    );
   return (
     <main className={replay === undefined ? "viewer" : "viewer viewer-embedded"}>
       <Viewport
@@ -470,23 +490,7 @@ export function App({
             onTheme={setTheme}
             onSource={chooseSource}
           >
-            {snapshot !== null && (
-              <DisplayOptions
-                colourProperties={display.colourProperties}
-                colourBy={display.colourBy}
-                onColourBy={display.setColourBy}
-                showDimensions={display.showDimensions}
-                onShowDimensions={display.setShowDimensions}
-                byCategory={display.byCategory}
-                onByCategory={display.setByCategory}
-                drawn={overlaysDrawn}
-                fieldView={fieldView}
-                overlays={display.toggles}
-                onOverlays={display.setToggles}
-                qaMode={qaMode}
-                onQaMode={setQaMode}
-              />
-            )}
+            {source.kind !== "scenario" && displayCard}
             {qaMode && (
               <QaPanel
                 build={build}
@@ -503,6 +507,7 @@ export function App({
             {source.kind === "scenario" && (
               <ScenarioPanels
                 source={source}
+                display={displayCard}
                 snapshot={snapshot}
                 weathers={summary?.weathers ?? []}
                 days={summary?.duration_days ?? 1}
