@@ -37,8 +37,10 @@ for the selected item.
    `greenhouse_sim/web/src/ScenarioPanels.tsx`, in its order; in the
    inspector (`greenhouse_sim/web/src/Inspector.tsx`), for a selected item;
    or folded to its summary line with `greenhouse_sim/web/src/folds.ts`.
-4. **Its styles** in `greenhouse_sim/web/src/styles.css`, in a commented
-   block, with colours only as the roles of
+4. **Its styles** in its folder's stylesheet, `src/<folder>/<folder>.css`,
+   if its folder has one (`PANEL_STYLESHEETS` in
+   `greenhouse_sim/web/src/styles.test.ts`), or else in
+   `greenhouse_sim/web/src/viewer.css`, in a commented block, with colours only as the roles of
    `greenhouse_sim/web/src/design/tokens.css`. Its classes are lowercase words joined by hyphens, the first naming its
    feature (`weather-day-chart`). A new feature's first word is added to
    `FEATURES` in `greenhouse_sim/web/src/styles.test.ts`, which checks
