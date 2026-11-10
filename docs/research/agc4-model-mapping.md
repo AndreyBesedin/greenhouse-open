@@ -166,11 +166,17 @@ force), and weekly leaf and truss counts on 40 plants.
 
 | Measured, 2023 | Reduced-State TOMGRO | Vanthoor's model |
 | --- | --- | --- |
-| `DW whole plant`, per plant | `w` | `c_leaf` + `c_stem` + `c_fruit` (+ `c_buf`), as dry matter by GreenLight's convention |
-| `DW fruits`, per plant | `wf` | `c_fruit` |
+| `DW whole plant`, per plant | `w` | `c_leaf` + `c_stem` + `c_fruit` + `harvested_fruit` (+ `c_buf`), as dry matter by GreenLight's convention |
+| `DW fruits`, per plant | `wf` | `c_fruit` + `harvested_fruit` |
 | `DW leaves`, `DW stem` | none: `w` is not split | `c_leaf`, `c_stem` |
 | Leaf area per plant, times the density | `lai` | `lai` (from `c_leaf` and its specific leaf area) |
 | Leaf counts | `n`, as nodes: a leaf per node is an approximation | none |
+
+The pre-trial's plants were sampled whole, nothing picked from them, so
+Vanthoor's fruit is held to them as in 2024: standing plus harvested. Its
+leaves pruned beyond a leaf area index of 3 leave `c_leaf` and are kept in
+no state, while AGC4 prunes none; a run that prunes says so beside its
+comparison. The pre-trial's leaf area index reached 2.54.
 
 ## What this leaves to decide
 
