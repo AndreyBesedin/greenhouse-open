@@ -535,16 +535,6 @@
   margin-top: var(--space-4);
 }
 
-.cfd-controls {
-  margin: 0 0 var(--space-4);
-  padding: 0;
-  border: 0;
-}
-
-.cfd-controls p {
-  margin: var(--space-1) 0 0;
-}
-
 /* The switches of the overlays over the scene, wrapped to the panel's width.
  * Floated, the legend is a flex item on the switches' line, not a line of its
  * own: the info panel shows all of itself at the usual window size beside the
@@ -593,57 +583,6 @@
 
 .equipment-switch {
   white-space: nowrap;
-}
-
-/* The plant lab's actions on the selected organ's plant. */
-.plant-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-4);
-  padding: 0;
-  border: 0;
-}
-
-/* The plant's history: what was done to it, and what was refused. */
-.plant-history {
-  max-height: 20vh;
-  margin: 0 0 var(--space-4);
-  overflow: auto;
-}
-
-.plant-history .refused {
-  color: var(--warn);
-}
-
-/* The plant lab's debug tree: an organ per line, scrolling on its own. */
-.plant-structure {
-  max-height: 40vh;
-  margin: 0 0 var(--space-4);
-  overflow: auto;
-}
-
-.plant-structure ul {
-  margin: 0;
-  padding-left: 14px;
-  list-style: none;
-}
-
-.plant-structure .organ-link {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--action);
-  font: inherit;
-  cursor: pointer;
-}
-
-.plant-structure .organ-link[aria-pressed="true"] {
-  font-weight: 600;
-}
-
-.plant-structure .organ-detail {
-  color: var(--text-muted);
 }
 
 /* The panels stand in two columns at the sides of the view: the info panel

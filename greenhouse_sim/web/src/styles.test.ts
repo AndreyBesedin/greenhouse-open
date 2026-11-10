@@ -437,6 +437,8 @@ const FEATURES = new Set([
   "daily",
   "timeline",
   "checkpoints",
+  "plants",
+  "cfd",
   "branches",
   "branch",
   "command",
@@ -1166,6 +1168,8 @@ const PANEL_STYLESHEETS: readonly string[] = [
   "qaMode",
   "timeline",
   "checkpoints",
+  "plants",
+  "cfd",
 ];
 const SOURCE_ROOT = fileURLToPath(new URL(".", import.meta.url));
 
