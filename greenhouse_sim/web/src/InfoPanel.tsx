@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import type { BuildInfo } from "./buildInfo";
+import { type BuildInfo, describeBuild } from "./buildInfo";
 import type { Theme } from "./design/theme";
 import { HomeButton } from "./landing/HomeButton";
 import { SceneFailures, SceneStatus } from "./SceneStatus";
@@ -8,6 +8,25 @@ import { SourceChooser } from "./SourceChooser";
 import type { ScenariosState } from "./scenarios";
 import type { SceneState } from "./scene/sceneLoad";
 import type { SceneSource } from "./scene/source";
+
+/** What the viewer shows, as its heading names it (P22.8): a scenario simulated
+ * here, by its name, the plant lab, or a scene drawn to check the renderer. A run
+ * the simulator keeps is a replay's, whose own header names it. */
+export function viewTitle(source: SceneSource, scenarios: ScenariosState): string {
+  switch (source.kind) {
+    case "scenario": {
+      const summary =
+        scenarios.status === "loaded"
+          ? scenarios.scenarios.find((scenario) => scenario.id === source.scenarioId)
+          : undefined;
+      return `Simulation of ${summary?.name ?? source.scenarioId}`;
+    }
+    case "plants":
+      return "Plant lab";
+    default:
+      return "Test scene";
+  }
+}
 
 export function InfoPanel({
   build,
@@ -49,7 +68,7 @@ export function InfoPanel({
         <>
           <div className="panel-head">
             <HomeButton />
-            <h1>greenhouse-sim viewer</h1>
+            <h1>{viewTitle(source, scenarios)}</h1>
           </div>
           <SourceChooser
             scenarios={scenarios}
@@ -62,11 +81,11 @@ export function InfoPanel({
       )}
       <SceneFailures failures={failures} />
       {children}
-      {/* What the viewer was built from, last, in a line: QA mode's run
-          manifest says it too, beside the simulator's own (#206). */}
+      {/* What the viewer was built from, last, in a line, its commit on hover:
+          QA mode's run manifest says it too, beside the simulator's own (#206). */}
       <div className="panel-footer">
-        <p className="build-line" data-testid="build-line">
-          simulator {build.simulatorVersion} · commit {build.sourceCommit}
+        <p className="build-line" data-testid="build-line" title={`commit ${build.sourceCommit}`}>
+          {describeBuild(build)}
         </p>
         {onTheme !== undefined && (
           <label className="panel-theme">

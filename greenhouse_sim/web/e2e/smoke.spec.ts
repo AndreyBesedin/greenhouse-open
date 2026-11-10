@@ -20,7 +20,7 @@ test("the viewer lists the simulator's scenarios, without console errors", async
 
   await page.goto(VIEWER_PATH);
 
-  await expect(page.getByRole("heading", { name: "greenhouse-sim viewer" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Test scene", level: 1 })).toBeVisible();
   const scenarios = page.getByRole("table", { name: "Scenarios" });
   for (const scenario of ["Tomato compartment", "Climate box", "Airflow QA Box"]) {
     await expect(scenarios).toContainText(scenario);

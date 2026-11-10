@@ -85,7 +85,7 @@ export function ReplayHeader({
     <header className="replay-header">
       <HomeButton />
       <div className="replay-title">
-        <h1 ref={heading}>{name ?? position.scenario_id}</h1>
+        <h1 ref={heading}>Run of {name ?? position.scenario_id}</h1>
         <p data-testid="replay-subtitle">{runSubtitle(position)}</p>
         {position.status === "failed" && <p data-testid="replay-failed">{failedText(failure)}</p>}
         {noFork !== null && <p data-testid="replay-no-fork">{noFork}</p>}

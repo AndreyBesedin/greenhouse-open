@@ -107,7 +107,7 @@ describe("the replay's header", () => {
     );
     const { container } = rendered;
 
-    expect(container.querySelector("h1")?.textContent).toBe("Reference greenhouse");
+    expect(container.querySelector("h1")?.textContent).toBe("Run of Reference greenhouse");
     expect(said(container, "replay-subtitle")).toBe("seed 2 · epoch 3 · everything kept");
     expect(statusOf(container)).toBe("Running");
     expect(container.querySelector('[data-testid="home-button"]')?.textContent).toContain("Home");
@@ -118,7 +118,7 @@ describe("the replay's header", () => {
     rendered = render(
       <ReplayHeader name={null} position={position()} onDeleted={stays} onFork={noFork} />,
     );
-    expect(rendered.container.querySelector("h1")?.textContent).toBe("reference_greenhouse");
+    expect(rendered.container.querySelector("h1")?.textContent).toBe("Run of reference_greenhouse");
   });
 
   it("says what each of its buttons does on hover, Fork first", () => {

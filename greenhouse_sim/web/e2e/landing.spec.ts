@@ -167,7 +167,7 @@ test("the viewer is at its own address, and an address with a query is still the
   // A page loaded directly at a path below the root, and the links made
   // before the landing page existed.
   await page.goto(VIEWER_PATH);
-  await expect(page.getByRole("heading", { name: "greenhouse-sim viewer" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Test scene", level: 1 })).toBeVisible();
 
   await page.goto("/?scenario=climate_box");
   await expect(page.getByTestId("scene-status")).toContainText("climate_box, 0 days in");
