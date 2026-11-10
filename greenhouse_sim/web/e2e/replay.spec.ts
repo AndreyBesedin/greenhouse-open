@@ -462,13 +462,90 @@ test("an address that names no run, or a run that is not kept, says so and offer
   ).toBeVisible();
 });
 
-test("a replay's other runs are the scenario's, on the landing page", async ({ page }) => {
+test("the panel under the view folds as the side panels do, and stays so for the next visit (P22.9)", async ({
+  page,
+}) => {
   await replayOfANewRun(page, "44");
+  const transport = page.getByRole("region", { name: "Move through the run" });
+  const scene = page.locator(".replay-scene");
+  const stripe = page.getByTestId("transport-stripe");
+  await expect(transport).toBeVisible();
+  const open = await scene.boundingBox();
+  // Its stripe takes the page's whole width, as a side's takes its whole height.
+  expect((await stripe.boundingBox())?.width).toBe(page.viewportSize()?.width);
 
-  await page.getByRole("link", { name: "Other runs" }).click();
+  await page.getByRole("button", { name: "Fold the controls under the view" }).click();
+  await expect(transport).toBeHidden();
+  // The scene takes the room, and the stripe stays at the page's foot to open it again.
+  expect((await scene.boundingBox())?.height).toBeGreaterThan((open?.height ?? 0) + 60);
+  const folded = await stripe.boundingBox();
+  expect((folded?.y ?? 0) + (folded?.height ?? 0)).toBe(page.viewportSize()?.height);
 
-  await expect(page).toHaveURL(/#runs=solar_lab$/);
-  await expect(page.getByRole("dialog").getByRole("heading", { level: 2 })).toContainText("Solar");
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Open the controls under the view" }),
+  ).toBeVisible();
+  await expect(transport).toBeHidden();
+  await page.getByRole("button", { name: "Open the controls under the view" }).press("Enter");
+  await expect(transport).toBeVisible();
+  await expect(page.getByTestId("replay-moment")).toBeVisible();
+});
+
+test("a replay's buttons say what each does on hover, Fork first (P22.9)", async ({ page }) => {
+  await replayOfANewRun(page, "45");
+  const header = page.getByRole("banner");
+
+  // Words for the browser's own tooltip: each says what pressing does.
+  const says = async (name: string | RegExp, within = page.locator(".replay")) =>
+    within.getByRole("button", { name, exact: true }).getAttribute("title");
+  expect(await says("Fork from here", header)).toBe("Make a new run from this moment; asks first");
+  expect(await says("Delete this run", header)).toBe(
+    "Delete this run and what it kept; asks first",
+  );
+  expect(await header.getByRole("link", { name: "Home" }).getAttribute("title")).toBe(
+    "Go to the start page",
+  );
+  expect(await says("Previous day")).toBe("Go back a day");
+  expect(await says("Play")).toBe("Play from this moment");
+  expect(await says("Next day")).toBe("Go on a day");
+  expect(await says("Fold the controls under the view")).toBe("Fold the controls under the view");
+  // The way to the scenario's other runs is gone: Home lists them.
+  await expect(page.getByRole("link", { name: "Other runs" })).toHaveCount(0);
+});
+
+test("a replay's Delete asks again, then deletes the run, and lands on the start page (P22.9)", async ({
+  page,
+}) => {
+  await replayOfANewRun(page, "46");
+  const replayed = replayTarget(new URL(page.url()).search);
+  const header = page.getByRole("banner");
+
+  await test.step("while the run is computed, it is not deleted, and says why", async () => {
+    await header.getByRole("button", { name: "Delete this run" }).click();
+    await expect(header.getByRole("button", { name: "Keep it" })).toBeFocused();
+    await header.getByRole("button", { name: "Delete this run" }).click();
+    await expect(page.getByTestId("replay-delete-refused")).toHaveText(
+      /^This run is (still being computed|waiting for a worker): stop it, then delete it\.$/,
+    );
+  });
+
+  await test.step("stopped, it is deleted once asked again, and the page goes home", async () => {
+    await stopReplayed(page);
+    await expect(page.getByTestId("replay-delete-refused")).toHaveCount(0);
+    await header.getByRole("button", { name: "Delete this run" }).click();
+    await header.getByRole("button", { name: "Keep it" }).click();
+    await expect(header.getByRole("button", { name: "Delete this run" })).toBeFocused();
+    await header.getByRole("button", { name: "Delete this run" }).click();
+    await header.getByRole("button", { name: "Delete this run" }).click();
+    await expect(page).toHaveURL(new RegExp(`${LANDING_PATH}$`));
+    const runs = (await (await page.request.get("/api/runs")).json()) as {
+      run_id: string;
+      epoch: number;
+    }[];
+    expect(
+      runs.some((run) => run.run_id === replayed?.runId && run.epoch === replayed?.epoch),
+    ).toBe(false);
+  });
 });
 
 // The reference greenhouse's first row of plants, a stem every 0.75 m from

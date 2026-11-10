@@ -317,6 +317,14 @@ test("each side's panels fold to a stripe at the view's edge, and open as they w
   });
   const scrolled = await info.evaluate((panel) => panel.scrollTop);
   expect(scrolled).toBeGreaterThan(0);
+  // Each stripe takes the height of the panel beside it, past its tab's (P22.9).
+  const infoHeight = (await info.boundingBox())?.height ?? 0;
+  expect(infoHeight).toBeGreaterThan(96);
+  expect((await infoStripe.boundingBox())?.height).toBeCloseTo(infoHeight, 0);
+  expect((await viewStripe.boundingBox())?.height).toBeCloseTo(
+    Math.max(96, (await hud.boundingBox())?.height ?? 0),
+    0,
+  );
 
   await test.step("by the pointer, the info panel folds to its stripe at the left edge", async () => {
     await page.getByRole("button", { name: "Fold the info panel" }).click();
@@ -325,6 +333,8 @@ test("each side's panels fold to a stripe at the view's edge, and open as they w
     expect(stripe?.x).toBeLessThan(20);
     // Folded, nothing of the side but its stripe covers the view.
     expect(stripe?.width).toBeLessThan(20);
+    // Folded, its stripe keeps the height of the panel beside it (P22.9).
+    expect(stripe?.height).toBeCloseTo(infoHeight, 0);
     await expect(hud).toBeVisible();
   });
 

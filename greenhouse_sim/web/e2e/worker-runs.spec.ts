@@ -79,8 +79,8 @@ test("two runs of one scenario are computed at once, from the dialog, each follo
       .poll(async () => Number(await computed.getAttribute("aria-valuenow")), WORKS)
       .toBeGreaterThan(0);
 
-    // The second is asked for from the replay's way to the others.
-    await page.getByRole("link", { name: "Other runs" }).click();
+    // The second is asked for from the scenario's dialog again.
+    await page.goto(runsAddress(SCENARIO));
     await expect(page.getByRole("dialog")).toBeVisible();
     started.push(await start(page, "72"));
 

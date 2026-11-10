@@ -147,7 +147,7 @@ export function runKey(run: Pick<StoredRun, "run_id" | "epoch">): string {
 
 /** Whether a run is still being computed, when it can be followed and not
  * deleted. */
-export function isComputing(run: StoredRun): boolean {
+export function isComputing(run: Pick<StoredRun, "status">): boolean {
   return run.status === "queued" || run.status === "running";
 }
 

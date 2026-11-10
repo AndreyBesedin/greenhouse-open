@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DAY_S } from "../clock";
 import { button, choose, click, type Rendered, render, said, select } from "../testing/render";
 import type { PositionState } from "./position";
-import { canFollow, ReplayTransport, spanOf } from "./ReplayTransport";
+import { canFollow, ReplayTransport, spanOf, TRANSPORT_NOTES } from "./ReplayTransport";
 
 function position(more: Partial<PositionState> = {}): PositionState {
   return {
@@ -82,6 +82,37 @@ describe("what moves a position over a stored run", () => {
     expect(button(container, "Play").classList).toContain("ds-button-primary");
     expect(button(container, "Play").querySelector("svg")?.getAttribute("width")).toBe("20");
     expect(button(container, "Next day").querySelector("svg")?.getAttribute("width")).toBe("18");
+  });
+
+  it("says what each of its buttons does on hover, as it stands", () => {
+    const paused = shown(position());
+    expect(button(paused.container, "Previous day").title).toBe(TRANSPORT_NOTES.back);
+    expect(button(paused.container, "Play").title).toBe(TRANSPORT_NOTES.play);
+    expect(button(paused.container, "Next day").title).toBe(TRANSPORT_NOTES.on);
+    expect(button(paused.container, "Follow the newest day").title).toBe(TRANSPORT_NOTES.follow);
+    rendered?.unmount();
+
+    const following = shown(position({ playing: true, following: true }));
+    expect(button(following.container, "Pause").title).toBe(TRANSPORT_NOTES.pause);
+    expect(button(following.container, "Follow the newest day").title).toBe(
+      TRANSPORT_NOTES.following,
+    );
+  });
+
+  it("is hidden once folded, the scene taking the room", () => {
+    const calls = {
+      onPlay: vi.fn(),
+      onPause: vi.fn(),
+      onFollow: vi.fn(),
+      onSeek: vi.fn(),
+      onPace: vi.fn(),
+    };
+    const section = () =>
+      rendered?.container.querySelector<HTMLElement>('[aria-label="Move through the run"]');
+    rendered = render(<ReplayTransport position={position()} {...calls} />);
+    expect(section()?.hidden).toBe(false);
+    rendered.rerender(<ReplayTransport position={position()} {...calls} folded />);
+    expect(section()?.hidden).toBe(true);
   });
 
   it("says why a move did nothing, and nothing when none was refused", () => {

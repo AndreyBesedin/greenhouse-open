@@ -1,10 +1,14 @@
+import { useRef, useState } from "react";
+
 import { Button } from "../design/Button";
 import { LinkButton } from "../design/LinkButton";
 import { StatusChip } from "../design/StatusChip";
 import { HomeButton } from "../landing/HomeButton";
 import { replayAddress } from "../landing/paths";
+import { RunDelete } from "../landing/RunDelete";
 import { STATUS_TONE } from "../landing/RunParts";
-import { STATUS_LABEL } from "../landing/storedRuns";
+import { deleteRun, notDeleted } from "../landing/runActions";
+import { STATUS_LABEL, type Status } from "../landing/storedRuns";
 import { failedText } from "./failure";
 import { whyNoFork } from "./fork";
 import type { PositionState } from "./position";
@@ -14,6 +18,10 @@ import { useForkQuestion } from "./useForkQuestion";
 /** What the run's status is named, to whoever hears the page, which is told each
  * change of it. */
 export const STATUS_NAME = "Run status";
+
+/** What the header's buttons say on hover (P22.9); Delete says the start page's. */
+export const FORK_NOTE = "Make a new run from this moment; asks first";
+export const PARENT_NOTE = "Open the run this one was forked from";
 
 /** The run, in words: whose it is, at which seed, and which epoch. The
  * store keeps every epoch whole until a store can keep only the present; of a
@@ -29,36 +37,59 @@ export function runSubtitle(position: PositionState): string {
 /**
  * Where the replay's header says what is replayed (P17.6): the way home, the
  * run's name, its seed and epoch, in what state it is (a word, never a
- * colour alone) and, if it failed, why, and the way to its other runs; and a fork of the run from
- * the moment shown (P17.8), asked first, or why there can be none.
+ * colour alone) and, if it failed, why; a fork of the run from the moment
+ * shown (P17.8), asked first, or why there can be none; and the run's Delete
+ * (P22.9), the start page's, asked first, after which the page is gone with the
+ * run (`onDeleted`).
  */
 export function ReplayHeader({
   name,
   position,
-  otherRunsHref,
   forking = false,
   forkRefused = null,
   failure = null,
   onFork,
+  onDeleted,
 }: {
   /** The scenario's name, once the list of scenarios has said it. */
   name: string | null;
   position: PositionState;
-  otherRunsHref: string;
   forking?: boolean;
   /** Why the simulator did not make the last fork asked for. */
   forkRefused?: string | null;
   /** Why a failed run failed, once the simulator has said. */
   failure?: string | null;
   onFork: () => void;
+  onDeleted: () => void;
 }) {
   const noFork = whyNoFork(position);
   const { trigger, ask, question } = useForkQuestion({ designed: true });
+  const heading = useRef<HTMLHeadingElement>(null);
+  // Why the run was not deleted, said while the run stands as it was asked about.
+  const [notGone, setNotGone] = useState<{ why: string; status: Status } | null>(null);
+
+  async function remove(): Promise<boolean> {
+    const answer = await deleteRun(position);
+    if (answer !== "being computed" && answer.ok) {
+      setNotGone(null);
+      onDeleted();
+      return true;
+    }
+    // A position has no `stopping` to tell: one asked to stop reads as computed.
+    const why =
+      answer === "being computed"
+        ? notDeleted({ status: position.status, stopping: false }, "this run")
+        : answer.problem;
+    setNotGone({ why, status: position.status });
+    return false;
+  }
+
+  const deleteRefused = notGone?.status === position.status ? notGone.why : null;
   return (
     <header className="replay-header">
       <HomeButton />
       <div className="replay-title">
-        <h1>{name ?? position.scenario_id}</h1>
+        <h1 ref={heading}>{name ?? position.scenario_id}</h1>
         <p data-testid="replay-subtitle">{runSubtitle(position)}</p>
         {position.status === "failed" && <p data-testid="replay-failed">{failedText(failure)}</p>}
         {noFork !== null && <p data-testid="replay-no-fork">{noFork}</p>}
@@ -67,25 +98,34 @@ export function ReplayHeader({
             This run could not be forked: {forkRefused}.
           </p>
         )}
+        {deleteRefused !== null && (
+          <p role="alert" data-testid="replay-delete-refused">
+            {deleteRefused}
+          </p>
+        )}
       </div>
       <StatusChip tone={STATUS_TONE[position.status]} label={STATUS_NAME}>
         {STATUS_LABEL[position.status]}
       </StatusChip>
       <span className="replay-spacer" />
       {position.fork !== null && position.parent_kept && (
-        <LinkButton href={replayAddress(position.fork.run_id, position.fork.epoch)}>
+        <LinkButton
+          href={replayAddress(position.fork.run_id, position.fork.epoch)}
+          title={PARENT_NOTE}
+        >
           The run it came from
         </LinkButton>
       )}
       <Button
         ref={trigger}
         data-testid="replay-fork"
+        title={FORK_NOTE}
         disabled={forking || noFork !== null}
         onClick={() => ask(onFork)}
       >
         {forking ? "Forking…" : "Fork from here"}
       </Button>
-      <LinkButton href={otherRunsHref}>Other runs</LinkButton>
+      <RunDelete name="this run" onDelete={remove} whenGone={heading} />
       {question}
     </header>
   );

@@ -1,4 +1,4 @@
-import { type ReactNode, useLayoutEffect, useRef } from "react";
+import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { PanelStripe } from "./PanelStripe";
 import type { PanelSide as Side } from "./panelFolds";
 
@@ -11,6 +11,10 @@ import type { PanelSide as Side } from "./panelFolds";
  * longer has anything to scroll, so the browser puts it back at its top:
  * where each scrolled one stood is kept as the side folds, and given back
  * as it opens, by its stripe or otherwise.
+ *
+ * The stripe is as tall as the side's first panel, the info panel or the HUD,
+ * however it grows or folds (P22.9): never shorter than its tab, and never over
+ * the view below the panel, whose clicks are the scene's.
  */
 export function PanelSide({
   side,
@@ -25,6 +29,24 @@ export function PanelSide({
 }) {
   const column = useRef<HTMLDivElement>(null);
   const scrolled = useRef(new Map<Element, number>());
+  const [panelPx, setPanelPx] = useState<number | null>(null);
+  const foldedNow = useRef(folded);
+  foldedNow.current = folded;
+  useLayoutEffect(() => {
+    const panel = column.current?.firstElementChild;
+    if (panel === null || panel === undefined || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    // Folded, the panel leaves the column, unbounded by its height: the stripe keeps
+    // the height it had open, and takes the panel's again as it opens.
+    const observer = new ResizeObserver(() => {
+      if (!foldedNow.current) {
+        setPanelPx(panel.getBoundingClientRect().height);
+      }
+    });
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, []);
   function toggle(): void {
     const panels = column.current;
     if (!folded && panels !== null) {
@@ -47,7 +69,7 @@ export function PanelSide({
   }, [folded]);
 
   const atTheEnd = side === "view";
-  const stripe = <PanelStripe side={side} folded={folded} onToggle={toggle} />;
+  const stripe = <PanelStripe side={side} folded={folded} onToggle={toggle} heightPx={panelPx} />;
   return (
     <div
       className={["panel-side", atTheEnd ? "at-the-end" : "", folded ? "folded" : ""]

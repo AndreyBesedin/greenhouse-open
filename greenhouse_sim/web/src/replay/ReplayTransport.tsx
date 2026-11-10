@@ -10,6 +10,16 @@ import { computedText, dayAway, dayLabel, type Span } from "./timeline";
 // Play and Pause, the transport's main button, drawn a little larger than a day's steps.
 const PLAY_ICON_PX = 20;
 
+/** What each of the transport's buttons says on hover (P22.9). */
+export const TRANSPORT_NOTES = {
+  back: "Go back a day",
+  play: "Play from this moment",
+  pause: "Pause at this moment",
+  on: "Go on a day",
+  follow: "Go to the newest day computed, and stay at it as the run computes",
+  following: "Stop following the newest day, and pause here",
+} as const;
+
 const QUICK_S = 2;
 const BRISK_S = 5;
 const STEADY_S = 10;
@@ -55,7 +65,8 @@ export function forkWaitNote(position: PositionState): string | null {
  * What moves a position, under the scene (P17.6): a day back, play, a day
  * on, where it stands and how far the epoch is computed, how fast a day
  * plays, and whether to stay at the newest day; and the timeline over the
- * whole run.
+ * whole run. Folded to its stripe (P22.9), it is hidden, and the scene takes
+ * the room.
  */
 export function ReplayTransport({
   position,
@@ -66,6 +77,7 @@ export function ReplayTransport({
   onFollow,
   onSeek,
   onPace,
+  folded = false,
 }: {
   position: PositionState;
   /** Why the latest move did nothing, if it was refused. */
@@ -78,6 +90,7 @@ export function ReplayTransport({
   onFollow: () => void;
   onSeek: (timeS: number) => void;
   onPace: (secondsPerDay: number) => void;
+  folded?: boolean;
 }) {
   const span = spanOf(position);
   const from = heading ?? position.time_s;
@@ -92,7 +105,7 @@ export function ReplayTransport({
     ? PACES_S
     : [...PACES_S, position.seconds_per_day].sort((a, b) => a - b);
   return (
-    <section className="replay-transport" aria-label="Move through the run">
+    <section className="replay-transport" aria-label="Move through the run" hidden={folded}>
       {refused !== null && (
         <p role="alert" className="replay-refused">
           That did not reach the run: {refused}. Reload the page to open it again.
@@ -105,13 +118,18 @@ export function ReplayTransport({
       )}
       <div className="replay-controls">
         <div className="replay-buttons">
-          <IconButton label="Previous day" onClick={() => onSeek(dayAway(from, -1, span))}>
+          <IconButton
+            label="Previous day"
+            title={TRANSPORT_NOTES.back}
+            onClick={() => onSeek(dayAway(from, -1, span))}
+          >
             <StepBackIcon />
           </IconButton>
           <IconButton
             tone="primary"
             className="replay-play"
             label={position.playing ? "Pause" : "Play"}
+            title={position.playing ? TRANSPORT_NOTES.pause : TRANSPORT_NOTES.play}
             // At the run's end there is nothing to play: it would stop at once. One
             // already waiting at a frontier with nothing to come can still be told
             // to stop waiting.
@@ -124,7 +142,11 @@ export function ReplayTransport({
               <PlayIcon size={PLAY_ICON_PX} />
             )}
           </IconButton>
-          <IconButton label="Next day" onClick={() => onSeek(dayAway(from, 1, span))}>
+          <IconButton
+            label="Next day"
+            title={TRANSPORT_NOTES.on}
+            onClick={() => onSeek(dayAway(from, 1, span))}
+          >
             <StepForwardIcon />
           </IconButton>
         </div>
@@ -155,6 +177,7 @@ export function ReplayTransport({
           <Button
             className="replay-follow"
             aria-pressed={position.following}
+            title={position.following ? TRANSPORT_NOTES.following : TRANSPORT_NOTES.follow}
             // A position that follows is held where it is by pausing it, which
             // clears the following and the playing alike (it shows Play then).
             onClick={position.following ? onPause : onFollow}
