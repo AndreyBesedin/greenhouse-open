@@ -1,3 +1,4 @@
+import { Fold } from "../design/Fold";
 import { useLoad } from "../useLoad";
 import { labRunQuery } from "./lab";
 import {
@@ -62,12 +63,11 @@ export function PlantTree({
   onSelect: (organId: string) => void;
 }) {
   return (
-    <details className="plant-structure" open>
-      <summary>Plant structure: {plantId}</summary>
+    <Fold className="plant-structure" open summary={<>Plant structure: {plantId}</>}>
       <ul>
         <Organ organ={tree} selectedOrgan={selectedOrgan} onSelect={onSelect} />
       </ul>
-    </details>
+    </Fold>
   );
 }
 
@@ -78,8 +78,7 @@ export function PlantHistory({ plantId, history }: { plantId: string; history: P
     return null;
   }
   return (
-    <details className="plant-history" open>
-      <summary>History: {plantId}</summary>
+    <Fold className="plant-history" open summary={<>History: {plantId}</>}>
       <ol>
         {history.map((event, index) => (
           <li
@@ -94,7 +93,7 @@ export function PlantHistory({ plantId, history }: { plantId: string; history: P
           </li>
         ))}
       </ol>
-    </details>
+    </Fold>
   );
 }
 

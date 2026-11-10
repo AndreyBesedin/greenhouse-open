@@ -9,6 +9,7 @@ import {
 } from "./debug/categories";
 import { DIMENSION_COLOR } from "./debug/dimensions";
 import type { OverlayToggles, SceneOverlay } from "./debug/overlays";
+import { Button } from "./design/Button";
 import {
   CUBE_COLOR,
   CUBE_CORNER_M,
@@ -357,9 +358,9 @@ export function WhatAmISeeing({ view }: { view: ViewState }) {
   const [open, setOpen] = useState(false);
   if (!open) {
     return (
-      <button type="button" className="seen-open" onClick={() => setOpen(true)}>
+      <Button size="compact" className="seen-open" onClick={() => setOpen(true)}>
         What am I seeing?
-      </button>
+      </Button>
     );
   }
   const seen = seenInTheView(view);
@@ -367,9 +368,9 @@ export function WhatAmISeeing({ view }: { view: ViewState }) {
     <section className="seen-in-the-view" aria-label="What am I seeing?">
       <header>
         <h2>What am I seeing?</h2>
-        <button type="button" aria-label="Close what am I seeing" onClick={() => setOpen(false)}>
+        <Button size="compact" aria-label="Close what am I seeing" onClick={() => setOpen(false)}>
           ×
-        </button>
+        </Button>
       </header>
       <Rows rows={seen.overlays} />
       <Rows rows={seen.colours} />

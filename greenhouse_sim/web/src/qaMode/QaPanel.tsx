@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { BuildInfo } from "../buildInfo";
+import { Fold } from "../design/Fold";
 import {
   describeManifest,
   type RunManifestState,
@@ -45,8 +46,7 @@ function DeveloperList({
   }
   const described = state.status === "loaded" ? describeRunState(state.state) : null;
   return (
-    <details className="developer" open>
-      <summary>Developer</summary>
+    <Fold className="developer" open summary={"Developer"}>
       {state.status === "loading" && <p>Reading what the run holds…</p>}
       {state.status === "unavailable" && <p>What the run holds cannot be read: {state.reason}.</p>}
       {described !== null && state.status === "loaded" && (
@@ -98,7 +98,7 @@ function DeveloperList({
           </Row>
         </dl>
       )}
-    </details>
+    </Fold>
   );
 }
 
@@ -142,8 +142,7 @@ function RunManifestList({
     build.sourceCommit !== UNKNOWN_COMMIT &&
     served.served.commit !== build.sourceCommit;
   return (
-    <details className="run-manifest" open>
-      <summary>Run manifest</summary>
+    <Fold className="run-manifest" open summary={"Run manifest"}>
       {manifest.status === "loading" && <p>Reading the run's manifest…</p>}
       {manifest.status === "unavailable" && (
         <p>The run's manifest cannot be read: {manifest.reason}.</p>
@@ -166,7 +165,7 @@ function RunManifestList({
           The viewer was built from another commit than the simulator runs.
         </p>
       )}
-    </details>
+    </Fold>
   );
 }
 

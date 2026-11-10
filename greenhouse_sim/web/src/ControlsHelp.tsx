@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
-
+import { Button } from "./design/Button";
 import { PLACE_BY_CLICKING } from "./fields/FieldProbes";
 
 /** The inputs that do an action on one kind of device. */
@@ -148,24 +148,24 @@ export function ControlsHelp({ onShow }: { onShow?: () => void } = {}) {
 
   if (!open) {
     return (
-      <button
-        type="button"
+      <Button
+        size="compact"
         className="controls-open"
         ref={trigger}
         aria-keyshortcuts="?"
         onClick={() => setOpen(true)}
       >
         Controls <kbd>?</kbd>
-      </button>
+      </Button>
     );
   }
   return (
     <section className="controls-help" aria-labelledby="controls-help-title">
       <header>
         <h2 id="controls-help-title">Moving around the view</h2>
-        <button type="button" ref={close} aria-label="Close the controls" onClick={shut}>
+        <Button size="compact" ref={close} aria-label="Close the controls" onClick={shut}>
           ×
-        </button>
+        </Button>
       </header>
       {CONTROLS.map(({ section, actions }) => (
         <div key={section} data-testid={`controls-${section.toLowerCase().replaceAll(" ", "-")}`}>

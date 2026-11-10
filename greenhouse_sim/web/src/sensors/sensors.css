@@ -23,8 +23,10 @@
   margin: 0 0 var(--space-2);
 }
 
+/* The pass shown, in the tone of what is chosen: every tab's words are 600. */
 .camera-tabs [aria-selected="true"] {
-  font-weight: 600;
+  border-color: var(--action);
+  color: var(--action);
 }
 
 /* A depth or instance pass lies over the picture, at its size. */

@@ -1,6 +1,7 @@
 import { type PointerEvent, useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { PRESET_ORDER, type PresetName } from "./camera";
+import { Button } from "./design/Button";
 import { type Box, isMoved, type Offset, UNMOVED, unmoved, within } from "./hudPlace";
 import {
   formatCount,
@@ -152,9 +153,9 @@ export function Hud({
         </summary>
         <HudBody sample={sample} pointer={pointer} simulator={simulator} onPreset={onPreset} />
         {isMoved(offset) && (
-          <button type="button" className="hud-put-back" onClick={() => setOffset(UNMOVED)}>
+          <Button size="compact" className="hud-put-back" onClick={() => setOffset(UNMOVED)}>
             Put it back
-          </button>
+          </Button>
         )}
       </details>
     </section>
@@ -177,9 +178,9 @@ function HudBody({
     <>
       <fieldset aria-label="Camera presets">
         {PRESET_ORDER.map((preset) => (
-          <button type="button" key={preset} onClick={() => onPreset(preset)}>
+          <Button size="compact" key={preset} onClick={() => onPreset(preset)}>
             {PRESET_LABELS[preset]}
-          </button>
+          </Button>
         ))}
       </fieldset>
       <dl>

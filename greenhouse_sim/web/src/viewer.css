@@ -378,6 +378,14 @@
   color: var(--text-muted);
 }
 
+/* The two buttons that stand over the scene alone, on a panel's ground so that
+ * the scene behind never takes their words, in the panels' size. */
+.controls-open,
+.seen-open {
+  background: var(--surface-panel);
+  font-size: var(--font-sm);
+}
+
 .controls-open kbd {
   padding: 0 var(--space-2);
   border: 1px solid var(--text-muted);
