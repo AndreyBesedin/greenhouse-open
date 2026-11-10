@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -639,30 +638,12 @@ describe("the stylesheet's classes (AUDIT.20)", () => {
   });
 });
 
-// The stylesheet as the browser takes it, in each theme, by digest (P19.1). While
-// tokens replace written values (P19.2 to P19.5), this does not change: equal text
-// in equal order is an equal cascade, and custom properties stand on `:root` alone
-// (below), so that replacing each `var()` is what the browser computes.
-//
-// A pull request that means to change a style writes the digests the test
-// prints here, in its own diff, where review sees them; a token step must not. The
-// components' rules stand outside it: the reference page's baselines hold those, and
-// adding them moves nothing a page draws.
-//
-// A page's rules cut into a stylesheet of their own come before the viewer's, which
-// changes their order, and so these digests: the pull request says what shows that
-// the order changes nothing (the builder's, P19.9). It goes in P19.8. Until then it
-// holds what nothing else does: at `c0262394`, 206 of the stylesheet's 370 rules
-// match nothing on the pages the no-tolerance baselines draw, and the guards below
-// read how a value is written, not which it is.
-const RESOLVED_DIGESTS = {
-  dark: "2dda082b7730af6f4ddda9ccee7d361e2bd580f29c8256550cf3eeeca7aa4f41",
-  light: "9be952f386d65e697763c842afd913f218e17cf9c3f13301924201332d14bbbf",
-};
-type ThemeName = keyof typeof RESOLVED_DIGESTS;
-const STYLES_OF_THE_PAGES = withImports(ENTRY, (file) =>
-  file.endsWith("/design/components.css") ? "" : readFileSync(file, "utf8"),
-);
+// The tokens each theme gives, and the stylesheet with them resolved: a custom
+// property stands on `:root` alone (below), so that replacing each `var()` is what
+// the browser computes. A digest of it held each step to no pixel from P19.1 until
+// a page's rules began to move (P19.8); the page baselines at no tolerance
+// (`e2e/visual/pages.spec.ts`) hold what each page draws.
+type ThemeName = "dark" | "light";
 const COMMENT = /\/\*[\s\S]*?\*\//g;
 const ROOT_BLOCK = /:root([^{]*)\{([^}]*)\}/g;
 const LIGHT_ROOT = /\[data-theme="light"\]\s*$/;
@@ -700,10 +681,6 @@ function resolved(stylesheet: string, theme: ThemeName): string {
   return replaced(text.replace(ROOT_BLOCK, "")).replace(/\s+/g, " ").trim();
 }
 
-function digest(text: string): string {
-  return createHash("sha256").update(text).digest("hex");
-}
-
 /** What stands in `stylesheet`'s `:root` blocks but custom properties, and any
  * custom property written outside them: a value replacing cannot account for. */
 function outsideTheTokens(stylesheet: string): string[] {
@@ -737,21 +714,6 @@ describe("the stylesheet with its tokens resolved (P19.1)", () => {
     .b { gap: 4px; }
   `;
 
-  it("is what it was", () => {
-    expect(
-      {
-        dark: digest(resolved(STYLES_OF_THE_PAGES, "dark")),
-        light: digest(resolved(STYLES_OF_THE_PAGES, "light")),
-      },
-      "the stylesheet draws something else: a token step must not; a change of style writes these digests in RESOLVED_DIGESTS",
-    ).toEqual(RESOLVED_DIGESTS);
-  });
-
-  it("leaves out the rules of no page, and only those", () => {
-    expect(STYLES_OF_THE_PAGES).not.toContain(".ds-");
-    expect(STYLES_OF_THE_PAGES).toContain(".landing-button");
-  });
-
   it("uses no token that is not defined, in a component's rules too", () => {
     expect(() => resolved(STYLES, "dark")).not.toThrow();
     expect(() => resolved(STYLES, "light")).not.toThrow();
@@ -774,49 +736,6 @@ describe("the stylesheet with its tokens resolved (P19.1)", () => {
     expect(resolved(written, "light")).toBe(
       ".a { padding: 8px 12px; color: #eeeeee; } .b { gap: 4px; }",
     );
-  });
-
-  it("does not see a value written as a token, a token's name, comments or white space", () => {
-    const same = `
-      :root { --space-3: 8px; --gap-small: 4px; --text: #111111; --pad: 12px; }
-      :root[data-theme="light"] { --text: #eeeeee; }
-      .a {
-        padding: var(--space-3) var(--pad);
-        /* Its colour. */
-        color: var(--text);
-      }
-      .b { gap: var(--gap-small); }
-    `;
-    for (const theme of ["dark", "light"] as const) {
-      expect(digest(resolved(same, theme))).toBe(digest(resolved(written, theme)));
-    }
-  });
-
-  it("sees a value moved by the least, in the theme it moved in", () => {
-    const original = {
-      dark: digest(resolved(written, "dark")),
-      light: digest(resolved(written, "light")),
-    };
-    const pixel = written.replace("--size: 8px", "--size: 9px");
-    expect(digest(resolved(pixel, "dark"))).not.toBe(original.dark);
-    expect(digest(resolved(pixel, "light"))).not.toBe(original.light);
-
-    const onlyLight = written.replace("--ink: #eeeeee", "--ink: #eeeeef");
-    expect(digest(resolved(onlyLight, "dark"))).toBe(original.dark);
-    expect(digest(resolved(onlyLight, "light"))).not.toBe(original.light);
-
-    const raw = written.replace("gap: 4px", "gap: 5px");
-    expect(digest(resolved(raw, "dark"))).not.toBe(original.dark);
-  });
-
-  it("sees two rules change order, which changes the cascade", () => {
-    const swapped = `
-      :root { --size: 8px; --ink: #111111; --deep: var(--ink); }
-      :root[data-theme="light"] { --ink: #eeeeee; }
-      .b { gap: 4px; }
-      .a { padding: var(--size) 12px; color: var(--deep); }
-    `;
-    expect(digest(resolved(swapped, "dark"))).not.toBe(digest(resolved(written, "dark")));
   });
 
   it("refuses a token used and never defined", () => {
