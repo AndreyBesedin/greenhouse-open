@@ -587,6 +587,14 @@
   white-space: nowrap;
 }
 
+/* A kind of which there is more than one, named over its pieces' rows (P22.8). */
+.opening-group,
+.equipment-group {
+  margin: var(--space-2) 0 0;
+  color: var(--text-soft);
+  font-weight: 600;
+}
+
 /* The panels stand in two columns at the sides of the view: the info panel
  * above the inspector on the left, the HUD above the legends on the right.
  * A column shares its height among its panels, which scroll rather than

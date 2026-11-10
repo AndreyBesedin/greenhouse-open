@@ -1,5 +1,6 @@
 import { Fold } from "./design/Fold";
 import type { Fold as FoldState } from "./folds";
+import { capitalised, describeGroups, inGroups } from "./groups";
 import { formatValue, onAndRest, setBeside } from "./readouts";
 import type { ThermostatAt } from "./scene/equipment";
 import type { SceneSnapshot } from "./scene/generated/snapshotTypes";
@@ -21,6 +22,8 @@ const RATINGS: Readonly<Record<string, { property: string; scale: number; unit: 
 interface EquipmentState {
   actuatorId: string;
   label: string;
+  /** What it is, `fan`, by which it is listed with others of its kind. */
+  kind: string;
   level: number;
   /** What it does at full power, in `unit`. */
   rated: number;
@@ -30,7 +33,7 @@ interface EquipmentState {
 /** The climate equipment a scene holds, with the level each runs at. */
 export function equipmentIn(snapshot: SceneSnapshot): EquipmentState[] {
   return snapshot.entities.flatMap((entity) => {
-    const { actuator_id, level, does } = entity.properties;
+    const { actuator_id, level, does, device_kind } = entity.properties;
     const rating =
       entity.kind === "EQUIPMENT" && typeof does === "string" ? RATINGS[does] : undefined;
     const rated = rating === undefined ? undefined : entity.properties[rating.property];
@@ -46,6 +49,7 @@ export function equipmentIn(snapshot: SceneSnapshot): EquipmentState[] {
       {
         actuatorId: actuator_id,
         label: entity.label ?? actuator_id,
+        kind: typeof device_kind === "string" ? device_kind : actuator_id,
         level,
         rated: rated * rating.scale,
         unit: rating.unit,
@@ -62,14 +66,12 @@ export function describeLevel({ level, rated, unit }: EquipmentState): string {
     : `${Math.round(level * PERCENT)}%, ${formatValue(level * rated)} ${unit}`;
 }
 
-/** The equipment in a line, as the scene drawn runs it: `Equipment: heater
- * 100%; fan right, fan left off`. */
+/** The equipment in a line, as the scene drawn runs it, by kind (P22.8): `Equipment:
+ * heater 100%; fans, dehumidifier off`; a kind whose pieces run apart, by piece:
+ * `fan right 100%; fan left off`. */
 export function describeEquipment(equipment: readonly EquipmentState[]): string {
-  const on = equipment
-    .filter(({ level }) => level > 0)
-    .map(({ label, level }) => `${label} ${Math.round(level * PERCENT)}%`);
-  const off = equipment.filter(({ level }) => level === 0).map(({ label }) => label);
-  return `Equipment: ${onAndRest(on, off, "off")}`;
+  const { running, idle } = describeGroups(inGroups(equipment));
+  return `Equipment: ${onAndRest(running, idle, "off")}`;
 }
 
 /** What a piece of equipment does, and, if a thermostat runs it, at what it
@@ -119,35 +121,45 @@ export function EquipmentControls({
       summary={<span data-testid="equipment-summary">{describeEquipment(equipment)}</span>}
     >
       <fieldset className="equipment-controls" aria-label="Equipment">
-        {equipment.map((piece) => {
-          const shown = requested[piece.actuatorId] ?? piece.level;
-          const set = (level: number) => onChange({ ...requested, [piece.actuatorId]: level });
-          return (
-            <div key={piece.actuatorId} className="equipment-control">
-              <label className="equipment-switch">
+        {inGroups(equipment).flatMap((group) => [
+          ...(group.pieces.length > 1
+            ? [
+                <p key={`${group.name}-name`} className="equipment-group">
+                  {capitalised(group.name)}
+                </p>,
+              ]
+            : []),
+          ...group.pieces.map(({ piece, name }) => {
+            const shown = requested[piece.actuatorId] ?? piece.level;
+            const set = (level: number) => onChange({ ...requested, [piece.actuatorId]: level });
+            return (
+              <div key={piece.actuatorId} className="equipment-control">
+                <label className="equipment-switch">
+                  <input
+                    type="checkbox"
+                    aria-label={piece.label}
+                    checked={shown > 0}
+                    onChange={(event) => set(event.target.checked ? 1 : 0)}
+                  />{" "}
+                  {name}
+                </label>
                 <input
-                  type="checkbox"
-                  checked={shown > 0}
-                  onChange={(event) => set(event.target.checked ? 1 : 0)}
-                />{" "}
-                {piece.label}
-              </label>
-              <input
-                type="range"
-                aria-label={`${piece.label} level`}
-                min={0}
-                max={PERCENT}
-                step={STEP_PERCENT}
-                value={Math.round(shown * PERCENT)}
-                onChange={(event) => set(Number(event.target.value) / PERCENT)}
-              />
-              <span data-testid={`equipment-${piece.actuatorId}`}>
-                {describeRun(piece, thermostat)}
-                {setBeside(notDrawn[piece.actuatorId], piece.level)}
-              </span>
-            </div>
-          );
-        })}
+                  type="range"
+                  aria-label={`${piece.label} level`}
+                  min={0}
+                  max={PERCENT}
+                  step={STEP_PERCENT}
+                  value={Math.round(shown * PERCENT)}
+                  onChange={(event) => set(Number(event.target.value) / PERCENT)}
+                />
+                <span data-testid={`equipment-${piece.actuatorId}`}>
+                  {describeRun(piece, thermostat)}
+                  {setBeside(notDrawn[piece.actuatorId], piece.level)}
+                </span>
+              </div>
+            );
+          }),
+        ])}
       </fieldset>
     </Fold>
   );
