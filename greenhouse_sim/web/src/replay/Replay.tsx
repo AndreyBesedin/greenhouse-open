@@ -129,7 +129,7 @@ function ReplayOf({
             forkInLayout: (forkLayout, timeS) => fork({ timeS, layout: forkLayout }),
             noFork: whyNoFork(position),
             steer,
-            lane: { runId, epoch, startedAt: position.started_at, stored: true },
+            lane: { runId, epoch, startedAt: position.started_at },
           }}
         />
       </div>

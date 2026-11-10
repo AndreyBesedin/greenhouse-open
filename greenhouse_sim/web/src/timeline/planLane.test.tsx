@@ -46,43 +46,30 @@ function batch(outcomes: unknown[], after: number, hasMore: boolean) {
   };
 }
 
-const COMING = {
-  plan_id: "viewer",
-  revision: 2,
-  ref: { action_id: "change_3" },
-  action: WARM,
-  timing: { kind: "at", at: "2026-03-01T08:00:00Z" },
-  due: "2026-03-01T08:00:00Z",
-  principal: LOCAL_OPERATOR,
-  state: "assigned",
-};
-
 function answering(byUrl: Record<string, unknown>): typeof fetch {
   return vi.fn(async (url: string) =>
     url in byUrl ? new Response(JSON.stringify(byUrl[url])) : new Response("{}", { status: 404 }),
   ) as unknown as typeof fetch;
 }
 
-const OUTCOMES = `/consumer/v1/runs/${RUN.runId}/outcomes`;
-const ACTIONS = `/actuation/v1/runs/${RUN.runId}/actions`;
+const OUTCOMES = `/api/runs/${RUN.runId}/epochs/0/outcomes`;
 
-describe("a followed run's plan lane", () => {
-  it("reads the whole outcome log, page by page, and what is still to come", async () => {
+describe("a replayed epoch's plan lane", () => {
+  it("reads the outcomes its epoch delivered by the moment shown, page by page, through the store alone", async () => {
     const fetchFn = answering({
-      [`${OUTCOMES}?after=0`]: batch(
+      [`${OUTCOMES}?after=0&t=25200`]: batch(
         [outcome("change_1", "2026-03-01T06:00:00Z", "executed")],
         0,
         true,
       ),
-      [`${OUTCOMES}?after=1`]: batch(
+      [`${OUTCOMES}?after=1&t=25200`]: batch(
         [outcome("change_2", "2026-03-01T06:30:00Z", "refused", "no device 'fan_9'")],
         1,
         false,
       ),
-      [ACTIONS]: [COMING],
     });
 
-    const lane = await loadPlanLane(RUN, fetchFn);
+    const lane = await loadPlanLane(RUN, fetchFn, 7 * 3600);
 
     expect(lane).toEqual({
       status: "loaded",
@@ -94,7 +81,6 @@ describe("a followed run's plan lane", () => {
           action: "fan to 100%",
           status: "executed",
           reason: null,
-          resolved: true,
         },
         {
           timeS: 6.5 * 3600,
@@ -103,53 +89,19 @@ describe("a followed run's plan lane", () => {
           action: "fan to 100%",
           status: "refused",
           reason: "no device 'fan_9'",
-          resolved: true,
-        },
-        {
-          timeS: 8 * 3600,
-          planId: "viewer",
-          ref: "change_3",
-          action: "heating_day to 22 °C",
-          status: "assigned",
-          reason: null,
-          resolved: false,
         },
       ],
     });
-  });
-
-  it("of a stored epoch replayed, reads its outcomes through the store by the moment shown, and nothing still to come", async () => {
-    const stored = `/api/runs/${RUN.runId}/epochs/0/outcomes`;
-    const fetchFn = answering({
-      [`${stored}?after=0&t=25200`]: batch(
-        [outcome("change_1", "2026-03-01T06:00:00Z", "executed")],
-        0,
-        true,
-      ),
-      [`${stored}?after=1&t=25200`]: batch(
-        [outcome("change_2", "2026-03-01T06:30:00Z", "late")],
-        1,
-        false,
-      ),
-    });
-
-    const lane = await loadPlanLane({ ...RUN, stored: true }, fetchFn, 7 * 3600);
-
-    expect(
-      lane.status === "loaded" && lane.entries.map(({ ref, status }) => [ref, status]),
-    ).toEqual([
-      ["change_1", "executed"],
-      ["change_2", "late"],
-    ]);
-    // Neither the consumer interface nor the gateway is asked: the store alone.
+    // Neither the consumer interface nor the gateway is asked (P22.3): the
+    // store keeps no list of the actions still to come.
     expect(vi.mocked(fetchFn).mock.calls.map(([url]) => url)).toEqual([
-      `${stored}?after=0&t=25200`,
-      `${stored}?after=1&t=25200`,
+      `${OUTCOMES}?after=0&t=25200`,
+      `${OUTCOMES}?after=1&t=25200`,
     ]);
   });
 
   it("is unavailable, saying why, when a log is not what the viewer reads", async () => {
-    const fetchFn = answering({ [`${OUTCOMES}?after=0`]: { outcomes: "none" }, [ACTIONS]: [] });
+    const fetchFn = answering({ [`${OUTCOMES}?after=0&t=0`]: { outcomes: "none" } });
 
     expect(await loadPlanLane(RUN, fetchFn)).toEqual({
       status: "unavailable",
@@ -187,7 +139,7 @@ const WINDOW: Timeline = {
   kind: [],
 };
 
-function entry(timeS: number | null, status: PlanEntry["status"], resolved: boolean): PlanEntry {
+function entry(timeS: number, status: PlanEntry["status"]): PlanEntry {
   return {
     timeS,
     planId: "viewer",
@@ -195,27 +147,25 @@ function entry(timeS: number | null, status: PlanEntry["status"], resolved: bool
     action: "fan to 100%",
     status,
     reason: status === "refused" ? "not authorised" : null,
-    resolved,
   };
 }
 
-describe("a followed run's plan lane, drawn", () => {
+describe("a replayed epoch's plan lane, drawn", () => {
   it("draws and lists the window's actions in the order of their moments, with what became of each", () => {
     const shown = render(
       <TimelineLanes
         timeline={WINDOW}
         time={6.5 * 3600}
         plan={[
-          entry(6.75 * 3600, "refused", true),
-          entry(6 * 3600, "executed", true),
-          entry(9 * 3600, "assigned", false),
-          entry(null, "waiting", false),
+          entry(6.75 * 3600, "refused"),
+          entry(6 * 3600, "executed"),
+          entry(9 * 3600, "executed"),
         ]}
       />,
     );
 
     expect(shown.container.querySelector('[data-testid="timeline-plan"]')?.textContent).toBe(
-      "plan, 3",
+      "plan, 2",
     );
     expect(
       [...shown.container.querySelectorAll('[data-testid="timeline-plan-entry"]')].map(
@@ -224,20 +174,25 @@ describe("a followed run's plan lane, drawn", () => {
     ).toEqual([
       "6 h 00 min, fan to 100% (viewer/at_21600): executed",
       "6 h 45 min, fan to 100% (viewer/at_24300): refused: not authorised",
-      "as soon as it can, fan to 100% (viewer/at_null): waiting",
     ]);
     expect(shown.container.querySelector(".timeline-plan-ran")?.getAttribute("d")).toBe("M0 0V10");
     expect(shown.container.querySelector(".timeline-plan-not-ran")?.getAttribute("d")).toBe(
       "M180 0V10",
     );
+    // Nothing is still to come in a lane the store reads.
+    expect(
+      [...shown.container.querySelectorAll('svg[aria-label^="plan:"] path')].map((path) =>
+        path.getAttribute("class"),
+      ),
+    ).toEqual(["timeline-plan-ran", "timeline-plan-not-ran"]);
   });
 
-  it("is not drawn for a run not followed", () => {
+  it("is not drawn for a run not replayed", () => {
     const shown = render(<TimelineLanes timeline={WINDOW} time={6.5 * 3600} />);
 
     expect(shown.container.querySelector('[data-testid="timeline-plan"]')).toBeNull();
-    expect(describeEntry(entry(null, "waiting", false))).toBe(
-      "as soon as it can, fan to 100% (viewer/at_null): waiting",
+    expect(describeEntry(entry(6 * 3600, "missed"))).toBe(
+      "6 h 00 min, fan to 100% (viewer/at_21600): missed",
     );
   });
 });

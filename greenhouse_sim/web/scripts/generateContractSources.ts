@@ -1,8 +1,8 @@
 // Generates the viewer's side of the simulator's contracts from the schemas
 // it publishes (`tests/test_published_schemas.py` lists them): the scene,
 // the environment field, the CFD geometry, and each service's answer the
-// viewer reads; and of the protocol's records the viewer writes and reads
-// through a run's gateway (P13.8), as the protocol publishes them. For each,
+// viewer reads; and of the protocol's records, the plans the viewer writes and
+// the outcomes it reads (P13.8, P22.3), as the protocol publishes them. For each,
 // the TypeScript types, and the schema itself as a module for validation, in
 // its area's `generated` folder.
 //
@@ -175,19 +175,6 @@ export const CONTRACTS: readonly Contract[] = [
     "EPOCH_CHANGES_SCHEMA",
   ),
   contract(`${PROTOCOL}/plan.schema.json`, "Plan", ["src/plan", "plan"], "PLAN_SCHEMA"),
-  contract(`${PROTOCOL}/receipt.schema.json`, "Receipt", ["src/plan", "receipt"], "RECEIPT_SCHEMA"),
-  contract(
-    `${PROTOCOL}/plan-state.schema.json`,
-    "PlanState",
-    ["src/plan", "planState"],
-    "PLAN_STATE_SCHEMA",
-  ),
-  contract(
-    `${PROTOCOL}/action-state.schema.json`,
-    "ActionState",
-    ["src/plan", "actionState"],
-    "ACTION_STATE_SCHEMA",
-  ),
   contract(
     `${PROTOCOL}/outcome-batch.schema.json`,
     "OutcomeBatch",

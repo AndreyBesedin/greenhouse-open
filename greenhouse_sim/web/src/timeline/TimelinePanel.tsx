@@ -47,9 +47,8 @@ function turns(timeline: Timeline, seconds: number): [string, TimelineEvent[]][]
   return [...byProcess];
 }
 
-/** A run's plan lane, asked for at a moment: again as the moment moves on,
- * as its clock or its replay moves it, and once the viewer has given it a
- * plan. */
+/** An epoch's plan lane, asked for at a moment: again as its replay moves
+ * on, and once the viewer has given it a change. */
 interface PlanRequest {
   run: PlanLaneRun;
   time: number;
@@ -64,10 +63,9 @@ const planKey = ({ run, time }: PlanRequest) =>
  * A run's timeline (P09.2), opened on demand: a lane per process, its events
  * as ticks across the window the moment drawn lies in, from a day to a
  * minute wide, with the moment marked; and what each process does at that
- * moment, in the order they take their turns. A run followed as it plays
- * has a plan lane too (P13.8): what its plans had due in the window, what
- * became of each and why, and what is still to come; so has a stored run
- * replayed (P22.3), but for what is still to come.
+ * moment, in the order they take their turns. A stored epoch replayed has a
+ * plan lane too (P13.8, P22.3): what its plans had due in the window, and what
+ * became of each and why.
  */
 export function TimelinePanel({
   scenarioId,
@@ -80,8 +78,7 @@ export function TimelinePanel({
   run: RunParts;
   /** The moment drawn, in seconds into the run. */
   time: number;
-  /** The run followed as it plays, or the stored epoch replayed, whose plan
-   * lane is drawn, if one is. */
+  /** The stored epoch replayed, whose plan lane is drawn, if one is. */
   played?: PlanLaneRun | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -169,19 +166,17 @@ export function TimelineLanes({
   );
 }
 
-// The plan lane's ticks, by what became of each action: carried out, not
-// carried out (refused, missed, cancelled, replaced...), still to come.
+// The plan lane's ticks, by what became of each action: carried out, or not
+// (refused, missed, cancelled, replaced...).
 const PLAN_TICKS = [
-  ["ran", (entry: PlanEntry) => entry.resolved && RAN.has(entry.status)],
-  ["not-ran", (entry: PlanEntry) => entry.resolved && !RAN.has(entry.status)],
-  ["to-come", (entry: PlanEntry) => !entry.resolved],
+  ["ran", (entry: PlanEntry) => RAN.has(entry.status)],
+  ["not-ran", (entry: PlanEntry) => !RAN.has(entry.status)],
 ] as const;
 
 /**
- * A followed run's plan lane (P13.8): each action its plans had in the
- * window as a tick where it started, or was resolved, or falls due, by what
- * became of it; and each listed, in the order of their moments, with its
- * outcome and why; those still to come as soon as they can, last.
+ * A replayed epoch's plan lane (P13.8): each action its plans had in the
+ * window as a tick where it started, or was resolved, by what became of it;
+ * and each listed, in the order of their moments, with its outcome and why.
  */
 function PlanLane({
   timeline,
@@ -194,12 +189,8 @@ function PlanLane({
 }) {
   const span = timeline.untilS - timeline.fromS;
   const within = entries
-    .filter(
-      (entry) =>
-        entry.timeS === null || (entry.timeS >= timeline.fromS && entry.timeS <= timeline.untilS),
-    )
-    .sort((a, b) => (a.timeS ?? Number.POSITIVE_INFINITY) - (b.timeS ?? Number.POSITIVE_INFINITY));
-  const placed = within.filter((entry) => entry.timeS !== null);
+    .filter((entry) => entry.timeS >= timeline.fromS && entry.timeS <= timeline.untilS)
+    .sort((a, b) => a.timeS - b.timeS);
   const column = (timeS: number) =>
     Math.round(((timeS - timeline.fromS) / span) * CHART_WIDTH * TICKS_PER_UNIT) / TICKS_PER_UNIT;
   return (
@@ -216,9 +207,9 @@ function PlanLane({
             <path
               key={name}
               className={`timeline-plan-${name}`}
-              d={placed
+              d={within
                 .filter(chosen)
-                .map((entry) => `M${column(entry.timeS ?? 0)} 0V${HEIGHT}`)
+                .map((entry) => `M${column(entry.timeS)} 0V${HEIGHT}`)
                 .join("")}
             />
           ))}
@@ -242,9 +233,8 @@ function PlanLane({
 }
 
 /** An action of a plan lane, in words: when, what, and what became of it
- * and why, or how it stands. */
+ * and why. */
 export function describeEntry(entry: PlanEntry): string {
-  const when = entry.timeS === null ? "as soon as it can" : describeTime(entry.timeS);
   const why = entry.reason === null ? "" : `: ${entry.reason}`;
-  return `${when}, ${entry.action} (${entry.planId}/${entry.ref}): ${entry.status}${why}`;
+  return `${describeTime(entry.timeS)}, ${entry.action} (${entry.planId}/${entry.ref}): ${entry.status}${why}`;
 }
