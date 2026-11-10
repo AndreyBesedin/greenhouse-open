@@ -1,17 +1,18 @@
 import { useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "../design/Button";
+import type { ButtonSize } from "../design/buttonClass";
 
 /** What a fork does, said before one is made: it takes a worker and makes a run. */
 export const WHAT_A_FORK_DOES =
   "A new run from this moment, computed by a worker beside the others. This one stays as it is.";
 
 function ForkQuestion({
-  designed,
+  size,
   onFork,
   onCancel,
 }: {
-  designed: boolean;
+  size: ButtonSize;
   onFork: () => void;
   onCancel: () => void;
 }) {
@@ -32,23 +33,12 @@ function ForkQuestion({
       }}
     >
       <p id={said}>{WHAT_A_FORK_DOES}</p>
-      {designed ? (
-        <>
-          <Button ref={yes} tone="primary" onClick={onFork}>
-            Make the fork
-          </Button>
-          <Button onClick={onCancel}>Cancel</Button>
-        </>
-      ) : (
-        <>
-          <button ref={yes} type="button" onClick={onFork}>
-            Make the fork
-          </button>
-          <button type="button" onClick={onCancel}>
-            Cancel
-          </button>
-        </>
-      )}
+      <Button ref={yes} tone="primary" size={size} onClick={onFork}>
+        Make the fork
+      </Button>
+      <Button size={size} onClick={onCancel}>
+        Cancel
+      </Button>
     </fieldset>
   );
 }
@@ -64,12 +54,12 @@ function ForkQuestion({
  */
 export function useForkQuestion({
   about = "",
-  designed = false,
+  size = "compact",
 }: {
   about?: string;
-  /** Whether its buttons are the design system's, as a page's are; a panel's stay
-   * the browser's until the panels' controls move (P19.11). */
-  designed?: boolean;
+  /** Its buttons' size: a panel's are `compact`, as its other controls are; the
+   * replay's header's a target's. */
+  size?: ButtonSize;
 } = {}) {
   const [asked, setAsked] = useState<{ fork: () => void; about: string } | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -86,7 +76,7 @@ export function useForkQuestion({
     question:
       asked === null ? null : (
         <ForkQuestion
-          designed={designed}
+          size={size}
           onFork={() => {
             answered();
             asked.fork();

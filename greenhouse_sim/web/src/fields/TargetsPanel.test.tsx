@@ -91,6 +91,7 @@ describe("the heating targets (#274)", () => {
     expect(document.activeElement).toBe(set);
 
     click(set);
+    expect(button(view.container, "Make the fork").classList).toContain("ds-button-primary");
     click(button(view.container, "Make the fork"));
     expect(onSet).toHaveBeenCalledExactlyOnceWith({ heating_day: 21 });
     view.unmount();

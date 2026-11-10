@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Button } from "../design/Button";
 import { Fold } from "../design/Fold";
 import { useFolds } from "../folds";
 import { formatValue } from "../readouts";
@@ -164,13 +165,14 @@ function TargetsForm({
           onChange={(event) => setNight(event.target.value)}
         />
       </label>{" "}
-      <button
+      <Button
+        size="compact"
         ref={trigger}
         type="submit"
         disabled={!valid || Object.keys(changed).length === 0 || noFork !== null}
       >
         Set {from}
-      </button>
+      </Button>
       {noFork !== null && <p className="targets-note">{noFork}</p>}
       {question}
     </form>

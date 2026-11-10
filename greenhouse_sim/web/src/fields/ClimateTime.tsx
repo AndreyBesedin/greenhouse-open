@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { DAY_S, dayNumber, dayStart, runDay } from "../clock";
+import { Button } from "../design/Button";
 
 // The time of day moves a minute at a time.
 export const CLIMATE_STEP_S = 60;
@@ -183,9 +184,9 @@ export function ClimateTime({
       <div className="climate-time-row">
         {!followed && (
           <>
-            <button type="button" onClick={() => onPlaying(!playing)}>
+            <Button size="compact" onClick={() => onPlaying(!playing)}>
               {playing ? "Pause" : "Play"}
-            </button>
+            </Button>
             <input
               className="climate-time-slider"
               type="range"
@@ -225,14 +226,14 @@ export function ClimateTime({
       )}
       {days > 1 && !followed && (
         <div className="climate-time-row">
-          <button
-            type="button"
+          <Button
+            size="compact"
             aria-label="Previous day"
             disabled={day === 0}
             onClick={() => onTime(onDay(day - 1, within))}
           >
             ◀
-          </button>
+          </Button>
           <input
             className="climate-time-slider"
             type="range"
@@ -244,14 +245,14 @@ export function ClimateTime({
             aria-valuetext={`day ${dayNumber(time)}`}
             onChange={(event) => onTime(onDay(Number(event.target.value), within))}
           />
-          <button
-            type="button"
+          <Button
+            size="compact"
             aria-label="Next day"
             disabled={day >= days - 1}
             onClick={() => onTime(onDay(day + 1, within))}
           >
             ▶
-          </button>
+          </Button>
           <select
             aria-label="Pace"
             value={pace}

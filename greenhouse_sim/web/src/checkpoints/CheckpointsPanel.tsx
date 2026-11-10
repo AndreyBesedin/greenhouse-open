@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 
 import { dayBegun, daysEnded } from "../clock";
+import { Button } from "../design/Button";
+import { Fold } from "../design/Fold";
 import type { RunParts } from "../scene/run";
 import { useLoad } from "../useLoad";
 import {
@@ -85,26 +87,26 @@ export function CheckpointsPanel({
       ? state.checkpoints.filter((checkpoint) => checkpoint.scenarioId === scenarioId)
       : [];
   return (
-    <details
+    <Fold
       className="checkpoints"
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
+      summary="Checkpoints"
     >
-      <summary>Checkpoints</summary>
-      <button
-        type="button"
+      <Button
+        size="compact"
         disabled={working !== null}
         onClick={() =>
           void make(`Saving day ${day}'s start…`, saveCheckpoint(saveUrl(scenarioId, run), fetchFn))
         }
       >
         Save day {day}'s start
-      </button>{" "}
+      </Button>{" "}
       {/* The browser draws its own file picker's button and status in its own
           language: the viewer's button, in its words, opens it instead (#303). */}
-      <button type="button" disabled={working !== null} onClick={() => picker.current?.click()}>
+      <Button size="compact" disabled={working !== null} onClick={() => picker.current?.click()}>
         Upload a checkpoint
-      </button>
+      </Button>
       <input
         ref={picker}
         type="file"
@@ -138,16 +140,16 @@ export function CheckpointsPanel({
           {kept.map((checkpoint) => (
             <li key={checkpoint.checkpointId} data-testid="checkpoint">
               <span data-testid="checkpoint-description">{describeCheckpoint(checkpoint)}</span>{" "}
-              <button
-                type="button"
+              <Button
+                size="compact"
                 aria-label={`Restore day ${dayBegun(checkpoint.day)}, ${checkpoint.checkpointId}`}
                 onClick={() => onRestore(checkpoint)}
               >
                 Restore
-              </button>{" "}
+              </Button>{" "}
               {onCompare !== undefined && (
-                <button
-                  type="button"
+                <Button
+                  size="compact"
                   aria-pressed={compared === checkpoint.checkpointId}
                   aria-label={`Compare with day ${dayBegun(checkpoint.day)}, ${checkpoint.checkpointId}`}
                   onClick={() =>
@@ -155,7 +157,7 @@ export function CheckpointsPanel({
                   }
                 >
                   Compare
-                </button>
+                </Button>
               )}{" "}
               <a href={downloadUrl(checkpoint)} download={downloadName(checkpoint)}>
                 Download
@@ -164,6 +166,6 @@ export function CheckpointsPanel({
           ))}
         </ol>
       )}
-    </details>
+    </Fold>
   );
 }

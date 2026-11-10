@@ -1,3 +1,5 @@
+import { Button } from "../design/Button";
+import { Fold } from "../design/Fold";
 import { DEFAULT_WEATHER } from "../scenarios";
 import { WeatherDayChart } from "./WeatherDay";
 import {
@@ -148,13 +150,17 @@ export function WeatherPanel({
       : "";
   return (
     <section className="weather-panel" aria-label="Weather">
-      <details className="weather-fold">
-        <summary className="weather-heading">
-          <span data-testid="weather-summary">
-            {`Outside at ${localTime(weather)}: ${temperature}, wind ${wind}.`}
-          </span>
-          <WindCompass weather={weather} />
-        </summary>
+      <Fold
+        className="weather-fold"
+        summary={
+          <>
+            <span data-testid="weather-summary">
+              {`Outside at ${localTime(weather)}: ${temperature}, wind ${wind}.`}
+            </span>
+            <WindCompass weather={weather} />
+          </>
+        }
+      >
         {onChoose !== undefined && weathers.length > 1 && (
           <label className="weather-choice">
             Run under{" "}
@@ -191,9 +197,9 @@ export function WeatherPanel({
               {`${Math.round(clouds ?? outside.cloud_cover_pct)}%${clouds === undefined ? "" : ", for QA"}`}
             </span>
             {clouds !== undefined && (
-              <button type="button" onClick={() => onClouds(undefined)}>
+              <Button size="compact" onClick={() => onClouds(undefined)}>
                 Its own
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -215,9 +221,9 @@ export function WeatherPanel({
               {windFrom === undefined ? "its own" : `${windFrom}°, for QA`}
             </span>
             {windFrom !== undefined && (
-              <button type="button" onClick={() => onWindFrom(undefined)}>
+              <Button size="compact" onClick={() => onWindFrom(undefined)}>
                 Its own wind
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -240,7 +246,7 @@ export function WeatherPanel({
           <dd data-testid="weather-site">{describeSite(weather)}</dd>
         </dl>
         <WeatherDayChart state={day} time={time} />
-      </details>
+      </Fold>
     </section>
   );
 }

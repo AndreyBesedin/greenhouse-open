@@ -4,14 +4,13 @@
   margin: 0 0 var(--space-4);
 }
 
-.weather-heading {
+.weather-fold > summary {
   display: flex;
   gap: var(--space-4);
   align-items: center;
-  cursor: pointer;
 }
 
-.weather-heading span {
+.weather-fold > summary span {
   flex: 1;
 }
 

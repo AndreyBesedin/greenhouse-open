@@ -1,4 +1,6 @@
 import { DAY_S, dayStart, runDay } from "../clock";
+import { Button } from "../design/Button";
+import { Fold } from "../design/Fold";
 import { latestDaily } from "../scene/edits";
 import type { ScheduledCommand } from "../scene/source";
 import { PERCENT } from "../units";
@@ -115,24 +117,27 @@ export function ClimateSchedule({
   ];
   return (
     <section className="climate-schedule" aria-label="Schedule">
-      <details>
-        <summary>
-          <span data-testid="schedule-summary">
-            {describeSchedule({ schedule, daily, time, days, describe })}
-          </span>
-          <span className="climate-schedule-bar" aria-hidden="true">
-            {marked.map((command, index) => (
-              <span
-                // Commands are listed in the order given, so their places are theirs.
-                // biome-ignore lint/suspicious/noArrayIndexKey: two commands may be alike.
-                key={index}
-                data-testid="schedule-marker"
-                className={`${command.timeS <= time ? "applied" : "to-come"}${command.every ? " daily" : ""}`}
-                style={{ left: `${((command.timeS - from) / DAY_S) * PERCENT}%` }}
-              />
-            ))}
-          </span>
-        </summary>
+      <Fold
+        summary={
+          <>
+            <span data-testid="schedule-summary">
+              {describeSchedule({ schedule, daily, time, days, describe })}
+            </span>
+            <span className="climate-schedule-bar" aria-hidden="true">
+              {marked.map((command, index) => (
+                <span
+                  // Commands are listed in the order given, so their places are theirs.
+                  // biome-ignore lint/suspicious/noArrayIndexKey: two commands may be alike.
+                  key={index}
+                  data-testid="schedule-marker"
+                  className={`${command.timeS <= time ? "applied" : "to-come"}${command.every ? " daily" : ""}`}
+                  style={{ left: `${((command.timeS - from) / DAY_S) * PERCENT}%` }}
+                />
+              ))}
+            </span>
+          </>
+        }
+      >
         <ol>
           {daily.map((command, index) => {
             const said = `${describeCommand(command)} every day at ${describeTime(command.timeS)}`;
@@ -140,18 +145,18 @@ export function ClimateSchedule({
             return (
               // biome-ignore lint/suspicious/noArrayIndexKey: two commands may be alike.
               <li key={`daily-${index}`} data-testid="daily-command" data-applied={today <= time}>
-                <button type="button" aria-label={`Go to ${said}`} onClick={() => onTime(today)}>
+                <Button size="compact" aria-label={`Go to ${said}`} onClick={() => onTime(today)}>
                   every day {describeTime(command.timeS)}
-                </button>{" "}
+                </Button>{" "}
                 {describeCommand(command)}{" "}
                 {!fixed && (
-                  <button
-                    type="button"
+                  <Button
+                    size="compact"
                     aria-label={`Remove ${said}`}
                     onClick={() => onRemoveDaily?.(index)}
                   >
                     ×
-                  </button>
+                  </Button>
                 )}
               </li>
             );
@@ -161,31 +166,31 @@ export function ClimateSchedule({
             return (
               // biome-ignore lint/suspicious/noArrayIndexKey: two commands may be alike.
               <li key={index} data-testid="schedule-command" data-applied={command.timeS <= time}>
-                <button
-                  type="button"
+                <Button
+                  size="compact"
                   aria-label={`Go to ${said}`}
                   onClick={() => onTime(command.timeS)}
                 >
                   {describe(command.timeS)}
-                </button>{" "}
+                </Button>{" "}
                 {describeCommand(command)}{" "}
                 {onRepeat !== undefined && !fixed && (
-                  <button
-                    type="button"
+                  <Button
+                    size="compact"
                     aria-label={`Repeat ${said} every day`}
                     onClick={() => onRepeat(index)}
                   >
                     ↻
-                  </button>
+                  </Button>
                 )}{" "}
                 {!fixed && (
-                  <button
-                    type="button"
+                  <Button
+                    size="compact"
                     aria-label={`Remove ${said}`}
                     onClick={() => onRemove(index)}
                   >
                     ×
-                  </button>
+                  </Button>
                 )}
               </li>
             );
@@ -197,7 +202,7 @@ export function ClimateSchedule({
             before one goes on with what it has inherited up to there.
           </p>
         )}
-      </details>
+      </Fold>
     </section>
   );
 }

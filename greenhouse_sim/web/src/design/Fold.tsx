@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 
 import type { Fold as FoldState } from "../folds";
 
-export type FoldProps = FoldState & {
+/** Its state, if a page keeps it: without, the browser's `<details>` keeps its own. */
+export type FoldProps = Partial<FoldState> & {
   /** Its line, which shows folded or open, and opens or folds it. */
   summary: ReactNode;
   /** What it holds, shown when open. */

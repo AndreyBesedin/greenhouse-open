@@ -42,6 +42,7 @@ describe("a plant's work in a replay", () => {
 
     click(button(shown.container, "Lower the stem"));
     expect(onFork).not.toHaveBeenCalled();
+    expect(button(shown.container, "Make the fork").classList).toContain("ds-button-primary");
     click(button(shown.container, "Make the fork"));
 
     expect(onFork).toHaveBeenCalledWith(expect.objectContaining({ kind: "lower_stem" }));
