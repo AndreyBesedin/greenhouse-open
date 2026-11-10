@@ -117,7 +117,8 @@ class Status(StrEnum):
     RUNNING = "running"
     FINISHED = "finished"
     FAILED = "failed"
-    # Stopped before its end: a restart, or the producer stopping.
+    # Stopped before its end: told to stop, or its producer stopping (or, for an
+    # epoch an earlier version kept, its playback starting over).
     INTERRUPTED = "interrupted"
 
 

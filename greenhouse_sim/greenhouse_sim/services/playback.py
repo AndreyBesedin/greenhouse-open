@@ -8,9 +8,9 @@ worked out, so a record the clock has reached is always there. The viewer
 draws the run at the clock's moment as it draws any moment of a run (its
 field, its crop, its sensors, `run_state`), and a consumer reads the records
 delivered by then. Both name it by the run's identity (`air_through_a_run`),
-its epoch and the clock's instant. A restart is a new epoch of the same run
-from its start: the run is deterministic, so its records are the same again,
-and are not worked out twice.
+its epoch and the clock's instant. It plays one epoch: another epoch of the
+same run is another playback's, as a worker's resume, a fork or an
+experiment's runner makes one.
 
 The records are the point sensors' readings at a consumer's cadence
 (`every_s`): each sensor's own sample at that minute, noise and all, as the
@@ -40,9 +40,8 @@ same until the change.
 Its run's targets, such as the heating setpoint by day, can be changed
 while it plays (#274, decision 0043): from the clock's next minute on, in
 the same run and epoch, as the local operator's plan of them, revised. They
-are part of its state. A restart, a new epoch of the scenario's own run,
-cancels what is pending and forgets the plans, and a run played to its end
-cancels what is left of them.
+are part of its state. A run played to its end cancels what is left of
+them.
 
 A change given to a run kept in the store is the epoch's own (P17.8, decision
 0065): it is written to the epoch's log, at the moment of the clock it is given
@@ -86,7 +85,7 @@ from greenhouse_protocol.authorisation import AuthorisationConfig
 from greenhouse_protocol.context import CapabilityContext
 from greenhouse_protocol.contracts.consumer import OutcomeBatch
 from greenhouse_protocol.contracts.execution import ActionNotExecutable
-from greenhouse_protocol.contracts.gateway import STARTED_OVER, GatewayLimits, PlanState, Receipt
+from greenhouse_protocol.contracts.gateway import GatewayLimits, PlanState, Receipt
 from greenhouse_protocol.contracts.memory_gateway import InMemoryGateway
 from greenhouse_protocol.event import Event
 from greenhouse_protocol.observation import Observation
@@ -259,7 +258,6 @@ class PlaybackCommand(StrEnum):
 
     PLAY = "play"
     PAUSE = "pause"
-    RESTART = "restart"
 
 
 class PlaybackState(BaseModel):
@@ -455,7 +453,6 @@ class Playback:
         self._worked: list[tuple[_Packed, _Packed]] = []
         # Counted on from the run's last epoch, if they are kept: a producer
         # started again is a new epoch of its run, never its first again.
-        self._epochs = epochs
         self._epoch = FIRST_EPOCH if epochs is None else epochs.next(self.run_id)
         if epoch is not None:
             # An epoch a worker was given, started already (`workers`): the
@@ -990,19 +987,13 @@ class Playback:
         else:
             self._end_store(Status.FAILED, reason=failure_reason(failure))
 
-    def _end_store(
-        self, status: Status, store: EpochStore | None = None, *, reason: str | None = None
-    ) -> None:
+    def _end_store(self, status: Status, *, reason: str | None = None) -> None:
         """Says in the run store how its epoch ended, unless it ended already:
-        finished, failed and why, or interrupted by the producer stopping. Given the
-        `store` of the epoch whose end it says, it says nothing once a restart
-        has put another epoch's store in its place, which said that one was
-        interrupted: the new epoch is not ended for the old one. One the store
-        could not be told of can be told again."""
+        finished, failed and why, or interrupted by the producer stopping. One
+        the store could not be told of can be told again."""
         with self._lock:
             current = self._store
-            another = store is not None and store is not current
-            if current is None or self._store_ended or another:
+            if current is None or self._store_ended:
                 return
             self._store_ended = True
         try:
@@ -1043,7 +1034,7 @@ class Playback:
                 outcomes.append(self._outcomes_until((day + 1) * DAY_S, position))
                 position += len(outcomes[-1])
         if failure is not None:
-            self._end_store(Status.FAILED, store, reason=failure_reason(failure))
+            self._end_store(Status.FAILED, reason=failure_reason(failure))
             return
         try:
             for (day, (observed, happened)), kept in zip(todo, outcomes, strict=True):
@@ -1060,18 +1051,17 @@ class Playback:
         except LimitPassed as passed:
             # The commit stands, and the store has said so: nothing failed but the limit.
             logger.warning("the epoch of %s ended: %s", self.run_id, passed.message)
-            self._end_store(Status.FAILED, store, reason=passed.message)
+            self._end_store(Status.FAILED, reason=passed.message)
             return
         except Exception as error:
             logger.exception("the run store could not keep %s", self.run_id)
-            self._end_store(Status.FAILED, store, reason=failure_reason(error))
+            self._end_store(Status.FAILED, reason=failure_reason(error))
             return
         with self._lock:
-            if self._store is store:
-                self._stored_days = closed
-                self._stored_outcomes += sum(map(len, outcomes))
+            self._stored_days = closed
+            self._stored_outcomes += sum(map(len, outcomes))
         if closed == days and todo:
-            self._end_store(Status.FINISHED, store)
+            self._end_store(Status.FINISHED)
 
     def _outcomes_until(self, until_s: float, position: int) -> list[ActionOutcome]:
         """The outcomes in its gateway's log after `position` that were
@@ -1261,10 +1251,7 @@ class Playback:
             return self._state()
 
     def command(self, command: PlaybackCommand) -> PlaybackState:
-        """Plays on, holds the clock, or starts the run over as a new epoch,
-        playing; answers with the new state. One stopped that keeps its epochs
-        starts nothing over: no thread would work the epoch it opened, which
-        no one could then end."""
+        """Plays on, or holds the clock; answers with the new state."""
         with self._lock:
             self._advance()
             match command:
@@ -1272,30 +1259,6 @@ class Playback:
                     self._playing = self._time_s < self.end_s
                 case PlaybackCommand.PAUSE:
                     self._playing = False
-                case PlaybackCommand.RESTART:
-                    over = self._stopped.is_set() or self._failure is not None
-                    if over and self._epochs is not None:
-                        raise Conflict(f"the playback of {self.run_id} no longer works")
-                    self._epoch += 1
-                    if self._epochs is not None:
-                        if self._store is not None and not self._store_ended:
-                            self._store.set_status(Status.INTERRUPTED)
-                        self._store = self._open_epoch(self._epochs)
-                        self._store.set_status(Status.RUNNING)
-                        self._stored_days = self._stored_outcomes = 0
-                        self._store_ended = False
-                        self._logged = 0
-                        self._taken = None
-                    self._time_s = 0.0
-                    if self._epochs is not None:
-                        self._log_start()
-                    self._playing = True
-                    # The scenario's own run again: what was pending is
-                    # cancelled, as the first outcomes of the new epoch,
-                    # and the plans and their actions forgotten.
-                    self._gateway.restart(continue_clock=False)
-                    self._gateway.epoch = self._epoch
-                    self._executor.forget()
             return self._state()
 
     def set_targets(
@@ -1416,19 +1379,9 @@ class Playback:
 
     def owner_of(self, outcome: ActionOutcome) -> Principal | None:
         """Who owns the plan an outcome of its run's is of: whoever first gave
-        it in the epoch it was given in. An action the run cancelled as it
-        started over ends in the new epoch, among its first outcomes, its
-        plan the epoch's before, which the gateway no longer holds."""
-        given_in = outcome.epoch
-        started_over = (
-            outcome.status == OutcomeStatus.CANCELLED
-            and outcome.cancelled_by is None
-            and STARTED_OVER in (outcome.reason or "")
-        )
-        if started_over:
-            given_in -= 1
+        it in the epoch it was given in."""
         with self._lock:
-            return self._owners.get((given_in, outcome.plan_id))
+            return self._owners.get((outcome.epoch, outcome.plan_id))
 
     def _written(self, write: Callable[[], Receipt]) -> Receipt:
         """A write to its gateway, refused as a conflict once its run has

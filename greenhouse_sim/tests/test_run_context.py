@@ -317,5 +317,3 @@ def test_a_playback_gives_the_context_of_its_epoch_and_authorisation(
     )
     played.authorise(policies)
     assert played.context(POLICY).grants == policies.groups[0].grants
-    played.command(PlaybackCommand.RESTART)
-    assert played.context(POLICY).epoch == state.epoch + 1

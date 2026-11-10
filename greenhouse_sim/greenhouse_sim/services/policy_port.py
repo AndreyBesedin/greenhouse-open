@@ -298,8 +298,8 @@ class RunPolicyPort:
     ) -> PlaybackState:
         """Reads the run's log on from where it last read, keeping what its
         principal reads: from its start again in a new epoch, read again
-        until a cut is of the epoch it keeps, however often the run starts
-        over meanwhile."""
+        until a cut is of the epoch it keeps, however often the run's epoch
+        changes meanwhile."""
         while True:
             cut = read(kept.read)
             if cut.state.epoch != kept.epoch:

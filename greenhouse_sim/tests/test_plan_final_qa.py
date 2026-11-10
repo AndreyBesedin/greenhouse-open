@@ -21,7 +21,7 @@ from greenhouse_protocol.plan import ActionKey, ActionState, Plan, Principal, Pr
 
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR
-from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
+from greenhouse_sim.services.playback import Epochs, Playback
 from greenhouse_sim.services.scenarios import plant_ids, scenario
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
@@ -319,26 +319,6 @@ def test_what_is_still_to_come_is_listed_and_chosen_actions_cancelled(played: _P
         assert done[f"listed/{each}"].cancelled_by == LOCAL_OPERATOR
     assert done["listed/second"].status == OutcomeStatus.CANCELLED
     assert "listed/first" in (done["listed/second"].reason or "")
-
-
-@pytest.mark.slow
-def test_a_run_started_over_drops_what_was_still_to_come(played: _Played) -> None:
-    """Step 10's first half: a new epoch from its start, each action still to
-    come cancelled because the run started over, and nothing given before it
-    applies."""
-    played.give("qa", *_the_day_s_plan())
-    played.to(9)
-
-    restarted = played.found.command(PlaybackCommand.RESTART)
-
-    assert (restarted.epoch, restarted.time_s) == (played.state.epoch + 1, 0.0)
-    assert (restarted.targets, restarted.commands, restarted.crop) == ([], [], [])
-    assert played.listed() == []
-    done = played.outcomes()
-    assert sorted(done) == ["qa/harvest", "qa/lower", "qa/open_vent"]
-    for each in done.values():
-        assert (each.status, each.epoch) == (OutcomeStatus.CANCELLED, restarted.epoch)
-        assert each.reason == "the run started over"
 
 
 @pytest.mark.slow

@@ -156,25 +156,6 @@ def test_the_viewers_frame_and_the_consumers_records_name_one_run_and_one_instan
     assert {r.source.source_id for r in cut.records} == {now.run_id}
 
 
-def test_a_restart_is_a_new_epoch_of_the_same_run_from_its_start(
-    played: Playback, clock: Clock
-) -> None:
-    played.command(PlaybackCommand.PLAY)
-    clock.now += 8.0
-    before = played.records_after(0, ALL)
-
-    restarted = played.command(PlaybackCommand.RESTART)
-    assert (restarted.epoch, restarted.time_s, restarted.playing) == (1, 0.0, True)
-    # At its start again: only what was delivered at its first instant.
-    anew = played.records_after(0, ALL)
-    assert {r.delivered_at or r.timestamp for r in anew.records} == {restarted.started_at}
-    assert anew.records == before.records[: len(anew.records)]
-    clock.now += 8.0
-    again = played.records_after(0, ALL)
-    assert again.state.epoch == 1
-    assert again.records == before.records
-
-
 def test_a_playback_stopped_works_out_nothing_more(simulator: Simulator, clock: Clock) -> None:
     run = Playback(simulator, SCENARIO, seconds_per_day=10.0, every_s=EVERY_S, clock=clock)
     run.begin()

@@ -139,57 +139,16 @@ def test_a_run_played_to_its_end_is_kept_as_the_consumer_read_it(
     assert again.next(run.run_id) == 1
 
 
-def test_a_restart_and_a_stop_tell_the_epoch_it_was_interrupted(
+def test_a_stop_tells_the_epoch_it_was_interrupted(
     played: Callable[[Epochs, Clock], Playback], tmp_path: Path
 ) -> None:
     epochs, clock = Epochs(tmp_path), Clock()
     run = played(epochs, clock)
     assert run.wait_for(1, timeout_s=WAIT_S)
 
-    run.command(PlaybackCommand.RESTART)
-    by_epoch = {r.epoch: r.status for r in stored_runs(epochs.objects, SHORT)}
-    assert by_epoch == {0: Status.INTERRUPTED, 1: Status.RUNNING}
-
     run.stop()
     by_epoch = {r.epoch: r.status for r in stored_runs(epochs.objects, SHORT)}
-    assert by_epoch == {0: Status.INTERRUPTED, 1: Status.INTERRUPTED}
-
-
-def test_a_restart_while_the_last_day_is_kept_leaves_the_new_epoch_running(
-    played: Callable[[Epochs, Clock], Playback], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """The old epoch's last day is committed outside the lock: a restart
-    meanwhile says it was interrupted and opens the next, which the old
-    one's end does not end, and which goes on keeping its own days."""
-    epochs, clock = Epochs(tmp_path), Clock()
-    committing, restarted = threading.Event(), threading.Event()
-    commit = EpochStore.commit
-
-    def held_at_the_last_day(store: EpochStore, start_s: float, *args: Any, **kept: Any) -> Any:
-        if store.epoch == 0 and start_s == DAY_S:
-            committing.set()
-            assert restarted.wait(WAIT_S)
-        return commit(store, start_s, *args, **kept)
-
-    monkeypatch.setattr(EpochStore, "commit", held_at_the_last_day)
-    run = played(epochs, clock)
-    assert run.wait_for(2, timeout_s=WAIT_S)
-    run.command(PlaybackCommand.PLAY)
-    clock.now += 20.0
-    assert committing.wait(WAIT_S)
-
-    run.command(PlaybackCommand.RESTART)
-    restarted.set()
-    assert run.wait_for(1, timeout_s=WAIT_S)
-    run.command(PlaybackCommand.PLAY)
-    clock.now += 10.0
-
-    def new_epoch() -> StoredRun:
-        return next(r for r in stored_runs(epochs.objects, SHORT) if r.epoch == 1)
-
-    _until(lambda: new_epoch().frontier_s == DAY_S, "the new epoch's first day to be kept")
-    by_epoch = {r.epoch: r.status for r in stored_runs(epochs.objects, SHORT)}
-    assert by_epoch == {0: Status.INTERRUPTED, 1: Status.RUNNING}
+    assert by_epoch == {0: Status.INTERRUPTED}
 
 
 def test_a_run_whose_simulation_fails_is_kept_as_failed(

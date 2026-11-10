@@ -293,20 +293,21 @@ def test_a_plan_for_one_hand_ends_on_time_late_missed_and_cancelled(step: timede
     assert _ends(gateway) == CREW_ENDS
 
 
-def test_a_playback_with_a_crew_ends_a_plan_the_same_after_it_starts_over(
+def test_a_playback_with_a_crew_ends_a_plan_the_same_in_the_next_epoch(
     tmp_path: Path,
 ) -> None:
     """On a playback of the reference greenhouse, for one hand: the plan's
-    outcomes as the gateway alone gives them, and the same again once the
-    playback starts over and is given it again."""
+    outcomes as the gateway alone gives them, and the same again in a
+    playback of the run's next epoch, as a resume or a fork makes one, given
+    it again on the same simulator."""
     clock = _Clock()
+    epochs = Epochs(tmp_path)
     with simulator_of(PLAYED, crew=ONE_HAND) as simulator:
-        played = Playback(
-            simulator, SCENARIO, seconds_per_day=24.0, clock=clock, epochs=Epochs(tmp_path)
-        )
         ends = []
-        for _ in range(2):
+        for epoch in range(2):
+            played = Playback(simulator, SCENARIO, seconds_per_day=24.0, clock=clock, epochs=epochs)
             state = played.state()
+            assert state.epoch == epoch
             receipt = played.submit(
                 Plan(
                     plan_id="crop",
@@ -318,7 +319,6 @@ def test_a_playback_with_a_crew_ends_a_plan_the_same_after_it_starts_over(
             )
             assert receipt.accepted and receipt.refused == ()
             ends.append(_played_through(played, clock))
-            played.command(PlaybackCommand.RESTART)
 
     assert ends[0] == ends[1] == CREW_ENDS
 

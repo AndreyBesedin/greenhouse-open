@@ -21,7 +21,7 @@ from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.services import forks, interventions, scheduler
 from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.gateway import LOCAL_OPERATOR
-from greenhouse_sim.services.playback import Epochs, Playback, PlaybackCommand
+from greenhouse_sim.services.playback import Epochs, Playback
 from greenhouse_sim.services.run_store import EpochStore, FolderStore, Status
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
@@ -237,19 +237,20 @@ def test_an_epoch_begun_under_other_rights_than_the_local_operators_says_so_firs
     tmp_path: Path,
 ) -> None:
     """Queued or played under a server's file, an epoch's log begins with it, and
-    so does the next epoch a restart opens; under the local operator's rights,
-    the log says nothing of them, and keeps the bytes and the digest it had."""
+    so does the run's next epoch a playback opens; under the local operator's
+    rights, the log says nothing of them, and keeps the bytes and the digest it
+    had."""
     with _simulator(authorisation=NO_LEVELS, runs=FolderStore(tmp_path / "file")) as server:
         given = queued(server, FolderStore(tmp_path / "file"), BOX)
-        played = Playback(server, BOX, epochs=Epochs(tmp_path / "played"))
-        played.begin()
-        played.command(PlaybackCommand.RESTART)
-        played.stop()
+        for _ in range(2):
+            played = Playback(server, BOX, epochs=Epochs(tmp_path / "played"))
+            played.begin()
+            played.stop()
     with _simulator() as local:
         plain = queued(local, FolderStore(tmp_path / "local"), BOX)
 
-    restarted = [EpochStore(FolderStore(tmp_path / "played"), given.run_id, n) for n in (0, 1)]
-    begun = [each.logged()[0] for each in (given, *restarted)]
+    opened = [EpochStore(FolderStore(tmp_path / "played"), given.run_id, n) for n in (0, 1)]
+    begun = [each.logged()[0] for each in (given, *opened)]
     assert [(entry.seq, entry.given_s, entry.what) for entry in begun] == [(0, 0.0, SAID)] * 3
     assert plain.logged() == []
 
