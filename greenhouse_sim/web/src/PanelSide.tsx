@@ -30,13 +30,20 @@ export function PanelSide({
   const column = useRef<HTMLDivElement>(null);
   const scrolled = useRef(new Map<Element, number>());
   const [panelPx, setPanelPx] = useState<number | null>(null);
+  const foldedNow = useRef(folded);
+  foldedNow.current = folded;
   useLayoutEffect(() => {
     const panel = column.current?.firstElementChild;
     if (panel === null || panel === undefined || typeof ResizeObserver === "undefined") {
       return;
     }
-    // Folded, the panel keeps its box, unseen, so the stripe keeps its height.
-    const observer = new ResizeObserver(() => setPanelPx(panel.getBoundingClientRect().height));
+    // Folded, the panel leaves the column, unbounded by its height: the stripe keeps
+    // the height it had open, and takes the panel's again as it opens.
+    const observer = new ResizeObserver(() => {
+      if (!foldedNow.current) {
+        setPanelPx(panel.getBoundingClientRect().height);
+      }
+    });
     observer.observe(panel);
     return () => observer.disconnect();
   }, []);
