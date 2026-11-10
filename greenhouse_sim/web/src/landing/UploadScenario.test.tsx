@@ -145,8 +145,8 @@ describe("a scenario file uploaded from the start page (P17.11)", () => {
     const upload = button(shown.container, "Upload a scenario or house file");
 
     expect(upload.title).toBe(UPLOAD_NOTE);
-    expect(UPLOAD_NOTE).toContain("opens in the builder");
-    expect(shown.container.textContent).not.toContain("opens in the builder");
+    expect(UPLOAD_NOTE).toContain("in the builder");
+    expect(shown.container.textContent).not.toContain(UPLOAD_NOTE);
     const pick = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
     click(upload);
     expect(pick).toHaveBeenCalledOnce();

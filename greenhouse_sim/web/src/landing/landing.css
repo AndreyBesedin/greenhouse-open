@@ -30,18 +30,21 @@
   padding: var(--space-8) var(--space-8) var(--space-9);
 }
 
+/* The title, centred over the two ways in under it. */
 .landing-main h2 {
   margin: 0 0 var(--space-7);
   font-size: var(--font-4xl);
+  text-align: center;
 }
 
-/* The two ways in (P22.7): equal, one under the other, "or" between them. */
+/* The two ways in (P22.7): equal, one under the other, "or" between them,
+ * centred in the page's width. */
 .landing-choices {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   max-width: 720px;
-  margin-bottom: var(--space-8);
+  margin: 0 auto var(--space-8);
 }
 
 .landing-or {

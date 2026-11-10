@@ -32,10 +32,8 @@ import { UploadScenario } from "./UploadScenario";
 /** What the start page is for, as its title says it (P22.7). */
 export const START_TITLE = "Simulate a greenhouse's climate and crop";
 /** What the start page's buttons say on hover: the page itself keeps few words. */
-export const CONTRIBUTE_NOTE =
-  "The simulator's code, on GitHub: report a problem, or propose a change.";
-export const BUILDER_NOTE =
-  "Lay out a house, its rows, its weather and its crop models, then run it.";
+export const CONTRIBUTE_NOTE = "See its code on GitHub; report a problem or propose a change";
+export const BUILDER_NOTE = "Lay out a house, its rows, weather and crop models; then run it";
 
 /** How many of the latest runs the page lists, besides any being computed. */
 const RECENT_RUNS = 5;

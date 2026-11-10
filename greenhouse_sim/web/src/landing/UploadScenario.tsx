@@ -7,7 +7,7 @@ import { keepHouse, keepSettings, uploadedAddress, uploadedHouseAddress } from "
 
 /** What the button says on hover, and to whoever hears it, of what a file does. */
 export const UPLOAD_NOTE =
-  "A scenario file, or a house file from the builder, opens in the builder, where it can be changed before it is run.";
+  "Open a scenario or house file in the builder, to change it before it runs";
 
 /**
  * A file sent in (P17.11): the simulator says which kind it is, and the builder

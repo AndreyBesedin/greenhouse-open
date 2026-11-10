@@ -6,9 +6,8 @@ import { notDoneText, resumeRun, stopRun } from "./runActions";
 import { isComputing, isResumable, type StoredRun } from "./storedRuns";
 
 /** What Stop and Resume say on hover (P22.7). */
-export const STOP_NOTE =
-  "Its worker stops at its next look, keeping what it has computed. It can be resumed.";
-export const RESUME_NOTE = "A worker computes it on from where it stopped.";
+export const STOP_NOTE = "Stop this run, keeping what it computed; it can be resumed";
+export const RESUME_NOTE = "Compute this run on from where it stopped";
 
 /** A run, a worker's or a playback's, stopped while it is computed and resumed
  * once it is interrupted or ended by a limit (P17.7, P17.9, P18.5), with nothing to

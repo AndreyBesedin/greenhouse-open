@@ -60,7 +60,7 @@ export const FOLLOWS_NOTE =
   "Opens at the newest day computed, and stays at it as the run computes. Play from an earlier day moves on as days arrive.";
 
 /** What is said of the replay of a run computed no longer, on its link (P22.7). */
-export const REPLAY_NOTE = "Opens at its first day, to play it day by day.";
+export const REPLAY_NOTE = "Replay this run from its first day";
 
 /** The one way to watch a run: its replay (P22.2), unless it has files missing.
  * A run still computed opens following its newest day, and one computed no

@@ -5,7 +5,7 @@ import { deleteRun, notDeleted } from "./runActions";
 import { isComputing, runKey, type StoredRun } from "./storedRuns";
 
 /** What Delete says on hover (P22.7). */
-export const DELETE_NOTE = "Removes the run and everything kept of it, once asked again.";
+export const DELETE_NOTE = "Delete this run and what it kept; asks first";
 
 /** A list's deletions and what it says of one refused. Why a run not over is not
  * deleted is read off its row, as `runs` has it now: it follows the row, and goes
