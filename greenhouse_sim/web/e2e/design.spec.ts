@@ -11,10 +11,11 @@ const THEMES: readonly Theme[] = ["dark", "light"];
 const TARGET_PX = 44;
 const COMPACT_TARGET_PX = 24;
 // Each control: a button, a disabled one, a link, and an icon of each, in every
-// tone and size, and the one that shows the focus.
-const COMPACT_CONTROLS = 3 * 5;
+// tone (plain, primary, danger, go) and size, and the one that shows the focus.
+const TONES = 4;
+const COMPACT_CONTROLS = TONES * 5;
 const CONTROLS = 2 * COMPACT_CONTROLS + 1;
-const ENABLED = 2 * 3 * 3 + 1;
+const ENABLED = 2 * TONES * 3 + 1;
 // Each field's control, one of them disabled, two compact (P19.9), and each fold's
 // line (P19.7): drawn by the browser, as on the pages that use them, and a field's
 // control as tall as its size asks.

@@ -70,6 +70,19 @@ describe("what moves a position over a stored run", () => {
     expect(playing.onPause).toHaveBeenCalledOnce();
   });
 
+  it("draws Play and Pause in one colour, go's green, the one button they are", () => {
+    for (const [playing, name] of [
+      [false, "Play"],
+      [true, "Pause"],
+    ] as const) {
+      const { container } = shown(position({ playing }));
+      expect(button(container, name).className).toBe(
+        "ds-button ds-button-go ds-icon-button replay-play",
+      );
+      rendered?.unmount();
+    }
+  });
+
   it("moves by icon buttons, each named by its label, its icon decoration", () => {
     const { container } = shown(position());
     for (const name of ["Previous day", "Play", "Next day"]) {
@@ -78,8 +91,8 @@ describe("what moves a position over a stored run", () => {
       expect(pressed.textContent).toBe("");
       expect(pressed.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
     }
-    // Play, the main one, in the action's colour, its icon a little larger.
-    expect(button(container, "Play").classList).toContain("ds-button-primary");
+    // Play, the main one, in green, its icon a little larger.
+    expect(button(container, "Play").classList).toContain("ds-button-go");
     expect(button(container, "Play").querySelector("svg")?.getAttribute("width")).toBe("20");
     expect(button(container, "Next day").querySelector("svg")?.getAttribute("width")).toBe("18");
   });
