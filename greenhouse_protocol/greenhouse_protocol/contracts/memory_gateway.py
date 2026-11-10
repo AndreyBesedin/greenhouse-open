@@ -530,10 +530,13 @@ class InMemoryGateway:
                 if reason is not None:
                     self._withdraw(action)
                     self._end(action, OutcomeStatus.REFUSED, reason=f"{reason}, as it was carried")
-                elif action.state == ActionStateKind.ASSIGNED and action.assignment_id is not None:
-                    if self._executor.revoke(action.assignment_id) == Revocation.REVOKED:
-                        action.state = ActionStateKind.WAITING
-                        action.assignment_id = None
+                elif (
+                    action.state == ActionStateKind.ASSIGNED
+                    and action.assignment_id is not None
+                    and self._executor.revoke(action.assignment_id) == Revocation.REVOKED
+                ):
+                    action.state = ActionStateKind.WAITING
+                    action.assignment_id = None
         else:
             self.now = self.started_at = self._start
             self.continues_from = None
