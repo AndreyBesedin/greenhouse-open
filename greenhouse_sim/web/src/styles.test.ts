@@ -1105,6 +1105,7 @@ describe("the stylesheet's focus rings (P19.6)", () => {
 const PAGE_STYLESHEETS: Readonly<Record<string, string>> = {
   builder: "/src/builder/builder.css",
   landing: "/src/landing/landing.css",
+  replay: "/src/replay/replay.css",
 };
 
 /** The selector lists in `stylesheets` that name a page's class outside its own
@@ -1128,7 +1129,7 @@ function pageRulesMisplaced(stylesheets: readonly { path: string; text: string }
   });
 }
 
-describe("a page's stylesheet (P19.8, P19.9)", () => {
+describe("a page's stylesheet (P19.8, P19.9, P19.10)", () => {
   it("holds its rules, and only its own", () => {
     const stylesheets = importedStylesheets(ENTRY);
     for (const file of Object.values(PAGE_STYLESHEETS)) {
