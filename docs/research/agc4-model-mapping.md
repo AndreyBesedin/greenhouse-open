@@ -153,8 +153,10 @@ Each comparison of fruit goes through three conversions:
 **When.** A model stepped by the day holds its states at the day's
 boundaries; a sampling took place during its day (the adapter stamps it at
 local noon), and the final harvest on its harvest day. The state at the
-midnight before and after a measurement brackets it; their difference is a
-day's growth, the uncertainty of the timing.
+midnight before and after a sampling brackets it; their difference is a
+day's growth, the uncertainty of the timing. A compartment's file ends at
+12:00 on its harvest day, so the final harvest has drivers up to the
+midnight before it and half a day past, not to the midnight after.
 
 **In 2023,** the calibration candidates (the AGC4 memo, §4): per plant and
 per light and EC treatment, the dry weights of leaves, stem, flowers and
