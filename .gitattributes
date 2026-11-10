@@ -7,3 +7,4 @@ greenhouse_sim/web/public/scenes/*.json linguist-generated=true
 greenhouse_sim/web/src/**/generated/** linguist-generated=true
 greenhouse_sim/web/public/fields/*.json linguist-generated=true
 greenhouse_sim/web/package-lock.json linguist-generated=true
+greenhouse_sim/web/e2e/visual/runAnswers.json.gz linguist-generated=true

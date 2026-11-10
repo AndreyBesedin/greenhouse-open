@@ -1,8 +1,12 @@
+import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
+
 import type { Page, Route } from "@playwright/test";
 
 import { DAY_S } from "../../src/clock";
 import type { ScenarioSummary } from "../../src/generated/scenarioSummaryTypes";
 import type { Room } from "../../src/landing/generated/roomTypes";
+import type { OutcomeBatch } from "../../src/plan/generated/outcomeBatchTypes";
 import type { PositionState } from "../../src/scene/generated/positionTypes";
 import type { StoredRun } from "../../src/scene/generated/storedRunTypes";
 
@@ -125,7 +129,9 @@ const POSITION: PositionState = {
   crop: [],
 };
 
-const ANSWERS: readonly (readonly [RegExp, unknown])[] = [
+type Answers = readonly (readonly [RegExp, unknown])[];
+
+const ANSWERS: Answers = [
   [/^\/api\/scenarios$/, SCENARIOS],
   [/^\/api\/runs$/, RUNS],
   [/^\/api\/room$/, ROOM],
@@ -137,23 +143,95 @@ const ANSWERS: readonly (readonly [RegExp, unknown])[] = [
 // the replay's baseline holds (`pages.css`).
 const REFUSED = /^\/api\/scenarios\/[^/]+\/./;
 
+// A run of the reference greenhouse, its replay standing at day 2, noon, so that
+// its panels show what a run's do: the simulator's answers about it at that
+// moment, recorded by `scripts/recordRunAnswers.ts`, its organs left out, as only
+// the scene draws them. The viewer checks each against its contract as it reads
+// it, so that a stale recording shows as a refusal on the panels' baselines.
+const RECORDING = JSON.parse(
+  gunzipSync(readFileSync(new URL("./runAnswers.json.gz", import.meta.url))).toString("utf8"),
+) as {
+  recorded: { scenarioId: string; seed: number; timeS: number };
+  answers: Record<string, unknown>;
+};
+const RECORDED = RECORDING.recorded;
+const PANELS_RUN_ID = `${RECORDED.scenarioId}-climate-panels`;
+const PANELS_RUN: StoredRun = {
+  ...RUN,
+  ...PART_WAY,
+  run_id: PANELS_RUN_ID,
+  scenario_id: RECORDED.scenarioId,
+  seed: RECORDED.seed,
+  status: "interrupted",
+  days_computed: DAYS_COMPUTED,
+};
+const PANELS_POSITION: PositionState = {
+  ...POSITION,
+  position_id: "visual-panels-position",
+  scenario_id: RECORDED.scenarioId,
+  run_id: PANELS_RUN_ID,
+  seed: RECORDED.seed,
+  simulated_now: "2026-03-02T12:00:00Z",
+  time_s: RECORDED.timeS,
+  day: Math.floor(RECORDED.timeS / DAY_S),
+};
+const NO_OUTCOMES: OutcomeBatch = {
+  run_id: PANELS_RUN_ID,
+  epoch: EPOCH,
+  after: 0,
+  next: 0,
+  simulated_now: PANELS_POSITION.simulated_now,
+  has_more: false,
+  outcomes: [],
+};
+const RUN_PANELS_ANSWERS: Answers = [
+  [/^\/api\/runs$/, [PANELS_RUN]],
+  [/^\/api\/runs\/[^/]+\/epochs\/\d+\/positions$/, PANELS_POSITION],
+  [/^\/api\/runs\/[^/]+\/epochs\/\d+\/outcomes$/, NO_OUTCOMES],
+  ...ANSWERS,
+];
+/** The replay the run's panels are drawn on. */
+export const PANELS_REPLAY = { runId: PANELS_RUN_ID, epoch: EPOCH };
+
+/** The answer recorded for a question about the run's scenario: by its path, and
+ * for the house's air, by whether it asks for the run all off beside it. The
+ * replay asks for its first moment before the one its position stands at: that
+ * is answered with the recorded moment's answer, said to be of the moment asked,
+ * so that the replay moves on to the recorded moment, which is what it draws. */
+function recorded(url: URL): unknown {
+  const allOff = url.searchParams.get("all_off");
+  const answer =
+    RECORDING.answers[allOff === null ? url.pathname : `${url.pathname}?all_off=${allOff}`];
+  if (answer === null || typeof answer !== "object" || !("time_s" in answer)) {
+    return answer;
+  }
+  return { ...answer, time_s: Number(url.searchParams.get("t") ?? 0) };
+}
+
 /**
  * Answers the page's questions to the simulator, which the visual checks do not
  * run, from the above. A question with no answer here is answered 404 and
  * returned, for the test to insist there is none: a page that asks something new
- * must not be drawn as if it had been answered.
+ * must not be drawn as if it had been answered. With `run`, the page is the
+ * recorded run's replay, and its scenario's questions are answered too.
  */
-export async function answerAsTheSimulator(page: Page): Promise<string[]> {
+export async function answerAsTheSimulator(page: Page, run = false): Promise<string[]> {
   const unanswered: string[] = [];
+  const answers = run ? RUN_PANELS_ANSWERS : ANSWERS;
   const answer = async (route: Route) => {
-    const { pathname } = new URL(route.request().url());
-    const found = ANSWERS.find(([path]) => path.test(pathname));
+    const url = new URL(route.request().url());
+    const found = run ? recorded(url) : undefined;
     if (found !== undefined) {
-      await route.fulfill({ json: found[1] });
+      await route.fulfill({ json: found });
       return;
     }
-    if (!REFUSED.test(pathname)) {
-      unanswered.push(`${route.request().method()} ${pathname}`);
+    const given = answers.find(([path]) => path.test(url.pathname));
+    if (given !== undefined) {
+      await route.fulfill({ json: given[1] });
+      return;
+    }
+    if (run || !REFUSED.test(url.pathname)) {
+      unanswered.push(`${route.request().method()} ${url.pathname}`);
     }
     await route.fulfill({ status: 404, json: { error: "not in the baselines' answers" } });
   };

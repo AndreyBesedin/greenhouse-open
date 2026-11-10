@@ -4,7 +4,14 @@ import { expect, type Page, test } from "@playwright/test";
 import type { Theme } from "../../src/design/theme.ts";
 import { BUILDER_PATH, LANDING_PATH, replayAddress, runsAddress } from "../../src/landing/paths.ts";
 import { designAddress } from "../../src/qa/designPage.ts";
-import { answerAsTheSimulator, DRAWN_AT, EPOCH, RUN_ID, SCENARIO_ID } from "./pageAnswers.ts";
+import {
+  answerAsTheSimulator,
+  DRAWN_AT,
+  EPOCH,
+  PANELS_REPLAY,
+  RUN_ID,
+  SCENARIO_ID,
+} from "./pageAnswers.ts";
 
 test.skip(process.platform !== "linux", "the baselines are drawn on Linux, in CI's container");
 
@@ -31,6 +38,10 @@ interface Drawn {
   shown: (page: Page) => Promise<void>;
   /** Taller than the view, and compared whole. */
   fullPage?: boolean;
+  /** The recorded run's replay, its scenario answered (`pageAnswers.ts`). */
+  run?: boolean;
+  /** What of the page is compared, if not all it shows, in a view this tall. */
+  part?: { selector: string; heightPx: number };
 }
 
 const PAGES: readonly Drawn[] = [
@@ -83,6 +94,30 @@ const PAGES: readonly Drawn[] = [
     },
   },
   {
+    // A run's panels, as a replay shows them at a moment of its run, every fold
+    // open, in a view tall enough for all of them (P19.11): `/view?scene=example`
+    // shows few. Its fork question open, as a level set in a replay asks it.
+    name: "run-panels",
+    address: replayAddress(PANELS_REPLAY.runId, PANELS_REPLAY.epoch),
+    run: true,
+    part: { selector: ".info-panel", heightPx: 2400 },
+    shown: async (page) => {
+      await expect(page.getByTestId("replay-moment")).toHaveText("Day 2, 12:00");
+      await expect(page.getByTestId("moment-summary")).toHaveText("Climate run: Day 2, 12:00");
+      await expect(page.getByTestId("field-summary")).toContainText("Air field: climate");
+      await page.locator(".info-panel details").evaluateAll((folds) => {
+        for (const fold of folds) {
+          (fold as HTMLDetailsElement).open = true;
+        }
+      });
+      await page.getByRole("checkbox", { name: "heater" }).check();
+      await page.getByRole("button", { name: "Fork from here with these levels" }).click();
+      await expect(page.getByTestId("fork-question")).toBeVisible();
+      await expect(page.getByTestId("probes-summary")).toBeVisible();
+      await expect(page.locator(".weather-day svg").first()).toBeVisible();
+    },
+  },
+  {
     // Each token and each component, in each state: with one button focused, whose
     // ring its image draws (P19.6).
     name: "design",
@@ -101,7 +136,13 @@ async function open(page: Page, drawn: Drawn, theme: Theme): Promise<string[]> {
     ([key, value]) => localStorage.setItem(key as string, value as string),
     [STORED_THEME, theme],
   );
-  const unanswered = await answerAsTheSimulator(page);
+  if (drawn.part !== undefined) {
+    await page.setViewportSize({
+      width: page.viewportSize()?.width ?? 0,
+      height: drawn.part.heightPx,
+    });
+  }
+  const unanswered = await answerAsTheSimulator(page, drawn.run === true);
   await page.goto(typeof drawn.address === "string" ? drawn.address : drawn.address(theme));
   await drawn.shown(page);
   return unanswered;
@@ -116,10 +157,17 @@ for (const theme of THEMES) {
       const held = existsSync(testInfo.snapshotPath(baseline, { kind: "screenshot" }));
       const unanswered = await open(page, drawn, theme);
 
-      await expect(page).toHaveScreenshot(baseline, {
-        ...EXACT,
-        fullPage: drawn.fullPage === true,
-      });
+      if (drawn.part === undefined) {
+        await expect(page).toHaveScreenshot(baseline, {
+          ...EXACT,
+          fullPage: drawn.fullPage === true,
+        });
+      } else {
+        await expect(page.locator(drawn.part.selector)).toHaveScreenshot(baseline, {
+          ...EXACT,
+          stylePath: [EXACT.stylePath, new URL("./runPanels.css", import.meta.url).pathname],
+        });
+      }
       expect(unanswered).toEqual([]);
       // A missing baseline is written, and that comparison passes: this fails it,
       // which keeps what was drawn for CI's `visual-results`.

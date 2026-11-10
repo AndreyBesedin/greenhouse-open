@@ -1,0 +1,5 @@
+/* After `pages.css`, for a run's panels: the viewer in the recorded run's replay
+ * is answered, and its panels are what the baseline holds; its scene stays out. */
+.replay-scene {
+  visibility: visible;
+}
