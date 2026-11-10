@@ -23,12 +23,14 @@ from greenhouse_sim.services.run_store import (
     Status,
     StoredRun,
     delete_epoch,
+    started_epochs,
     stored_runs,
 )
 from greenhouse_sim.services.runs import RunRequest
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.sensors import delivered_between
 from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.services.workers import Free, execute, queued
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -226,3 +228,22 @@ def test_a_deleted_epochs_number_is_not_given_to_the_next(tmp_path: Path) -> Non
     assert epochs.next("run") == 2
     delete_epoch(epochs.objects, "run", 0)
     assert epochs.next("run") == 2
+
+
+def test_a_run_started_again_after_its_epoch_was_deleted_takes_the_next_number(
+    short: Simulator, tmp_path: Path
+) -> None:
+    # As the API starts one: deleted, then started again at the same choices, it
+    # took the deleted epoch's number, and its worker cleared the mark that kept it.
+    objects = Epochs(tmp_path).objects
+    first = queued(short, objects, SHORT)
+    delete_epoch(objects, first.run_id, first.epoch)
+
+    again = queued(short, objects, SHORT)
+    assert execute(short, again, Free()) == Status.FINISHED
+
+    assert (again.run_id, again.epoch) == (first.run_id, first.epoch + 1)
+    assert started_epochs(objects, first.run_id) == [first.epoch, again.epoch]
+    assert objects.names(f"{first.run_id}/{first.epoch}/") == [
+        f"{first.run_id}/{first.epoch}/deleted.json"
+    ]
