@@ -3,7 +3,9 @@ decision 0061): what a control policy reads of the run and gives it, as
 its own principal, by the protocol's contract
 (`greenhouse_protocol.contracts.policy`).
 
-A port is opened on a playback for one principal (`RunPolicyPort`). Every
+A port is opened on a playback for one principal (`RunPolicyPort`), and is
+on the one epoch its playback plays: another epoch of the run is another
+playback's, with ports of its own. Every
 plan, revision and cancellation it gives goes to the run's gateway as that
 principal; the authorisation in force decides the rest. It reads:
 
@@ -22,7 +24,7 @@ principal; the authorisation in force decides the rest. It reads:
 Its logs are its own. Each holds what its principal may read of the
 run's log, in the run's order, so its positions are not the run's, and
 its cursors are given and checked by the consumer interface's rules
-(`consumer.Cursors`). A new epoch starts them again.
+(`consumer.Cursors`).
 
 The port is trusted code in the simulator's process, held to the contract
 by `check_policy_port` and to its imports by the repository's dependency
@@ -65,12 +67,11 @@ from greenhouse_sim.services.playback import PlaybackState, RecordsAfter
 
 # How many of the run's records a port reads at once, catching up.
 READ_AT_ONCE: Final = 5_000
-# Before any epoch: a port's logs start at the first one it reads.
-NO_EPOCH: Final = -1
 
 
 class PlayedRun(Protocol):
-    """What a port reads of and gives to a run played back: a playback's."""
+    """What a port reads of and gives to a run played back: a playback's,
+    of one epoch."""
 
     def state(self) -> PlaybackState: ...
 
@@ -95,21 +96,19 @@ class PlayedRun(Protocol):
 
 @dataclass
 class _Kept[RecordT]:
-    """What a port keeps of one of its run's logs in an epoch: the records
-    its principal reads, in the log's order, and how far into the run's log
-    it has read."""
+    """What a port keeps of one of its run's logs: the records its
+    principal reads, in the log's order, and how far into the run's log it
+    has read."""
 
-    epoch: int = NO_EPOCH
     read: int = 0
     records: list[RecordT] = field(default_factory=list)
 
 
 @dataclass
 class _Issued:
-    """The forecasts its forecasters have issued in an epoch, in the order
-    they were issued, and the moment they were last asked up to."""
+    """The forecasts its forecasters have issued, in the order they were
+    issued, and the moment they were last asked up to."""
 
-    epoch: int = NO_EPOCH
     until: datetime | None = None
     forecasts: list[Forecast] = field(default_factory=list)
 
@@ -155,13 +154,15 @@ class RunPolicyPort:
         self._forecasters = self._served(budget, forecasters)
         self._lock = threading.Lock()
         self._cursors = Cursors()
+        # The epoch it is on, its playback's.
+        self._epoch = played.state().epoch
         self._observations: _Kept[Observation] = _Kept()
         self._events: _Kept[Event] = _Kept()
         self._outcomes: _Kept[ActionOutcome] = _Kept()
         self._forecasts: _Kept[Forecast] = _Kept()
         self._issued = _Issued()
-        # The types its context's sources observe, in an epoch.
-        self._observed: tuple[int, frozenset[ObservationType]] = (NO_EPOCH, frozenset())
+        # The types its context's sources observe, once asked.
+        self._observed: frozenset[ObservationType] | None = None
 
     def run(self) -> RunDescriptor:
         return run_descriptor(self._played.state())
@@ -196,7 +197,7 @@ class RunPolicyPort:
             "events",
             self._events,
             self._read_events,
-            lambda event, _: readable_event(event),
+            readable_event,
             after=after,
             limit=limit,
         )
@@ -229,7 +230,7 @@ class RunPolicyPort:
             "forecasts",
             self._forecasts,
             self._read_forecasts,
-            lambda forecast, _: forecast,
+            lambda forecast: forecast,
             after=after,
             limit=limit,
         )
@@ -266,22 +267,21 @@ class RunPolicyPort:
         log: str,
         kept: _Kept[RecordT],
         read: Callable[[int], _Cut[RecordT]],
-        keep: Callable[[RecordT, int], RecordT | None],
+        keep: Callable[[RecordT], RecordT | None],
         *,
         after: int | None,
         limit: int | None,
     ) -> _Answer[RecordT]:
         """The records of one of its logs after a cursor, the run's log read
         on as far as its clock and kept as its principal reads it; none
-        after a cursor it never gave in the epoch, as the consumer
-        interface answers."""
+        after a cursor it never gave, as the consumer interface answers."""
         cursor, most = batch_cursor(after), batch_limit(limit)
         with self._lock:
             state = self._caught_up(kept, read, keep)
-            known = self._cursors.knows(state.run_id, log, kept.epoch, cursor)
+            known = self._cursors.knows(state.run_id, log, self._epoch, cursor)
             chosen = tuple(kept.records[cursor : cursor + most]) if known else ()
             if known:
-                self._cursors.give(state.run_id, log, kept.epoch, cursor + len(chosen))
+                self._cursors.give(state.run_id, log, self._epoch, cursor + len(chosen))
             return _Answer(
                 records=chosen,
                 after=cursor,
@@ -294,21 +294,14 @@ class RunPolicyPort:
     def _caught_up[RecordT](
         kept: _Kept[RecordT],
         read: Callable[[int], _Cut[RecordT]],
-        keep: Callable[[RecordT, int], RecordT | None],
+        keep: Callable[[RecordT], RecordT | None],
     ) -> PlaybackState:
         """Reads the run's log on from where it last read, keeping what its
-        principal reads: from its start again in a new epoch, read again
-        until a cut is of the epoch it keeps, however often the run's epoch
-        changes meanwhile."""
+        principal reads."""
         while True:
             cut = read(kept.read)
-            if cut.state.epoch != kept.epoch:
-                kept.epoch, kept.read, kept.records = cut.state.epoch, 0, []
-                continue
             kept.records += [
-                kept_record
-                for record in cut.records
-                if (kept_record := keep(record, cut.state.epoch)) is not None
+                kept_record for record in cut.records if (kept_record := keep(record)) is not None
             ]
             kept.read = cut.next
             if not cut.has_more:
@@ -331,8 +324,6 @@ class RunPolicyPort:
         were last asked, from the observations it has read as far as its
         clock; those of its budget's providers and quantities only."""
         state = self._caught_up(self._observations, self._read_observations, self._observed_now)
-        if self._issued.epoch != state.epoch:
-            self._issued = _Issued(epoch=state.epoch)
         issued = self._issued
         if issued.until is None or state.simulated_now > issued.until:
             due = [
@@ -389,10 +380,10 @@ class RunPolicyPort:
             serving.append(found)
         return tuple(serving)
 
-    def _observed_now(self, observation: Observation, epoch: int) -> Observation | None:
-        if self._observed[0] != epoch:
-            self._observed = (epoch, self.context().observed_types())
-        return observation if observation.observation_type in self._observed[1] else None
+    def _observed_now(self, observation: Observation) -> Observation | None:
+        if self._observed is None:
+            self._observed = self.context().observed_types()
+        return observation if observation.observation_type in self._observed else None
 
-    def _owned(self, outcome: ActionOutcome, epoch: int) -> ActionOutcome | None:
+    def _owned(self, outcome: ActionOutcome) -> ActionOutcome | None:
         return outcome if self._played.owner_of(outcome) == self.principal else None
