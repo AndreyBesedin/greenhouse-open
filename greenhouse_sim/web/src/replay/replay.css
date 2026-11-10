@@ -180,9 +180,11 @@
   background: var(--text);
 }
 
+/* The one exception to the focus ring's colour: the handle's own edge is
+ * `--action`, which a ring of `--action` would only thicken, so its ring is the
+ * handle's fill. */
 .replay-handle:focus-visible {
-  outline: var(--focus-width) solid var(--text);
-  outline-offset: var(--focus-offset);
+  outline-color: var(--text);
 }
 
 .replay-ticks {

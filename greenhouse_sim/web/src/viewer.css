@@ -73,11 +73,6 @@
   text-decoration: none;
 }
 
-.home-button:focus-visible {
-  outline: var(--focus-width) solid var(--action);
-  outline-offset: var(--focus-offset);
-}
-
 .chooser-label {
   margin-right: var(--space-4);
   font-weight: 600;

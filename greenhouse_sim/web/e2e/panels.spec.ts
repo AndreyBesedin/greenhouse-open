@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { chooser } from "./chooser";
+import { focusRing } from "./focusRing";
 import { unfold } from "./folds";
 import { askForRun, openReplay, stopRun } from "./replays";
 import { selectAt } from "./view";
@@ -375,6 +376,9 @@ test("each side's panels fold to a stripe at the view's edge, and open as they w
     await expect(hud).toBeHidden();
     const stripe = await viewStripe.boundingBox();
     expect((stripe?.x ?? 0) + (stripe?.width ?? 0)).toBeGreaterThan(1260);
+    // Focused by the keyboard, it wears the one ring beside its hover's ground (P19.12).
+    await expect(viewStripe).toBeFocused();
+    expect(await focusRing(viewStripe)).toBe("solid 3px 2px --action");
   });
 
   await test.step("the view's controls, asked for by their key, open the View panel to be seen", async () => {

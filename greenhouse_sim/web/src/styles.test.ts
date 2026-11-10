@@ -208,7 +208,8 @@ const SITS_ON: readonly { needs: number; what: readonly string[]; on: readonly s
   { needs: TEXT_NEEDS, what: ["--surface-page"], on: ["--action"] },
   { needs: TEXT_NEEDS, what: ["--chart-soft", "--chart-blue-text"], on: ["--surface-panel"] },
   { needs: TEXT_NEEDS, what: ["--text-muted"], on: ["--chart-face"] },
-  // A control's outline: a field's, a plain button's, a primary's, a danger's.
+  // A control's outline: a field's, a plain button's, a primary's, a danger's; and the
+  // focus ring, `--action`, on the ground its control stands on.
   {
     needs: MARK_NEEDS,
     what: ["--border", "--text-muted", "--action", "--warn"],
@@ -1015,12 +1016,13 @@ function componentsRestyled(stylesheets: readonly { path: string; text: string }
     .flatMap(({ text }) => selectorLists(text).filter((list) => /(?<![\w-])ds-/.test(list)));
 }
 
-// The focus rings written today. One ring on every control, in `base.css`, is a visual
-// step (P19.12), which takes these with it: this can only shrink.
+// The rules that say how focus shows: one ring on every control, in `base.css` (P19.12),
+// and what two controls add to it. This can only shrink.
 const FOCUS_RINGS = [
-  ".ds-button:focus-visible",
-  ".home-button:focus-visible",
+  ":focus-visible",
+  // A panel's stripe, 14 px wide, takes the ground it takes on hover as well.
   ".panel-stripe:hover, .panel-stripe:focus-visible",
+  // The replay's handle, whose own edge is the ring's colour: the ring's colour alone.
   ".replay-handle:focus-visible",
 ];
 
@@ -1069,12 +1071,6 @@ describe("the design system's components (P19.6)", () => {
       importedStylesheets("/s/styles.css", (path) => files[path] ?? "").map(({ path }) => path),
     ).toEqual(["/s/styles.css", "/s/design/tokens.css", "/s/design/colours.css"]);
   });
-
-  it("wear one focus ring of the tokens' sizes", () => {
-    const rule = /\.ds-button:focus-visible\s*\{([^}]*)\}/.exec(STYLES)?.[1] ?? "";
-    expect(rule).toMatch(/outline:\s*var\(--focus-width\) solid var\(--action\)/);
-    expect(rule).toMatch(/outline-offset:\s*var\(--focus-offset\)/);
-  });
 });
 
 /** The rules in `stylesheet` that draw a focus ring of their own. */
@@ -1082,9 +1078,56 @@ function focusRings(stylesheet: string): string[] {
   return selectorLists(stylesheet).filter((list) => list.includes(":focus-visible"));
 }
 
-describe("the stylesheet's focus rings (P19.6)", () => {
+const BASE = fileURLToPath(new URL("./design/base.css", import.meta.url));
+
+/** Each rule's selector list and its declarations, in `stylesheet`, its comments left out. */
+function rules(stylesheet: string): { selectors: string; block: string }[] {
+  return [...stylesheet.replace(COMMENT, "").matchAll(/([^{};]*)\{([^{}]*)\}/g)].map(
+    ([, prelude, block]) => ({
+      selectors: (prelude ?? "").trim().replace(/\s+/g, " "),
+      block: block ?? "",
+    }),
+  );
+}
+
+/** The rules of `stylesheet` but the one ring that draw a ring's width, style or
+ * offset, a ring of their own beside it: a control may change its colour alone. */
+function ringsBesideTheOne(stylesheet: string): string[] {
+  return rules(stylesheet)
+    .filter(
+      ({ selectors, block }) =>
+        selectors !== ":focus-visible" &&
+        selectors.includes(":focus-visible") &&
+        /(?:^|;)\s*outline(?:-width|-style|-offset)?\s*:/.test(block),
+    )
+    .map(({ selectors }) => selectors);
+}
+
+describe("the stylesheet's focus rings (P19.6, P19.12)", () => {
   it("are the ones named here", () => {
     expect(againstTheList(focusRings(STYLES), FOCUS_RINGS)).toEqual({ unlisted: [], gone: [] });
+  });
+
+  it("are one ring on every control, of the tokens' sizes, in `--action`, in base.css", () => {
+    const ring = rules(readFileSync(BASE, "utf8")).find(
+      ({ selectors }) => selectors === ":focus-visible",
+    );
+    expect(ring?.block).toMatch(/outline:\s*var\(--focus-width\) solid var\(--action\);/);
+    expect(ring?.block).toMatch(/outline-offset:\s*var\(--focus-offset\);/);
+    expect(ringsBesideTheOne(STYLES)).toEqual([]);
+  });
+
+  it("refuse a control's ring of its own width, style or offset, and let its colour change", () => {
+    expect(
+      ringsBesideTheOne(`
+        :focus-visible { outline: var(--focus-width) solid var(--action); }
+        .a:focus-visible { outline-color: var(--text); }
+        .b:focus-visible { outline: 2px solid var(--action); }
+        .c:hover, .c:focus-visible { background: var(--mark); outline-offset: 0; }
+        .d:focus-visible { outline-width: 1px; }
+        .e:hover { outline: none; }
+      `),
+    ).toEqual([".b:focus-visible", ".c:hover, .c:focus-visible", ".d:focus-visible"]);
   });
 
   it("refuse one more, whatever its selector", () => {
@@ -1263,9 +1306,9 @@ describe("a panel folder's stylesheet (P19.11)", () => {
 /** Whether `stylesheet` draws the class `name` in `--warn`, a rule naming it so. */
 function drawsInWarn(stylesheet: string, name: string): boolean {
   const named = new RegExp(`\\.${name}(?![\\w-])`);
-  return [...stylesheet.replace(COMMENT, "").matchAll(/([^{};]*)\{([^}]*)\}/g)].some(
-    ([, prelude, block]) =>
-      named.test(prelude ?? "") && /(?:^|;)\s*color:\s*var\(--warn\)\s*(?:;|$)/.test(block ?? ""),
+  return rules(stylesheet).some(
+    ({ selectors, block }) =>
+      named.test(selectors) && /(?:^|;)\s*color:\s*var\(--warn\)\s*(?:;|$)/.test(block),
   );
 }
 
