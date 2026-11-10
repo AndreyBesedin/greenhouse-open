@@ -1,7 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
-import { LANDING_PATH, REPLAY_PATH, runsAddress } from "../src/landing/paths";
+import { LANDING_PATH, REPLAY_PATH, replayTarget, runsAddress } from "../src/landing/paths";
 import { unfold } from "./folds";
-import { askForRun, computedTo, openReplay } from "./replays";
+import { type AskedRun, askForRun, computedTo, openReplay, stopRun } from "./replays";
 import { onScreen } from "./view";
 
 const DAY_S = 86_400;
@@ -30,6 +30,25 @@ function collectErrors(page: Page): string[] {
 // computed while it is replayed.
 const SCENARIO = "solar_lab";
 
+// The runs a test has started, each stopped once the test is over. A run of
+// SCENARIO takes minutes over its ten days, and the simulator has two
+// workers: two runs left on by the tests before would keep the next test's
+// run waiting for one, past its timeout on a busy machine.
+const started: AskedRun[] = [];
+
+test.afterEach(async ({ page }) => {
+  for (const run of started.splice(0)) {
+    await stopRun(page, run);
+  }
+});
+
+/** A run asked of a worker as `askForRun` asks it, stopped once the test is over. */
+async function askForOwnRun(...asked: Parameters<typeof askForRun>): Promise<AskedRun> {
+  const run = await askForRun(...asked);
+  started.push(run);
+  return run;
+}
+
 /** Starts a run of a scenario at a seed and a pace, through the landing page,
  * which opens its replay at the newest day, and opens that again from its
  * start. By default a run of `SCENARIO` at a second a day; an empty pace is as
@@ -48,6 +67,10 @@ async function replayOfANewRun(
   await dialog.getByLabel("Seconds to compute a day").fill(pace);
   await dialog.getByRole("button", { name: "Start run" }).click();
   await expect(page).toHaveURL(new RegExp(`${REPLAY_PATH}\\?run=.*&follow=1$`));
+  const run = replayTarget(new URL(page.url()).search);
+  if (run !== null) {
+    started.push({ runId: run.runId, epoch: run.epoch });
+  }
   await page.goto(page.url().replace("&follow=1", ""));
 }
 
@@ -146,51 +169,43 @@ test("a run being computed is watched from its list in the replay: at its newest
 }) => {
   test.setTimeout(WAITS_FOR_A_DAY * 2);
   await replayOfANewRun(page, "43");
-  const replayed = page.url();
-  try {
-    // One way to watch it in its list (P22.2): its replay, which opens following.
-    await page.goto(runsAddress(SCENARIO));
-    const row = page
-      .getByRole("dialog")
-      .locator(".landing-run")
-      .filter({ hasText: /Seed 43(?!\d)/ })
-      .first();
-    await expect(row.getByRole("link")).toHaveCount(1);
-    await row.getByRole("link", { name: /^Replay the run with seed 43,/ }).click();
-    await expect(page).toHaveURL(new RegExp(`${REPLAY_PATH}\\?run=.*&follow=1$`));
+  // One way to watch it in its list (P22.2): its replay, which opens following.
+  await page.goto(runsAddress(SCENARIO));
+  const row = page
+    .getByRole("dialog")
+    .locator(".landing-run")
+    .filter({ hasText: /Seed 43(?!\d)/ })
+    .first();
+  await expect(row.getByRole("link")).toHaveCount(1);
+  await row.getByRole("link", { name: /^Replay the run with seed 43,/ }).click();
+  await expect(page).toHaveURL(new RegExp(`${REPLAY_PATH}\\?run=.*&follow=1$`));
 
-    const follow = page.getByRole("button", { name: "Follow the newest day" });
-    await expect(follow).toHaveAttribute("aria-pressed", "true");
-    // Following, the handle stands at the frontier as the run computes on.
-    const handle = page.getByRole("slider", { name: "Position in the run" });
-    await expect
-      .poll(async () => Number(await handle.getAttribute("aria-valuenow")), {
-        timeout: WAITS_FOR_A_DAY,
-      })
-      .toBeGreaterThanOrEqual(DAY_S);
-    const [followedTo, frontier] = await handle.evaluate((slider) => [
-      Number(slider.getAttribute("aria-valuenow")),
-      Number(slider.getAttribute("aria-valuemax")),
-    ]);
-    expect(followedTo).toBe(frontier);
+  const follow = page.getByRole("button", { name: "Follow the newest day" });
+  await expect(follow).toHaveAttribute("aria-pressed", "true");
+  // Following, the handle stands at the frontier as the run computes on.
+  const handle = page.getByRole("slider", { name: "Position in the run" });
+  await expect
+    .poll(async () => Number(await handle.getAttribute("aria-valuenow")), {
+      timeout: WAITS_FOR_A_DAY,
+    })
+    .toBeGreaterThanOrEqual(DAY_S);
+  const [followedTo, frontier] = await handle.evaluate((slider) => [
+    Number(slider.getAttribute("aria-valuenow")),
+    Number(slider.getAttribute("aria-valuemax")),
+  ]);
+  expect(followedTo).toBe(frontier);
 
-    // Played from the frontier, it waits there, and moves on as days arrive.
-    const transport = page.locator(".replay-transport");
-    await transport.getByLabel("Shows a day in").selectOption("2");
-    await transport.getByRole("button", { name: "Play" }).click();
-    await expect(follow).toHaveAttribute("aria-pressed", "false");
-    await expect(transport.getByRole("button", { name: "Pause" })).toBeVisible();
-    await expect
-      .poll(async () => Number(await handle.getAttribute("aria-valuenow")), {
-        timeout: WAITS_FOR_A_DAY,
-      })
-      .toBeGreaterThan(followedTo);
-  } finally {
-    const started = new URL(replayed).searchParams;
-    await page.request.post(
-      `/api/runs/${encodeURIComponent(started.get("run") ?? "")}/epochs/${started.get("epoch")}/stop`,
-    );
-  }
+  // Played from the frontier, it waits there, and moves on as days arrive.
+  const transport = page.locator(".replay-transport");
+  await transport.getByLabel("Shows a day in").selectOption("2");
+  await transport.getByRole("button", { name: "Play" }).click();
+  await expect(follow).toHaveAttribute("aria-pressed", "false");
+  await expect(transport.getByRole("button", { name: "Pause" })).toBeVisible();
+  await expect
+    .poll(async () => Number(await handle.getAttribute("aria-valuenow")), {
+      timeout: WAITS_FOR_A_DAY,
+    })
+    .toBeGreaterThan(followedTo);
 });
 
 test("keys pressed faster than the answers move from the moment last sought", async ({ page }) => {
@@ -385,7 +400,7 @@ test("a level set in the replay of a finished run forks it", async ({ page }) =>
 
 test("a moment whose field fails does not stop the replay playing on", async ({ page }) => {
   test.setTimeout(WAITS_FOR_A_DAY * 2);
-  const run = await askForRun(page, "climate_box", { seed: 67 });
+  const run = await askForOwnRun(page, "climate_box", { seed: 67 });
   await computedTo(page, run, 3 * DAY_S, WAITS_FOR_A_DAY);
   // Every climate field asked for after the first fails; the moments asked, by
   // the seconds into the run each names.
@@ -417,7 +432,7 @@ test("the replay of a house without equipment draws its climate, nothing refused
       refused.push(response.url());
     }
   });
-  const run = await askForRun(page, "airflow_box", { seed: 68 });
+  const run = await askForOwnRun(page, "airflow_box", { seed: 68 });
   await openReplay(page, run);
 
   await expect(page.getByTestId("field-status")).toContainText("airflow_box_climate", {
@@ -486,7 +501,7 @@ test("a plant's work in the replay of a run being computed steers it, and once i
 }) => {
   test.setTimeout(WAITS_FOR_A_DAY * 2);
   // Paced, so that it is still computed when the work is asked.
-  const run = await askForRun(page, "reference_greenhouse", { seed: 53, secondsPerDay: 60 });
+  const run = await askForOwnRun(page, "reference_greenhouse", { seed: 53, secondsPerDay: 60 });
   await openReplay(page, run);
   await expect(page.getByTestId("replay-status")).toHaveText(/Queued|Running/);
   const parent = page.url();
