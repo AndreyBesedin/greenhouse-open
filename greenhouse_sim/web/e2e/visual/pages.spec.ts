@@ -100,7 +100,7 @@ const PAGES: readonly Drawn[] = [
     name: "run-panels",
     address: replayAddress(PANELS_REPLAY.runId, PANELS_REPLAY.epoch),
     run: true,
-    part: { selector: ".info-panel", heightPx: 2400 },
+    part: { selector: ".info-panel", heightPx: 3000 },
     shown: async (page) => {
       await expect(page.getByTestId("replay-moment")).toHaveText("Day 2, 12:00");
       await expect(page.getByTestId("moment-summary")).toHaveText("Climate run: Day 2, 12:00");
