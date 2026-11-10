@@ -16,7 +16,9 @@ const COMPUTED = 120_000;
 async function replayOfAFinishedRun(page: Page, seed: number): Promise<AskedRun> {
   const run = await askForRun(page, SCENARIO, { seed });
   await openReplay(page, run);
-  await expect(page.getByTestId("replay-status")).toHaveText("Finished", { timeout: COMPUTED });
+  await expect(page.getByRole("status", { name: "Run status" })).toHaveText("Finished", {
+    timeout: COMPUTED,
+  });
   await expect(page.getByTestId("climate-time")).toBeVisible({ timeout: 20_000 });
   return run;
 }

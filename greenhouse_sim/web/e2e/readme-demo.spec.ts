@@ -158,7 +158,7 @@ test("the README's demo shows the simulator's main features, each under its capt
   await dialog.getByRole("button", { name: "Start run" }).click();
   await expect(page).toHaveURL(/\/replay\?run=.*&follow=1$/);
   const newRun = replayTarget(new URL(page.url()).search);
-  await expect(page.getByTestId("replay-status")).toHaveText("Running", ARRIVES);
+  await expect(page.getByRole("status", { name: "Run status" })).toHaveText("Running", ARRIVES);
   await expect(page.getByRole("button", { name: "Follow the newest day" })).toHaveAttribute(
     "aria-pressed",
     "true",

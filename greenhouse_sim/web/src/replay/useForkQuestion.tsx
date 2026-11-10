@@ -1,15 +1,17 @@
 import { useEffect, useId, useRef, useState } from "react";
 
+import { Button } from "../design/Button";
+
 /** What a fork does, said before one is made: it takes a worker and makes a run. */
 export const WHAT_A_FORK_DOES =
   "A new run from this moment, computed by a worker beside the others. This one stays as it is.";
 
 function ForkQuestion({
-  buttonClass,
+  designed,
   onFork,
   onCancel,
 }: {
-  buttonClass: string;
+  designed: boolean;
   onFork: () => void;
   onCancel: () => void;
 }) {
@@ -30,17 +32,23 @@ function ForkQuestion({
       }}
     >
       <p id={said}>{WHAT_A_FORK_DOES}</p>
-      <button
-        ref={yes}
-        type="button"
-        className={`${buttonClass} landing-button-primary`}
-        onClick={onFork}
-      >
-        Make the fork
-      </button>
-      <button type="button" className={buttonClass} onClick={onCancel}>
-        Cancel
-      </button>
+      {designed ? (
+        <>
+          <Button ref={yes} tone="primary" onClick={onFork}>
+            Make the fork
+          </Button>
+          <Button onClick={onCancel}>Cancel</Button>
+        </>
+      ) : (
+        <>
+          <button ref={yes} type="button" onClick={onFork}>
+            Make the fork
+          </button>
+          <button type="button" onClick={onCancel}>
+            Cancel
+          </button>
+        </>
+      )}
     </fieldset>
   );
 }
@@ -56,11 +64,12 @@ function ForkQuestion({
  */
 export function useForkQuestion({
   about = "",
-  buttonClass = "",
+  designed = false,
 }: {
   about?: string;
-  /** How its buttons are drawn, where the page's are drawn by a class. */
-  buttonClass?: string;
+  /** Whether its buttons are the design system's, as a page's are; a panel's stay
+   * the browser's until the panels' controls move (P19.11). */
+  designed?: boolean;
 } = {}) {
   const [asked, setAsked] = useState<{ fork: () => void; about: string } | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -77,7 +86,7 @@ export function useForkQuestion({
     question:
       asked === null ? null : (
         <ForkQuestion
-          buttonClass={buttonClass}
+          designed={designed}
           onFork={() => {
             answered();
             asked.fork();

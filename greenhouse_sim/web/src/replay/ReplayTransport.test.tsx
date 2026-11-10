@@ -70,6 +70,20 @@ describe("what moves a position over a stored run", () => {
     expect(playing.onPause).toHaveBeenCalledOnce();
   });
 
+  it("moves by icon buttons, each named by its label, its icon decoration", () => {
+    const { container } = shown(position());
+    for (const name of ["Previous day", "Play", "Next day"]) {
+      const pressed = button(container, name);
+      expect(pressed.classList).toContain("ds-icon-button");
+      expect(pressed.textContent).toBe("");
+      expect(pressed.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    }
+    // Play, the main one, in the action's colour, its icon a little larger.
+    expect(button(container, "Play").classList).toContain("ds-button-primary");
+    expect(button(container, "Play").querySelector("svg")?.getAttribute("width")).toBe("20");
+    expect(button(container, "Next day").querySelector("svg")?.getAttribute("width")).toBe("18");
+  });
+
   it("says why a move did nothing, and nothing when none was refused", () => {
     expect(shown(position()).container.querySelector('[role="alert"]')).toBeNull();
     rendered?.unmount();

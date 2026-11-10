@@ -1,8 +1,14 @@
 import { useId } from "react";
 
+import { Button } from "../design/Button";
+import { IconButton } from "../design/IconButton";
+import { PauseIcon, PlayIcon, StepBackIcon, StepForwardIcon } from "../icons";
 import type { PositionState } from "./position";
 import { ReplayTimeline } from "./ReplayTimeline";
 import { computedText, dayAway, dayLabel, type Span } from "./timeline";
+
+// Play and Pause, the transport's main button, drawn a little larger than a day's steps.
+const PLAY_ICON_PX = 20;
 
 const QUICK_S = 2;
 const BRISK_S = 5;
@@ -99,20 +105,13 @@ export function ReplayTransport({
       )}
       <div className="replay-controls">
         <div className="replay-buttons">
-          <button
-            type="button"
-            className="replay-button"
-            aria-label="Previous day"
-            onClick={() => onSeek(dayAway(from, -1, span))}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M19 6l-8 6 8 6zM7 6v12h-2V6z" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            className="replay-button replay-play"
-            aria-label={position.playing ? "Pause" : "Play"}
+          <IconButton label="Previous day" onClick={() => onSeek(dayAway(from, -1, span))}>
+            <StepBackIcon />
+          </IconButton>
+          <IconButton
+            tone="primary"
+            className="replay-play"
+            label={position.playing ? "Pause" : "Play"}
             // At the run's end there is nothing to play: it would stop at once. One
             // already waiting at a frontier with nothing to come can still be told
             // to stop waiting.
@@ -120,37 +119,14 @@ export function ReplayTransport({
             onClick={position.playing ? onPause : onPlay}
           >
             {position.playing ? (
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
-              </svg>
+              <PauseIcon size={PLAY_ICON_PX} />
             ) : (
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M7 4l13 8-13 8z" />
-              </svg>
+              <PlayIcon size={PLAY_ICON_PX} />
             )}
-          </button>
-          <button
-            type="button"
-            className="replay-button"
-            aria-label="Next day"
-            onClick={() => onSeek(dayAway(from, 1, span))}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M5 6l8 6-8 6zM17 6v12h2V6z" />
-            </svg>
-          </button>
+          </IconButton>
+          <IconButton label="Next day" onClick={() => onSeek(dayAway(from, 1, span))}>
+            <StepForwardIcon />
+          </IconButton>
         </div>
         <strong className="replay-moment" data-testid="replay-moment">
           {dayLabel(position.time_s)}
@@ -176,8 +152,7 @@ export function ReplayTransport({
           </select>
         </label>
         {canFollow(position) && (
-          <button
-            type="button"
+          <Button
             className="replay-follow"
             aria-pressed={position.following}
             // A position that follows is held where it is by pausing it, which
@@ -185,7 +160,7 @@ export function ReplayTransport({
             onClick={position.following ? onPause : onFollow}
           >
             Follow the newest day
-          </button>
+          </Button>
         )}
       </div>
       <ReplayTimeline span={span} timeS={from} onSeek={onSeek} />

@@ -82,7 +82,9 @@ async function stopReplayed(page: Page): Promise<void> {
   const run = encodeURIComponent(replayed.get("run") ?? "");
   const stopped = await page.request.post(`/api/runs/${run}/epochs/${replayed.get("epoch")}/stop`);
   expect(stopped.ok()).toBe(true);
-  await expect(page.getByTestId("replay-status")).toHaveText("Interrupted", { timeout: COMPUTES });
+  await expect(page.getByRole("status", { name: "Run status" })).toHaveText("Interrupted", {
+    timeout: COMPUTES,
+  });
 }
 
 /** The moment a replay says the run took a change from, in seconds into it. */
@@ -112,7 +114,9 @@ test("a stored run is replayed: its header, its scene and a timeline over what i
   const errors = collectErrors(page);
 
   await expect(page.getByTestId("replay-subtitle")).toHaveText(/^seed 41 · epoch \d+ · /);
-  await expect(page.getByTestId("replay-status")).toHaveText(/Queued|Running|Finished/);
+  await expect(page.getByRole("status", { name: "Run status" })).toHaveText(
+    /Queued|Running|Finished/,
+  );
   await expect(page.locator("canvas")).toBeVisible();
   // One way home, not two: the house, and no back link besides.
   await expect(page.getByRole("link", { name: "Home" })).toHaveCount(1);
@@ -333,7 +337,7 @@ test("a target set in the replay of a run being computed steers it from its mome
   await replayOfANewRun(page, "51", { scenario: "reference_greenhouse", pace: "20" });
   const replayed = page.url();
   const asked = changesAndForks(page);
-  await expect(page.getByTestId("replay-status")).toHaveText(/Queued|Running/);
+  await expect(page.getByRole("status", { name: "Run status" })).toHaveText(/Queued|Running/);
   const steering = page.getByTestId("epoch-steering");
   await expect(steering).toContainText("nothing forks");
   await expect(page.getByTestId("fork-levels")).toHaveCount(0);
@@ -381,7 +385,7 @@ test("a level set in the replay of a finished run forks it", async ({ page }) =>
   await replayOfANewRun(page, "52", { scenario: "climate_box", pace: "" });
   const parent = page.url();
   const asked = changesAndForks(page);
-  await expect(page.getByTestId("replay-status")).toHaveText("Finished", {
+  await expect(page.getByRole("status", { name: "Run status" })).toHaveText("Finished", {
     timeout: WAITS_FOR_A_DAY,
   });
   await expect(page.getByTestId("epoch-steering")).toHaveCount(0);
@@ -503,7 +507,7 @@ test("a plant's work in the replay of a run being computed steers it, and once i
   // Paced, so that it is still computed when the work is asked.
   const run = await askForOwnRun(page, "reference_greenhouse", { seed: 53, secondsPerDay: 60 });
   await openReplay(page, run);
-  await expect(page.getByTestId("replay-status")).toHaveText(/Queued|Running/);
+  await expect(page.getByRole("status", { name: "Run status" })).toHaveText(/Queued|Running/);
   const parent = page.url();
   const asked = changesAndForks(page);
   const forksAsked: unknown[] = [];

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DAY_S } from "../clock";
 import { click, button as named, type Rendered, render, said } from "../testing/render";
 import type { PositionState } from "./position";
-import { ReplayHeader, runSubtitle } from "./ReplayHeader";
+import { ReplayHeader, runSubtitle, STATUS_NAME } from "./ReplayHeader";
 import { WHAT_A_FORK_DOES } from "./useForkQuestion";
 
 const FORK: PositionState["fork"] = {
@@ -50,6 +50,15 @@ function position(more: Partial<PositionState> = {}): PositionState {
 
 const noFork = () => undefined;
 
+/** The run's status, as whoever hears the page finds it: by its role and name. */
+function statusChip(within: ParentNode): Element | null {
+  return within.querySelector(`[role="status"][aria-label="${STATUS_NAME}"]`);
+}
+
+function statusOf(within: ParentNode): string | null {
+  return statusChip(within)?.textContent ?? null;
+}
+
 describe("the replay's header", () => {
   let rendered: Rendered | undefined;
   afterEach(() => rendered?.unmount());
@@ -67,7 +76,7 @@ describe("the replay's header", () => {
 
     expect(container.querySelector("h1")?.textContent).toBe("Reference greenhouse");
     expect(said(container, "replay-subtitle")).toBe("seed 2 · epoch 3 · everything kept");
-    expect(said(container, "replay-status")).toBe("Running");
+    expect(statusOf(container)).toBe("Running");
     expect(container.querySelector('[data-testid="home-button"]')?.textContent).toContain("Home");
     expect(container.textContent).not.toContain("Scenarios");
   });
@@ -90,11 +99,12 @@ describe("the replay's header", () => {
     expect(rendered.container.querySelector("h1")?.textContent).toBe("reference_greenhouse");
   });
 
-  it("says each state of a run as a word", () => {
-    for (const [status, word] of [
-      ["finished", "Finished"],
-      ["interrupted", "Interrupted"],
-      ["failed", "Failed"],
+  it("says each state of a run as a word, in the chip of the start page's runs", () => {
+    for (const [status, word, tone] of [
+      ["queued", "Queued", "ds-status-chip ds-status-chip-active"],
+      ["finished", "Finished", "ds-status-chip"],
+      ["interrupted", "Interrupted", "ds-status-chip ds-status-chip-problem"],
+      ["failed", "Failed", "ds-status-chip ds-status-chip-problem"],
     ] as const) {
       rendered = render(
         <ReplayHeader
@@ -104,7 +114,8 @@ describe("the replay's header", () => {
           onFork={noFork}
         />,
       );
-      expect(said(rendered.container, "replay-status")).toBe(word);
+      expect(statusOf(rendered.container)).toBe(word);
+      expect(statusChip(rendered.container)?.className).toBe(tone);
       rendered.unmount();
     }
   });
@@ -175,8 +186,10 @@ describe("the replay's header", () => {
 
       expect(onFork).not.toHaveBeenCalled();
       expect(said(container, "fork-question")).toContain(WHAT_A_FORK_DOES);
-      // Ready to be answered from the keyboard.
+      // Ready to be answered from the keyboard, on the answer the page is drawn to lead to.
       expect(document.activeElement).toBe(named(container, "Make the fork"));
+      expect(named(container, "Make the fork").className).toBe("ds-button ds-button-primary");
+      expect(named(container, "Cancel").className).toBe("ds-button");
 
       click(named(container, "Make the fork"));
 
