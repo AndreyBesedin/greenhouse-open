@@ -1,5 +1,6 @@
 import { ColourBy } from "./ColourBy";
 import type { OverlayToggles, SceneOverlay } from "./debug/overlays";
+import { Fold } from "./design/Fold";
 import type { FieldView } from "./fields/display";
 import { useFolds } from "./folds";
 
@@ -76,16 +77,21 @@ export function DisplayOptions({
 }) {
   const fold = useFolds<"display">();
   return (
-    <details className="display-fold" {...fold("display")}>
-      <summary data-testid="display-summary">
-        {describeDisplay(
-          colourBy,
-          { showDimensions, byCategory, qaMode },
-          drawn
-            .filter((overlay) => !overlays[overlay])
-            .map((overlay) => overlayLabel(overlay, fieldView)),
-        )}
-      </summary>
+    <Fold
+      className="display-fold"
+      {...fold("display")}
+      summary={
+        <span data-testid="display-summary">
+          {describeDisplay(
+            colourBy,
+            { showDimensions, byCategory, qaMode },
+            drawn
+              .filter((overlay) => !overlays[overlay])
+              .map((overlay) => overlayLabel(overlay, fieldView)),
+          )}
+        </span>
+      }
+    >
       {colourProperties.length > 0 && (
         <ColourBy properties={colourProperties} value={colourBy} onChange={onColourBy} />
       )}
@@ -130,6 +136,6 @@ export function DisplayOptions({
           ))}
         </fieldset>
       )}
-    </details>
+    </Fold>
   );
 }

@@ -98,8 +98,8 @@ describe("a scene's equipment", () => {
       <EquipmentControls snapshot={EXAMPLE} requested={{}} fold={FOLDED} onChange={ignore} />,
     );
 
-    expect(html).toContain('<details class="equipment-fold">');
-    expect(html).toContain('data-testid="equipment-summary">Equipment: all off</summary>');
+    expect(html).toContain('<details class="ds-fold equipment-fold">');
+    expect(html).toContain('data-testid="equipment-summary">Equipment: all off</span></summary>');
     expect(describeEquipment([heater, fan, { ...fan, label: "fan left" }])).toBe(
       "Equipment: heater 100%; fan right, fan left off",
     );
