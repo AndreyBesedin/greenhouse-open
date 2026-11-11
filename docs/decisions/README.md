@@ -88,7 +88,7 @@ decision that changes course is a new record that supersedes the old one.
 | [0072](0072-an-epoch-keeps-its-authorisation-in-its-log.md) | An epoch keeps its authorisation in its log | Accepted |
 | [0073](0073-a-change-in-a-replay-steers-a-running-epoch-at-its-own-clock.md) | A change in a replay steers a running epoch at its own clock | Accepted |
 | [0074](0074-the-viewers-play-and-the-playbacks-http-surfaces-go.md) | The viewer's own play goes, and the playbacks' HTTP surfaces with it | Accepted |
-| [0075](0075-a-runs-weather-and-a-shorter-duration-are-its-own-as-its-seed-is.md) | A run's weather and a shorter duration are its own, as its seed is | Proposed |
+| [0075](0075-a-runs-weather-and-a-shorter-duration-are-its-own-as-its-seed-is.md) | A run's weather and a shorter duration are its own, as its seed is | Accepted |
 | [0076](0076-the-tomato-models-are-calibrated-on-agc4s-pre-trial-and-tested-once-on-its-challenge.md) | The tomato models are calibrated on AGC4's pre-trial and tested once on its challenge | Accepted |
 
 ## Template
