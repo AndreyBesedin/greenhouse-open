@@ -66,10 +66,6 @@ final QA left open:
   for is not handed back to the actions assigned after it, which keep their instants.
 - **A JSON plan in a run's request** ([P13.7](archive/p13-actions.md#settled-in-p137)): a
   plan that is part of a run's identity is still given in the address's spellings.
-- **The schedule's remove and repeat**, in the viewer
-  ([P13.8](archive/p13-actions.md#settled-in-p138)), which edit a followed run's own and
-  so make another run, go with the viewer's own play in
-  [P22.3](p22-watching-and-starting-a-run.md#steps).
 - **Who cancelled, in the plan lane** (the
   [final QA](archive/p13-actions.md#recorded-at-88f35bae), step 9): the lane reads
   "cancelled: cancelled", though the outcome names who cancelled it.
@@ -163,7 +159,7 @@ and 0066). Left, from P17, each designed in its document:
   record. Every epoch is kept whole today, and the viewer's header says so.
 - **A consumer interface and a gateway over a worker's epoch** (P17.4, P17.7): settled
   by [decision 0074](../decisions/0074-the-viewers-play-and-the-playbacks-http-surfaces-go.md)
-  in [P22.3](p22-watching-and-starting-a-run.md#steps), the simulator serves neither
+  in [P22.3](archive/p22-watching-and-starting-a-run.md#steps), the simulator serves neither
   over HTTP, and the policy's port reads a playback of its own, in the process or in its
   own server. A consumer that reads a run live, as it computes, or gives one plans,
   needs both designed afresh over a worker's epoch, by a decision of their own.
@@ -200,6 +196,30 @@ Recorded 2026-11-08, as [P18](archive/p18-resources-and-deployment.md) closed (d
 - **Not measured** (P18.6): a disk filled for real, and one that fills while a worker
   writes; memory past a limit on macOS; the viewer drawing in software beside the
   workers, on a machine without a graphics card; the list of 1,000 runs on the M2 again.
+
+## Watching and starting a run, after P22
+
+Recorded 2026-11-11, as [P22](archive/p22-watching-and-starting-a-run.md) closed
+(decisions 0073, 0074 and 0075). Left, from P22, each in its step's row or its QA:
+
+- **A change at a past moment of a running epoch** (P22.1): a change steers the epoch
+  at its own clock; one meant for a moment already computed is a fork, made from the
+  header, and then a change in it.
+- **A fork opened from a list while it computes** (P22.2) follows its frontier, not the
+  moment it was made from, as *Fork from here* opens it.
+- **A run longer than its scenario, and the weather's QA overrides** (P22.4, decision
+  0075): a longer season is a scenario of its own, and the overrides are refused.
+- **The first second of each day** (P22.6, P22.10): at 10 s a day, the panels and the
+  timeline read different days for up to 1.0 s after each midnight, while the moment
+  drawn is asked for again rather than taken from the answer ahead. On a slower machine
+  the QA of 2026-11-04 saw two days of lag, which was not measured again.
+- **A tooltip on a disabled button** (P22.7, P22.9), which the browser does not show; a
+  chip or a line says it instead.
+- **A group's rows by other names** (P22.8): a piece whose label in the scene does not
+  follow its kind keeps its whole name in its group.
+- **Stop and delete's refusal in the console** (P22.10): the first delete of a
+  computing run is refused, as designed, and the browser's console reports the 409 as a
+  failed load.
 
 ## Greenhouse R&D workflows and Modelica comparison
 

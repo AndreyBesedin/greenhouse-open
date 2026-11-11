@@ -127,7 +127,7 @@ links there.
 | [P19](p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | In progress: P19.1 to P19.11 done |
 | [P20](p20-crop-parameter-assets.md) | Crop parameters as versioned assets, edited by forms and reproduced from their versions | Proposed |
 | [P21](p21-rows-of-different-crops.md) | Rows of different crops in one house | Proposed |
-| [P22](p22-watching-and-starting-a-run.md) | Watching and starting a run: one *Play*, steering from the replay, a new run's form | In progress: P22.1 to P22.9 done |
+| [P22](archive/p22-watching-and-starting-a-run.md) | Watching and starting a run: one *Play*, steering from the replay, a new run's form | Done: P22.1 to P22.10, its QA recorded; what it left is in [future work](future-work.md#watching-and-starting-a-run-after-p22) |
 
 ## After a QA
 
@@ -139,14 +139,13 @@ A project's QA and a manual walk end the same way, in this order:
 3. **Plan the rest,** in the report, the project's clean-up or a project of its own.
 4. **Release.** Work that adds a feature starts again after it.
 
-The last QA is [the walk of 2026-11-04](qa-2026-11-04.md), closed: what it found to fix is
-fixed, and what it planned is in [P22](p22-watching-and-starting-a-run.md) and P19, as its
-report says.
+The last manual walk is [the walk of 2026-11-04](archive/qa-2026-11-04.md), closed and in the
+archive: what it found to fix is fixed, and what it planned was done in
+[P22](archive/p22-watching-and-starting-a-run.md) and P19, as its report says.
 
 ## Order of work
 
-1. **P19:** the design system's named visual changes (P19.12), then
-   [P22](p22-watching-and-starting-a-run.md)'s QA scenario (P22.10).
+1. **P19:** its final QA and its closing, its document to the archive.
 2. **The [research priorities](research-validation-priorities.md)**
    ([decision 0057](../decisions/0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md),
    proposed): two published tomato models reproduced and made P14 models, a validation
@@ -163,15 +162,15 @@ report says.
   day, actions and plans after P13, CO₂ and light targets, intelligence components
   beyond control policies, crop models from plant research beyond the tomato's two,
   models and devices after P14, runs and playbacks after P17, resources and limits after
-  P18, a Modelica comparison, the test suite and CI time, a second repository audit, and
-  an assistant in the viewer.
-- **[QA of 2026-11-04](qa-2026-11-04.md):** what a manual walk of the viewer found, and what follows from it.
+  P18, watching and starting a run after P22, a Modelica comparison, the test suite and
+  CI time, a second repository audit, and an assistant in the viewer.
 - **[The archive](archive/README.md):** the documents of finished projects, read
-  when a task cites their steps: P-1 to P18, the clean-ups of
+  when a task cites their steps: P-1 to P18 and P22, the clean-ups of
   [P03](archive/p03-cleanup.md), [P14](archive/p14-cleanup.md) and
-  [P17](archive/p17-cleanup.md), and
+  [P17](archive/p17-cleanup.md),
   [the frontend maintenance](archive/frontend-maintenance.md) that followed the
-  frontend audits of 6 and 11 October.
+  frontend audits of 6 and 11 October, and [the QA of 2026-11-04](archive/qa-2026-11-04.md),
+  a manual walk of the viewer, whose plans P22 and P19 took.
 - **[Audits](../audits/README.md):** a periodic look at the repository as a whole,
   from the [audit of 2026-10-13](../audits/2026-10-13-repository-audit.md), which led
   to [P14](archive/p14-models-by-manifest.md).

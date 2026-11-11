@@ -1,6 +1,6 @@
 # 0075: A run's weather and a shorter duration are its own, as its seed is
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-11-08
 
 ## Context

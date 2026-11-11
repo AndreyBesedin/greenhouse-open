@@ -3,7 +3,7 @@
 **Status:** done, closed on 2026-11-06: P17.1 to P17.11, P17.10's QA run for what is
 delivered and [its clean-up](p17-cleanup.md) closed. What the steps below leave
 undelivered moved: steering a running epoch from the viewer to
-[P22.1](../p22-watching-and-starting-a-run.md); a `present` store, the consumer interface and
+[P22.1](p22-watching-and-starting-a-run.md); a `present` store, the consumer interface and
 the policy port reading a stored epoch, a crop action under way at a kept state, and an
 epoch stepped by a caller to [future work](../future-work.md#runs-and-playbacks-after-p17).
 The design below, with decision
