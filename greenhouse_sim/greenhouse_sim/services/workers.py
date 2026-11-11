@@ -77,8 +77,8 @@ from greenhouse_sim.services.run_store import (
     Status,
     decompress,
     failure_reason,
+    started_epochs,
 )
-from greenhouse_sim.services.run_store import epochs as stored_epochs
 from greenhouse_sim.services.runs import RunRequest, started_duration_s, started_weather
 from greenhouse_sim.services.scenarios import layout_name, scenario
 from greenhouse_sim.services.simulator import Simulator
@@ -132,7 +132,8 @@ def queued(
 ) -> EpochStore:
     """A new epoch of the run of `scenario_id` at `layout` and `seed`, under
     `weather` and for `duration_days`, or the scenario's own (decision 0075), in
-    `objects`, `queued`: the run's next epoch, its manifest written last, with
+    `objects`, `queued`: the run's next epoch, after every one it has started,
+    those deleted too, whose numbers are not used again, its manifest written last, with
     all a worker in another process needs to run it, the simulator's authorisation
     among it, and `queued_at` if a scheduler puts it in line. A scenario, a layout,
     a seed, a weather or a duration refused starts nothing, as does a scenario that
@@ -146,7 +147,7 @@ def queued(
     _, run_id = air_through_a_run(
         simulator, RunRequest(scenario_id, layout=chosen, weather=under, seed=seed)
     )
-    started = stored_epochs(objects, run_id)
+    started = started_epochs(objects, run_id)
     scenario_file = scenario_files.carry(simulator.catalogue, objects, scenario_id)
     manifest = EpochManifest(
         run_id=run_id,

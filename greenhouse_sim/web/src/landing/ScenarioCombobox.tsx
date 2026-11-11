@@ -142,6 +142,9 @@ export function ScenarioCombobox({
           role="listbox"
           aria-label="Scenarios"
           className="landing-options"
+          // Not a stop of Tab: the browser makes a list that scrolls one, and
+          // focus there would close it, leaving focus on nothing.
+          tabIndex={-1}
         >
           {listed.map((scenario, index) => (
             // biome-ignore lint/a11y/useFocusableInteractive: an option of the same list takes no focus: the input keeps it.
