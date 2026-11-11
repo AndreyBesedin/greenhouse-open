@@ -118,7 +118,11 @@ data.
    ([the result](../../research/validation/agc4/README.md#the-result)):
    both models predict too little fruit, by 47 and 51 % on average, and
    neither beats the baseline, the pre-trial's crop at the same age.
-   Oliveira et al.'s observations are left to assess.
+   Oliveira et al.'s observations are assessed
+   ([the memo](../research/oliveira-observations.md)): usable for
+   non-commercial research, with anything derived marked and kept out of
+   the packages, or on their authors' terms; whether to validate on them
+   is a decision of its own.
 6. **Compare with Modelica, bounded.** As the roadmap's greenhouse R&D
    workflows and Modelica comparison plan it: one documented, measured
    interval of TiGwerLib reproduced in OpenModelica, then compared on
