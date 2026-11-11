@@ -9,16 +9,18 @@ export interface AskedRun {
 
 /** A run of `scenario` asked of a worker through the simulator's API, as a
  * scenario's dialog asks for one (P17.7): at `seed`, and as fast as it computes
- * unless `secondsPerDay` paces it. Each test asks for a run of its own, so that
+ * unless `secondsPerDay` paces it, over its scenario's days or `days` fewer
+ * (decision 0075). Each test asks for a run of its own, so that
  * none watches what another changes. */
 export async function askForRun(
   page: Page,
   scenario: string,
-  { seed, secondsPerDay }: { seed: number; secondsPerDay?: number },
+  { seed, secondsPerDay, days }: { seed: number; secondsPerDay?: number; days?: number },
 ): Promise<AskedRun> {
   const pace = secondsPerDay === undefined ? "" : `&seconds_per_day=${secondsPerDay}`;
+  const fewer = days === undefined ? "" : `&duration_days=${days}`;
   const response = await page.request.post(
-    `/api/scenarios/${encodeURIComponent(scenario)}/runs?seed=${seed}${pace}`,
+    `/api/scenarios/${encodeURIComponent(scenario)}/runs?seed=${seed}${pace}${fewer}`,
   );
   expect(response.ok(), await response.text()).toBe(true);
   const { run_id: runId, epoch } = (await response.json()) as { run_id: string; epoch: number };
