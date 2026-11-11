@@ -107,8 +107,9 @@ them.
   reported as a sensitivity.
 - *Vanthoor's fruit* is its standing fruit plus its harvested fruit, in
   the calibration and the test alike: AGC4 picked nothing from a plant
-  before it was measured. Its leaves pruned past a leaf area index of 3
-  are kept in no state, and AGC4 pruned none, so a run that prunes says so
+  before it was measured. The leaves it prunes, by a smooth switch about
+  a leaf area index of 3 that already removes some well below it, are
+  kept in no state, and AGC4 pruned none, so a run that prunes says so
   beside its comparisons.
 - *Dry to fresh:* the pre-trial's fruit dry-matter fraction at its last
   date, 8.02 %, the mean over 48 plants of `DW fruits` over
