@@ -193,6 +193,24 @@ test("a dialog closed by its button gives focus back to the search, with its lis
   await expect(page.getByRole("option")).toHaveCount(0);
 });
 
+test("Tab from the search goes to the next control, its list shut, not to the list", async ({
+  page,
+}) => {
+  await page.goto(LANDING_PATH);
+  const search = page.getByRole("combobox", { name: "Scenario" });
+  await search.focus();
+  // Open, the simulator's scenarios overflow the list, which then scrolls: the
+  // browser counts such a list a stop of Tab unless it says it is not one.
+  const list = page.getByRole("listbox");
+  await expect(list).toBeVisible();
+  expect(await list.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+
+  await page.keyboard.press("Tab");
+
+  await expect(page.getByRole("link", { name: "Open the builder" })).toBeFocused();
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+});
+
 test("a dialog closed by Escape gives focus back to the search, with its list shut", async ({
   page,
 }) => {
