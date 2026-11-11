@@ -114,6 +114,9 @@ export function App({
     steer: SteeredEpoch;
     /** The epoch replayed, whose plan lane the timeline draws (P22.3). */
     lane: PlanLaneRun;
+    /** How many days the run replayed lasts, which may be fewer than its
+     * scenario's (decision 0075), or null if it is not known. */
+    days?: number | null;
   };
 }) {
   const [addressed, setAddressed] = useSource(replay?.source);
@@ -505,7 +508,7 @@ export function App({
                 display={displayCard}
                 snapshot={snapshot}
                 weathers={summary?.weathers ?? []}
-                days={summary?.duration_days ?? 1}
+                days={replay?.days ?? summary?.duration_days ?? 1}
                 loads={{ field, compared, weather, weatherDay, houseAir, probeCharts, cfd }}
                 thermostat={runningThermostat(equipment)}
                 setpoints={

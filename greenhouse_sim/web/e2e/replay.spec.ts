@@ -383,6 +383,26 @@ test("a target set in the replay of a run being computed steers it from its mome
   await stopReplayed(page);
 });
 
+test("a run of fewer days than its scenario's says no command is to come at its end", async ({
+  page,
+}) => {
+  test.setTimeout(WAITS_FOR_A_DAY * 2);
+  // The reference greenhouse's 120 days give a command every day: a run of one
+  // day of them has none after its end, which its schedule read from the
+  // scenario's days, "Next at Day 2, 08:00" (P22.10's QA).
+  const run = await askForOwnRun(page, "reference_greenhouse", { seed: 7, days: 1 });
+  await computedTo(page, run, DAY_S, WAITS_FOR_A_DAY);
+  await openReplay(page, run);
+  const handle = page.getByRole("slider", { name: "Position in the run" });
+  await handle.focus();
+  await page.keyboard.press("End");
+  await expect(page.getByTestId("replay-moment")).toHaveText("Day 1, 24:00", {
+    timeout: COMPUTES,
+  });
+  const summary = page.getByRole("region", { name: "Schedule" }).getByTestId("schedule-summary");
+  await expect(summary).toHaveText("Schedule: 16 commands, none to come.", { timeout: COMPUTES });
+});
+
 test("a level set in the replay of a finished run forks it", async ({ page }) => {
   test.setTimeout(WAITS_FOR_A_DAY * 2);
   // As fast as it computes, so that it has finished when the level is set.
