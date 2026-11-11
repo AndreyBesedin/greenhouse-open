@@ -124,7 +124,7 @@ links there.
 | [P16](archive/p16-crop-at-its-models-step.md) | A run's crop at its model's step, not the run's day | Done, but for P16.4, deferred until a model takes crop work within its day |
 | [P17](archive/p17-runs-and-playbacks.md) | Runs kept in a store, playbacks as positions, and a place to choose | Done: P17.1 to P17.11, its QA run for what is delivered and its clean-up closed; steering a running epoch moved to P22.1, the rest to [future work](future-work.md#runs-and-playbacks-after-p17) |
 | [P18](archive/p18-resources-and-deployment.md) | Resources counted and limited, and a run that can move | Done: P18.1 to P18.6, its final QA recorded; what it left is in [future work](future-work.md#resources-and-limits-after-p18) |
-| [P19](p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | In progress: P19.1 to P19.12 done, its final QA recorded |
+| [P19](archive/p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | Done: P19.1 to P19.12, its final QA recorded; what it left is in [future work](future-work.md#the-design-system-after-p19) |
 | [P20](p20-crop-parameter-assets.md) | Crop parameters as versioned assets, edited by forms and reproduced from their versions | Proposed |
 | [P21](p21-rows-of-different-crops.md) | Rows of different crops in one house | Proposed |
 | [P22](archive/p22-watching-and-starting-a-run.md) | Watching and starting a run: one *Play*, steering from the replay, a new run's form | Done: P22.1 to P22.10, its QA recorded; what it left is in [future work](future-work.md#watching-and-starting-a-run-after-p22) |
@@ -141,17 +141,16 @@ A project's QA and a manual walk end the same way, in this order:
 
 The last manual walk is [the walk of 2026-11-04](archive/qa-2026-11-04.md), closed and in the
 archive: what it found to fix is fixed, and what it planned was done in
-[P22](archive/p22-watching-and-starting-a-run.md) and P19, as its report says.
+[P22](archive/p22-watching-and-starting-a-run.md) and [P19](archive/p19-design-system.md), as its report says.
 
 ## Order of work
 
-1. **P19:** its final QA and its closing, its document to the archive.
-2. **The [research priorities](research-validation-priorities.md)**
+1. **The [research priorities](research-validation-priorities.md)**
    ([decision 0057](../decisions/0057-a-published-model-is-reproduced-and-validated-before-the-crops-grow.md),
    proposed): two published tomato models reproduced and made P14 models, a validation
    on measured data, a bounded Modelica comparison, and the evaluation of policies.
    The projects' own documents keep their scope.
-3. **[P20](p20-crop-parameter-assets.md), then [P21](p21-rows-of-different-crops.md):** crop
+2. **[P20](p20-crop-parameter-assets.md), then [P21](p21-rows-of-different-crops.md):** crop
    parameters as versioned assets are the research priorities' last item, and rows of
    different crops come after them.
 
@@ -162,10 +161,10 @@ archive: what it found to fix is fixed, and what it planned was done in
   day, actions and plans after P13, CO₂ and light targets, intelligence components
   beyond control policies, crop models from plant research beyond the tomato's two,
   models and devices after P14, runs and playbacks after P17, resources and limits after
-  P18, watching and starting a run after P22, a Modelica comparison, the test suite and
+  P18, the design system after P19, watching and starting a run after P22, a Modelica comparison, the test suite and
   CI time, a second repository audit, and an assistant in the viewer.
 - **[The archive](archive/README.md):** the documents of finished projects, read
-  when a task cites their steps: P-1 to P18 and P22, the clean-ups of
+  when a task cites their steps: P-1 to P19 and P22, the clean-ups of
   [P03](archive/p03-cleanup.md), [P14](archive/p14-cleanup.md) and
   [P17](archive/p17-cleanup.md),
   [the frontend maintenance](archive/frontend-maintenance.md) that followed the

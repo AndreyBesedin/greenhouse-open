@@ -8,7 +8,7 @@
 The viewer's look is one stylesheet of 2,395 lines, grown a feature at a time
 (`greenhouse_sim/web/src/styles.css`, at commit `28701e05`; the audit, with how
 each figure was counted, is in
-[P19](../roadmap/p19-design-system.md#the-audit)):
+[P19](../roadmap/archive/p19-design-system.md#the-audit)):
 
 - **Only colours are named,** after places (`--panel-*`, `--landing-*`,
   `--chart-*`) and not what they do. Sizes are written out: 14 font sizes, 13
@@ -85,7 +85,7 @@ largest weighs more than everything the viewer's scripts have gained since
 - **Harder:** a class name is read by no bundler, so scoping stays a convention
   held by a test. A token costs bytes: the styles' budget rises from 29 kB to
   about 32 kB, measured in the step that crosses it.
-- **Next:** [P19](../roadmap/p19-design-system.md), whose first step changes no
+- **Next:** [P19](../roadmap/archive/p19-design-system.md), whose first step changes no
   style at all. The landing page's step follows the work in progress on
   `RunsDialog.tsx` and the new-run form.
 - **Left as it is:** a look. The builder and the panels stay drawn by the browser

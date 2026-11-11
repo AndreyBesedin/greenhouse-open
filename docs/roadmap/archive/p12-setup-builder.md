@@ -5,7 +5,7 @@
 [compared as design point 1 has it](#the-first-days-check): the house and its rows.
 What came after them has moved: [P20](../p20-crop-parameter-assets.md) takes the crops'
 parameters and [P21](../p21-rows-of-different-crops.md) rows of different crops; what the
-QA saw of the builder's form goes with [P19.9](../p19-design-system.md#steps).
+QA saw of the builder's form goes with [P19.9](p19-design-system.md#steps).
 Part of the [simulator roadmap](../README.md).
 
 ## Goal
@@ -247,7 +247,7 @@ would make the file a scenario's, which the design keeps apart.
 
 Also seen: the house form's labels *Origin Position X* and *Origin X* say little of what tells them
 apart. The console was clean but for the renderer library's deprecation warning. The labels go with
-the builder's controls in [P19.9](../p19-design-system.md#steps).
+the builder's controls in [P19.9](p19-design-system.md#steps).
 
 Not run: the house form and palette by keyboard alone, which the browser tests do in part, and
 which goes with P19.9 too; a packaged scenario's own file, whose upload is refused as a packaged
