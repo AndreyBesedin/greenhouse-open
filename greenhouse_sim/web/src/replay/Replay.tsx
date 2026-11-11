@@ -1,6 +1,7 @@
 import { useMemo, useRef } from "react";
 
 import { App } from "../App";
+import { DAY_S } from "../clock";
 import { Notice } from "../design/Notice";
 import { HomeButton } from "../landing/HomeButton";
 import { LANDING_PATH, replayTarget } from "../landing/paths";
@@ -138,6 +139,7 @@ function ReplayOf({
             noFork: whyNoFork(position),
             steer,
             lane: { runId, epoch, startedAt: position.started_at },
+            days: position.duration_s === null ? null : Math.ceil(position.duration_s / DAY_S),
           }}
         />
       </div>
