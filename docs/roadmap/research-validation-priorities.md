@@ -111,7 +111,9 @@ data.
    drivers of each 2024 compartment and 2023 light zone built, and the
    harness that runs either model on them, as decision 0076 fixes them;
    and each model calibrated on the 2023 pre-trial, as its manifest names
-   it, with its fit on the calibration data. The test on 2024 is left.
+   it, with its fit on the calibration data; and the test on 2024's
+   fruit written, its baseline, conversions and sensitivities with it.
+   Its single run is left.
 6. **Compare with Modelica, bounded.** As the roadmap's greenhouse R&D
    workflows and Modelica comparison plan it: one documented, measured
    interval of TiGwerLib reproduced in OpenModelica, then compared on

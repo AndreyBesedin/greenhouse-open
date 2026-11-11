@@ -143,7 +143,7 @@ Each comparison of fruit goes through three conversions:
    | Fraction | Source | What it is |
    | --- | --- | --- |
    | 6 % | GreenLight 2.0.7, `main_cli.py` | assumed |
-   | 8.0 % | 2023, last destructive date: per plant, `DW fruits` over `FW fruits clusters`, 48 plants | mostly green fruit (33.9 green, 6.9 orange, 6.4 red per plant), cluster stems included; the other year's |
+   | 8.02 % | 2023, last destructive date: per plant, `DW fruits` over `FW fruits clusters`, 48 plants | mostly green fruit (33.9 green, 6.9 orange, 6.4 red per plant), cluster stems included; the other year's |
    | 5.93 to 7.28 % | 2024, the red batches, one per compartment (the AGC4 memo, §1) | ripe fruit, each compartment's own |
    | 7.61 to 8.08 % | 2024, the green batches of 3.02, 3.06 and 3.07 | unripe fruit |
 

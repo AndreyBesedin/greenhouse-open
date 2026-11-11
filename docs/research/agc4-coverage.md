@@ -695,5 +695,7 @@ metadata only, and the tests build miniature workbooks of their own.
    run the test once, and report the metrics, sample counts, missing data,
    run times and differences of definition, as the priorities ask. The
    drivers and the calibration are done, 2026-11-10
-   ([`research/validation/agc4`](../../research/validation/agc4/README.md#the-calibration));
-   the test is left.
+   ([`research/validation/agc4`](../../research/validation/agc4/README.md#the-calibration)),
+   and the test's procedure is written
+   ([the test](../../research/validation/agc4/README.md#the-test)); its
+   single run is left.
