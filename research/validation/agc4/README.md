@@ -387,8 +387,11 @@ What it shows:
   with 0.75 g of dry matter per g of carbohydrate, is further under.
 - **Vanthoor's model prunes.** Its leaf area index stays below 2.36, and
   by its final harvest it has pruned 3.6 to 7.5 g of leaf per plant, where
-  AGC4 pruned none. Reduced-State TOMGRO's leaf area index reaches its
-  most, 4.0, in every compartment.
+  AGC4 pruned none. Decision 0076 has its leaves "pruned past a leaf area
+  index of 3"; its switch is smooth, and prunes well below it, as
+  [the mapping memo](../../../docs/research/agc4-model-mapping.md) has it.
+  Reduced-State TOMGRO's leaf area index reaches its most, 4.0, in every
+  compartment.
 - **Run times and hours filled.** A model's runs over the six
   compartments take under 0.1 s for Reduced-State TOMGRO and 2.3 s for
   Vanthoor's model; reading the archives takes most of the script's
