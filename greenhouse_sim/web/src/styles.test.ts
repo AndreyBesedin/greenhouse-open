@@ -815,9 +815,9 @@ const SIZE_SCALES: readonly { property: RegExp; token: RegExp }[] = [
 // text gave it, or a share of its box.
 const NEEDS_NO_SCALE = /^(?:0|auto|inherit|-?\d*\.?\d+(?:em|%))$/i;
 
-// What stays written as a value, with why, until a visual step (P19.12) moves it
-// onto a scale: moving one draws something else, which a neutral step must not.
-// A new entry is a finding about the scales, for review to weigh.
+// What stays written as a value, with why: moving one onto a scale draws
+// something else, a named visual change that P19.12 did not take. A new entry
+// is a finding about the scales, for review to weigh.
 const OFF_SCALE: Readonly<Record<string, string>> = {
   ".controls-device { min-width: 64px }": "a column for the device's name; nothing to press",
   ".controls-open kbd { border-radius: 3px }": "a key's cap, smaller than any control",

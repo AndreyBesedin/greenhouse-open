@@ -45,7 +45,7 @@ The walk of 2026-11-04 found the viewer working, and hard to find one's way in:
 - The policy's port ([P15](p15-policy-port.md)), in the process and over its
   own server. The playback routes went in P22.3
   ([decision 0074](../../decisions/0074-the-viewers-play-and-the-playbacks-http-surfaces-go.md)).
-- The design system's rules ([P19](../p19-design-system.md)): new controls are its
+- The design system's rules ([P19](p19-design-system.md)): new controls are its
   components, and a change of look is one of its named visual changes.
 
 ## Steps

@@ -197,6 +197,29 @@ Recorded 2026-11-08, as [P18](archive/p18-resources-and-deployment.md) closed (d
   writes; memory past a limit on macOS; the viewer drawing in software beside the
   workers, on a machine without a graphics card; the list of 1,000 runs on the M2 again.
 
+## The design system, after P19
+
+Recorded 2026-11-11, as [P19](archive/p19-design-system.md) closed (decision 0068). Left,
+from P19, each in its step's row or its final QA:
+
+- **Off-scale values onto the scale,** the one named visual change not taken: the 35
+  entries of `OFF_SCALE` in `styles.test.ts` each say why their value stays.
+- **The charts' contrast:** `CONTRAST_FAILURES` lists 14 pairs, a chart's words and
+  lines and a compass's ring, which change what the charts draw.
+- **The controls the browser draws:** selects, inputs, ranges and boxes to tick on the
+  panels and the builder keep the browser's size and edge, as `Field` would add a label
+  each row has; a plain button's outline stays `--border`.
+- **The builder's date field** (the final QA): its calendar button shows the browser's
+  thin box when focused, not the one ring, which no rule of the guard may style.
+- **A filled button,** and a colour for words on one: no tone is filled.
+- **Whether the no-tolerance images stay stable,** P19's first open question: if the
+  pinned container is not stable to the pixel for a page's text, the fallback is a
+  comparison of computed styles per element.
+- **A change of `font-weight` alone,** its second: the pinned container draws 600 as it
+  draws normal, so a page's own weight is held by nothing since the digest went (P19.8).
+- **Not walked** (the final QA): a plant's actions and history, the builder past its run
+  step, the QA pages but the reference page, browsers but Chromium, and a screen reader.
+
 ## Watching and starting a run, after P22
 
 Recorded 2026-11-11, as [P22](archive/p22-watching-and-starting-a-run.md) closed
