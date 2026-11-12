@@ -1,6 +1,6 @@
 # P20: Crop parameters as versioned assets
 
-**Status:** proposed, in progress (P20.1 is done): the steps below, with decision
+**Status:** proposed, in progress (P20.1 and P20.2 are done): the steps below, with decision
 [0077](../decisions/0077-a-crop-parameter-set-is-a-file-named-and-versioned-and-told-apart-by-its-digest.md),
 proposed. It was P12.4 and part of P12.6 in
 [the setup builder](archive/p12-setup-builder.md), which closes without it. Part of the
@@ -69,7 +69,7 @@ Decision 0077 settles what a set is, what tells it apart, how a run and a row na
 one, and where sets live. In short:
 
 - **A file:** a model, a name and a version, the set it is based on, the values it
-  changes with why, the model version it was made for.
+  changes with why, the model version and the cultivar it was made for.
 - **Its digest:** the SHA-256 of its model and every value it resolves to. Its name
   and version are for people, the digest for checking.
 - **The published sets as sets:** `gnvman` v1 and `greenlight_2_0_7` v1, written from
@@ -91,7 +91,7 @@ study needs to cite a set; the steps after them are for runs and people.
 | Step | Work | Accepted when | Status |
 | --- | --- | --- | --- |
 | P20.1 | **Parameters described:** each field of `TomgroParameters` and `VanthoorParameters` gives its unit, source and range in the schema it publishes; a test holds the units and sources to the reproductions' manifests | Each parameter's schema says its unit, source and range, each range with its source or saying it has none; no run id, checkpoint or replay digest moves | Done: each field says what it is, its unit, its source and its range, published as `parameters.schema.json` beside each model; a range's most comes from the equations or the quantity's meaning (TOMGRO's αF, DFmax, m and TRGH; Vanthoor's θ, ηCO2,AirStom and the two PAR reflections), every other end is its type's and says so; constants, D, T25K and TRGH fixed, read only, each saying why; decision 0076's calibrations, values and bounds, lie within |
-| P20.2 | **A set as a file:** its format and schema (`parameter_set.schema.json`), its digest, the published sets as sets with their digests pinned, and a set read, checked, resolved against its base and compared with another, in the package | A set based on a published one resolves to its values, a value outside its range is refused by field, two sets are compared parameter by parameter, and a published default changed without the model's version fails a test | Proposed |
+| P20.2 | **A set as a file:** its format and schema (`parameter_set.schema.json`), its digest, the published sets as sets with their digests pinned, and a set read, checked, resolved against its base and compared with another, in the package | A set based on a published one resolves to its values, a value outside its range is refused by field, two sets are compared parameter by parameter, and a published default changed without the model's version fails a test | Done: `biology/parameter_sets.py` and `parameter_set.schema.json`; a set names its cultivar (none for the published sets); a fixed parameter at another value, a value with no why and Vanthoor's ordered pairs out of order are refused; the published sets' digests pinned by model version |
 | P20.3 | **A run under a set:** `parameter_set_version` in the crop sections; the simulator's sets looked up, the published and those it keeps; the run's identity and its manifest answer; the store keeping the set beside the epoch, for its worker, a resume and a fork | A run under a set reads the same when repeated, and differs from the published set's; the packaged runs' ids are unchanged; a worker runs it from the store alone | Proposed |
 | P20.4 | **Sets kept and served:** routes to list a model's sets, read one, save one, compare two, download one and upload one; kept in the store, each version written once; the answers' schemas published and the viewer's contracts generated | The same numbers saved twice are one version; a value outside its range is refused by field; a name and version kept with another digest is refused | Proposed |
 | P20.5 | **The form,** in two pull requests: a set edited in the viewer from its model's schema, each field with its unit, source and range (`schemaForm.ts`), saved as a version, compared with its base and downloaded; then chosen for a run in a scenario's form for a new run | A browser test edits a set, sees a value outside its range refused, saves it, compares it with its base, and starts a run under it | Proposed |
@@ -110,10 +110,9 @@ and the same run. The published set reads as it did, and a run under it keeps it
 
 Decision 0077's, to settle before the step each touches:
 
-1. Whether a set names the cultivar it was made for, beside a row's variety (P20.2).
-2. Whether a calibrated set is ever packaged: before its model's validation, after
+1. Whether a calibrated set is ever packaged: before its model's validation, after
    it, or never (P20.3).
-3. Whether a set's name and version need a namespace across simulators, beyond its
+2. Whether a set's name and version need a namespace across simulators, beyond its
    digest (P20.4).
-4. Whether a run under a set made for another version of its model is refused, or run
+3. Whether a run under a set made for another version of its model is refused, or run
    and said so (P20.3).

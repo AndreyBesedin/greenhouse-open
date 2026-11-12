@@ -26,6 +26,7 @@ import pytest
 from pydantic import BaseModel, Field
 
 from greenhouse_sim.biology.parameter_fields import parameters_json_schema
+from greenhouse_sim.biology.parameter_sets import parameter_set_json_schema
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.tomato.organ.topology import Plant
 from greenhouse_sim.biology.tomato.tomgro.parameters import TomgroParameters
@@ -128,6 +129,8 @@ PUBLISHED: Final[dict[Path, Callable[[], Mapping[str, object]]]] = {
     TOMATO / "vanthoor" / "parameters.schema.json": partial(
         parameters_json_schema, VanthoorParameters
     ),
+    # A crop model's parameter set as a file (P20.2).
+    PACKAGE / "biology" / "parameter_set.schema.json": parameter_set_json_schema,
     **{path: partial(answer_json_schema, answered) for path, answered in ANSWERS.items()},
 }
 
