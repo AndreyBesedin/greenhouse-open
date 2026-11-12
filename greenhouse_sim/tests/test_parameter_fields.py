@@ -57,6 +57,23 @@ def test_a_range_s_most_says_where_it_comes_from_unless_only_its_type_bounds_it(
         assert field["range_from"]["least"] == TYPES_OWN, name
 
 
+def test_constants_and_what_the_run_settles_are_fixed_each_saying_why() -> None:
+    fixed = {
+        model.__name__: {
+            name: field["fixed"]
+            for name, field in _described(model).items()
+            if field.get("readOnly") is True
+        }
+        for model in MODELS
+    }
+
+    assert {model: set(names) for model, names in fixed.items()} == {
+        "TomgroParameters": {"d", "trgh"},
+        "VanthoorParameters": {"r", "m_ch2o", "t25k"},
+    }
+    assert all(why for names in fixed.values() for why in names.values())
+
+
 @pytest.mark.parametrize("model", MODELS, ids=lambda model: model.__name__)
 def test_the_published_set_is_within_its_ranges(model: type[BaseModel]) -> None:
     # A default is not validated where the model is made, so its values are

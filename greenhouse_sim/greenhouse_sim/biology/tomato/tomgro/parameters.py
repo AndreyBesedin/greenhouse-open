@@ -209,6 +209,7 @@ class TomgroParameters(BaseModel):
         ),
         unit="g CH₂O s d⁻¹ µmol⁻¹ CO₂",
         source=JONES,
+        fixed="a conversion of units: no set changes it",
     )
     trgh: NonNegativeFloat = parameter(
         1.0,
@@ -223,6 +224,10 @@ class TomgroParameters(BaseModel):
         ),
         most=1.0,
         most_from=f"{ALL_OF_IT}: the light the cover lets through of the light outside",
+        fixed=(
+            "1, as the run gives the PPFD inside the greenhouse: another value would count the"
+            " cover's transmission twice"
+        ),
     )
     lai_max: PositiveFloat = parameter(
         4.0,

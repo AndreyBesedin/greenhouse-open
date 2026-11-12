@@ -89,6 +89,13 @@ by field. A calibration's bounds are narrower and stay its manifest's
 (decision 0076). A test holds the units and sources to the reproduction's
 manifest.
 
+**Some parameters are fixed.** A constant of nature (Vanthoor's gas
+constant and CH₂O's molar mass), a conversion of units (TOMGRO's D), a
+reference a parameter is given at (Vanthoor's T25K) and a value the run's
+own drivers settle (TOMGRO's TRGH, 1, as the run gives the light inside
+the house) are no set's to change. Each says so in its schema, read only
+and why, and a set that changes one is refused.
+
 **A run names a set as it names its driver profile.** A crop section
 gives `parameter_set` and `parameter_set_version`, as it gives
 `driver_profile` and `driver_profile_version`, the version being 1 when

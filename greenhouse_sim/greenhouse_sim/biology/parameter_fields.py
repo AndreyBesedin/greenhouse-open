@@ -8,6 +8,10 @@ A range is wide: what the model's equations, or the quantity's meaning,
 allow. A calibration's bounds are narrower, and stay in its own manifest
 (decision 0076). An end that only the field's type bounds, such as not
 negative, says so.
+
+A parameter that no set may change, a constant of nature, a conversion of
+units or a value the run's own drivers settle, is fixed: its schema marks it
+read only (`readOnly`) and says why (`fixed`).
 """
 
 from typing import Any, Final
@@ -30,21 +34,20 @@ def parameter(
     most: float | None = None,
     below: float | None = None,
     most_from: str = TYPES_OWN,
+    fixed: str | None = None,
 ) -> Any:
     """A parameter's field: its published `default`, what it is, its `unit`
     and its `source`. Its least is its type's; its most is `most`, or less
-    than `below`, from `most_from`, or its type's."""
-    return Field(
-        default,
-        description=what,
-        le=most,
-        lt=below,
-        json_schema_extra={
-            "unit": unit,
-            "source": source,
-            "range_from": {"least": TYPES_OWN, "most": most_from},
-        },
-    )
+    than `below`, from `most_from`, or its type's. If no set may change it,
+    `fixed` says why."""
+    described: dict[str, JsonValue] = {
+        "unit": unit,
+        "source": source,
+        "range_from": {"least": TYPES_OWN, "most": most_from},
+    }
+    if fixed is not None:
+        described |= {"readOnly": True, "fixed": fixed}
+    return Field(default, description=what, le=most, lt=below, json_schema_extra=described)
 
 
 def parameters_json_schema(parameters: type[BaseModel]) -> dict[str, JsonValue]:

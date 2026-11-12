@@ -339,10 +339,12 @@
       "default": 2.5926912,
       "description": "D, an input: the conversion of gross photosynthesis from µmol CO₂ m⁻² s⁻¹ to g CH₂O m⁻² d⁻¹",
       "exclusiveMinimum": 0,
+      "fixed": "a conversion of units: no set changes it",
       "range_from": {
         "least": "none in its source: the field's type's",
         "most": "none in its source: the field's type's"
       },
+      "readOnly": true,
       "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_i.csv, 'all': Jones et al. 1999, spreadsheet",
       "title": "D",
       "type": "number",
@@ -351,12 +353,14 @@
     "trgh": {
       "default": 1.0,
       "description": "TRGH, an input: the greenhouse's light transmission, 1 where the PPFD given is inside the greenhouse already, as the run's is",
+      "fixed": "1, as the run gives the PPFD inside the greenhouse: another value would count the cover's transmission twice",
       "maximum": 1.0,
       "minimum": 0,
       "range_from": {
         "least": "none in its source: the field's type's",
         "most": "a share, of all of it at most: the light the cover lets through of the light outside"
       },
+      "readOnly": true,
       "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_i.csv, 'all': transmissivity of the cover, Jones et al. 1999, spreadsheet (inferred)",
       "title": "Trgh",
       "type": "number",

@@ -152,6 +152,7 @@ class VanthoorParameters(BaseModel):
         what="MCH2O: the molar mass of CH₂O",
         unit="mg µmol⁻¹",
         source=TABLE_9_1,
+        fixed="a constant of nature: no set changes it",
     )
     rg_fruit: NonNegativeFloat = parameter(
         0.328,
@@ -182,6 +183,10 @@ class VanthoorParameters(BaseModel):
         what="T25K: the electron transport's reference temperature",
         unit="K",
         source=TABLE_9_1,
+        fixed=(
+            "the temperature J25Leaf,max is given at: another value would change what that"
+            " parameter means"
+        ),
     )
     t_end_sum: PositiveFloat = parameter(
         1035.0,
@@ -230,6 +235,7 @@ class VanthoorParameters(BaseModel):
         what="R: the gas constant",
         unit="J kmol⁻¹ K⁻¹",
         source="Vanthoor (2011), Table 8.1 (Table 9.1 gives 8.314 J mol⁻¹ K⁻¹)",
+        fixed="a constant of nature: no set changes it",
     )
     c_fruit_max: PositiveFloat = parameter(
         300e3,
