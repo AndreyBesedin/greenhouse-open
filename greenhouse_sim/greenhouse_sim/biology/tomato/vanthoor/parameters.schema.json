@@ -1,0 +1,490 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The model's parameters, as GreenLight's crop definition and its\nstandalone extension give them.",
+  "properties": {
+    "lai_max": {
+      "default": 3.0,
+      "description": "laiMax: the most leaf area",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 2.2, the Netherlands",
+      "title": "Lai Max",
+      "type": "number",
+      "unit": "m² leaf m⁻² floor"
+    },
+    "alpha": {
+      "default": 0.385,
+      "description": "alpha: the electrons from the photons the canopy absorbs",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "Alpha",
+      "type": "number",
+      "unit": "µmol e⁻ µmol⁻¹ photons"
+    },
+    "theta": {
+      "default": 0.7,
+      "description": "θ: the curvature of the electron transport's response to light",
+      "exclusiveMinimum": 0,
+      "maximum": 1.0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "a curvature, of the non-rectangular hyperbola: above 1 the electron transport is not a real number where light and its most are alike (growth.py)"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "Theta",
+      "type": "number",
+      "unit": "-"
+    },
+    "eta_co2_air_stom": {
+      "default": 0.67,
+      "description": "ηCO2,AirStom: the stomata's CO₂ as a share of the air's",
+      "exclusiveMinimum": 0,
+      "maximum": 1.0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "a share of the air's CO₂, which the stomata take theirs from: all of it at most"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "Eta Co2 Air Stom",
+      "type": "number",
+      "unit": "-"
+    },
+    "c_gamma": {
+      "default": 1.7,
+      "description": "cΓ: the temperature's effect on the CO₂ compensation point Γ",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "C Gamma",
+      "type": "number",
+      "unit": "µmol mol⁻¹ K⁻¹"
+    },
+    "c_fruit_m": {
+      "default": 1.16e-07,
+      "description": "cFruit,m: the fruit's maintenance respiration",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "C Fruit M",
+      "type": "number",
+      "unit": "mg mg⁻¹ s⁻¹"
+    },
+    "c_leaf_m": {
+      "default": 3.47e-07,
+      "description": "cLeaf,m: the leaves' maintenance respiration",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "C Leaf M",
+      "type": "number",
+      "unit": "mg mg⁻¹ s⁻¹"
+    },
+    "c_stem_m": {
+      "default": 1.47e-07,
+      "description": "cStem,m: the stems' maintenance respiration",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "C Stem M",
+      "type": "number",
+      "unit": "mg mg⁻¹ s⁻¹"
+    },
+    "c_fruit_g": {
+      "default": 0.27,
+      "description": "cFruit,g: the fruit's growth respiration, of its growth",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "C Fruit G",
+      "type": "number",
+      "unit": "-"
+    },
+    "c_leaf_g": {
+      "default": 0.28,
+      "description": "cLeaf,g: the leaves' growth respiration, of their growth",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "C Leaf G",
+      "type": "number",
+      "unit": "-"
+    },
+    "c_stem_g": {
+      "default": 0.3,
+      "description": "cStem,g: the stems' growth respiration, of their growth",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "C Stem G",
+      "type": "number",
+      "unit": "-"
+    },
+    "c_rgr": {
+      "default": 2850000.0,
+      "description": "cRGR: the maintenance respiration's regression coefficient",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "C Rgr",
+      "type": "number",
+      "unit": "s (written s⁻¹; cRgr · rgr is dimensionless)"
+    },
+    "c_buf_max": {
+      "default": 20000.0,
+      "description": "cBuf,max: the most carbohydrate in the buffer",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "C Buf Max",
+      "type": "number",
+      "unit": "mg CH₂O m⁻²"
+    },
+    "c_buf_min": {
+      "default": 1000.0,
+      "description": "cBuf,min: the least carbohydrate in the buffer",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "C Buf Min",
+      "type": "number",
+      "unit": "mg CH₂O m⁻²"
+    },
+    "e_j": {
+      "default": 37000.0,
+      "description": "EJ: the electron transport's activation energy",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "E J",
+      "type": "number",
+      "unit": "J mol⁻¹"
+    },
+    "h": {
+      "default": 220000.0,
+      "description": "H: the electron transport's deactivation energy",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "H",
+      "type": "number",
+      "unit": "J mol⁻¹"
+    },
+    "s": {
+      "default": 710.0,
+      "description": "S: the electron transport's entropy",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "S",
+      "type": "number",
+      "unit": "J mol⁻¹ K⁻¹"
+    },
+    "j25_leaf_max": {
+      "default": 210.0,
+      "description": "J25Leaf,max: the most electron transport at 25 °C",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "J25 Leaf Max",
+      "type": "number",
+      "unit": "µmol e⁻ m⁻² leaf s⁻¹"
+    },
+    "m_ch2o": {
+      "default": 0.03,
+      "description": "MCH2O: the molar mass of CH₂O",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "M Ch2O",
+      "type": "number",
+      "unit": "mg µmol⁻¹"
+    },
+    "rg_fruit": {
+      "default": 0.328,
+      "description": "rgFruit: the fruit's potential growth",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "Rg Fruit",
+      "type": "number",
+      "unit": "mg CH₂O m⁻² s⁻¹"
+    },
+    "rg_leaf": {
+      "default": 0.095,
+      "description": "rgLeaf: the leaves' potential growth",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "Rg Leaf",
+      "type": "number",
+      "unit": "mg CH₂O m⁻² s⁻¹"
+    },
+    "rg_stem": {
+      "default": 0.074,
+      "description": "rgStem: the stems' potential growth",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "Rg Stem",
+      "type": "number",
+      "unit": "mg CH₂O m⁻² s⁻¹"
+    },
+    "sla": {
+      "default": 2.66e-05,
+      "description": "SLA: the specific leaf area",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "Sla",
+      "type": "number",
+      "unit": "m² leaf mg⁻¹"
+    },
+    "t25k": {
+      "default": 298.15,
+      "description": "T25K: the electron transport's reference temperature",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "T25K",
+      "type": "number",
+      "unit": "K"
+    },
+    "t_end_sum": {
+      "default": 1035.0,
+      "description": "TEndSum: the temperature sum to a fully generative crop",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1, its unit changed as GreenLight's definition notes",
+      "title": "T End Sum",
+      "type": "number",
+      "unit": "°C day"
+    },
+    "q10m": {
+      "default": 2.0,
+      "description": "Q10m: the maintenance respiration's rise for each 10 °C",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.1",
+      "title": "Q10M",
+      "type": "number",
+      "unit": "-"
+    },
+    "t_can_min": {
+      "default": 10.0,
+      "description": "TCan,min: the instantaneous temperature below which growth is inhibited",
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.2",
+      "title": "T Can Min",
+      "type": "number",
+      "unit": "°C"
+    },
+    "t_can_max": {
+      "default": 34.0,
+      "description": "TCan,max: the instantaneous temperature above which growth is inhibited",
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.2",
+      "title": "T Can Max",
+      "type": "number",
+      "unit": "°C"
+    },
+    "t_can24_min": {
+      "default": 15.0,
+      "description": "TCan24,min: the last day's mean temperature below which growth is inhibited",
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.2",
+      "title": "T Can24 Min",
+      "type": "number",
+      "unit": "°C"
+    },
+    "t_can24_max": {
+      "default": 24.5,
+      "description": "TCan24,max: the last day's mean temperature above which growth is inhibited",
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 9.2",
+      "title": "T Can24 Max",
+      "type": "number",
+      "unit": "°C"
+    },
+    "rgr": {
+      "default": 3e-06,
+      "description": "RGR: the relative growth rate, a constant, 'assumed'",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "GreenLight 1's setGlParams.m, 'assumed', as GreenLight's definition cites it",
+      "title": "Rgr",
+      "type": "number",
+      "unit": "s⁻¹"
+    },
+    "r": {
+      "default": 8314.0,
+      "description": "R: the gas constant",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 8.1 (Table 9.1 gives 8.314 J mol⁻¹ K⁻¹)",
+      "title": "R",
+      "type": "number",
+      "unit": "J kmol⁻¹ K⁻¹"
+    },
+    "c_fruit_max": {
+      "default": 300000.0,
+      "description": "cFruit,max: the most fruit unharvested",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Katzin (2021), p. 246",
+      "title": "C Fruit Max",
+      "type": "number",
+      "unit": "mg CH₂O m⁻²"
+    },
+    "k1_par": {
+      "default": 0.7,
+      "description": "K1,PAR: the canopy's extinction of the PAR from above",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 8.1, as the standalone extension gives it",
+      "title": "K1 Par",
+      "type": "number",
+      "unit": "-"
+    },
+    "k2_par": {
+      "default": 0.7,
+      "description": "K2,PAR: the canopy's extinction of the PAR reflected from the floor",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Vanthoor (2011), Table 8.1, as the standalone extension gives it",
+      "title": "K2 Par",
+      "type": "number",
+      "unit": "-"
+    },
+    "rho_can_par": {
+      "default": 0.07,
+      "description": "ρCan,PAR: the canopy's reflection of PAR",
+      "maximum": 1.0,
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "a share of the PAR that reaches it, all of it at most: above 1 the canopy absorbs less than none (growth.py)"
+      },
+      "source": "Vanthoor (2011), Table 8.1, as the standalone extension gives it",
+      "title": "Rho Can Par",
+      "type": "number",
+      "unit": "-"
+    },
+    "rho_flr_par": {
+      "default": 0.65,
+      "description": "ρFlr,PAR: the floor's reflection of PAR, the Netherlands'",
+      "maximum": 1.0,
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "a share of the PAR that reaches it, all of it at most: above 1 the canopy absorbs less than none (growth.py)"
+      },
+      "source": "Vanthoor (2011), Table 8.2, the Netherlands, as the standalone extension gives it",
+      "title": "Rho Flr Par",
+      "type": "number",
+      "unit": "-"
+    }
+  },
+  "title": "VanthoorParameters",
+  "type": "object"
+}

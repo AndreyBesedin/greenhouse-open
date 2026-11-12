@@ -25,8 +25,11 @@ from typing import Annotated, Final, Literal
 import pytest
 from pydantic import BaseModel, Field
 
+from greenhouse_sim.biology.parameter_fields import parameters_json_schema
 from greenhouse_sim.biology.plant.environment import LocalEnvironment
 from greenhouse_sim.biology.tomato.organ.topology import Plant
+from greenhouse_sim.biology.tomato.tomgro.parameters import TomgroParameters
+from greenhouse_sim.biology.tomato.vanthoor.parameters import VanthoorParameters
 from greenhouse_sim.builder.basic import basic_json_schema
 from greenhouse_sim.builder.edits import edit_json_schema
 from greenhouse_sim.builder.portable import INSTALLATION_SCHEMA_FILE, installation_json_schema
@@ -63,6 +66,7 @@ PACKAGE: Final = Path(__file__).resolve().parents[1] / "greenhouse_sim"
 SNAPSHOT_SCHEMA_FILE: Final = PACKAGE / "scene" / "snapshot.schema.json"
 SERVICES: Final = PACKAGE / "services"
 CLIMATE: Final = PACKAGE / "climate"
+TOMATO: Final = PACKAGE / "biology" / "tomato"
 
 # Each answer of a service the viewer reads: its schema's file, beside the
 # module of the type the service returns, and that type. A list the viewer
@@ -119,6 +123,11 @@ PUBLISHED: Final[dict[Path, Callable[[], Mapping[str, object]]]] = {
     MANIFEST_SCHEMA_FILE: manifest_json_schema,
     LAYOUT_SCHEMA_FILE: layout_json_schema,
     INSTALLATION_SCHEMA_FILE: installation_json_schema,
+    # A crop model's parameters, each with its unit, source and range (P20.1).
+    TOMATO / "tomgro" / "parameters.schema.json": partial(parameters_json_schema, TomgroParameters),
+    TOMATO / "vanthoor" / "parameters.schema.json": partial(
+        parameters_json_schema, VanthoorParameters
+    ),
     **{path: partial(answer_json_schema, answered) for path, answered in ANSWERS.items()},
 }
 

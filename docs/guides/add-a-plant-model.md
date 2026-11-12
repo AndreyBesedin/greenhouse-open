@@ -93,7 +93,13 @@ quantities, and the `canopy_sample` model reads it with its errors
    curves, environment, variation) without importing the tomato
    ([decision 0025](../decisions/0025-shared-vocabulary-in-a-domain-package-and-a-generic-plant.md)),
    its numbers in its own `parameters.py`. A tomato of another kind goes
-   under `greenhouse_sim/greenhouse_sim/biology/tomato/`.
+   under `greenhouse_sim/greenhouse_sim/biology/tomato/`. Where its
+   parameters are one parameter model, as a model grown by area's are,
+   each field is a `parameter(...)`
+   (`greenhouse_sim/greenhouse_sim/biology/parameter_fields.py`): what it
+   is, its unit, its source and its range, each end with where it comes
+   from, in the schema published beside it
+   ([decision 0077](../decisions/0077-a-crop-parameter-set-is-a-file-named-and-versioned-and-told-apart-by-its-digest.md)).
 2. **Its day** takes a `LocalEnvironment`, and every draw comes from the
    plant's seed (`greenhouse_sim/greenhouse_sim/biology/plant/seeds.py`).
 3. **Its rung,** beside `OrganRung` and `SimpleRung`, keeping `CropRung`:
