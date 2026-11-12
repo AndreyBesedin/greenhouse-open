@@ -10,6 +10,24 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict, NonNegativeFloat, PositiveFloat
 
+from greenhouse_sim.biology.parameter_fields import parameter
+
+# Where most parameters' values come from, as the reproduction's manifest
+# says each.
+TABLE_9_1: Final = "Vanthoor (2011), Table 9.1"
+TABLE_9_2: Final = "Vanthoor (2011), Table 9.2"
+EXTENSION: Final = "as the standalone extension gives it"
+# Why each range's most is what it is.
+CURVE: Final = (
+    "a curvature, of the non-rectangular hyperbola: above 1 the electron transport is not"
+    " a real number where light and its most are alike (growth.py)"
+)
+STOMATA: Final = "a share of the air's CO₂, which the stomata take theirs from: all of it at most"
+REFLECTED: Final = (
+    "a share of the PAR that reaches it, all of it at most: above 1 the canopy absorbs less"
+    " than none (growth.py)"
+)
+
 
 class VanthoorParameters(BaseModel):
     """The model's parameters, as GreenLight's crop definition and its
@@ -17,70 +35,242 @@ class VanthoorParameters(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    # laiMax: the most leaf area (m² leaf m⁻² floor), the Netherlands' (Table 2.2).
-    lai_max: PositiveFloat = 3.0
-    # alpha: photons to electrons (µmol e⁻ µmol⁻¹ photons, Table 9.1).
-    alpha: PositiveFloat = 0.385
-    # θ: the curvature of the electron transport (Table 9.1).
-    theta: PositiveFloat = 0.7
-    # ηCO2,AirStom: the air's CO₂ to the stomata's (Table 9.1).
-    eta_co2_air_stom: PositiveFloat = 0.67
-    # cΓ: temperature's effect on Γ (µmol mol⁻¹ K⁻¹, Table 9.1).
-    c_gamma: NonNegativeFloat = 1.7
-    # Maintenance respiration (mg mg⁻¹ s⁻¹, Table 9.1).
-    c_fruit_m: NonNegativeFloat = 1.16e-7
-    c_leaf_m: NonNegativeFloat = 3.47e-7
-    c_stem_m: NonNegativeFloat = 1.47e-7
-    # Growth respiration (Table 9.1).
-    c_fruit_g: NonNegativeFloat = 0.27
-    c_leaf_g: NonNegativeFloat = 0.28
-    c_stem_g: NonNegativeFloat = 0.3
-    # cRgr: maintenance respiration's regression coefficient (s, Table 9.1,
-    # which writes s⁻¹; `c_rgr * rgr` is dimensionless).
-    c_rgr: NonNegativeFloat = 2.85e6
-    # The buffer's most and least (mg CH₂O m⁻², Table 9.1).
-    c_buf_max: PositiveFloat = 20e3
-    c_buf_min: NonNegativeFloat = 1e3
-    # The electron transport's activation and deactivation (J mol⁻¹) and its
-    # entropy (J mol⁻¹ K⁻¹, Table 9.1).
-    e_j: PositiveFloat = 37e3
-    h: PositiveFloat = 22e4
-    s: PositiveFloat = 710.0
-    # The most electron transport at 25 °C (µmol e⁻ m⁻² leaf s⁻¹, Table 9.1).
-    j25_leaf_max: PositiveFloat = 210.0
-    # The molar mass of CH₂O (mg µmol⁻¹, Table 9.1).
-    m_ch2o: PositiveFloat = 30e-3
-    # Potential growth (mg CH₂O m⁻² s⁻¹, Table 9.1).
-    rg_fruit: NonNegativeFloat = 0.328
-    rg_leaf: NonNegativeFloat = 0.095
-    rg_stem: NonNegativeFloat = 0.074
-    # The specific leaf area (m² leaf mg⁻¹ CH₂O, Table 9.1).
-    sla: PositiveFloat = 2.66e-5
-    # The electron transport's reference temperature (K, Table 9.1).
-    t25k: PositiveFloat = 298.15
-    # The temperature sum to a fully generative crop (°C day, Table 9.1).
-    t_end_sum: PositiveFloat = 1035.0
-    # Q10 of maintenance respiration (Table 9.1).
-    q10m: PositiveFloat = 2.0
-    # The instantaneous temperature's inhibition (°C, Table 9.2).
-    t_can_min: float = 10.0
-    t_can_max: float = 34.0
-    # The last day's temperature's inhibition (°C, Table 9.2).
-    t_can24_min: float = 15.0
-    t_can24_max: float = 24.5
-    # The relative growth rate, a constant, "assumed" (s⁻¹, GreenLight 1).
-    rgr: NonNegativeFloat = 3e-6
-    # The gas constant (J kmol⁻¹ K⁻¹, Table 8.1).
-    r: PositiveFloat = 8314.0
-    # The most fruit unharvested (mg CH₂O m⁻², Katzin 2021, p. 246).
-    c_fruit_max: PositiveFloat = 300e3
-    # The canopy's extinction of PAR, from above and from the floor (Table 8.1).
-    k1_par: PositiveFloat = 0.7
-    k2_par: PositiveFloat = 0.7
-    # The canopy's and the floor's reflection of PAR, the floor's the
-    # Netherlands' (Tables 8.1, 8.2).
-    rho_can_par: NonNegativeFloat = 0.07
-    rho_flr_par: NonNegativeFloat = 0.65
+    lai_max: PositiveFloat = parameter(
+        3.0,
+        what="laiMax: the most leaf area",
+        unit="m² leaf m⁻² floor",
+        source="Vanthoor (2011), Table 2.2, the Netherlands",
+    )
+    alpha: PositiveFloat = parameter(
+        0.385,
+        what="alpha: the electrons from the photons the canopy absorbs",
+        unit="µmol e⁻ µmol⁻¹ photons",
+        source=TABLE_9_1,
+    )
+    theta: PositiveFloat = parameter(
+        0.7,
+        what="θ: the curvature of the electron transport's response to light",
+        unit="-",
+        source=TABLE_9_1,
+        most=1.0,
+        most_from=CURVE,
+    )
+    eta_co2_air_stom: PositiveFloat = parameter(
+        0.67,
+        what="ηCO2,AirStom: the stomata's CO₂ as a share of the air's",
+        unit="-",
+        source=TABLE_9_1,
+        most=1.0,
+        most_from=STOMATA,
+    )
+    c_gamma: NonNegativeFloat = parameter(
+        1.7,
+        what="cΓ: the temperature's effect on the CO₂ compensation point Γ",
+        unit="µmol mol⁻¹ K⁻¹",
+        source=TABLE_9_1,
+    )
+    c_fruit_m: NonNegativeFloat = parameter(
+        1.16e-7,
+        what="cFruit,m: the fruit's maintenance respiration",
+        unit="mg mg⁻¹ s⁻¹",
+        source=TABLE_9_1,
+    )
+    c_leaf_m: NonNegativeFloat = parameter(
+        3.47e-7,
+        what="cLeaf,m: the leaves' maintenance respiration",
+        unit="mg mg⁻¹ s⁻¹",
+        source=TABLE_9_1,
+    )
+    c_stem_m: NonNegativeFloat = parameter(
+        1.47e-7,
+        what="cStem,m: the stems' maintenance respiration",
+        unit="mg mg⁻¹ s⁻¹",
+        source=TABLE_9_1,
+    )
+    c_fruit_g: NonNegativeFloat = parameter(
+        0.27,
+        what="cFruit,g: the fruit's growth respiration, of its growth",
+        unit="-",
+        source=TABLE_9_1,
+    )
+    c_leaf_g: NonNegativeFloat = parameter(
+        0.28,
+        what="cLeaf,g: the leaves' growth respiration, of their growth",
+        unit="-",
+        source=TABLE_9_1,
+    )
+    c_stem_g: NonNegativeFloat = parameter(
+        0.3,
+        what="cStem,g: the stems' growth respiration, of their growth",
+        unit="-",
+        source=TABLE_9_1,
+    )
+    c_rgr: NonNegativeFloat = parameter(
+        2.85e6,
+        what="cRGR: the maintenance respiration's regression coefficient",
+        unit="s (written s⁻¹; cRgr · rgr is dimensionless)",
+        source=TABLE_9_1,
+    )
+    c_buf_max: PositiveFloat = parameter(
+        20e3,
+        what="cBuf,max: the most carbohydrate in the buffer",
+        unit="mg CH₂O m⁻²",
+        source=TABLE_9_1,
+    )
+    c_buf_min: NonNegativeFloat = parameter(
+        1e3,
+        what="cBuf,min: the least carbohydrate in the buffer",
+        unit="mg CH₂O m⁻²",
+        source=TABLE_9_1,
+    )
+    e_j: PositiveFloat = parameter(
+        37e3,
+        what="EJ: the electron transport's activation energy",
+        unit="J mol⁻¹",
+        source=TABLE_9_1,
+    )
+    h: PositiveFloat = parameter(
+        22e4,
+        what="H: the electron transport's deactivation energy",
+        unit="J mol⁻¹",
+        source=TABLE_9_1,
+    )
+    s: PositiveFloat = parameter(
+        710.0,
+        what="S: the electron transport's entropy",
+        unit="J mol⁻¹ K⁻¹",
+        source=TABLE_9_1,
+    )
+    j25_leaf_max: PositiveFloat = parameter(
+        210.0,
+        what="J25Leaf,max: the most electron transport at 25 °C",
+        unit="µmol e⁻ m⁻² leaf s⁻¹",
+        source=TABLE_9_1,
+    )
+    m_ch2o: PositiveFloat = parameter(
+        30e-3,
+        what="MCH2O: the molar mass of CH₂O",
+        unit="mg µmol⁻¹",
+        source=TABLE_9_1,
+        fixed="a constant of nature: no set changes it",
+    )
+    rg_fruit: NonNegativeFloat = parameter(
+        0.328,
+        what="rgFruit: the fruit's potential growth",
+        unit="mg CH₂O m⁻² s⁻¹",
+        source=TABLE_9_1,
+    )
+    rg_leaf: NonNegativeFloat = parameter(
+        0.095,
+        what="rgLeaf: the leaves' potential growth",
+        unit="mg CH₂O m⁻² s⁻¹",
+        source=TABLE_9_1,
+    )
+    rg_stem: NonNegativeFloat = parameter(
+        0.074,
+        what="rgStem: the stems' potential growth",
+        unit="mg CH₂O m⁻² s⁻¹",
+        source=TABLE_9_1,
+    )
+    sla: PositiveFloat = parameter(
+        2.66e-5,
+        what="SLA: the specific leaf area",
+        unit="m² leaf mg⁻¹",
+        source=TABLE_9_1,
+    )
+    t25k: PositiveFloat = parameter(
+        298.15,
+        what="T25K: the electron transport's reference temperature",
+        unit="K",
+        source=TABLE_9_1,
+        fixed=(
+            "the temperature J25Leaf,max is given at: another value would change what that"
+            " parameter means"
+        ),
+    )
+    t_end_sum: PositiveFloat = parameter(
+        1035.0,
+        what="TEndSum: the temperature sum to a fully generative crop",
+        unit="°C day",
+        source=f"{TABLE_9_1}, its unit changed as GreenLight's definition notes",
+    )
+    q10m: PositiveFloat = parameter(
+        2.0,
+        what="Q10m: the maintenance respiration's rise for each 10 °C",
+        unit="-",
+        source=TABLE_9_1,
+    )
+    t_can_min: float = parameter(
+        10.0,
+        what="TCan,min: the instantaneous temperature below which growth is inhibited",
+        unit="°C",
+        source=TABLE_9_2,
+    )
+    t_can_max: float = parameter(
+        34.0,
+        what="TCan,max: the instantaneous temperature above which growth is inhibited",
+        unit="°C",
+        source=TABLE_9_2,
+    )
+    t_can24_min: float = parameter(
+        15.0,
+        what="TCan24,min: the last day's mean temperature below which growth is inhibited",
+        unit="°C",
+        source=TABLE_9_2,
+    )
+    t_can24_max: float = parameter(
+        24.5,
+        what="TCan24,max: the last day's mean temperature above which growth is inhibited",
+        unit="°C",
+        source=TABLE_9_2,
+    )
+    rgr: NonNegativeFloat = parameter(
+        3e-6,
+        what="RGR: the relative growth rate, a constant, 'assumed'",
+        unit="s⁻¹",
+        source="GreenLight 1's setGlParams.m, 'assumed', as GreenLight's definition cites it",
+    )
+    r: PositiveFloat = parameter(
+        8314.0,
+        what="R: the gas constant",
+        unit="J kmol⁻¹ K⁻¹",
+        source="Vanthoor (2011), Table 8.1 (Table 9.1 gives 8.314 J mol⁻¹ K⁻¹)",
+        fixed="a constant of nature: no set changes it",
+    )
+    c_fruit_max: PositiveFloat = parameter(
+        300e3,
+        what="cFruit,max: the most fruit unharvested",
+        unit="mg CH₂O m⁻²",
+        source="Katzin (2021), p. 246",
+    )
+    k1_par: PositiveFloat = parameter(
+        0.7,
+        what="K1,PAR: the canopy's extinction of the PAR from above",
+        unit="-",
+        source=f"Vanthoor (2011), Table 8.1, {EXTENSION}",
+    )
+    k2_par: PositiveFloat = parameter(
+        0.7,
+        what="K2,PAR: the canopy's extinction of the PAR reflected from the floor",
+        unit="-",
+        source=f"Vanthoor (2011), Table 8.1, {EXTENSION}",
+    )
+    rho_can_par: NonNegativeFloat = parameter(
+        0.07,
+        what="ρCan,PAR: the canopy's reflection of PAR",
+        unit="-",
+        source=f"Vanthoor (2011), Table 8.1, {EXTENSION}",
+        most=1.0,
+        most_from=REFLECTED,
+    )
+    rho_flr_par: NonNegativeFloat = parameter(
+        0.65,
+        what="ρFlr,PAR: the floor's reflection of PAR, the Netherlands'",
+        unit="-",
+        source=f"Vanthoor (2011), Table 8.2, the Netherlands, {EXTENSION}",
+        most=1.0,
+        most_from=REFLECTED,
+    )
 
     @property
     def c_leaf_max(self) -> float:

@@ -154,6 +154,14 @@ def test_its_parameters_and_its_start_are_the_published_ones() -> None:
     assert INITIAL_STATE.harvested_fruit == 0.0
 
 
+def test_each_parameter_says_the_unit_and_source_its_reproduction_gives() -> None:
+    described = VanthoorParameters.model_json_schema()["properties"]
+
+    for symbol, entry in _manifest()["parameters"].items():
+        assert described[_field(symbol)]["unit"] == entry["unit"], symbol
+        assert described[_field(symbol)]["source"] == entry["source"], symbol
+
+
 def test_its_rates_agree_with_the_reference_at_the_same_states() -> None:
     """No integration stands between them, so they are held as the
     reproduction's are: within its tolerances, at each of its half hours."""

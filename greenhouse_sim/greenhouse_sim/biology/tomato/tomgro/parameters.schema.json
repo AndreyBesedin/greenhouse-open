@@ -1,0 +1,398 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The model's parameters (`gnvman`) and inputs (`gnv_n01`).",
+  "properties": {
+    "alpha_f": {
+      "default": 0.8,
+      "description": "alpha_F: the share of the day's net growth to the fruit, at most",
+      "maximum": 1.0,
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "a share, of all of it at most: the fruit grows by it of the day's net growth (growth.py)"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "Alpha F",
+      "type": "number",
+      "unit": "fraction d⁻¹"
+    },
+    "beta": {
+      "default": 0.169,
+      "description": "β: the leaf expansion's rise with the nodes",
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "Beta",
+      "type": "number",
+      "unit": "node⁻¹"
+    },
+    "delta": {
+      "default": 0.038,
+      "description": "δ: the leaf area added with each node, at most",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "Delta",
+      "type": "number",
+      "unit": "m² leaf node⁻¹"
+    },
+    "df_max": {
+      "default": 0.08,
+      "description": "DFmax: the fruit's maturing rate, at most",
+      "maximum": 1.0,
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "the day's step: a day matures DFmax of the fruit not yet mature, all of it at most (growth.py)"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "Df Max",
+      "type": "number",
+      "unit": "d⁻¹"
+    },
+    "e": {
+      "default": 0.75,
+      "description": "E: the conversion of CH₂O to dry weight",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "E",
+      "type": "number",
+      "unit": "g dry weight g⁻¹ CH₂O"
+    },
+    "k": {
+      "default": 0.58,
+      "description": "K: the canopy's light extinction coefficient",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "K",
+      "type": "number",
+      "unit": "-"
+    },
+    "k_f": {
+      "default": 5.0,
+      "description": "KF: the nodes between the first fruit and its maturing",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "K F",
+      "type": "number",
+      "unit": "nodes"
+    },
+    "m": {
+      "default": 0.1,
+      "description": "m: the leaves' light transmission",
+      "exclusiveMaximum": 1.0,
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "a transmission, less than all the light: at 1 an hour with no light's photosynthesis is 0 / 0 (growth.py)"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "M",
+      "type": "number",
+      "unit": "-"
+    },
+    "n_b": {
+      "default": 16.0,
+      "description": "Nb: the nodes at which the leaf expansion turns",
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "N B",
+      "type": "number",
+      "unit": "node"
+    },
+    "n_ff": {
+      "default": 22.0,
+      "description": "NFF: the nodes at which the first fruit sets",
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "N Ff",
+      "type": "number",
+      "unit": "node"
+    },
+    "n_max": {
+      "default": 0.5,
+      "description": "Nmax: the node rate, at most",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "N Max",
+      "type": "number",
+      "unit": "node d⁻¹"
+    },
+    "p_1": {
+      "default": 2.0,
+      "description": "p1: the leaf weight lost with each node once the leaf area is full",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "P 1",
+      "type": "number",
+      "unit": "g leaf node⁻¹"
+    },
+    "q10": {
+      "default": 1.4,
+      "description": "Q10: the maintenance respiration's rise for each 10 °C",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "Q10",
+      "type": "number",
+      "unit": "-"
+    },
+    "qe": {
+      "default": 0.08,
+      "description": "Qe: the leaves' quantum efficiency",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "Qe",
+      "type": "number",
+      "unit": "µmol CO₂ µmol⁻¹ photon"
+    },
+    "rm": {
+      "default": 0.016,
+      "description": "rm: the maintenance respiration",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "Rm",
+      "type": "number",
+      "unit": "d⁻¹, applied as rm / 24 an hour"
+    },
+    "sl_n1": {
+      "default": 0.025,
+      "description": "slN1: the node rate's rise with the temperature",
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "Sl N1",
+      "type": "number",
+      "unit": "°C⁻¹"
+    },
+    "sl_n2": {
+      "default": 0.05,
+      "description": "slN2: the node rate's fall with the temperature",
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "Sl N2",
+      "type": "number",
+      "unit": "°C⁻¹"
+    },
+    "sl_r": {
+      "default": 0.0032,
+      "description": "slR: the roots' share's fall with the nodes",
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "Sl R",
+      "type": "number",
+      "unit": "node⁻¹"
+    },
+    "t_crit": {
+      "default": 24.4,
+      "description": "Tcrit: the daytime temperature above which fruit sets less",
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "T Crit",
+      "type": "number",
+      "unit": "°C"
+    },
+    "tau1": {
+      "default": 0.07428,
+      "description": "τ1: the leaves' maximum photosynthesis's rise with the CO₂, below 350 ppm",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "Tau1",
+      "type": "number",
+      "unit": "µmol m⁻² s⁻¹ ppm⁻¹"
+    },
+    "tau2": {
+      "default": 0.05848,
+      "description": "τ2: the leaves' maximum photosynthesis's rise with the CO₂, above 350 ppm",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "Tau2",
+      "type": "number",
+      "unit": "µmol m⁻² s⁻¹ ppm⁻¹"
+    },
+    "tmax_pg": {
+      "default": 35.0,
+      "description": "tmaxPg: the temperature above which photosynthesis falls",
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "Tmax Pg",
+      "type": "number",
+      "unit": "°C"
+    },
+    "tmin_fr_gr": {
+      "default": 8.5,
+      "description": "tmin_fr_gr: the temperature below which fruit grows no more",
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "Tmin Fr Gr",
+      "type": "number",
+      "unit": "°C"
+    },
+    "t_slop": {
+      "default": 20.6,
+      "description": "TSlop: the leaf expansion's fall with the daytime temperature",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "T Slop",
+      "type": "number",
+      "unit": "°C"
+    },
+    "v": {
+      "default": 0.135,
+      "description": "V: the fruit's share's rise with the nodes past the first fruit",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "V",
+      "type": "number",
+      "unit": "node⁻¹"
+    },
+    "v_max": {
+      "default": 8.0,
+      "description": "Vmax: the dry weight added with each node, at most",
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+      "title": "V Max",
+      "type": "number",
+      "unit": "g dry weight node⁻¹"
+    },
+    "d": {
+      "default": 2.5926912,
+      "description": "D, an input: the conversion of gross photosynthesis from µmol CO₂ m⁻² s⁻¹ to g CH₂O m⁻² d⁻¹",
+      "exclusiveMinimum": 0,
+      "fixed": "a conversion of units: no set changes it",
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "readOnly": true,
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_i.csv, 'all': Jones et al. 1999, spreadsheet",
+      "title": "D",
+      "type": "number",
+      "unit": "g CH₂O s d⁻¹ µmol⁻¹ CO₂"
+    },
+    "trgh": {
+      "default": 1.0,
+      "description": "TRGH, an input: the greenhouse's light transmission, 1 where the PPFD given is inside the greenhouse already, as the run's is",
+      "fixed": "1, as the run gives the PPFD inside the greenhouse: another value would count the cover's transmission twice",
+      "maximum": 1.0,
+      "minimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "a share, of all of it at most: the light the cover lets through of the light outside"
+      },
+      "readOnly": true,
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_i.csv, 'all': transmissivity of the cover, Jones et al. 1999, spreadsheet (inferred)",
+      "title": "Trgh",
+      "type": "number",
+      "unit": "-"
+    },
+    "lai_max": {
+      "default": 4.0,
+      "description": "LAImax, an input: the leaf area index, at most",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_i.csv, gnv_n01",
+      "title": "Lai Max",
+      "type": "number",
+      "unit": "m² leaf m⁻²"
+    },
+    "ro": {
+      "default": 3.5,
+      "description": "ρ, an input: the plants per m² of floor the parameters are for",
+      "exclusiveMinimum": 0,
+      "range_from": {
+        "least": "none in its source: the field's type's",
+        "most": "none in its source: the field's type's"
+      },
+      "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_i.csv, gnv_n01",
+      "title": "Ro",
+      "type": "number",
+      "unit": "plants m⁻²"
+    }
+  },
+  "title": "TomgroParameters",
+  "type": "object"
+}

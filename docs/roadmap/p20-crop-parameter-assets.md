@@ -1,6 +1,6 @@
 # P20: Crop parameters as versioned assets
 
-**Status:** proposed, its plan for review: the steps below, with decision
+**Status:** proposed, in progress (P20.1 is done): the steps below, with decision
 [0077](../decisions/0077-a-crop-parameter-set-is-a-file-named-and-versioned-and-told-apart-by-its-digest.md),
 proposed. It was P12.4 and part of P12.6 in
 [the setup builder](archive/p12-setup-builder.md), which closes without it. Part of the
@@ -90,7 +90,7 @@ study needs to cite a set; the steps after them are for runs and people.
 
 | Step | Work | Accepted when | Status |
 | --- | --- | --- | --- |
-| P20.1 | **Parameters described:** each field of `TomgroParameters` and `VanthoorParameters` gives its unit, source and range in the schema it publishes; a test holds the units and sources to the reproductions' manifests | Each parameter's schema says its unit, source and range, each range with its source or saying it has none; no run id, checkpoint or replay digest moves | Proposed |
+| P20.1 | **Parameters described:** each field of `TomgroParameters` and `VanthoorParameters` gives its unit, source and range in the schema it publishes; a test holds the units and sources to the reproductions' manifests | Each parameter's schema says its unit, source and range, each range with its source or saying it has none; no run id, checkpoint or replay digest moves | Done: each field says what it is, its unit, its source and its range, published as `parameters.schema.json` beside each model; a range's most comes from the equations or the quantity's meaning (TOMGRO's αF, DFmax, m and TRGH; Vanthoor's θ, ηCO2,AirStom and the two PAR reflections), every other end is its type's and says so; constants, D, T25K and TRGH fixed, read only, each saying why; decision 0076's calibrations, values and bounds, lie within |
 | P20.2 | **A set as a file:** its format and schema (`parameter_set.schema.json`), its digest, the published sets as sets with their digests pinned, and a set read, checked, resolved against its base and compared with another, in the package | A set based on a published one resolves to its values, a value outside its range is refused by field, two sets are compared parameter by parameter, and a published default changed without the model's version fails a test | Proposed |
 | P20.3 | **A run under a set:** `parameter_set_version` in the crop sections; the simulator's sets looked up, the published and those it keeps; the run's identity and its manifest answer; the store keeping the set beside the epoch, for its worker, a resume and a fork | A run under a set reads the same when repeated, and differs from the published set's; the packaged runs' ids are unchanged; a worker runs it from the store alone | Proposed |
 | P20.4 | **Sets kept and served:** routes to list a model's sets, read one, save one, compare two, download one and upload one; kept in the store, each version written once; the answers' schemas published and the viewer's contracts generated | The same numbers saved twice are one version; a value outside its range is refused by field; a name and version kept with another digest is refused | Proposed |

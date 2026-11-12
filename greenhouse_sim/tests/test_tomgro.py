@@ -59,6 +59,9 @@ INPUTS: Final = {"d": "D", "trgh": "TRGH", "lai_max": "LAI_max", "ro": "ro"}
 # The temperature at which the reference's Qe would vary, which its
 # implementation leaves out, as the package's model does.
 UNUSED: Final = {"TQe"}
+# The unit the schema names where the manifest says what the input does: D
+# converts µmol CO₂ m⁻² s⁻¹ to g CH₂O m⁻² d⁻¹.
+UNITS_NAMED: Final = {"D": "g CH₂O s d⁻¹ µmol⁻¹ CO₂"}
 
 
 def _manifest() -> dict[str, Any]:
@@ -108,6 +111,19 @@ def test_its_parameters_and_its_start_are_the_published_ones() -> None:
     for field, symbol in INPUTS.items():
         assert getattr(parameters, field) == manifest["inputs"][symbol]["value"], symbol
     assert INITIAL_STATE.model_dump() == manifest["initial_state"]
+
+
+def test_each_parameter_says_the_unit_and_source_its_reproduction_gives() -> None:
+    manifest = _manifest()
+    described = TomgroParameters.model_json_schema()["properties"]
+
+    for section, symbols in (("parameters", SYMBOLS), ("inputs", INPUTS)):
+        for field, symbol in symbols.items():
+            entry = manifest[section][symbol]
+            assert described[field]["unit"] == UNITS_NAMED.get(symbol, entry["unit"]), symbol
+            # The schema's source says the release's table in full, where the
+            # manifest's input names only its file.
+            assert entry["source"] in described[field]["source"], symbol
 
 
 def test_it_agrees_with_the_reference_on_every_state_every_day() -> None:
