@@ -13,11 +13,14 @@ import {
 // model.
 const PACKAGE = new URL("../../greenhouse_sim/", import.meta.url);
 // The schemas of the files a scenario, or an installation, is written in,
-// which the viewer does not read.
+// and of a crop model's parameters, which the viewer does not read: a
+// parameter set's form will, through the answers that serve them (P20.5).
 const NOT_READ = [
   "builder/installation.schema.json",
   "scenarios/layout.schema.json",
   "scenarios/scenario.schema.json",
+  "biology/tomato/tomgro/parameters.schema.json",
+  "biology/tomato/vanthoor/parameters.schema.json",
 ];
 
 describe("the viewer's side of the simulator's contracts", () => {
