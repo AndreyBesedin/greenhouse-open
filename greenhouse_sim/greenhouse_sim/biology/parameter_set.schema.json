@@ -1,0 +1,1035 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "SetNamed": {
+      "additionalProperties": false,
+      "description": "A set as another names it: its name, its version and its digest.",
+      "properties": {
+        "name": {
+          "pattern": "^[a-z0-9][a-z0-9_]*$",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        },
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "digest"
+      ],
+      "title": "SetNamed",
+      "type": "object"
+    },
+    "TomgroParameters": {
+      "additionalProperties": false,
+      "description": "The model's parameters (`gnvman`) and inputs (`gnv_n01`).",
+      "properties": {
+        "alpha_f": {
+          "default": 0.8,
+          "description": "alpha_F: the share of the day's net growth to the fruit, at most",
+          "maximum": 1.0,
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "a share, of all of it at most: the fruit grows by it of the day's net growth (growth.py)"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "Alpha F",
+          "type": "number",
+          "unit": "fraction d⁻¹"
+        },
+        "beta": {
+          "default": 0.169,
+          "description": "β: the leaf expansion's rise with the nodes",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "Beta",
+          "type": "number",
+          "unit": "node⁻¹"
+        },
+        "delta": {
+          "default": 0.038,
+          "description": "δ: the leaf area added with each node, at most",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "Delta",
+          "type": "number",
+          "unit": "m² leaf node⁻¹"
+        },
+        "df_max": {
+          "default": 0.08,
+          "description": "DFmax: the fruit's maturing rate, at most",
+          "maximum": 1.0,
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "the day's step: a day matures DFmax of the fruit not yet mature, all of it at most (growth.py)"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "Df Max",
+          "type": "number",
+          "unit": "d⁻¹"
+        },
+        "e": {
+          "default": 0.75,
+          "description": "E: the conversion of CH₂O to dry weight",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "E",
+          "type": "number",
+          "unit": "g dry weight g⁻¹ CH₂O"
+        },
+        "k": {
+          "default": 0.58,
+          "description": "K: the canopy's light extinction coefficient",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "K",
+          "type": "number",
+          "unit": "-"
+        },
+        "k_f": {
+          "default": 5.0,
+          "description": "KF: the nodes between the first fruit and its maturing",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "K F",
+          "type": "number",
+          "unit": "nodes"
+        },
+        "m": {
+          "default": 0.1,
+          "description": "m: the leaves' light transmission",
+          "exclusiveMaximum": 1.0,
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "a transmission, less than all the light: at 1 an hour with no light's photosynthesis is 0 / 0 (growth.py)"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "M",
+          "type": "number",
+          "unit": "-"
+        },
+        "n_b": {
+          "default": 16.0,
+          "description": "Nb: the nodes at which the leaf expansion turns",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "N B",
+          "type": "number",
+          "unit": "node"
+        },
+        "n_ff": {
+          "default": 22.0,
+          "description": "NFF: the nodes at which the first fruit sets",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "N Ff",
+          "type": "number",
+          "unit": "node"
+        },
+        "n_max": {
+          "default": 0.5,
+          "description": "Nmax: the node rate, at most",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "N Max",
+          "type": "number",
+          "unit": "node d⁻¹"
+        },
+        "p_1": {
+          "default": 2.0,
+          "description": "p1: the leaf weight lost with each node once the leaf area is full",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "P 1",
+          "type": "number",
+          "unit": "g leaf node⁻¹"
+        },
+        "q10": {
+          "default": 1.4,
+          "description": "Q10: the maintenance respiration's rise for each 10 °C",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "Q10",
+          "type": "number",
+          "unit": "-"
+        },
+        "qe": {
+          "default": 0.08,
+          "description": "Qe: the leaves' quantum efficiency",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "Qe",
+          "type": "number",
+          "unit": "µmol CO₂ µmol⁻¹ photon"
+        },
+        "rm": {
+          "default": 0.016,
+          "description": "rm: the maintenance respiration",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "Rm",
+          "type": "number",
+          "unit": "d⁻¹, applied as rm / 24 an hour"
+        },
+        "sl_n1": {
+          "default": 0.025,
+          "description": "slN1: the node rate's rise with the temperature",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "Sl N1",
+          "type": "number",
+          "unit": "°C⁻¹"
+        },
+        "sl_n2": {
+          "default": 0.05,
+          "description": "slN2: the node rate's fall with the temperature",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "Sl N2",
+          "type": "number",
+          "unit": "°C⁻¹"
+        },
+        "sl_r": {
+          "default": 0.0032,
+          "description": "slR: the roots' share's fall with the nodes",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "Sl R",
+          "type": "number",
+          "unit": "node⁻¹"
+        },
+        "t_crit": {
+          "default": 24.4,
+          "description": "Tcrit: the daytime temperature above which fruit sets less",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "T Crit",
+          "type": "number",
+          "unit": "°C"
+        },
+        "tau1": {
+          "default": 0.07428,
+          "description": "τ1: the leaves' maximum photosynthesis's rise with the CO₂, below 350 ppm",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "Tau1",
+          "type": "number",
+          "unit": "µmol m⁻² s⁻¹ ppm⁻¹"
+        },
+        "tau2": {
+          "default": 0.05848,
+          "description": "τ2: the leaves' maximum photosynthesis's rise with the CO₂, above 350 ppm",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "Tau2",
+          "type": "number",
+          "unit": "µmol m⁻² s⁻¹ ppm⁻¹"
+        },
+        "tmax_pg": {
+          "default": 35.0,
+          "description": "tmaxPg: the temperature above which photosynthesis falls",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "Tmax Pg",
+          "type": "number",
+          "unit": "°C"
+        },
+        "tmin_fr_gr": {
+          "default": 8.5,
+          "description": "tmin_fr_gr: the temperature below which fruit grows no more",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "Tmin Fr Gr",
+          "type": "number",
+          "unit": "°C"
+        },
+        "t_slop": {
+          "default": 20.6,
+          "description": "TSlop: the leaf expansion's fall with the daytime temperature",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "T Slop",
+          "type": "number",
+          "unit": "°C"
+        },
+        "v": {
+          "default": 0.135,
+          "description": "V: the fruit's share's rise with the nodes past the first fruit",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "V",
+          "type": "number",
+          "unit": "node⁻¹"
+        },
+        "v_max": {
+          "default": 8.0,
+          "description": "Vmax: the dry weight added with each node, at most",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_p.csv, set gnvman ('original'); units as their preprint's Table A1 gives them where it does",
+          "title": "V Max",
+          "type": "number",
+          "unit": "g dry weight node⁻¹"
+        },
+        "d": {
+          "default": 2.5926912,
+          "description": "D, an input: the conversion of gross photosynthesis from µmol CO₂ m⁻² s⁻¹ to g CH₂O m⁻² d⁻¹",
+          "exclusiveMinimum": 0,
+          "fixed": "a conversion of units: no set changes it",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "readOnly": true,
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_i.csv, 'all': Jones et al. 1999, spreadsheet",
+          "title": "D",
+          "type": "number",
+          "unit": "g CH₂O s d⁻¹ µmol⁻¹ CO₂"
+        },
+        "trgh": {
+          "default": 1.0,
+          "description": "TRGH, an input: the greenhouse's light transmission, 1 where the PPFD given is inside the greenhouse already, as the run's is",
+          "fixed": "1, as the run gives the PPFD inside the greenhouse: another value would count the cover's transmission twice",
+          "maximum": 1.0,
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "a share, of all of it at most: the light the cover lets through of the light outside"
+          },
+          "readOnly": true,
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_i.csv, 'all': transmissivity of the cover, Jones et al. 1999, spreadsheet (inferred)",
+          "title": "Trgh",
+          "type": "number",
+          "unit": "-"
+        },
+        "lai_max": {
+          "default": 4.0,
+          "description": "LAImax, an input: the leaf area index, at most",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_i.csv, gnv_n01",
+          "title": "Lai Max",
+          "type": "number",
+          "unit": "m² leaf m⁻²"
+        },
+        "ro": {
+          "default": 3.5,
+          "description": "ρ, an input: the plants per m² of floor the parameters are for",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Oliveira et al. v0.4.0, tables/parameters_inputs/tomgro_i.csv, gnv_n01",
+          "title": "Ro",
+          "type": "number",
+          "unit": "plants m⁻²"
+        }
+      },
+      "title": "TomgroParameters",
+      "type": "object"
+    },
+    "VanthoorParameters": {
+      "additionalProperties": false,
+      "description": "The model's parameters, as GreenLight's crop definition and its\nstandalone extension give them.",
+      "properties": {
+        "lai_max": {
+          "default": 3.0,
+          "description": "laiMax: the most leaf area",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 2.2, the Netherlands",
+          "title": "Lai Max",
+          "type": "number",
+          "unit": "m² leaf m⁻² floor"
+        },
+        "alpha": {
+          "default": 0.385,
+          "description": "alpha: the electrons from the photons the canopy absorbs",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "Alpha",
+          "type": "number",
+          "unit": "µmol e⁻ µmol⁻¹ photons"
+        },
+        "theta": {
+          "default": 0.7,
+          "description": "θ: the curvature of the electron transport's response to light",
+          "exclusiveMinimum": 0,
+          "maximum": 1.0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "a curvature, of the non-rectangular hyperbola: above 1 the electron transport is not a real number where light and its most are alike (growth.py)"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "Theta",
+          "type": "number",
+          "unit": "-"
+        },
+        "eta_co2_air_stom": {
+          "default": 0.67,
+          "description": "ηCO2,AirStom: the stomata's CO₂ as a share of the air's",
+          "exclusiveMinimum": 0,
+          "maximum": 1.0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "a share of the air's CO₂, which the stomata take theirs from: all of it at most"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "Eta Co2 Air Stom",
+          "type": "number",
+          "unit": "-"
+        },
+        "c_gamma": {
+          "default": 1.7,
+          "description": "cΓ: the temperature's effect on the CO₂ compensation point Γ",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "C Gamma",
+          "type": "number",
+          "unit": "µmol mol⁻¹ K⁻¹"
+        },
+        "c_fruit_m": {
+          "default": 1.16e-07,
+          "description": "cFruit,m: the fruit's maintenance respiration",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "C Fruit M",
+          "type": "number",
+          "unit": "mg mg⁻¹ s⁻¹"
+        },
+        "c_leaf_m": {
+          "default": 3.47e-07,
+          "description": "cLeaf,m: the leaves' maintenance respiration",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "C Leaf M",
+          "type": "number",
+          "unit": "mg mg⁻¹ s⁻¹"
+        },
+        "c_stem_m": {
+          "default": 1.47e-07,
+          "description": "cStem,m: the stems' maintenance respiration",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "C Stem M",
+          "type": "number",
+          "unit": "mg mg⁻¹ s⁻¹"
+        },
+        "c_fruit_g": {
+          "default": 0.27,
+          "description": "cFruit,g: the fruit's growth respiration, of its growth",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "C Fruit G",
+          "type": "number",
+          "unit": "-"
+        },
+        "c_leaf_g": {
+          "default": 0.28,
+          "description": "cLeaf,g: the leaves' growth respiration, of their growth",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "C Leaf G",
+          "type": "number",
+          "unit": "-"
+        },
+        "c_stem_g": {
+          "default": 0.3,
+          "description": "cStem,g: the stems' growth respiration, of their growth",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "C Stem G",
+          "type": "number",
+          "unit": "-"
+        },
+        "c_rgr": {
+          "default": 2850000.0,
+          "description": "cRGR: the maintenance respiration's regression coefficient",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "C Rgr",
+          "type": "number",
+          "unit": "s (written s⁻¹; cRgr · rgr is dimensionless)"
+        },
+        "c_buf_max": {
+          "default": 20000.0,
+          "description": "cBuf,max: the most carbohydrate in the buffer",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "C Buf Max",
+          "type": "number",
+          "unit": "mg CH₂O m⁻²"
+        },
+        "c_buf_min": {
+          "default": 1000.0,
+          "description": "cBuf,min: the least carbohydrate in the buffer",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "C Buf Min",
+          "type": "number",
+          "unit": "mg CH₂O m⁻²"
+        },
+        "e_j": {
+          "default": 37000.0,
+          "description": "EJ: the electron transport's activation energy",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "E J",
+          "type": "number",
+          "unit": "J mol⁻¹"
+        },
+        "h": {
+          "default": 220000.0,
+          "description": "H: the electron transport's deactivation energy",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "H",
+          "type": "number",
+          "unit": "J mol⁻¹"
+        },
+        "s": {
+          "default": 710.0,
+          "description": "S: the electron transport's entropy",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "S",
+          "type": "number",
+          "unit": "J mol⁻¹ K⁻¹"
+        },
+        "j25_leaf_max": {
+          "default": 210.0,
+          "description": "J25Leaf,max: the most electron transport at 25 °C",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "J25 Leaf Max",
+          "type": "number",
+          "unit": "µmol e⁻ m⁻² leaf s⁻¹"
+        },
+        "m_ch2o": {
+          "default": 0.03,
+          "description": "MCH2O: the molar mass of CH₂O",
+          "exclusiveMinimum": 0,
+          "fixed": "a constant of nature: no set changes it",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "readOnly": true,
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "M Ch2O",
+          "type": "number",
+          "unit": "mg µmol⁻¹"
+        },
+        "rg_fruit": {
+          "default": 0.328,
+          "description": "rgFruit: the fruit's potential growth",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "Rg Fruit",
+          "type": "number",
+          "unit": "mg CH₂O m⁻² s⁻¹"
+        },
+        "rg_leaf": {
+          "default": 0.095,
+          "description": "rgLeaf: the leaves' potential growth",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "Rg Leaf",
+          "type": "number",
+          "unit": "mg CH₂O m⁻² s⁻¹"
+        },
+        "rg_stem": {
+          "default": 0.074,
+          "description": "rgStem: the stems' potential growth",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "Rg Stem",
+          "type": "number",
+          "unit": "mg CH₂O m⁻² s⁻¹"
+        },
+        "sla": {
+          "default": 2.66e-05,
+          "description": "SLA: the specific leaf area",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "Sla",
+          "type": "number",
+          "unit": "m² leaf mg⁻¹"
+        },
+        "t25k": {
+          "default": 298.15,
+          "description": "T25K: the electron transport's reference temperature",
+          "exclusiveMinimum": 0,
+          "fixed": "the temperature J25Leaf,max is given at: another value would change what that parameter means",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "readOnly": true,
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "T25K",
+          "type": "number",
+          "unit": "K"
+        },
+        "t_end_sum": {
+          "default": 1035.0,
+          "description": "TEndSum: the temperature sum to a fully generative crop",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1, its unit changed as GreenLight's definition notes",
+          "title": "T End Sum",
+          "type": "number",
+          "unit": "°C day"
+        },
+        "q10m": {
+          "default": 2.0,
+          "description": "Q10m: the maintenance respiration's rise for each 10 °C",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.1",
+          "title": "Q10M",
+          "type": "number",
+          "unit": "-"
+        },
+        "t_can_min": {
+          "default": 10.0,
+          "description": "TCan,min: the instantaneous temperature below which growth is inhibited",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.2",
+          "title": "T Can Min",
+          "type": "number",
+          "unit": "°C"
+        },
+        "t_can_max": {
+          "default": 34.0,
+          "description": "TCan,max: the instantaneous temperature above which growth is inhibited",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.2",
+          "title": "T Can Max",
+          "type": "number",
+          "unit": "°C"
+        },
+        "t_can24_min": {
+          "default": 15.0,
+          "description": "TCan24,min: the last day's mean temperature below which growth is inhibited",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.2",
+          "title": "T Can24 Min",
+          "type": "number",
+          "unit": "°C"
+        },
+        "t_can24_max": {
+          "default": 24.5,
+          "description": "TCan24,max: the last day's mean temperature above which growth is inhibited",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 9.2",
+          "title": "T Can24 Max",
+          "type": "number",
+          "unit": "°C"
+        },
+        "rgr": {
+          "default": 3e-06,
+          "description": "RGR: the relative growth rate, a constant, 'assumed'",
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "GreenLight 1's setGlParams.m, 'assumed', as GreenLight's definition cites it",
+          "title": "Rgr",
+          "type": "number",
+          "unit": "s⁻¹"
+        },
+        "r": {
+          "default": 8314.0,
+          "description": "R: the gas constant",
+          "exclusiveMinimum": 0,
+          "fixed": "a constant of nature: no set changes it",
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "readOnly": true,
+          "source": "Vanthoor (2011), Table 8.1 (Table 9.1 gives 8.314 J mol⁻¹ K⁻¹)",
+          "title": "R",
+          "type": "number",
+          "unit": "J kmol⁻¹ K⁻¹"
+        },
+        "c_fruit_max": {
+          "default": 300000.0,
+          "description": "cFruit,max: the most fruit unharvested",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Katzin (2021), p. 246",
+          "title": "C Fruit Max",
+          "type": "number",
+          "unit": "mg CH₂O m⁻²"
+        },
+        "k1_par": {
+          "default": 0.7,
+          "description": "K1,PAR: the canopy's extinction of the PAR from above",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 8.1, as the standalone extension gives it",
+          "title": "K1 Par",
+          "type": "number",
+          "unit": "-"
+        },
+        "k2_par": {
+          "default": 0.7,
+          "description": "K2,PAR: the canopy's extinction of the PAR reflected from the floor",
+          "exclusiveMinimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "source": "Vanthoor (2011), Table 8.1, as the standalone extension gives it",
+          "title": "K2 Par",
+          "type": "number",
+          "unit": "-"
+        },
+        "rho_can_par": {
+          "default": 0.07,
+          "description": "ρCan,PAR: the canopy's reflection of PAR",
+          "maximum": 1.0,
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "a share of the PAR that reaches it, all of it at most: above 1 the canopy absorbs less than none (growth.py)"
+          },
+          "source": "Vanthoor (2011), Table 8.1, as the standalone extension gives it",
+          "title": "Rho Can Par",
+          "type": "number",
+          "unit": "-"
+        },
+        "rho_flr_par": {
+          "default": 0.65,
+          "description": "ρFlr,PAR: the floor's reflection of PAR, the Netherlands'",
+          "maximum": 1.0,
+          "minimum": 0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "a share of the PAR that reaches it, all of it at most: above 1 the canopy absorbs less than none (growth.py)"
+          },
+          "source": "Vanthoor (2011), Table 8.2, the Netherlands, as the standalone extension gives it",
+          "title": "Rho Flr Par",
+          "type": "number",
+          "unit": "-"
+        }
+      },
+      "title": "VanthoorParameters",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A crop model's parameter set, as its file gives it.",
+  "properties": {
+    "model": {
+      "description": "The crop model it is a set of, by its registered name.",
+      "title": "Model",
+      "type": "string",
+      "enum": [
+        "reduced_tomgro",
+        "vanthoor_katzin"
+      ]
+    },
+    "name": {
+      "description": "What a person calls it.",
+      "pattern": "^[a-z0-9][a-z0-9_]*$",
+      "title": "Name",
+      "type": "string"
+    },
+    "version": {
+      "description": "Its version under its name, from 1.",
+      "exclusiveMinimum": 0,
+      "title": "Version",
+      "type": "integer"
+    },
+    "based_on": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SetNamed"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The set it starts from, by name, version and digest; none for a set that gives every value."
+    },
+    "parameters": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "description": "The values it changes from its base, by its model's parameters' fields.",
+      "title": "Parameters",
+      "type": "object"
+    },
+    "why": {
+      "additionalProperties": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "description": "Where each value it changes comes from, by the same fields.",
+      "title": "Why",
+      "type": "object"
+    },
+    "made_for": {
+      "description": "The version of its model it was made with.",
+      "exclusiveMinimum": 0,
+      "title": "Made For",
+      "type": "integer"
+    },
+    "cultivar": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The cultivar it was made for; none where its source names none.",
+      "title": "Cultivar"
+    },
+    "description": {
+      "default": "",
+      "title": "Description",
+      "type": "string"
+    }
+  },
+  "required": [
+    "model",
+    "name",
+    "version",
+    "based_on",
+    "parameters",
+    "why",
+    "made_for",
+    "cultivar"
+  ],
+  "title": "ParameterSet",
+  "type": "object",
+  "oneOf": [
+    {
+      "properties": {
+        "model": {
+          "const": "reduced_tomgro"
+        },
+        "parameters": {
+          "$ref": "#/$defs/TomgroParameters"
+        }
+      }
+    },
+    {
+      "properties": {
+        "model": {
+          "const": "vanthoor_katzin"
+        },
+        "parameters": {
+          "$ref": "#/$defs/VanthoorParameters"
+        }
+      }
+    }
+  ]
+}

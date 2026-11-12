@@ -50,6 +50,8 @@
 - `why`: for each value it changes, where the value comes from, such as a
   calibration's manifest and result, a publication or a measurement;
 - `made_for`: the version of the model it was made with;
+- `cultivar`: the cultivar it was made for, or none where its source
+  names none, as the published sets' do not;
 - `description`: free text.
 
 **Its digest tells it apart.** A set's digest is the SHA-256, whole and
@@ -96,6 +98,12 @@ own drivers settle (TOMGRO's TRGH, 1, as the run gives the light inside
 the house) are no set's to change. Each says so in its schema, read only
 and why, and a set that changes one is refused.
 
+**Some pairs are ordered.** Where the equations open a window between two
+parameters, the first stays below the second whatever a set gives each:
+Vanthoor's buffer's least and most, and its two temperature inhibitions'
+least and most. A set whose values, its base's included, break a pair is
+refused, naming both.
+
 **A run names a set as it names its driver profile.** A crop section
 gives `parameter_set` and `parameter_set_version`, as it gives
 `driver_profile` and `driver_profile_version`, the version being 1 when
@@ -129,7 +137,7 @@ it keeps, and refuses a run that names one it has not.
 model, its variety and its set, by name and version. The crop section's
 set is the rows', as its model is, and a manifest whose section names
 another is refused. The variety stays a word, what was planted, and the
-set is the numbers grown. Rows of different sets are P21's.
+set is the numbers grown, naming the cultivar they were made for. Rows of different sets are P21's.
 
 **What it covers:** the models whose parameters are one parameter model,
 Reduced-State TOMGRO and Vanthoor's model. The organ crop's parameters,
@@ -161,17 +169,14 @@ parameter model can then have sets without a change to this decision.
 
 ## Open questions
 
-1. **A cultivar:** whether a set names the cultivar it was made for,
-   beside the row's variety. AGC4's two years' cultivars are not known to
-   be the same (decision 0076).
-2. **Packaging a calibration:** whether a calibrated set is ever
+1. **Packaging a calibration:** whether a calibrated set is ever
    packaged, so that every simulator offers it: before its model's
    validation (milestone C), after it, or never.
-3. **Names across simulators:** two simulators may each save
+2. **Names across simulators:** two simulators may each save
    `agc4_pretrial_2023` v1 with other numbers. Their digests tell them
    apart, and an upload of the second where the first is kept is refused.
    Whether that is enough, or whether names need a namespace, such as the
    party or the source.
-4. **Another model version:** whether a run under a set made for another
+3. **Another model version:** whether a run under a set made for another
    version of its model is refused, or run and said so. Proposed: run,
    with `made_for` beside the model's version in its manifest answer.

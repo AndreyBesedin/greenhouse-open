@@ -50,6 +50,24 @@ def parameter(
     return Field(default, description=what, le=most, lt=below, json_schema_extra=described)
 
 
+def fixed_parameters(parameters: type[BaseModel]) -> frozenset[str]:
+    """The fields of a parameter model that no set may change."""
+    return frozenset(
+        name
+        for name, field in parameters.model_fields.items()
+        if isinstance(field.json_schema_extra, dict) and "fixed" in field.json_schema_extra
+    )
+
+
+def parameter_sources(parameters: type[BaseModel]) -> dict[str, str]:
+    """Where each field's published value comes from, by field."""
+    return {
+        name: str(field.json_schema_extra["source"])
+        for name, field in parameters.model_fields.items()
+        if isinstance(field.json_schema_extra, dict)
+    }
+
+
 def parameters_json_schema(parameters: type[BaseModel]) -> dict[str, JsonValue]:
     """The schema a parameter model publishes: each field's default, what it
     is, its unit, its source, and its range with where each end comes

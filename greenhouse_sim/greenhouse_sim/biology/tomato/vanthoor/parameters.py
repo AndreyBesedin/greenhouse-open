@@ -6,9 +6,9 @@ reproduction's manifest records each with its unit and source
 Vanthoor's thesis. Each field is named by the published symbol.
 """
 
-from typing import Final
+from typing import Final, Self
 
-from pydantic import BaseModel, ConfigDict, NonNegativeFloat, PositiveFloat
+from pydantic import BaseModel, ConfigDict, NonNegativeFloat, PositiveFloat, model_validator
 
 from greenhouse_sim.biology.parameter_fields import parameter
 
@@ -26,6 +26,13 @@ STOMATA: Final = "a share of the air's CO₂, which the stomata take theirs from
 REFLECTED: Final = (
     "a share of the PAR that reaches it, all of it at most: above 1 the canopy absorbs less"
     " than none (growth.py)"
+)
+
+# The pairs whose first is below its second, whatever a set gives each.
+BELOW: Final = (
+    ("c_buf_min", "c_buf_max"),
+    ("t_can_min", "t_can_max"),
+    ("t_can24_min", "t_can24_max"),
 )
 
 
@@ -271,6 +278,19 @@ class VanthoorParameters(BaseModel):
         most=1.0,
         most_from=REFLECTED,
     )
+
+    @model_validator(mode="after")
+    def _each_least_below_its_most(self) -> Self:
+        """The buffer's least below its most, and each temperature's
+        inhibition's least below its most: each pair bounds a window the
+        growth's equations open between them (growth.py)."""
+        for least, most in BELOW:
+            if getattr(self, least) >= getattr(self, most):
+                raise ValueError(
+                    f"{least} ({getattr(self, least):g}) is not below {most}"
+                    f" ({getattr(self, most):g})"
+                )
+        return self
 
     @property
     def c_leaf_max(self) -> float:
