@@ -128,6 +128,7 @@ links there.
 | [P20](p20-crop-parameter-assets.md) | Crop parameters as versioned assets, edited by forms and reproduced from their versions | Proposed: its plan, with [decision 0077](../decisions/0077-a-crop-parameter-set-is-a-file-named-and-versioned-and-told-apart-by-its-digest.md) |
 | [P21](p21-rows-of-different-crops.md) | Rows of different crops in one house | Proposed |
 | [P22](archive/p22-watching-and-starting-a-run.md) | Watching and starting a run: one *Play*, steering from the replay, a new run's form | Done: P22.1 to P22.10, its QA recorded; what it left is in [future work](future-work.md#watching-and-starting-a-run-after-p22) |
+| [P23](p23-experiments.md) | Experiments: policies paired on a run's conditions, each episode with its record | Proposed |
 
 ## After a QA
 
