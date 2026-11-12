@@ -51,7 +51,8 @@ kept. `check` builds TiGwerLib's global model,
 over the first day of its experiment. It simulates the day with DASSL,
 OpenModelica's default solver, at the experiment's tolerance (1e-5) and
 interval (300 s). It prints what each step took, and leaves the build,
-the results and both logs in its working folder.
+the results and both logs in its working folder. It first removes what an
+earlier check left there, and stops at a step that fails.
 
 Any other command runs in the same container:
 
@@ -63,6 +64,10 @@ The command runs in `WORKDIR`, as the user who runs it. The libraries are
 on its `MODELICAPATH`, and TiGwerLib is read-only at `/tigwerlib`. A model
 reads its data from the paths it was built with, so it is built and run
 with TiGwerLib at that same place.
+
+It has run on macOS and on Linux. Windows has no user ids to give the
+container, so there a command runs as the image's own user; that has not
+been tried yet.
 
 The [Modelica workflow](../../.github/workflows/modelica.yml) sets it up
 and runs the check on GitHub's Linux runners. It runs when this folder,

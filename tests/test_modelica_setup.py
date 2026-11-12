@@ -1,14 +1,18 @@
 """The OpenModelica setup holds what it fetches and installs to its pins
 (research/modelica), without Docker: what a run in its container is given,
 an archive refused unless its sha256 is pinned, a library refused unless it
-was installed from its pinned commit, and the README naming every pin.
+was installed from its pinned commit, a check failing on what fails in it
+rather than passing on what an earlier check left, and the README naming
+every pin.
 """
 
 import hashlib
 import io
 import json
 import os
+import subprocess
 import urllib.request
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -35,6 +39,17 @@ def test_a_run_is_its_users_with_the_folders_home_and_tigwerlib_read_only(
         f"{work.resolve()}:/work",
     ]
     assert argv[-3:] == [om.IMAGE, "omc", "build.mos"]
+
+
+def test_a_run_on_windows_is_the_images_user(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Windows has no user ids to give the container.
+    monkeypatch.delattr(os, "getuid")
+    monkeypatch.delattr(os, "getgid")
+    argv = om.command(tmp_path / "folder", tmp_path / "work", "omc", "build.mos")
+    assert "--user" not in argv
+    assert argv[argv.index("--env") + 1] == f"HOME={om.HOME}"
 
 
 def test_an_archive_is_refused_unless_its_sha256_is_pinned(
@@ -79,6 +94,34 @@ def test_a_library_is_refused_unless_installed_from_its_pinned_commit(tmp_path: 
     metadata.unlink()
     with pytest.raises(om.Refused, match=f"{moved.name} {moved.version} is not installed"):
         om.verify_installed(tmp_path)
+
+
+def test_a_check_fails_on_its_own_steps_not_on_what_an_earlier_one_left(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    folder, work = tmp_path / "folder", tmp_path / "work"
+    monkeypatch.setattr(om, "_require_docker", lambda: None)
+
+    def left_by_an_earlier_check() -> None:
+        work.mkdir(exist_ok=True)
+        (work / om.MODEL).write_text("built earlier")
+        (work / f"{om.MODEL}_res.mat").write_text("simulated earlier")
+        (work / "simulate.log").write_text("The simulation finished successfully.\n")
+
+    def ran(status: int) -> Callable[..., subprocess.CompletedProcess[bytes]]:
+        return lambda argv, check: subprocess.CompletedProcess(argv, status)
+
+    # The container does not start: Docker exits with 125 and writes nothing.
+    left_by_an_earlier_check()
+    monkeypatch.setattr(subprocess, "run", ran(125))
+    with pytest.raises(om.Failed, match="the build step exited with status 125: see Docker's"):
+        om.check(folder, work)
+
+    # omc exits cleanly and builds nothing.
+    left_by_an_earlier_check()
+    monkeypatch.setattr(subprocess, "run", ran(0))
+    with pytest.raises(om.Failed, match="the model did not build"):
+        om.check(folder, work)
 
 
 def test_the_readme_names_every_pin() -> None:

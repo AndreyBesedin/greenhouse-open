@@ -108,6 +108,18 @@ TOLERANCE: Final = 1e-5
 SOLVER: Final = "dassl"
 SOLVERS: Final = ("dassl", "cvode", "ida")
 
+# What a check leaves in its working folder that it then reads: the built
+# model, its results, and each step's log and peak memory. A check removes
+# an earlier check's first, so that a step failing now cannot pass on them.
+CHECK_OUTPUTS: Final = (
+    MODEL,
+    f"{MODEL}_res.mat",
+    "build.log",
+    "build.peak",
+    "simulate.log",
+    "simulate.peak",
+)
+
 
 class Unavailable(RuntimeError):
     """Docker is not running, so OpenModelica's container cannot be."""
@@ -131,13 +143,13 @@ class Step:
 
 def command(folder: Path, workdir: Path, *argv: str) -> list[str]:
     """The `docker run` that runs `argv` in OpenModelica's container: in
-    `workdir`, as the user who runs it, with `folder`'s home and TiGwerLib."""
+    `workdir`, as the user who runs it (`_user`), with `folder`'s home and
+    TiGwerLib."""
     return [
         "docker",
         "run",
         "--rm",
-        "--user",
-        f"{os.getuid()}:{os.getgid()}",
+        *_user(),
         "--env",
         f"HOME={HOME}",
         "--volume",
@@ -203,6 +215,8 @@ def check(folder: Path, workdir: Path, solver: str = SOLVER) -> tuple[Step, Step
     `workdir`, and simulates the day with `solver`."""
     _require_docker()
     workdir.mkdir(parents=True, exist_ok=True)
+    for output in CHECK_OUTPUTS:
+        (workdir / output).unlink(missing_ok=True)
     (workdir / "build.mos").write_text(_build_script(), encoding="utf-8")
     build = _step(folder, workdir, "build", "omc", "build.mos")
     if not (workdir / MODEL).is_file():
@@ -262,6 +276,15 @@ def _require_docker() -> None:
         raise Unavailable("Docker is not running")
 
 
+def _user() -> list[str]:
+    """The user a run is: the one who runs it, so that what it writes in the
+    folder is theirs. Windows has no user ids, and Docker Desktop's mounts
+    there carry no owners, so a run there is the image's own user."""
+    if not hasattr(os, "getuid"):
+        return []
+    return ["--user", f"{os.getuid()}:{os.getgid()}"]
+
+
 def _install(folder: Path) -> None:
     """Installs the libraries from OpenModelica's package index, and checks
     what was installed."""
@@ -298,14 +321,20 @@ def _build_script() -> str:
 
 def _step(folder: Path, workdir: Path, name: str, *argv: str) -> Step:
     """Runs `argv` in the container, its output in `<name>.log`, and keeps
-    the container's peak memory, where its control group gives it."""
+    the container's peak memory, where its control group gives it. Fails
+    unless the step exits cleanly."""
     wrapped = (
         f'"$@" > {name}.log 2>&1; status=$?; '
         f"cat /sys/fs/cgroup/memory.peak > {name}.peak 2>/dev/null; exit $status"
     )
     started = time.monotonic()
-    subprocess.run(command(folder, workdir, "sh", "-c", wrapped, "sh", *argv), check=False)
+    ran = subprocess.run(command(folder, workdir, "sh", "-c", wrapped, "sh", *argv), check=False)
     seconds = time.monotonic() - started
+    if ran.returncode != 0:
+        log = workdir / f"{name}.log"
+        # Without a log, the container did not start: Docker said why.
+        where = f"see {log}" if log.is_file() else "see Docker's message above"
+        raise Failed(f"the {name} step exited with status {ran.returncode}: {where}")
     peak = workdir / f"{name}.peak"
     text = peak.read_text(encoding="utf-8").strip() if peak.is_file() else ""
     return Step(seconds, int(text) if text.isdigit() else None)
