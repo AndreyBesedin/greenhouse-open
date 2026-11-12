@@ -20,5 +20,9 @@ call for that is not part of the packages: nothing in `greenhouse_sim`,
   against the reproduction's forcing and against a reference's
   greenhouse. [`driver_profiles/`](integrations/driver_profiles/README.md)
   measures the first driver profile for both tomato models.
+- [`modelica/`](modelica/README.md): OpenModelica in its container, with
+  TiGwerLib and the libraries it uses, pinned, for the Modelica comparison
+  (item 6), and a check that builds and simulates a day of TiGwerLib's
+  global model.
 
 The memos that plan this work are in [`docs/research/`](../docs/research/README.md).
