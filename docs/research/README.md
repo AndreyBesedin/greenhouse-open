@@ -14,6 +14,7 @@ and is not rewritten as they change: a later check is a new memo.
 | [The two tomato models in the run](tomato-models-in-the-run.md) | What each predicts as a crop model of the run, in a documented scenario, and how the run's driving moves it (milestone B) | 4 |
 | [What the AGC4 dataset gives a tomato model's validation](agc4-coverage.md) | What the WUR AGC4 records hold and the adapters read, what fits a tomato model, splits and limits | 5 |
 | [What each tomato model reads of AGC4, and what it is held to](agc4-model-mapping.md) | Each model's drivers from AGC4's columns, and each output's measured counterpart and conversions | 5 |
+| [What Oliveira et al.'s tomato observations give a validation, and on what terms](oliveira-observations.md) | What their record holds for the tomato models, and what its non-commercial licence allows | 5 |
 | [Benchmarking greenhouse decisions](policy-evaluation-contract.md) | What exists and is missing for a fair, reproducible benchmark, and the baselines it could start from | 7 |
 
 Beside the memos, a record of results the packages hold to:
