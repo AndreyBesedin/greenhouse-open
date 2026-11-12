@@ -90,8 +90,9 @@ data.
    canopy's temperature, simulated by GreenLight's greenhouse, as decision
    0062 asks
    ([`research/integrations/driver_profiles`](../../research/integrations/driver_profiles/README.md)).
-   Milestone B is done for both; their outputs stay predictions until
-   milestone C.
+   Milestone B is done for both. Milestone C is item 5's test on AGC4,
+   run once: neither model beats its baseline there, and a claim of
+   their outputs is bounded by that report.
 5. **Validate on measured data, as a workflow others can repeat.** Begin
    with the WUR AGC4 dataset, through its adapter, where what it measures
    and its licence allow: inventory what it records (weather, climate,
@@ -112,8 +113,12 @@ data.
    harness that runs either model on them, as decision 0076 fixes them;
    and each model calibrated on the 2023 pre-trial, as its manifest names
    it, with its fit on the calibration data; and the test on 2024's
-   fruit written, its baseline, conversions and sensitivities with it.
-   Its single run is left.
+   fruit written, its baseline, conversions and sensitivities with it,
+   and run once
+   ([the result](../../research/validation/agc4/README.md#the-result)):
+   both models predict too little fruit, by 47 and 51 % on average, and
+   neither beats the baseline, the pre-trial's crop at the same age.
+   Oliveira et al.'s observations are left to assess.
 6. **Compare with Modelica, bounded.** As the roadmap's greenhouse R&D
    workflows and Modelica comparison plan it: one documented, measured
    interval of TiGwerLib reproduced in OpenModelica, then compared on

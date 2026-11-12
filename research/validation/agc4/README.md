@@ -313,5 +313,95 @@ the midnight that begins its harvest day.
   pruned per plant by each date, and each difference between what the
   model gives and what was measured.
 
-The procedure is committed before it runs: no 2024 fruit was compared with
+The procedure was committed before it ran: no 2024 fruit was compared with
 a prediction to write it.
+
+## The result
+
+Each model ran the test once, at commit `067370b8`, and its report is the
+one the script wrote: [`tested/tomgro.json`](tested/tomgro.json) and
+[`tested/vanthoor_katzin.json`](tested/vanthoor_katzin.json). Decision
+0076 keeps them: a model changed and tested again reports both tests,
+this one first.
+
+The fruit's fresh weight per plant, over the 24 compartment-dates. The
+bias is the mean relative error; the skill is one minus the model's sum of
+squared errors over the baseline's, so a model no better than the
+baseline scores 0 or less.
+
+| | Bias | RMS relative error | Within 2 SE | Spearman, six final harvests | Skill |
+| --- | --- | --- | --- | --- | --- |
+| Reduced-State TOMGRO | −47 % | 51 % | 1 of 24 | 0.54 | −0.54 |
+| Vanthoor's model | −51 % | 52 % | 1 of 24 | 0.71 | −1.09 |
+| The baseline | −33 % | 36 % | 4 of 24 | −0.20 | |
+
+Reduced-State TOMGRO's mature fruit, held to the final harvest's red
+fruit over 50 plants: bias −42 %, RMS relative error 43 %, none of the six
+within two standard errors, Spearman 0.31.
+
+The mean relative error by date, over the six compartments:
+
+| | 7 October | 22 October | 5 November | Final harvest, 11 to 21 November |
+| --- | --- | --- | --- | --- |
+| Reduced-State TOMGRO | −60 % | −60 % | −48 % | −21 % |
+| Vanthoor's model | −43 % | −62 % | −58 % | −41 % |
+| The baseline | −30 % | −46 % | −40 % | −15 % |
+
+The sensitivities, as bias and skill; the baseline's bias beside them:
+
+| Varied | Reduced-State TOMGRO | Vanthoor's model | The baseline |
+| --- | --- | --- | --- |
+| Nothing: 8.02 % | −47 %, −0.54 | −51 %, −1.09 | −33 % |
+| GreenLight's 6 % | −30 %, −1.09 | −34 %, −1.88 | −10 % |
+| 2024's lowest red batch, 5.93 % | −29 %, −1.09 | −33 %, −1.86 | −9 % |
+| 2024's highest red batch, 7.28 % | −42 %, −0.70 | −46 %, −1.39 | −26 % |
+| Each sampling at the midnight after | −45 %, −0.43 | −49 %, −1.02 | −33 % |
+| 0.75 g of dry matter per g of carbohydrate | | −63 %, −2.06 | −33 % |
+
+What it shows:
+
+- **Both models predict too little fruit, and neither beats the
+  baseline.** Reduced-State TOMGRO is under the measurement at 23 of the
+  24 compartment-dates, Vanthoor's model at all 24. Their sums of squared
+  errors are 1.54 and 2.09 times the baseline's.
+- **2024's crop had more fruit at the same age than 2023's.** The
+  baseline, the pre-trial's EC3 crop at the same days after transplanting,
+  is itself under 2024's fruit at every fraction tried: by 33 % at 8.02 %,
+  by 9 to 26 % at the dry matter of 2024's red batches. Both models,
+  calibrated on the pre-trial, are further under. Their calibration's fit
+  already had both short of the pre-trial's fruit on 9 November
+  ([the calibration](#the-calibration)).
+- **The shortfall is largest at the samplings.** Both models are 54 to
+  56 % under there on average, and 21 and 41 % under at the final
+  harvests. In five compartments the final harvest's fruit per plant, over
+  its 30 plants (21 in 3.06), is below the last sampling's, over 6, while
+  each model's fruit still grows: part of the final harvests' smaller
+  error comes from that.
+- **The ordering of the six final harvests is not shown.** With six
+  harvests, a two-sided test of Spearman's correlation at 5 % needs 0.886:
+  neither model's, 0.54 and 0.71, is told from no order. The baseline's
+  final harvests differ by their dates alone.
+- **No fraction tried changes the verdict.** A lower dry-matter fraction
+  narrows each model's bias, but the baseline's more, so the skill falls.
+  Reading each sampling a day later helps both a little. Vanthoor's model,
+  with 0.75 g of dry matter per g of carbohydrate, is further under.
+- **Vanthoor's model prunes.** Its leaf area index stays below 2.36, and
+  by its final harvest it has pruned 3.6 to 7.5 g of leaf per plant, where
+  AGC4 pruned none. Decision 0076 has its leaves "pruned past a leaf area
+  index of 3"; its switch is smooth, and prunes well below it, as
+  [the mapping memo](../../../docs/research/agc4-model-mapping.md) has it.
+  Reduced-State TOMGRO's leaf area index reaches its most, 4.0, in every
+  compartment.
+- **Run times and hours filled.** A model's runs over the six
+  compartments take under 0.1 s for Reduced-State TOMGRO and 2.3 s for
+  Vanthoor's model; reading the archives takes most of the script's
+  time. Each 2024 series fills one hour from the hour before: the repeated
+  02:00 of 27 October.
+
+The result is bounded as decision 0076 records: AGC4's dwarf pot plants,
+grown for 69 to 79 days, not an indeterminate crop picked through a
+season; cultivars not known to be the same in the two years; a pre-trial
+that varied light and EC, not temperature or CO₂; a dry-matter fraction
+of mostly green fruit, held to a final harvest of mostly red; a PAR sensor
+at a fixed height; and the air's temperature for the canopy's. Neither
+model's published defaults change.

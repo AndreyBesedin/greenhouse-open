@@ -1,6 +1,7 @@
 """Decision 0076's test on the 2024 challenge, as a procedure: what it
 reads of the fruit, its baseline, its conversion and its measures. No data
-needed, and no 2024 measurement read: the test runs once, on the data."""
+needed: the test ran once, on the data, and its committed reports are held
+to their own fit and calibration."""
 
 import io
 import json
@@ -365,3 +366,17 @@ def test_a_compartments_series_not_the_one_recorded_is_refused(tmp_path: Path) -
 
     with pytest.raises(ValueError, match=r"not the series drivers\.json records"):
         calibrate.zones(tmp_path, CHALLENGE)
+
+
+@pytest.mark.parametrize("model", [TOMGRO, VANTHOOR], ids=["tomgro", "vanthoor_katzin"])
+def test_a_committed_report_holds_its_calibration_and_its_fits_measures(model: Model) -> None:
+    report = json.loads((challenge.TESTED / f"{model.name}.json").read_text())
+    assert report["model"] == model.name
+    assert report["parameters"] == challenge.calibrated(model)
+    fruit = [row for row in report["fit"] if row["quantity"] == challenge.FRUIT_FRESH]
+    red = [row for row in report["fit"] if row["quantity"] == challenge.RED_FRUIT_FRESH]
+    assert len(fruit) == 24
+    assert len(red) == (6 if model is TOMGRO else 0)
+    assert report["fruit"] == challenge.measures(fruit) | {"skill": challenge.skill(fruit)}
+    assert report["baseline_fruit"] == challenge.measures(fruit, "baseline")
+    assert report.get("red_fruit") == (challenge.measures(red) if red else None)

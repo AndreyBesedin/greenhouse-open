@@ -697,5 +697,6 @@ metadata only, and the tests build miniature workbooks of their own.
    drivers and the calibration are done, 2026-11-10
    ([`research/validation/agc4`](../../research/validation/agc4/README.md#the-calibration)),
    and the test's procedure is written
-   ([the test](../../research/validation/agc4/README.md#the-test)); its
-   single run is left.
+   ([the test](../../research/validation/agc4/README.md#the-test)) and
+   run once, 2026-11-11
+   ([the result](../../research/validation/agc4/README.md#the-result)).
