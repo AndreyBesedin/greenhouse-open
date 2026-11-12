@@ -90,6 +90,7 @@ decision that changes course is a new record that supersedes the old one.
 | [0074](0074-the-viewers-play-and-the-playbacks-http-surfaces-go.md) | The viewer's own play goes, and the playbacks' HTTP surfaces with it | Accepted |
 | [0075](0075-a-runs-weather-and-a-shorter-duration-are-its-own-as-its-seed-is.md) | A run's weather and a shorter duration are its own, as its seed is | Accepted |
 | [0076](0076-the-tomato-models-are-calibrated-on-agc4s-pre-trial-and-tested-once-on-its-challenge.md) | The tomato models are calibrated on AGC4's pre-trial and tested once on its challenge | Accepted |
+| [0077](0077-a-crop-parameter-set-is-a-file-named-and-versioned-and-told-apart-by-its-digest.md) | A crop parameter set is a file, named and versioned, and told apart by its digest | Proposed |
 
 ## Template
 

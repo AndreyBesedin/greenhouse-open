@@ -125,7 +125,7 @@ links there.
 | [P17](archive/p17-runs-and-playbacks.md) | Runs kept in a store, playbacks as positions, and a place to choose | Done: P17.1 to P17.11, its QA run for what is delivered and its clean-up closed; steering a running epoch moved to P22.1, the rest to [future work](future-work.md#runs-and-playbacks-after-p17) |
 | [P18](archive/p18-resources-and-deployment.md) | Resources counted and limited, and a run that can move | Done: P18.1 to P18.6, its final QA recorded; what it left is in [future work](future-work.md#resources-and-limits-after-p18) |
 | [P19](archive/p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | Done: P19.1 to P19.12, its final QA recorded; what it left is in [future work](future-work.md#the-design-system-after-p19) |
-| [P20](p20-crop-parameter-assets.md) | Crop parameters as versioned assets, edited by forms and reproduced from their versions | Proposed |
+| [P20](p20-crop-parameter-assets.md) | Crop parameters as versioned assets, edited by forms and reproduced from their versions | Proposed: its plan, with [decision 0077](../decisions/0077-a-crop-parameter-set-is-a-file-named-and-versioned-and-told-apart-by-its-digest.md) |
 | [P21](p21-rows-of-different-crops.md) | Rows of different crops in one house | Proposed |
 | [P22](archive/p22-watching-and-starting-a-run.md) | Watching and starting a run: one *Play*, steering from the replay, a new run's form | Done: P22.1 to P22.10, its QA recorded; what it left is in [future work](future-work.md#watching-and-starting-a-run-after-p22) |
 
@@ -150,9 +150,10 @@ archive: what it found to fix is fixed, and what it planned was done in
    proposed): two published tomato models reproduced and made P14 models, a validation
    on measured data, a bounded Modelica comparison, and the evaluation of policies.
    The projects' own documents keep their scope.
-2. **[P20](p20-crop-parameter-assets.md), then [P21](p21-rows-of-different-crops.md):** crop
-   parameters as versioned assets are the research priorities' last item, and rows of
-   different crops come after them.
+2. **[P20](p20-crop-parameter-assets.md), beside them, then [P21](p21-rows-of-different-crops.md):**
+   crop parameters as versioned assets are the research priorities' last item, and
+   their condition holds, both tomato models carrying versioned parameters, so P20
+   goes on beside the other items; rows of different crops come after it.
 
 ## Elsewhere
 
