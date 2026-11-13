@@ -80,6 +80,30 @@ def test_a_reproduction_is_within_tolerance_only_at_every_moment() -> None:
     assert (found["within"], found["missing"]) == (False, 1)
 
 
+def test_a_value_that_is_not_a_number_is_missing_not_within(tmp_path: Path) -> None:
+    # A NaN differs from nothing by more than a tolerance: read as a value,
+    # it would pass every moment's check.
+    results = tmp_path / "results.csv"
+    results.write_text('"time","MainAir.RH","MainAir.T"\n29030400,nan,293.15\n29030700,0.5,inf\n')
+    assert repro.our_series(results) == {
+        "MainAir.T": {29030400: 293.15},
+        "MainAir.RH": {29030700: 0.5},
+    }
+    at = repro.Window("one_day", 10 * DAY, 11 * DAY)
+    reference = {"MainAir.T": _flat(290.0, at), "MainAir.RH": _flat(0.7, at)}
+    ours = {"MainAir.T": _flat(290.0, at), "MainAir.RH": _flat(0.7, at)}
+    ours["MainAir.T"].pop(at.start_s)
+    found = repro.compare(
+        ours,
+        reference,
+        measured=reference,
+        papers_daily={"MainAir.T": {}, "MainAir.RH": {}},
+        at=at,
+        tolerances={"MainAir.T": 0.16, "MainAir.RH": 0.01},
+    )["MainAir.T"]
+    assert (found["within"], found["missing"]) == (False, 1)
+
+
 def test_a_days_rmse_is_over_its_moments_from_its_midnight() -> None:
     at = repro.Window("two_days", 10 * DAY, 12 * DAY)
     measured = {"MainAir.T": _flat(289.0, at), "MainAir.RH": _flat(0.6, at)}

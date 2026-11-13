@@ -219,11 +219,17 @@ def _csv_rows(archive: Path, member: str) -> list[dict[str, str]]:
 
 
 def _column(rows: Iterable[Mapping[str, str]], name: str, *, time: str = "Time") -> Series:
-    return {
-        round(float(row[time])): float(row[name])
-        for row in rows
-        if row.get(time, "").strip() and row.get(name, "").strip()
-    }
+    """A column by moment. A blank cell, or one that is not a finite
+    number, is no value: it would differ from nothing by more than a
+    tolerance, and pass every check as one."""
+    column = {}
+    for row in rows:
+        if not (row.get(time, "").strip() and row.get(name, "").strip()):
+            continue
+        value = float(row[name])
+        if math.isfinite(value):
+            column[round(float(row[time]))] = value
+    return column
 
 
 def _mean(values: Iterable[float]) -> float | None:
