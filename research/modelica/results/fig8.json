@@ -1,0 +1,185 @@
+{
+ "window": {
+  "name": "fig8",
+  "figure": "Fig 8",
+  "from": "2015-01-09 00:00",
+  "to": "2015-01-20 00:00",
+  "start_s": 32227200,
+  "end_s": 33177600
+ },
+ "stated_in": "6c4faff9cd92fb0794d7359533a4c343726ea60a",
+ "run": {
+  "image": "openmodelica/openmodelica:v1.25.0-minimal@sha256:c85938d4dd4cdc15ea2d2af899920907e707ef94243e13603bd347679e5e6a14",
+  "solver": "dassl",
+  "tolerance": 1e-05,
+  "simulated_s": 4147200,
+  "build_s": 64,
+  "build_peak_bytes": 2956234752,
+  "simulate_s": 479,
+  "simulate_peak_bytes": 693805056
+ },
+ "compared": {
+  "MainAir.T": {
+   "tolerance": 0.16,
+   "moments": 3169,
+   "compared": 3169,
+   "missing": 0,
+   "beyond_tolerance": 0,
+   "first_beyond_s": null,
+   "largest_difference": 0.00235118630831721,
+   "largest_at_s": 32801700,
+   "mean_difference": -2.0433459918273207e-05,
+   "rmse_difference": 0.00028690435734291485,
+   "within": true,
+   "days": [
+    {
+     "start_s": 32227200,
+     "ours": 0.2459536920188511,
+     "papers_series": 0.24593370008217727,
+     "papers_own": 0.254
+    },
+    {
+     "start_s": 32313600,
+     "ours": 0.4737711941568379,
+     "papers_series": 0.47366715841994345,
+     "papers_own": 0.485
+    },
+    {
+     "start_s": 32400000,
+     "ours": 0.9124901721633335,
+     "papers_series": 0.9125038393330571,
+     "papers_own": 0.928
+    },
+    {
+     "start_s": 32486400,
+     "ours": 0.5343042361096115,
+     "papers_series": 0.5343206686847151,
+     "papers_own": 0.546
+    },
+    {
+     "start_s": 32572800,
+     "ours": 0.6241732072814369,
+     "papers_series": 0.6240891595732719,
+     "papers_own": 0.643
+    },
+    {
+     "start_s": 32659200,
+     "ours": 0.5879475376887675,
+     "papers_series": 0.587935955230184,
+     "papers_own": 0.6
+    },
+    {
+     "start_s": 32745600,
+     "ours": 0.5177984537274687,
+     "papers_series": 0.5178369691358657,
+     "papers_own": 0.522
+    },
+    {
+     "start_s": 32832000,
+     "ours": 0.6775070133379091,
+     "papers_series": 0.6775834298899714,
+     "papers_own": 0.7
+    },
+    {
+     "start_s": 32918400,
+     "ours": 0.73384536624584,
+     "papers_series": 0.7338389919521701,
+     "papers_own": 0.761
+    },
+    {
+     "start_s": 33004800,
+     "ours": 1.1487627025979823,
+     "papers_series": 1.1487153543135764,
+     "papers_own": 1.148
+    },
+    {
+     "start_s": 33091200,
+     "ours": 0.7917556612903771,
+     "papers_series": 0.791739481787749,
+     "papers_own": 0.811
+    }
+   ]
+  },
+  "MainAir.RH": {
+   "tolerance": 0.01,
+   "moments": 3169,
+   "compared": 3169,
+   "missing": 0,
+   "beyond_tolerance": 0,
+   "first_beyond_s": null,
+   "largest_difference": 0.0001758771115508706,
+   "largest_at_s": 32349600,
+   "mean_difference": 3.2987875116168964e-06,
+   "rmse_difference": 3.2983326044326506e-05,
+   "within": true,
+   "days": [
+    {
+     "start_s": 32227200,
+     "ours": 0.02467841240659264,
+     "papers_series": 0.024680650596953246,
+     "papers_own": 0.025
+    },
+    {
+     "start_s": 32313600,
+     "ours": 0.027395286780435756,
+     "papers_series": 0.027396192963418997,
+     "papers_own": 0.0274
+    },
+    {
+     "start_s": 32400000,
+     "ours": 0.06353201468193526,
+     "papers_series": 0.06353390881603654,
+     "papers_own": 0.0637
+    },
+    {
+     "start_s": 32486400,
+     "ours": 0.03945297653068645,
+     "papers_series": 0.039461703921509626,
+     "papers_own": 0.0396
+    },
+    {
+     "start_s": 32572800,
+     "ours": 0.038475322986230485,
+     "papers_series": 0.03847810163658748,
+     "papers_own": 0.0393
+    },
+    {
+     "start_s": 32659200,
+     "ours": 0.04076277953793538,
+     "papers_series": 0.040764528340621504,
+     "papers_own": 0.0411
+    },
+    {
+     "start_s": 32745600,
+     "ours": 0.03723987756197522,
+     "papers_series": 0.03724347910857833,
+     "papers_own": 0.0374
+    },
+    {
+     "start_s": 32832000,
+     "ours": 0.05334215747430489,
+     "papers_series": 0.05333541630047005,
+     "papers_own": 0.0536
+    },
+    {
+     "start_s": 32918400,
+     "ours": 0.06177741395823096,
+     "papers_series": 0.06177762933385443,
+     "papers_own": 0.062
+    },
+    {
+     "start_s": 33004800,
+     "ours": 0.04519851329990601,
+     "papers_series": 0.04520781336106502,
+     "papers_own": 0.0449
+    },
+    {
+     "start_s": 33091200,
+     "ours": 0.05619877923387756,
+     "papers_series": 0.05620159336906938,
+     "papers_own": 0.0565
+    }
+   ]
+  }
+ }
+}
