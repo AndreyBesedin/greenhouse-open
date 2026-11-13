@@ -5,17 +5,20 @@ name: Modelica
 # by its digest, TiGwerLib's archive by its sha256, and each library at its
 # commit in OpenModelica's package index, with that commit's archive. They
 # are not ours, so they can go away or move without a change here: the
-# check also runs each week. It runs with Python's standard library alone.
-# Building and simulating a model is `check`'s, run by hand.
+# check also runs each week. It runs with Python's standard library alone,
+# and the simulator's module for containers from its source. Building and
+# simulating a model is `check`'s, run by hand.
 on:
   push:
     branches: [main]
     paths:
       - "research/modelica/**"
+      - "greenhouse_sim/greenhouse_sim/containers.py"
       - ".github/workflows/modelica.yml"
   pull_request:
     paths:
       - "research/modelica/**"
+      - "greenhouse_sim/greenhouse_sim/containers.py"
       - ".github/workflows/modelica.yml"
   schedule:
     # Mondays, 06:17 UTC.
@@ -38,4 +41,6 @@ jobs:
           python-version: "3.14"
 
       - name: Check each pin where it is published
+        env:
+          PYTHONPATH: greenhouse_sim
         run: python -m research.modelica.openmodelica verify

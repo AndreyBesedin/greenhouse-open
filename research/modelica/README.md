@@ -38,7 +38,10 @@ authors publish it, pinned by its content.
 ## Setting it up
 
 Docker must be running: Docker Desktop on macOS or Windows, Docker Engine
-on Linux. Then, from the repository's root:
+on Linux. The commands need Python's standard library and the simulator's
+module for containers, `greenhouse_sim.containers`: in the repository's
+environment, or with `PYTHONPATH=greenhouse_sim`. From the repository's
+root:
 
 ```bash
 python -m research.modelica.openmodelica setup ~/.greenhouse-open/modelica
@@ -61,14 +64,17 @@ Any other command runs in the same container:
 python -m research.modelica.openmodelica run ~/.greenhouse-open/modelica WORKDIR -- omc script.mos
 ```
 
-The command runs in `WORKDIR`, as the user who runs it. The libraries are
-on its `MODELICAPATH`, and TiGwerLib is read-only at `/tigwerlib`. A model
+The command runs in `WORKDIR`. The libraries are on its `MODELICAPATH`,
+and TiGwerLib is read-only at `/tigwerlib`. A model
 reads its data from the paths it was built with, so it is built and run
 with TiGwerLib at that same place.
 
-It has run on macOS and on Linux. Windows has no user ids to give the
-container, so there a command runs as the image's own user; that has not
-been tried yet.
+The container runs as `greenhouse_sim.containers` runs every container,
+OpenFOAM's for the airflow too: on Linux as the user who runs it, so that
+what it writes is theirs, and under Docker Desktop, whose mounts carry no
+owners, as the image's own user. It has run on Linux, and on macOS as the
+user who ran it. As the image's user, as it now runs on macOS and on
+Windows, it has not been tried yet.
 
 ## Checking the pins
 

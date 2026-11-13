@@ -27,19 +27,20 @@ pinned: the image's digest on Docker Hub, TiGwerLib's archive on Zenodo,
 and each library at its commit in OpenModelica's package index, with that
 commit's archive. They are not ours, so they can go away or move.
 
-Nothing in the packages imports this, and nothing it fetches is committed
-(decision 0063, rule 1).
+Running a container is `greenhouse_sim.containers`'s. What is here is
+OpenModelica's: its image, the libraries and where the container sees
+them, and TiGwerLib's model. Like that module, it needs Python's standard
+library alone. Nothing in the packages imports this, and nothing it
+fetches is committed (decision 0063, rule 1).
 """
 
 import argparse
 import hashlib
 import json
-import os
 import shutil
 import subprocess
 import sys
 import tempfile
-import time
 import urllib.error
 import urllib.request
 import zipfile
@@ -48,6 +49,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
 
+from greenhouse_sim.containers import (
+    ImageNotPublished,
+    Measured,
+    Mount,
+    docker_run,
+    docker_running,
+    run_measured,
+    verify_published,
+)
+
 # The release TiGwerLib 0.7.0 was tested with, by digest as well as by tag:
 # the image index's, which holds an arm64 and an amd64 image.
 IMAGE: Final = (
@@ -55,38 +66,18 @@ IMAGE: Final = (
     "@sha256:c85938d4dd4cdc15ea2d2af899920907e707ef94243e13603bd347679e5e6a14"
 )
 
-# Where the image is published, and the manifest types its digest may name:
-# an image index (OCI's or Docker's), or a single image.
-REGISTRY_TOKEN: Final = "https://auth.docker.io/token"
-REGISTRY: Final = "https://registry-1.docker.io/v2"
-MANIFEST_TYPES: Final = (
-    "application/vnd.oci.image.index.v1+json",
-    "application/vnd.docker.distribution.manifest.list.v2+json",
-    "application/vnd.oci.image.manifest.v1+json",
-    "application/vnd.docker.distribution.manifest.v2+json",
-)
-
 # Where the container sees the folder's parts and the working directory.
 HOME: Final = "/omhome"
 TIGWERLIB_MOUNT: Final = "/tigwerlib"
 WORK: Final = "/work"
 
-
-@dataclass(frozen=True)
-class Archive:
-    """A file fetched from its publisher and checked by its sha256."""
-
-    url: str
-    name: str
-    sha256: str
-
-
-# TiGwerLib 0.7.0, MIT, doi:10.5281/zenodo.15590404.
-TIGWERLIB: Final = Archive(
-    url="https://zenodo.org/api/records/15590404/files/TiGwerLib_0_7_0.zip/content",
-    name="TiGwerLib_0_7_0.zip",
-    sha256="9ed2c0b2ad6c0ba0d68b49bd0c597fb5a2fb3a61c8a4c0e9c1e8ea9aa9a1b1cb",
-)
+# TiGwerLib 0.7.0, MIT, doi:10.5281/zenodo.15590404: its archive, where
+# Zenodo publishes it, and the archive's sha256.
+TIGWERLIB_URL: Final = "https://zenodo.org/api/records/15590404/files/TiGwerLib_0_7_0.zip/content"
+TIGWERLIB_ARCHIVE: Final = "TiGwerLib_0_7_0.zip"
+TIGWERLIB_SHA256: Final = "9ed2c0b2ad6c0ba0d68b49bd0c597fb5a2fb3a61c8a4c0e9c1e8ea9aa9a1b1cb"
+# How long Zenodo and the package index may take to answer, in seconds.
+FETCH_TIMEOUT_S: Final = 120
 
 
 @dataclass(frozen=True)
@@ -131,166 +122,41 @@ TOLERANCE: Final = 1e-5
 SOLVER: Final = "dassl"
 SOLVERS: Final = ("dassl", "cvode", "ida")
 
-# What a check leaves in its working folder that it then reads: the built
-# model, its results, and each step's log and peak memory. A check removes
-# an earlier check's first, so that a step failing now cannot pass on them.
-CHECK_OUTPUTS: Final = (
-    MODEL,
-    f"{MODEL}_res.mat",
-    "build.log",
-    "build.peak",
-    "simulate.log",
-    "simulate.peak",
-)
+# What a check builds and simulates in its working folder, and then reads.
+# A check removes an earlier check's first, so that a step failing now
+# cannot pass on them; each step's log goes the same way.
+CHECK_OUTPUTS: Final = (MODEL, f"{MODEL}_res.mat")
 
 
-class Unavailable(RuntimeError):
+class OpenModelicaUnavailable(RuntimeError):
     """Docker is not running, so OpenModelica's container cannot be."""
 
 
-class Refused(RuntimeError):
-    """What was fetched or installed is not what is pinned here."""
+class PinRefused(RuntimeError):
+    """What was fetched, installed or published is not what is pinned here."""
 
 
-class Failed(RuntimeError):
+class CheckFailed(RuntimeError):
     """A step of the check did not finish."""
 
 
-@dataclass(frozen=True)
-class Step:
-    """What a step in the container took."""
-
-    seconds: float
-    peak_bytes: int | None
-
-
-def command(folder: Path, workdir: Path, *argv: str) -> list[str]:
-    """The `docker run` that runs `argv` in OpenModelica's container: in
-    `workdir`, as the user who runs it (`_user`), with `folder`'s home and
-    TiGwerLib."""
-    return [
-        "docker",
-        "run",
-        "--rm",
-        *_user(),
-        "--env",
-        f"HOME={HOME}",
-        "--volume",
-        f"{folder.resolve() / 'home'}:{HOME}",
-        "--volume",
-        f"{folder.resolve() / 'tigwerlib'}:{TIGWERLIB_MOUNT}:ro",
-        "--volume",
-        f"{workdir.resolve()}:{WORK}",
-        "--workdir",
-        WORK,
-        IMAGE,
-        *argv,
-    ]
-
-
-def setup(folder: Path) -> None:
+def set_up_openmodelica(folder: Path) -> None:
     """Pulls the image, fetches TiGwerLib and installs its libraries."""
     _require_docker()
     (folder / "home").mkdir(parents=True, exist_ok=True)
     subprocess.run(["docker", "pull", "--quiet", IMAGE], check=True)
-    fetch(TIGWERLIB, folder)
+    archive = _fetch_tigwerlib(folder)
     extracted = folder / "tigwerlib"
     if not (extracted / "TiGwerLib" / "package.mo").is_file():
         shutil.rmtree(extracted, ignore_errors=True)
-        with zipfile.ZipFile(folder / TIGWERLIB.name) as archive:
-            archive.extractall(extracted)
-    _install(folder)
+        with zipfile.ZipFile(archive) as unpacked:
+            unpacked.extractall(extracted)
+    _install_libraries(folder)
 
 
-def fetch(archive: Archive, folder: Path) -> Path:
-    """`archive` in `folder`, downloaded unless a copy is there, and refused
-    unless its sha256 is the one pinned."""
-    path = folder / archive.name
-    if not path.is_file() or _sha256(path) != archive.sha256:
-        partial = path.with_suffix(".part")
-        with urllib.request.urlopen(archive.url, timeout=120) as response:
-            partial.write_bytes(response.read())
-        partial.replace(path)
-    found = _sha256(path)
-    if found != archive.sha256:
-        path.unlink()
-        raise Refused(f"{archive.name}'s sha256 is {found}, not {archive.sha256}")
-    return path
-
-
-def verify_installed(libraries: Path) -> None:
-    """Refuses the libraries installed in `libraries` unless each is
-    installed, from the commit pinned here."""
-    for library in LIBRARIES:
-        metadata = libraries / f"{library.name} {library.version}" / "openmodelica.metadata.json"
-        if not metadata.is_file():
-            raise Refused(f"{library.name} {library.version} is not installed")
-        commit = json.loads(metadata.read_text(encoding="utf-8")).get("sha")
-        if commit != library.commit:
-            raise Refused(
-                f"{library.name} {library.version} was installed from {commit}, "
-                f"not {library.commit}: set up a folder of its own"
-            )
-
-
-def verify() -> None:
-    """Refuses the pins unless each is still published as pinned: the
-    image's digest, TiGwerLib's archive, and each library at its commit in
-    the package index, with that commit's archive."""
-    verify_image()
-    with tempfile.TemporaryDirectory() as folder:
-        fetch(TIGWERLIB, Path(folder))
-    verify_index(_json(PACKAGE_INDEX))
-
-
-def verify_image() -> None:
-    """Refuses the image unless Docker Hub still serves its digest. Asking
-    for a manifest is not a pull, so this downloads no image."""
-    named, _, digest = IMAGE.partition("@")
-    repository = named.partition(":")[0]
-    token = _json(
-        f"{REGISTRY_TOKEN}?service=registry.docker.io&scope=repository:{repository}:pull"
-    )["token"]
-    request = urllib.request.Request(
-        f"{REGISTRY}/{repository}/manifests/{digest}",
-        method="HEAD",
-        headers={"Authorization": f"Bearer {token}", "Accept": ", ".join(MANIFEST_TYPES)},
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=60) as response:
-            served = response.headers.get("Docker-Content-Digest")
-    except urllib.error.HTTPError as error:
-        raise Refused(f"Docker Hub no longer serves {IMAGE} ({error.code})") from error
-    if served != digest:
-        raise Refused(f"Docker Hub serves {served} for {IMAGE}")
-
-
-def verify_index(index: dict[str, Any]) -> None:
-    """Refuses OpenModelica's package index unless it still offers each
-    library at its version, from the commit pinned here, and that commit's
-    archive is still there."""
-    archives = []
-    for library in LIBRARIES:
-        offered = index["libs"].get(library.name, {}).get("versions", {}).get(library.version)
-        if offered is None:
-            raise Refused(f"the package index no longer offers {library.name} {library.version}")
-        if offered.get("sha") != library.commit:
-            raise Refused(
-                f"the package index offers {library.name} {library.version} "
-                f"from {offered.get('sha')}, not {library.commit}"
-            )
-        archives.append(offered["zipfile"])
-    # The standard library's three share one archive.
-    for archive in dict.fromkeys(archives):
-        try:
-            urllib.request.urlopen(
-                urllib.request.Request(archive, method="HEAD"), timeout=60
-            ).close()
-        except urllib.error.HTTPError as error:
-            raise Refused(f"{archive} is no longer there ({error.code})") from error
-
-
-def check(folder: Path, workdir: Path, solver: str = SOLVER) -> tuple[Step, Step]:
+def check_global_model(
+    folder: Path, workdir: Path, solver: str = SOLVER
+) -> tuple[Measured, Measured]:
     """Builds TiGwerLib's global model over its experiment's first day in
     `workdir`, and simulates the day with `solver`."""
     _require_docker()
@@ -298,14 +164,29 @@ def check(folder: Path, workdir: Path, solver: str = SOLVER) -> tuple[Step, Step
     for output in CHECK_OUTPUTS:
         (workdir / output).unlink(missing_ok=True)
     (workdir / "build.mos").write_text(_build_script(), encoding="utf-8")
-    build = _step(folder, workdir, "build", "omc", "build.mos")
+    build = _measured_step(folder, workdir, "build", "omc", "build.mos")
     if not (workdir / MODEL).is_file():
-        raise Failed(f"the model did not build: see {workdir / 'build.log'}")
-    simulate = _step(folder, workdir, "simulate", f"./{MODEL}", f"-s={solver}", "-lv=LOG_STATS")
+        raise CheckFailed(f"the model did not build: see {workdir / 'build.log'}")
+    simulate = _measured_step(
+        folder, workdir, "simulate", f"./{MODEL}", f"-s={solver}", "-lv=LOG_STATS"
+    )
     log = (workdir / "simulate.log").read_text(encoding="utf-8", errors="replace")
     if "The simulation finished successfully." not in log:
-        raise Failed(f"the day was not simulated: see {workdir / 'simulate.log'}")
+        raise CheckFailed(f"the day was not simulated: see {workdir / 'simulate.log'}")
     return build, simulate
+
+
+def verify_pins() -> None:
+    """Refuses the pins unless each is still published as pinned: the
+    image's digest, TiGwerLib's archive, and each library at its commit in
+    the package index, with that commit's archive."""
+    try:
+        verify_published(IMAGE)
+    except ImageNotPublished as error:
+        raise PinRefused(str(error)) from error
+    with tempfile.TemporaryDirectory() as folder:
+        _fetch_tigwerlib(Path(folder))
+    _verify_package_index(_json(PACKAGE_INDEX))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -324,14 +205,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     arguments = parser.parse_args(argv)
     try:
         if arguments.command == "verify":
-            verify()
+            verify_pins()
             sys.stdout.write(
                 "published as pinned: the image's digest, TiGwerLib's archive, "
                 "and each library at its commit\n"
             )
             return 0
         if arguments.command == "setup":
-            setup(arguments.folder)
+            set_up_openmodelica(arguments.folder)
             sys.stdout.write(f"set up in {arguments.folder}\n")
             return 0
         if arguments.command == "run":
@@ -339,9 +220,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             if not given:
                 parser.error("run needs a command")
             _require_docker()
-            return subprocess.run(command(arguments.folder, arguments.workdir, *given)).returncode
-        build, simulate = check(arguments.folder, arguments.workdir, arguments.solver)
-    except (Unavailable, Refused, Failed) as error:
+            return subprocess.run(_command(arguments.folder, arguments.workdir, *given)).returncode
+        build, simulate = check_global_model(arguments.folder, arguments.workdir, arguments.solver)
+    except (OpenModelicaUnavailable, PinRefused, CheckFailed) as error:
         raise SystemExit(str(error)) from error
     results = arguments.workdir / f"{MODEL}_res.mat"
     sys.stdout.write(
@@ -352,28 +233,70 @@ def main(argv: Sequence[str] | None = None) -> int:
     return 0
 
 
-def _require_docker() -> None:
-    if shutil.which("docker") is None:
-        raise Unavailable("Docker is not installed")
-    found = subprocess.run(
-        ["docker", "info", "--format", "{{.ServerVersion}}"],
-        capture_output=True,
-        check=False,
+def _mounts(folder: Path) -> list[Mount]:
+    """The folder's home, as the container's user's, and TiGwerLib,
+    read-only, where a model built in one run finds its data in the next."""
+    return [
+        Mount(folder / "home", HOME),
+        Mount(folder / "tigwerlib", TIGWERLIB_MOUNT, read_only=True),
+    ]
+
+
+def _command(folder: Path, workdir: Path, *argv: str) -> list[str]:
+    """The `docker run` that runs `argv` in OpenModelica's container, in
+    `workdir`, with `folder`'s home and TiGwerLib."""
+    return docker_run(
+        IMAGE,
+        argv,
+        mounts=[*_mounts(folder), Mount(workdir, WORK)],
+        workdir=WORK,
+        environment={"HOME": HOME},
     )
-    if found.returncode != 0:
-        raise Unavailable("Docker is not running")
 
 
-def _user() -> list[str]:
-    """The user a run is: the one who runs it, so that what it writes in the
-    folder is theirs. Windows has no user ids, and Docker Desktop's mounts
-    there carry no owners, so a run there is the image's own user."""
-    if not hasattr(os, "getuid"):
-        return []
-    return ["--user", f"{os.getuid()}:{os.getgid()}"]
+def _measured_step(folder: Path, workdir: Path, name: str, *argv: str) -> Measured:
+    """Runs a step of the check, its output in `<name>.log`, and fails
+    unless it exits cleanly."""
+    step = run_measured(
+        IMAGE,
+        argv,
+        workdir=Mount(workdir, WORK),
+        name=name,
+        mounts=_mounts(folder),
+        environment={"HOME": HOME},
+    )
+    if step.status != 0:
+        log = workdir / f"{name}.log"
+        # Without a log, the container did not start: Docker said why.
+        where = f"see {log}" if log.is_file() else "see Docker's message above"
+        raise CheckFailed(f"the {name} step exited with status {step.status}: {where}")
+    return step
 
 
-def _install(folder: Path) -> None:
+def _require_docker() -> None:
+    if not docker_running():
+        raise OpenModelicaUnavailable("Docker is not installed, or not running")
+
+
+def _fetch_tigwerlib(folder: Path) -> Path:
+    """TiGwerLib's archive in `folder`, downloaded unless a copy is there,
+    and refused unless its sha256 is the one pinned. One archive, checked
+    by the sha256 its record gives: the adapters' storage is for datasets,
+    by their manifests."""
+    path = folder / TIGWERLIB_ARCHIVE
+    if not path.is_file() or _sha256(path) != TIGWERLIB_SHA256:
+        partial = path.with_suffix(".part")
+        with urllib.request.urlopen(TIGWERLIB_URL, timeout=FETCH_TIMEOUT_S) as response:
+            partial.write_bytes(response.read())
+        partial.replace(path)
+    found = _sha256(path)
+    if found != TIGWERLIB_SHA256:
+        path.unlink()
+        raise PinRefused(f"{TIGWERLIB_ARCHIVE}'s sha256 is {found}, not {TIGWERLIB_SHA256}")
+    return path
+
+
+def _install_libraries(folder: Path) -> None:
     """Installs the libraries from OpenModelica's package index, and checks
     what was installed."""
     _omc_script(
@@ -385,14 +308,53 @@ def _install(folder: Path) -> None:
             for library in LIBRARIES
         ),
     )
-    verify_installed(folder / "home" / ".openmodelica" / "libraries")
+    _verify_installed_libraries(folder / "home" / ".openmodelica" / "libraries")
+
+
+def _verify_installed_libraries(libraries: Path) -> None:
+    """Refuses the libraries installed in `libraries` unless each is
+    installed, from the commit pinned here."""
+    for library in LIBRARIES:
+        metadata = libraries / f"{library.name} {library.version}" / "openmodelica.metadata.json"
+        if not metadata.is_file():
+            raise PinRefused(f"{library.name} {library.version} is not installed")
+        commit = json.loads(metadata.read_text(encoding="utf-8")).get("sha")
+        if commit != library.commit:
+            raise PinRefused(
+                f"{library.name} {library.version} was installed from {commit}, "
+                f"not {library.commit}: set up a folder of its own"
+            )
+
+
+def _verify_package_index(index: dict[str, Any]) -> None:
+    """Refuses OpenModelica's package index unless it still offers each
+    library at its version, from the commit pinned here, and that commit's
+    archive is still there."""
+    archives = []
+    for library in LIBRARIES:
+        offered = index["libs"].get(library.name, {}).get("versions", {}).get(library.version)
+        if offered is None:
+            raise PinRefused(f"the package index no longer offers {library.name} {library.version}")
+        if offered.get("sha") != library.commit:
+            raise PinRefused(
+                f"the package index offers {library.name} {library.version} "
+                f"from {offered.get('sha')}, not {library.commit}"
+            )
+        archives.append(offered["zipfile"])
+    # The standard library's three share one archive.
+    for archive in dict.fromkeys(archives):
+        request = urllib.request.Request(archive, method="HEAD")
+        try:
+            urllib.request.urlopen(request, timeout=FETCH_TIMEOUT_S).close()
+        except urllib.error.HTTPError as error:
+            raise PinRefused(f"{archive} is no longer there ({error.code})") from error
 
 
 def _omc_script(folder: Path, name: str, *calls: str) -> None:
     """Runs `calls` in omc, in `folder`, stopping at the first that fails."""
     lines = [f"if not {call} then print(getErrorString()); exit(1); end if;" for call in calls]
     (folder / name).write_text("\n".join(lines) + "\n", encoding="utf-8")
-    subprocess.run(command(folder, folder, "omc", name), check=True)
+    subprocess.run(_command(folder, folder, "omc", name), check=True)
 
 
 def _build_script() -> str:
@@ -407,39 +369,18 @@ def _build_script() -> str:
     )
 
 
-def _step(folder: Path, workdir: Path, name: str, *argv: str) -> Step:
-    """Runs `argv` in the container, its output in `<name>.log`, and keeps
-    the container's peak memory, where its control group gives it. Fails
-    unless the step exits cleanly."""
-    wrapped = (
-        f'"$@" > {name}.log 2>&1; status=$?; '
-        f"cat /sys/fs/cgroup/memory.peak > {name}.peak 2>/dev/null; exit $status"
-    )
-    started = time.monotonic()
-    ran = subprocess.run(command(folder, workdir, "sh", "-c", wrapped, "sh", *argv), check=False)
-    seconds = time.monotonic() - started
-    if ran.returncode != 0:
-        log = workdir / f"{name}.log"
-        # Without a log, the container did not start: Docker said why.
-        where = f"see {log}" if log.is_file() else "see Docker's message above"
-        raise Failed(f"the {name} step exited with status {ran.returncode}: {where}")
-    peak = workdir / f"{name}.peak"
-    text = peak.read_text(encoding="utf-8").strip() if peak.is_file() else ""
-    return Step(seconds, int(text) if text.isdigit() else None)
-
-
-def _described(step: Step) -> str:
+def _described(step: Measured) -> str:
     memory = "unknown" if step.peak_bytes is None else f"{step.peak_bytes / 2**30:.1f} GiB"
     return f"{step.seconds:.0f} s, peak memory {memory}"
 
 
-def _json(url: str) -> Any:
-    with urllib.request.urlopen(url, timeout=60) as response:
-        return json.loads(response.read())
-
-
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _json(url: str) -> Any:
+    with urllib.request.urlopen(url, timeout=FETCH_TIMEOUT_S) as response:
+        return json.loads(response.read())
 
 
 if __name__ == "__main__":
