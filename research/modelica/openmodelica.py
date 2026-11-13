@@ -11,6 +11,9 @@ the repository:
 - OpenModelica 1.25.0's image, pulled by digest;
 - TiGwerLib 0.7.0, fetched from its Zenodo record and checked by its
   sha256, in `FOLDER/tigwerlib`;
+- the dataset of Sourisseau et al. (2026), the paper TiGwerLib's global
+  model was published with: its measurements and its model's outputs,
+  fetched the same way, in `FOLDER`;
 - the libraries TiGwerLib uses, installed into `FOLDER/home` by
   OpenModelica's package manager, each refused unless it was installed
   from the commit pinned here.
@@ -23,9 +26,10 @@ day of its experiment in WORKDIR, simulates that day, and prints the time
 and the peak memory each step took.
 
 `verify` checks, without Docker, that every pin is still published as
-pinned: the image's digest on Docker Hub, TiGwerLib's archive on Zenodo,
-and each library at its commit in OpenModelica's package index, with that
-commit's archive. They are not ours, so they can go away or move.
+pinned: the image's digest on Docker Hub, each archive on Zenodo with the
+checksum Zenodo published for it, and each library at its commit in
+OpenModelica's package index, with that commit's archive. They are not
+ours, so they can go away or move.
 
 Running a container is `greenhouse_sim.containers`'s. What is here is
 OpenModelica's: its image, the libraries and where the container sees
@@ -40,8 +44,8 @@ import json
 import shutil
 import subprocess
 import sys
-import tempfile
 import urllib.error
+import urllib.parse
 import urllib.request
 import zipfile
 from collections.abc import Sequence
@@ -71,13 +75,43 @@ HOME: Final = "/omhome"
 TIGWERLIB_MOUNT: Final = "/tigwerlib"
 WORK: Final = "/work"
 
-# TiGwerLib 0.7.0, MIT, doi:10.5281/zenodo.15590404: its archive, where
-# Zenodo publishes it, and the archive's sha256.
-TIGWERLIB_URL: Final = "https://zenodo.org/api/records/15590404/files/TiGwerLib_0_7_0.zip/content"
-TIGWERLIB_ARCHIVE: Final = "TiGwerLib_0_7_0.zip"
-TIGWERLIB_SHA256: Final = "9ed2c0b2ad6c0ba0d68b49bd0c597fb5a2fb3a61c8a4c0e9c1e8ea9aa9a1b1cb"
+ZENODO_RECORDS: Final = "https://zenodo.org/api/records"
 # How long Zenodo and the package index may take to answer, in seconds.
 FETCH_TIMEOUT_S: Final = 120
+
+
+@dataclass(frozen=True)
+class ZenodoFile:
+    """A file of a Zenodo record: the md5 Zenodo published for it, which
+    says it is still the file it was, and the sha256 pinned here, which a
+    copy is checked by."""
+
+    record: int
+    name: str
+    md5: str
+    sha256: str
+
+    @property
+    def url(self) -> str:
+        return f"{ZENODO_RECORDS}/{self.record}/files/{urllib.parse.quote(self.name)}/content"
+
+
+# TiGwerLib 0.7.0, MIT, doi:10.5281/zenodo.15590404.
+TIGWERLIB: Final = ZenodoFile(
+    record=15590404,
+    name="TiGwerLib_0_7_0.zip",
+    md5="019f1aa5f5735fc42bc348246e3d6a20",
+    sha256="9ed2c0b2ad6c0ba0d68b49bd0c597fb5a2fb3a61c8a4c0e9c1e8ea9aa9a1b1cb",
+)
+# The dataset of Sourisseau et al. (2026), doi:10.1371/journal.pone.0340619,
+# CC BY 4.0, doi:10.5281/zenodo.17554203: the greenhouse's measurements
+# and the global model's outputs, the data behind each of its figures.
+SOURISSEAU_DATASET: Final = ZenodoFile(
+    record=17554203,
+    name="Supplementary_Information_v0.zip",
+    md5="d0e4486fa1041fac5e6e47673b6c95d3",
+    sha256="5462cecc6874262f18136971a8ec7c6db33374c8ff2cadb8f9309a61ece8e480",
+)
 
 
 @dataclass(frozen=True)
@@ -122,10 +156,13 @@ TOLERANCE: Final = 1e-5
 SOLVER: Final = "dassl"
 SOLVERS: Final = ("dassl", "cvode", "ida")
 
-# What a check builds and simulates in its working folder, and then reads.
-# A check removes an earlier check's first, so that a step failing now
-# cannot pass on them; each step's log goes the same way.
-CHECK_OUTPUTS: Final = (MODEL, f"{MODEL}_res.mat")
+# What a build and a simulation leave in their working folder, and are
+# then read by. Each removes an earlier one's first, so that a step failing
+# now cannot pass on them; each step's log goes the same way.
+BUILT: Final = MODEL
+RESULTS: Final = (f"{MODEL}_res.mat", f"{MODEL}_res.csv")
+# What OpenModelica's simulation writes when it has run to its end.
+FINISHED: Final = "The simulation finished successfully."
 
 
 class OpenModelicaUnavailable(RuntimeError):
@@ -145,7 +182,8 @@ def set_up_openmodelica(folder: Path) -> None:
     _require_docker()
     (folder / "home").mkdir(parents=True, exist_ok=True)
     subprocess.run(["docker", "pull", "--quiet", IMAGE], check=True)
-    archive = _fetch_tigwerlib(folder)
+    archive = _fetch(TIGWERLIB, folder)
+    _fetch(SOURISSEAU_DATASET, folder)
     extracted = folder / "tigwerlib"
     if not (extracted / "TiGwerLib" / "package.mo").is_file():
         shutil.rmtree(extracted, ignore_errors=True)
@@ -159,33 +197,59 @@ def check_global_model(
 ) -> tuple[Measured, Measured]:
     """Builds TiGwerLib's global model over its experiment's first day in
     `workdir`, and simulates the day with `solver`."""
+    build = build_global_model(folder, workdir, START_S + DAY_S)
+    return build, simulate_global_model(folder, workdir, solver)
+
+
+def build_global_model(
+    folder: Path,
+    workdir: Path,
+    stop_s: int,
+    *,
+    variables: str | None = None,
+    output_format: str = "mat",
+) -> Measured:
+    """Builds TiGwerLib's global model in `workdir`, from its experiment's
+    start to `stop_s`, with a result at each of its intervals: of every
+    variable, or of those whose names match `variables`, a regular
+    expression."""
     _require_docker()
     workdir.mkdir(parents=True, exist_ok=True)
-    for output in CHECK_OUTPUTS:
+    for output in (BUILT, *RESULTS):
         (workdir / output).unlink(missing_ok=True)
-    (workdir / "build.mos").write_text(_build_script(), encoding="utf-8")
+    script = _build_script(stop_s, variables=variables, output_format=output_format)
+    (workdir / "build.mos").write_text(script, encoding="utf-8")
     build = _measured_step(folder, workdir, "build", "omc", "build.mos")
-    if not (workdir / MODEL).is_file():
+    if not (workdir / BUILT).is_file():
         raise CheckFailed(f"the model did not build: see {workdir / 'build.log'}")
+    return build
+
+
+def simulate_global_model(folder: Path, workdir: Path, solver: str = SOLVER) -> Measured:
+    """Simulates the model built in `workdir` with `solver`, its results at
+    its intervals alone, not at its events too."""
+    for output in RESULTS:
+        (workdir / output).unlink(missing_ok=True)
     simulate = _measured_step(
-        folder, workdir, "simulate", f"./{MODEL}", f"-s={solver}", "-lv=LOG_STATS"
+        folder, workdir, "simulate", f"./{BUILT}", f"-s={solver}", "-noEventEmit", "-lv=LOG_STATS"
     )
     log = (workdir / "simulate.log").read_text(encoding="utf-8", errors="replace")
-    if "The simulation finished successfully." not in log:
-        raise CheckFailed(f"the day was not simulated: see {workdir / 'simulate.log'}")
-    return build, simulate
+    if FINISHED not in log:
+        raise CheckFailed(f"the model was not simulated to its end: see {workdir / 'simulate.log'}")
+    return simulate
 
 
 def verify_pins() -> None:
     """Refuses the pins unless each is still published as pinned: the
-    image's digest, TiGwerLib's archive, and each library at its commit in
-    the package index, with that commit's archive."""
+    image's digest, each archive with the checksum Zenodo published for it,
+    and each library at its commit in the package index, with that commit's
+    archive."""
     try:
         verify_published(IMAGE)
     except ImageNotPublished as error:
         raise PinRefused(str(error)) from error
-    with tempfile.TemporaryDirectory() as folder:
-        _fetch_tigwerlib(Path(folder))
+    for archive in (TIGWERLIB, SOURISSEAU_DATASET):
+        _verify_on_zenodo(archive)
     _verify_package_index(_json(PACKAGE_INDEX))
 
 
@@ -207,7 +271,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if arguments.command == "verify":
             verify_pins()
             sys.stdout.write(
-                "published as pinned: the image's digest, TiGwerLib's archive, "
+                "published as pinned: the image's digest, each archive, "
                 "and each library at its commit\n"
             )
             return 0
@@ -224,7 +288,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         build, simulate = check_global_model(arguments.folder, arguments.workdir, arguments.solver)
     except (OpenModelicaUnavailable, PinRefused, CheckFailed) as error:
         raise SystemExit(str(error)) from error
-    results = arguments.workdir / f"{MODEL}_res.mat"
+    results = arguments.workdir / RESULTS[0]
     sys.stdout.write(
         f"build: {_described(build)}\n"
         f"simulate, one day with {arguments.solver}: {_described(simulate)}, "
@@ -278,22 +342,39 @@ def _require_docker() -> None:
         raise OpenModelicaUnavailable("Docker is not installed, or not running")
 
 
-def _fetch_tigwerlib(folder: Path) -> Path:
-    """TiGwerLib's archive in `folder`, downloaded unless a copy is there,
-    and refused unless its sha256 is the one pinned. One archive, checked
-    by the sha256 its record gives: the adapters' storage is for datasets,
+def _fetch(archive: ZenodoFile, folder: Path) -> Path:
+    """`archive` in `folder`, downloaded unless a copy is there, and refused
+    unless its sha256 is the one pinned. Two archives, a library and a
+    paper's data: the adapters' storage is for datasets the adapters read,
     by their manifests."""
-    path = folder / TIGWERLIB_ARCHIVE
-    if not path.is_file() or _sha256(path) != TIGWERLIB_SHA256:
+    path = folder / archive.name
+    if not path.is_file() or _sha256(path) != archive.sha256:
         partial = path.with_suffix(".part")
-        with urllib.request.urlopen(TIGWERLIB_URL, timeout=FETCH_TIMEOUT_S) as response:
+        with urllib.request.urlopen(archive.url, timeout=FETCH_TIMEOUT_S) as response:
             partial.write_bytes(response.read())
         partial.replace(path)
     found = _sha256(path)
-    if found != TIGWERLIB_SHA256:
+    if found != archive.sha256:
         path.unlink()
-        raise PinRefused(f"{TIGWERLIB_ARCHIVE}'s sha256 is {found}, not {TIGWERLIB_SHA256}")
+        raise PinRefused(f"{archive.name}'s sha256 is {found}, not {archive.sha256}")
     return path
+
+
+def _verify_on_zenodo(archive: ZenodoFile) -> None:
+    """Refuses `archive` unless its record still lists it with the md5
+    Zenodo published for it: a record's files do not change, a new version
+    is a new record, so this downloads none of them."""
+    try:
+        record = _json(f"{ZENODO_RECORDS}/{archive.record}")
+    except urllib.error.HTTPError as error:
+        raise PinRefused(f"Zenodo no longer has record {archive.record} ({error.code})") from error
+    listed = {entry["key"]: entry.get("checksum") for entry in record.get("files", [])}
+    if archive.name not in listed:
+        raise PinRefused(f"Zenodo's record {archive.record} no longer lists {archive.name}")
+    if listed[archive.name] != f"md5:{archive.md5}":
+        raise PinRefused(
+            f"Zenodo lists {archive.name} with {listed[archive.name]}, not md5:{archive.md5}"
+        )
 
 
 def _install_libraries(folder: Path) -> None:
@@ -357,14 +438,16 @@ def _omc_script(folder: Path, name: str, *calls: str) -> None:
     subprocess.run(_command(folder, folder, "omc", name), check=True)
 
 
-def _build_script() -> str:
+def _build_script(stop_s: int, *, variables: str | None, output_format: str) -> str:
+    kept = "" if variables is None else f', variableFilter="{variables}"'
     return (
         f'if not loadModel(Modelica, {{"4.0.0"}}) then print(getErrorString()); exit(1); end if;\n'
         f'if not loadModel(Buildings, {{"9.1.0"}}) then print(getErrorString()); exit(1); end if;\n'
         f'if not loadFile("{TIGWERLIB_MOUNT}/TiGwerLib/package.mo") then '
         f"print(getErrorString()); exit(1); end if;\n"
-        f"buildModel({MODEL}, startTime={START_S}, stopTime={START_S + DAY_S}, "
-        f"numberOfIntervals={DAY_S // INTERVAL_S}, tolerance={TOLERANCE});\n"
+        f"buildModel({MODEL}, startTime={START_S}, stopTime={stop_s}, "
+        f"numberOfIntervals={(stop_s - START_S) // INTERVAL_S}, tolerance={TOLERANCE}, "
+        f'outputFormat="{output_format}"{kept});\n'
         f"print(getErrorString());\n"
     )
 
