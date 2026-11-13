@@ -1,63 +1,41 @@
 name: Modelica
 
-# Sets OpenModelica up in its container, with TiGwerLib and the libraries it
-# uses as research/modelica pins them, and builds and simulates the first
-# day of TiGwerLib's global model: the setup the Modelica comparison runs
-# on (item 6 of the research priorities). The build's and the simulation's
-# logs are kept as an artifact.
+# Checks, without Docker, that what the OpenModelica setup in
+# research/modelica pins is still published as pinned: OpenModelica's image
+# by its digest, TiGwerLib's archive by its sha256, and each library at its
+# commit in OpenModelica's package index, with that commit's archive. They
+# are not ours, so they can go away or move without a change here: the
+# check also runs each week. It runs with Python's standard library alone.
+# Building and simulating a model is `check`'s, run by hand.
 on:
   push:
     branches: [main]
     paths:
       - "research/modelica/**"
-      # What it runs on: the locked packages and the Python.
-      - "uv.lock"
-      - ".python-version"
       - ".github/workflows/modelica.yml"
   pull_request:
     paths:
       - "research/modelica/**"
-      # What it runs on: the locked packages and the Python.
-      - "uv.lock"
-      - ".python-version"
       - ".github/workflows/modelica.yml"
+  schedule:
+    # Mondays, 06:17 UTC.
+    - cron: "17 6 * * 1"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  openmodelica:
-    name: OpenModelica builds and simulates TiGwerLib's global model
+  pins:
+    name: OpenModelica's pins are still published as pinned
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # uv, at the version uv.lock records, which installs the Python.
-      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          version-file: uv.lock
-          enable-cache: true
-          cache-dependency-glob: uv.lock
+          python-version: "3.14"
 
-      - name: Install the workspace
-        run: uv sync --locked
-
-      - name: Set OpenModelica up, with TiGwerLib and its libraries
-        run: >-
-          uv run --no-sync python -m research.modelica.openmodelica setup
-          "$RUNNER_TEMP/modelica"
-
-      - name: Build and simulate the global model's first day
-        run: >-
-          uv run --no-sync python -m research.modelica.openmodelica check
-          "$RUNNER_TEMP/modelica" "$RUNNER_TEMP/check"
-
-      - name: Keep the build's and the simulation's logs
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: modelica-logs
-          path: ${{ runner.temp }}/check/*.log
-          retention-days: 14
+      - name: Check each pin where it is published
+        run: python -m research.modelica.openmodelica verify

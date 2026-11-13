@@ -4,6 +4,7 @@ of the research priorities), and checked on TiGwerLib's global model.
     python -m research.modelica.openmodelica setup FOLDER
     python -m research.modelica.openmodelica check FOLDER WORKDIR
     python -m research.modelica.openmodelica run FOLDER WORKDIR -- omc script.mos
+    python -m research.modelica.openmodelica verify
 
 `setup` makes FOLDER hold everything the comparison runs on, apart from
 the repository:
@@ -21,6 +22,11 @@ again when it runs. `check` builds TiGwerLib's global model over the first
 day of its experiment in WORKDIR, simulates that day, and prints the time
 and the peak memory each step took.
 
+`verify` checks, without Docker, that every pin is still published as
+pinned: the image's digest on Docker Hub, TiGwerLib's archive on Zenodo,
+and each library at its commit in OpenModelica's package index, with that
+commit's archive. They are not ours, so they can go away or move.
+
 Nothing in the packages imports this, and nothing it fetches is committed
 (decision 0063, rule 1).
 """
@@ -32,19 +38,32 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
+import urllib.error
 import urllib.request
 import zipfile
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 # The release TiGwerLib 0.7.0 was tested with, by digest as well as by tag:
 # the image index's, which holds an arm64 and an amd64 image.
 IMAGE: Final = (
     "openmodelica/openmodelica:v1.25.0-minimal"
     "@sha256:c85938d4dd4cdc15ea2d2af899920907e707ef94243e13603bd347679e5e6a14"
+)
+
+# Where the image is published, and the manifest types its digest may name:
+# an image index (OCI's or Docker's), or a single image.
+REGISTRY_TOKEN: Final = "https://auth.docker.io/token"
+REGISTRY: Final = "https://registry-1.docker.io/v2"
+MANIFEST_TYPES: Final = (
+    "application/vnd.oci.image.index.v1+json",
+    "application/vnd.docker.distribution.manifest.list.v2+json",
+    "application/vnd.oci.image.manifest.v1+json",
+    "application/vnd.docker.distribution.manifest.v2+json",
 )
 
 # Where the container sees the folder's parts and the working directory.
@@ -80,6 +99,10 @@ class Library:
     version: str
     commit: str
 
+
+# OpenModelica's package index: for each library and version, the commit
+# its package manager installs, and that commit's archive.
+PACKAGE_INDEX: Final = "https://libraries.openmodelica.org/index/v1/index.json"
 
 # What TiGwerLib's `uses` asks for: the Modelica Standard Library 4.0.0, as
 # OpenModelica's maintenance branch of it, with the two libraries that come
@@ -210,6 +233,63 @@ def verify_installed(libraries: Path) -> None:
             )
 
 
+def verify() -> None:
+    """Refuses the pins unless each is still published as pinned: the
+    image's digest, TiGwerLib's archive, and each library at its commit in
+    the package index, with that commit's archive."""
+    verify_image()
+    with tempfile.TemporaryDirectory() as folder:
+        fetch(TIGWERLIB, Path(folder))
+    verify_index(_json(PACKAGE_INDEX))
+
+
+def verify_image() -> None:
+    """Refuses the image unless Docker Hub still serves its digest. Asking
+    for a manifest is not a pull, so this downloads no image."""
+    named, _, digest = IMAGE.partition("@")
+    repository = named.partition(":")[0]
+    token = _json(
+        f"{REGISTRY_TOKEN}?service=registry.docker.io&scope=repository:{repository}:pull"
+    )["token"]
+    request = urllib.request.Request(
+        f"{REGISTRY}/{repository}/manifests/{digest}",
+        method="HEAD",
+        headers={"Authorization": f"Bearer {token}", "Accept": ", ".join(MANIFEST_TYPES)},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            served = response.headers.get("Docker-Content-Digest")
+    except urllib.error.HTTPError as error:
+        raise Refused(f"Docker Hub no longer serves {IMAGE} ({error.code})") from error
+    if served != digest:
+        raise Refused(f"Docker Hub serves {served} for {IMAGE}")
+
+
+def verify_index(index: dict[str, Any]) -> None:
+    """Refuses OpenModelica's package index unless it still offers each
+    library at its version, from the commit pinned here, and that commit's
+    archive is still there."""
+    archives = []
+    for library in LIBRARIES:
+        offered = index["libs"].get(library.name, {}).get("versions", {}).get(library.version)
+        if offered is None:
+            raise Refused(f"the package index no longer offers {library.name} {library.version}")
+        if offered.get("sha") != library.commit:
+            raise Refused(
+                f"the package index offers {library.name} {library.version} "
+                f"from {offered.get('sha')}, not {library.commit}"
+            )
+        archives.append(offered["zipfile"])
+    # The standard library's three share one archive.
+    for archive in dict.fromkeys(archives):
+        try:
+            urllib.request.urlopen(
+                urllib.request.Request(archive, method="HEAD"), timeout=60
+            ).close()
+        except urllib.error.HTTPError as error:
+            raise Refused(f"{archive} is no longer there ({error.code})") from error
+
+
 def check(folder: Path, workdir: Path, solver: str = SOLVER) -> tuple[Step, Step]:
     """Builds TiGwerLib's global model over its experiment's first day in
     `workdir`, and simulates the day with `solver`."""
@@ -240,8 +320,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     running.add_argument("folder", type=Path)
     running.add_argument("workdir", type=Path)
     running.add_argument("argv", nargs=argparse.REMAINDER)
+    commands.add_parser("verify")
     arguments = parser.parse_args(argv)
     try:
+        if arguments.command == "verify":
+            verify()
+            sys.stdout.write(
+                "published as pinned: the image's digest, TiGwerLib's archive, "
+                "and each library at its commit\n"
+            )
+            return 0
         if arguments.command == "setup":
             setup(arguments.folder)
             sys.stdout.write(f"set up in {arguments.folder}\n")
@@ -343,6 +431,11 @@ def _step(folder: Path, workdir: Path, name: str, *argv: str) -> Step:
 def _described(step: Step) -> str:
     memory = "unknown" if step.peak_bytes is None else f"{step.peak_bytes / 2**30:.1f} GiB"
     return f"{step.seconds:.0f} s, peak memory {memory}"
+
+
+def _json(url: str) -> Any:
+    with urllib.request.urlopen(url, timeout=60) as response:
+        return json.loads(response.read())
 
 
 def _sha256(path: Path) -> str:

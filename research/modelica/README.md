@@ -32,7 +32,8 @@ The image is the release itself, and runs natively on Apple silicon.
 Nothing here is committed but the code: the image, TiGwerLib and the
 libraries are fetched into a folder of their own (decision
 [0063](../../docs/decisions/0063-a-data-file-is-generated-committed-or-fetched-by-one-rule.md),
-rule 1).
+rule 1). Nothing is published from here either: each comes from where its
+authors publish it, pinned by its content.
 
 ## Setting it up
 
@@ -69,9 +70,27 @@ It has run on macOS and on Linux. Windows has no user ids to give the
 container, so there a command runs as the image's own user; that has not
 been tried yet.
 
-The [Modelica workflow](../../.github/workflows/modelica.yml) sets it up
-and runs the check on GitHub's Linux runners. It runs when this folder,
-the lock or the Python changes, and its logs are kept as an artifact.
+## Checking the pins
+
+The pins are not ours: an image, an archive or a library's commit can go
+away, and the package index can move a version to another commit, as a
+maintenance branch does. `verify` checks, without Docker, that each is
+still published as pinned:
+
+```bash
+python -m research.modelica.openmodelica verify
+```
+
+It asks Docker Hub for the image's digest, which pulls nothing. It
+downloads TiGwerLib's archive (15 MB) and checks its sha256. It reads
+OpenModelica's package index (0.5 MB) for each library's commit, and asks
+GitHub for that commit's archive. It takes a few seconds, with Python's
+standard library alone.
+
+The [Modelica workflow](../../.github/workflows/modelica.yml) runs it each
+week, and when this folder changes. Building and simulating is left to
+`check`, run by hand: the pins cannot change what they hold, so it needs
+running again only when the setup here changes.
 
 ## What it takes
 
@@ -86,6 +105,10 @@ first with 28 % of the Mac's memory free, then with 12 to 19 % free and
 | TiGwerLib and the libraries, fetched and installed | 20 s | | | 15 MB archived, 64 MB unpacked (57 MB of data); 240 MB of libraries |
 | The global model, built | 43 s | 421 s | 2.6 GiB | 180 MB |
 | One day, simulated with DASSL | 11 s | 31 s | 0.7 GiB | 62 MB of results |
+
+On GitHub's Linux runners (4 CPUs, 16 GB), over two runs, the build took
+24 to 27 s with a peak of 2.5 GiB, and the day 15 to 20 s with a peak of
+0.5 GiB.
 
 The peak is the container's, from its control group, the page cache
 included. The build is the heavy step: it needs about 3 GB in Docker's

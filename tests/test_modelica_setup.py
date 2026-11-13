@@ -1,19 +1,23 @@
 """The OpenModelica setup holds what it fetches and installs to its pins
 (research/modelica), without Docker: what a run in its container is given,
 an archive refused unless its sha256 is pinned, a library refused unless it
-was installed from its pinned commit, a check failing on what fails in it
-rather than passing on what an earlier check left, and the README naming
-every pin.
+was installed from its pinned commit, the pins refused unless they are
+still published as pinned, a check failing on what fails in it rather than
+passing on what an earlier check left, and the README naming every pin.
 """
 
 import hashlib
 import io
 import json
 import os
+import re
 import subprocess
+import urllib.error
 import urllib.request
 from collections.abc import Callable
+from email.message import Message
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -94,6 +98,88 @@ def test_a_library_is_refused_unless_installed_from_its_pinned_commit(tmp_path: 
     metadata.unlink()
     with pytest.raises(om.Refused, match=f"{moved.name} {moved.version} is not installed"):
         om.verify_installed(tmp_path)
+
+
+class _Published(io.BytesIO):
+    """A response from where a pin is published."""
+
+    def __init__(self, body: bytes = b"", headers: dict[str, str] | None = None) -> None:
+        super().__init__(body)
+        self.headers = headers or {}
+
+
+def _index() -> dict[str, Any]:
+    """OpenModelica's package index as it offers the pinned libraries."""
+    libs: dict[str, Any] = {}
+    for library in om.LIBRARIES:
+        libs.setdefault(library.name, {"versions": {}})["versions"][library.version] = {
+            "sha": library.commit,
+            "zipfile": f"https://github.com/archive/{library.commit}.zip",
+        }
+    return {"libs": libs}
+
+
+def test_the_pins_are_refused_unless_still_published_as_pinned(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    digest = om.IMAGE.partition("@")[2]
+    archive = b"TiGwerLib, as pinned"
+    monkeypatch.setattr(
+        om, "TIGWERLIB", om.Archive(om.TIGWERLIB.url, "a.zip", hashlib.sha256(archive).hexdigest())
+    )
+    index = _index()
+    served = {"digest": digest}
+    gone: set[str] = set()
+
+    def urlopen(request: str | urllib.request.Request, timeout: float) -> _Published:
+        url = request if isinstance(request, str) else request.full_url
+        if url in gone:
+            raise urllib.error.HTTPError(url, 404, "Not Found", Message(), None)
+        if url.startswith(om.REGISTRY_TOKEN):
+            return _Published(json.dumps({"token": "anonymous"}).encode())
+        if url.startswith(f"{om.REGISTRY}/openmodelica/openmodelica/manifests/"):
+            return _Published(headers={"Docker-Content-Digest": served["digest"]})
+        if url == om.PACKAGE_INDEX:
+            return _Published(json.dumps(index).encode())
+        if url == om.TIGWERLIB.url:
+            return _Published(archive)
+        if url.startswith("https://github.com/archive/"):
+            return _Published()
+        raise AssertionError(f"asked for {url}")
+
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    om.verify()
+
+    # The image's digest gone from Docker Hub.
+    manifest = f"{om.REGISTRY}/openmodelica/openmodelica/manifests/{digest}"
+    gone.add(manifest)
+    with pytest.raises(om.Refused, match=r"Docker Hub no longer serves .* \(404\)"):
+        om.verify()
+    gone.clear()
+
+    # Docker Hub answering for the digest with another.
+    served["digest"] = "sha256:" + "2" * 64
+    with pytest.raises(om.Refused, match=r"Docker Hub serves sha256:2+ for"):
+        om.verify()
+    served["digest"] = digest
+
+    # A library's version moved to another commit, as a maintenance branch can.
+    moved = om.LIBRARIES[0]
+    named = re.escape(f"{moved.name} {moved.version}")
+    index["libs"][moved.name]["versions"][moved.version]["sha"] = "1" * 40
+    with pytest.raises(om.Refused, match=f"offers {named} from 1+, not"):
+        om.verify()
+
+    # A library's version no longer offered.
+    del index["libs"][moved.name]["versions"][moved.version]
+    with pytest.raises(om.Refused, match=f"no longer offers {named}"):
+        om.verify()
+
+    # A commit's archive gone.
+    index = _index()
+    gone.add(f"https://github.com/archive/{om.LIBRARIES[-1].commit}.zip")
+    with pytest.raises(om.Refused, match=r"is no longer there \(404\)"):
+        om.verify()
 
 
 def test_a_check_fails_on_its_own_steps_not_on_what_an_earlier_one_left(
