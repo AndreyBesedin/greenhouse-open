@@ -190,3 +190,36 @@ from its Fig 10 data.
 
 The dataset is CC BY 4.0, and is fetched, not committed. A report holds
 the comparison's numbers alone, none of its series.
+
+### What it found
+
+Each window ran once, at the commit that states it, on an Apple M2 with
+8 GB and Docker Desktop's 4 GB virtual machine:
+[`results/fig8.json`](results/fig8.json) and
+[`results/fig9.json`](results/fig9.json), committed as written.
+
+| Window | Moments compared | Beyond tolerance | Largest difference, T and RH | RMSE of the difference, T and RH | Within, as stated |
+| --- | --- | --- | --- | --- | --- |
+| `fig8` | 3,169 of 3,169 | 0 | 0.0024 K, 0.018 %RH | 0.0003 K, 0.003 %RH | yes |
+| `fig9` | 3,168 of 3,169 | 0 | 0.0037 K, 0.015 %RH | 0.0003 K, 0.003 %RH | no: a moment is missing |
+
+- **The paper's indoor climate is reproduced in OpenModelica,** without
+  Dymola, at every moment compared in both windows, to a fiftieth of the
+  tolerances or less. The dataset gives its values to 0.0001 K and
+  0.01 %RH, a part of what is left.
+- **July misses a moment, so it is not within as stated.** OpenModelica
+  wrote the result for the 22nd of July, 2015 at 13:05 at 13:00:20.05
+  instead, and no row at 13:05. Its output holds six such rows over the
+  season, at 13:00:20 every two or four weeks from the 15th of April, each
+  in place of the 13:05 row; January's window holds none. It is the
+  output's grid, not the model's values: the rule stated before the run
+  counts a missing moment, and stands.
+- **Each day's RMSE against the measurements** is the paper's, from its
+  own series, to 0.0006 K and 0.0001 (0.01 %RH): from 0.25 to 1.15 K in
+  January and from 0.54 to 2.20 K in July. The paper's own daily values,
+  in its Fig 10 data, differ from those its series gives by −1.1 % to
+  +3.7 %: they are computed otherwise than from the 5-minute series, in a
+  way the paper does not state.
+- **What it took:** in January, a build of 64 s at a peak of 3.0 GB and
+  47 days simulated in 8 minutes at 0.7 GB; in July, a build of 126 s at
+  2.8 GB and 235 days in 44 minutes at 1.0 GB, other applications open.
