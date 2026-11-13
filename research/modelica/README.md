@@ -4,15 +4,17 @@ Item 6 of the [research priorities](../../docs/roadmap/research-validation-prior
 compares the simulator with a Modelica model: one documented, measured
 interval of TiGwerLib reproduced in OpenModelica, then compared on matched
 inputs. This folder sets OpenModelica up for it, apart from the
-repository's own environment, and checks the setup on TiGwerLib's global
-model. It reproduces nothing yet.
+repository's own environment, checks the setup on TiGwerLib's global
+model, and reproduces the indoor climate of the paper that model was
+published with ([below](#reproducing-sourisseau-et-al-2026)).
 
 ## What it runs on
 
 | What | Version | Pinned by |
 | --- | --- | --- |
 | OpenModelica | 1.25.0, its `minimal` image, for arm64 and amd64 | the image index's digest, `sha256:c85938d4dd4cdc15ea2d2af899920907e707ef94243e13603bd347679e5e6a14` |
-| TiGwerLib | 0.7.0, MIT, [doi:10.5281/zenodo.15590404](https://doi.org/10.5281/zenodo.15590404) | its archive's sha256, `9ed2c0b2ad6c0ba0d68b49bd0c597fb5a2fb3a61c8a4c0e9c1e8ea9aa9a1b1cb` |
+| TiGwerLib | 0.7.0, MIT, [doi:10.5281/zenodo.15590404](https://doi.org/10.5281/zenodo.15590404) | its archive's sha256, `9ed2c0b2ad6c0ba0d68b49bd0c597fb5a2fb3a61c8a4c0e9c1e8ea9aa9a1b1cb`, and the md5 Zenodo published, `019f1aa5f5735fc42bc348246e3d6a20` |
+| Sourisseau et al. (2026)'s dataset | its measurements and its global model's outputs, CC BY 4.0, [doi:10.5281/zenodo.17554203](https://doi.org/10.5281/zenodo.17554203) | its archive's sha256, `5462cecc6874262f18136971a8ec7c6db33374c8ff2cadb8f9309a61ece8e480`, and the md5 Zenodo published, `d0e4486fa1041fac5e6e47673b6c95d3` |
 | The Modelica Standard Library | 4.0.0, as OpenModelica's `4.0.0+maint.om`, with ModelicaServices and Complex | its commit, `bbdadca3e90d73e42b9c86e184e8a5fb2a8120a8` |
 | The Buildings library | 9.1.0 | its commit, `d34a259960ca12b2126ef188f2d20fc8148eafb2` |
 
@@ -48,14 +50,15 @@ python -m research.modelica.openmodelica setup ~/.greenhouse-open/modelica
 python -m research.modelica.openmodelica check ~/.greenhouse-open/modelica /tmp/modelica-check
 ```
 
-`setup` pulls the image, fetches TiGwerLib into `tigwerlib/` and installs
-the libraries into `home/`. It can run again: what is there and pinned is
-kept. `check` builds TiGwerLib's global model,
+`setup` pulls the image, fetches TiGwerLib into `tigwerlib/`, installs
+the libraries into `home/`, and fetches the paper's dataset (126 MB)
+beside them. It can run again: what is there and pinned is kept. `check` builds TiGwerLib's global model,
 `TiGwerLib.Applications.CTIFLGreenhouse.GlobalModels.UsingStatuses.CTIFLGreenhouseBaseModel`,
 over the first day of its experiment. It simulates the day with DASSL,
 OpenModelica's default solver, at the experiment's tolerance (1e-5) and
-interval (300 s). It prints what each step took, and leaves the build,
-the results and both logs in its working folder. It first removes what an
+interval (300 s), with results at its intervals alone, not at its events
+too. It prints what each step took, and leaves the build, the results and
+both logs in its working folder. It first removes what an
 earlier check left there, and stops at a step that fails.
 
 Any other command runs in the same container:
@@ -87,11 +90,12 @@ still published as pinned:
 python -m research.modelica.openmodelica verify
 ```
 
-It asks Docker Hub for the image's digest, which pulls nothing. It
-downloads TiGwerLib's archive (15 MB) and checks its sha256. It reads
-OpenModelica's package index (0.5 MB) for each library's commit, and asks
-GitHub for that commit's archive. It takes a few seconds, with Python's
-standard library alone.
+It asks Docker Hub for the image's digest, which pulls nothing. It asks
+Zenodo whether each archive's record still lists it with the md5 Zenodo
+published: a record's files do not change, a new version is a new record,
+so it downloads neither. It reads OpenModelica's package index (0.5 MB)
+for each library's commit, and asks GitHub for that commit's archive. It
+takes a few seconds, with Python's standard library alone.
 
 The [Modelica workflow](../../.github/workflows/modelica.yml) runs it each
 week, and when this folder changes. Building and simulating is left to
@@ -122,7 +126,8 @@ virtual machine, and it slows tenfold when the Mac has to swap that
 machine's memory out. On 8 GB, it runs best with other large
 applications closed, and Docker Desktop quit after it.
 
-A longer run is light in memory but heavy on disk. At 62 MB a day, the
+A longer run is light in memory but heavy on disk. At 62 MB a day, every
+variable at each interval and each event as these runs wrote them, the
 experiment's 334 days would write about 20 GB of results, so a longer run
 keeps only the variables it compares (`variableFilter`). At the first
 day's pace, that season would take about an hour.
@@ -145,3 +150,43 @@ These are first observations for item 6, not results:
 - **CVODE,** the solver the experiment names for Dymola, stops 0.51 s
   into the day: `##CVODE## -8 error occurred at time = 29030400.5146821`.
   `check --solver cvode` runs the day with it.
+
+## Reproducing Sourisseau et al. (2026)
+
+TiGwerLib's global model was published with
+[Sourisseau et al. (2026)](https://doi.org/10.1371/journal.pone.0340619),
+which ran it with Dymola and DASSL over a season of a Venlo tomato
+greenhouse at CTIFL, Carquefou, from the 3rd of December, 2014. Its
+dataset holds, every 5 minutes of that season, the model's indoor
+temperature and relative humidity beside the measurements. The model
+reads the season's weather and the equipment's recorded states (vents,
+screens, heating) from TiGwerLib's own data; its control loops are not
+modelled.
+
+The reproduction runs the same model, unchanged, in OpenModelica, from the
+season's start to the end of one of the paper's figures' windows, and
+compares its indoor climate with the paper's at every moment of the
+window:
+
+| Window | The paper's | Days | Simulated from the season's start |
+| --- | --- | --- | --- |
+| `fig8` | Fig 8, winter | 9 to 19 January 2015 | 47 days |
+| `fig9` | Fig 9, summer | 15 to 25 July 2015 | 235 days |
+
+```bash
+python -m research.modelica.sourisseau_2026 ~/.greenhouse-open/modelica /tmp/fig8 fig8
+```
+
+What is compared, where and within which tolerances is stated in
+[`sourisseau_2026.json`](sourisseau_2026.json), committed before any run:
+the indoor air's temperature within 0.16 K and its relative humidity
+within 1 %RH of the paper's, at every 5-minute moment of the window. They
+are a tenth of what the paper holds its model to against the
+measurements, a day's RMSE of 1.6 K and of 10 %RH: a difference within
+them moves a day's RMSE against the measurements by no more than they
+are. The report, in `results/<window>.json`, also gives each day's RMSE
+against the measurements, ours beside the paper's, and the paper's own
+from its Fig 10 data.
+
+The dataset is CC BY 4.0, and is fetched, not committed. A report holds
+the comparison's numbers alone, none of its series.
