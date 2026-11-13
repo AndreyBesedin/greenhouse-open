@@ -10,6 +10,7 @@ on:
     branches: [main]
     paths:
       - "greenhouse_sim/greenhouse_sim/cfd/**"
+      - "greenhouse_sim/greenhouse_sim/containers.py"
       - "greenhouse_sim/greenhouse_sim/fields/**"
       - "greenhouse_sim/greenhouse_sim/scenarios/**"
       - "greenhouse_sim/greenhouse_sim/world/**"
@@ -22,6 +23,7 @@ on:
   pull_request:
     paths:
       - "greenhouse_sim/greenhouse_sim/cfd/**"
+      - "greenhouse_sim/greenhouse_sim/containers.py"
       - "greenhouse_sim/greenhouse_sim/fields/**"
       - "greenhouse_sim/greenhouse_sim/scenarios/**"
       - "greenhouse_sim/greenhouse_sim/world/**"

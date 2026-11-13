@@ -1,5 +1,5 @@
 """Running OpenFOAM out of process: natively if it is installed, or in its
-container if Docker is.
+container if Docker is (`greenhouse_sim.containers`).
 
 Nothing in the simulator needs OpenFOAM. What does use it asks whether it is
 `available()` first, and a test that needs it is skipped without it.
@@ -8,9 +8,10 @@ Nothing in the simulator needs OpenFOAM. What does use it asks whether it is
 import os
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 from typing import Final
+
+from greenhouse_sim.containers import Mount, docker_run, docker_running
 
 # The container image OpenFOAM is run from when it is not installed, unless
 # GREENHOUSE_OPENFOAM_IMAGE names another: by digest, as well as by tag, so
@@ -28,10 +29,10 @@ CASE_MOUNT: Final = "/case"
 CONTAINER_ENVIRONMENT: Final = (
     "f=/usr/lib/openfoam/openfoam2412/etc/bashrc; if [ -f $f ]; then . $f; fi; "
 )
-# How long a command may run, and how long Docker may take to say whether it
-# is running, in seconds.
+# Where OpenFOAM writes as the host's user, who has no home in the image.
+CONTAINER_HOME: Final = "/tmp"
+# How long a command may run, in seconds.
 TIMEOUT_S: Final = 600
-PROBE_TIMEOUT_S: Final = 30
 
 
 class OpenFoamUnavailable(RuntimeError):
@@ -42,25 +43,9 @@ def _native() -> bool:
     return shutil.which("blockMesh") is not None
 
 
-def _docker() -> bool:
-    if shutil.which("docker") is None:
-        return False
-    try:
-        info = subprocess.run(
-            ["docker", "info", "--format", "{{.ServerVersion}}"],
-            capture_output=True,
-            text=True,
-            timeout=PROBE_TIMEOUT_S,
-            check=False,
-        )
-    except OSError, subprocess.TimeoutExpired:
-        return False
-    return info.returncode == 0
-
-
 def available() -> bool:
     """Whether OpenFOAM can be run here."""
-    return _native() or _docker()
+    return _native() or docker_running()
 
 
 def run(case: Path, script: str) -> subprocess.CompletedProcess[str]:
@@ -69,30 +54,15 @@ def run(case: Path, script: str) -> subprocess.CompletedProcess[str]:
     if _native():
         command = ["sh", "-c", script]
         cwd: Path | None = case
-    elif _docker():
-        image = os.environ.get(IMAGE_VARIABLE, DEFAULT_IMAGE)
-        # On Linux the case's files keep their owners inside the container,
-        # so OpenFOAM runs as the case's owner, to write beside them.
-        user = (
-            ["--user", f"{os.getuid()}:{os.getgid()}", "--env", "HOME=/tmp"]
-            if sys.platform == "linux"
-            else []
+    elif docker_running():
+        command = docker_run(
+            os.environ.get(IMAGE_VARIABLE, DEFAULT_IMAGE),
+            ["-lc", CONTAINER_ENVIRONMENT + script],
+            mounts=[Mount(case, CASE_MOUNT)],
+            workdir=CASE_MOUNT,
+            environment={"HOME": CONTAINER_HOME},
+            entrypoint="bash",
         )
-        command = [
-            "docker",
-            "run",
-            "--rm",
-            *user,
-            "--volume",
-            f"{case.resolve()}:{CASE_MOUNT}",
-            "--workdir",
-            CASE_MOUNT,
-            "--entrypoint",
-            "bash",
-            image,
-            "-lc",
-            CONTAINER_ENVIRONMENT + script,
-        ]
         cwd = None
     else:
         raise OpenFoamUnavailable("OpenFOAM is not installed, and Docker is not running")

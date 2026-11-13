@@ -127,6 +127,12 @@ data.
    workflows and Modelica comparison plan it: one documented, measured
    interval of TiGwerLib reproduced in OpenModelica, then compared on
    matched inputs, its blockers recorded rather than worked around.
+   OpenModelica is set up for it
+   ([research/modelica](../../research/modelica/README.md)): its release
+   1.25.0 in its container, with TiGwerLib 0.7.0 and the libraries it
+   uses, each pinned. TiGwerLib's global model builds and simulates a day
+   with DASSL; CVODE, the solver its experiment names, stops in the first
+   second.
 7. **Benchmark greenhouse decisions, repeatably.** Not only an interface
    and a rule: a capability to compare decisions fairly (decision
    [0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md),

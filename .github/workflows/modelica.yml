@@ -1,0 +1,46 @@
+name: Modelica
+
+# Checks, without Docker, that what the OpenModelica setup in
+# research/modelica pins is still published as pinned: OpenModelica's image
+# by its digest, TiGwerLib's archive by its sha256, and each library at its
+# commit in OpenModelica's package index, with that commit's archive. They
+# are not ours, so they can go away or move without a change here: the
+# check also runs each week. It runs with Python's standard library alone,
+# and the simulator's module for containers from its source. Building and
+# simulating a model is `check`'s, run by hand.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "research/modelica/**"
+      - "greenhouse_sim/greenhouse_sim/containers.py"
+      - ".github/workflows/modelica.yml"
+  pull_request:
+    paths:
+      - "research/modelica/**"
+      - "greenhouse_sim/greenhouse_sim/containers.py"
+      - ".github/workflows/modelica.yml"
+  schedule:
+    # Mondays, 06:17 UTC.
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pins:
+    name: OpenModelica's pins are still published as pinned
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+
+      - name: Check each pin where it is published
+        env:
+          PYTHONPATH: greenhouse_sim
+        run: python -m research.modelica.openmodelica verify
