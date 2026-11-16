@@ -1,0 +1,25 @@
+{
+ "model": "reduced_tomgro",
+ "name": "agc4_pretrial_2023",
+ "version": 1,
+ "based_on": {
+  "name": "gnvman",
+  "version": 1,
+  "digest": "sha256:2c83ead72f5e26a13a16bc1caea6853cdd63598faa7f92613580d3d78123c168"
+ },
+ "parameters": {
+  "n_ff": 10.134414960024458,
+  "delta": 0.019476494220825327,
+  "qe": 0.0998254275506692,
+  "alpha_f": 0.9982485362609262
+ },
+ "why": {
+  "n_ff": "Calibrated on AGC4's 2023 pre-trial (decision 0076), within 6 to 22; published 22.",
+  "delta": "Calibrated on AGC4's 2023 pre-trial (decision 0076), within 0.004 to 0.05; published 0.038.",
+  "qe": "Calibrated on AGC4's 2023 pre-trial (decision 0076), within 0.04 to 0.1, at its upper bound; published 0.08.",
+  "alpha_f": "Calibrated on AGC4's 2023 pre-trial (decision 0076), within 0.4 to 1, at its upper bound; published 0.8."
+ },
+ "made_for": 1,
+ "cultivar": null,
+ "description": "gnvman v1 with the parameters calibrated on WUR AGC4's 2023 pre-trial (decision 0076), as research/validation/agc4/calibrated/tomgro.json reports them and as the test on 2024's fruit ran them. A research result, not the model's published defaults. The pre-trial's cultivar is not verified (the AGC4 memo, §2), so the set names none."
+}
