@@ -438,7 +438,7 @@ def _run_recorded(
         scenario_id=episode.scenario_id,
         greenhouse_id=played.greenhouse_id,
         layout=played.layout,
-        scenario_file_digest=file_digest(catalogue, episode.scenario_id),
+        scenario_file_digest=file_digest(catalogue, simulator.runs, episode.scenario_id),
         run_id=summary.run_id,
         epoch=summary.epoch,
         condition=episode.condition,
