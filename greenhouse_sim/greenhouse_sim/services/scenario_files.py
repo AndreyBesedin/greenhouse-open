@@ -183,6 +183,24 @@ def carry(catalogue: Scenarios, objects: ObjectStore, scenario_id: str) -> str |
     it to name, with its recording inside; none for a packaged scenario, which
     every simulator has. Refused if the scenario cannot be written as a file,
     or would not read back as the same scenario: a worker would run another."""
+    carried = _carried(catalogue, scenario_id)
+    if carried is None:
+        return None
+    text, digest = carried
+    name = kept_name(digest)
+    if objects.size(name) is None:
+        objects.put(name, text.encode())
+    return digest
+
+
+def file_digest(catalogue: Scenarios, scenario_id: str) -> str | None:
+    """`carry`'s digest, the file not kept."""
+    carried = _carried(catalogue, scenario_id)
+    return None if carried is None else carried[1]
+
+
+def _carried(catalogue: Scenarios, scenario_id: str) -> tuple[str, str] | None:
+    """A scenario's file and its digest, as `carry` refuses them; none if packaged."""
     config = scenario(catalogue, scenario_id)
     entry = catalogue.entry(scenario_id)
     if entry is not None and entry.packaged:
@@ -196,10 +214,7 @@ def carry(catalogue: Scenarios, objects: ObjectStore, scenario_id: str) -> str |
     read_back = with_parameter_set(read.config, sets)
     if config_digest(read_back) != config_digest(config):
         raise InvalidRequest(f"{scenario_id!r} does not read back from its file as it is")
-    name = kept_name(read.digest)
-    if objects.size(name) is None:
-        objects.put(name, text.encode())
-    return read.digest
+    return text, read.digest
 
 
 def take_up(simulator: Simulator, objects: ObjectStore, digest: str) -> None:

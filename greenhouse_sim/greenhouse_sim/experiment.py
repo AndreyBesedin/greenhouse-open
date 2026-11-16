@@ -26,7 +26,10 @@ when none. Its runner owns everything but the policy's memory:
   allows is not acted on, and the skip is recorded;
 - **its end:** the policy stopped, and an episode's summary returned: its
   scenario, run and epoch, the policy and its principal, its budget, what
-  it gave and what became of it, what it skipped, and a digest.
+  it gave and what became of it, what it skipped, and a digest; or its
+  record (`record_episode`, P23.2), which names besides the run's
+  condition, models and weather, the policy's entry, the software, and
+  each decision with what each log delivered, counted and digested.
 
 The digest covers what the policy was given and what it gave: every
 delivery, every receipt and every outcome. The same scenario, condition and
@@ -36,22 +39,26 @@ tested of a given policy, not promised of every one.
 A sensor's draws are keyed by the run's seed, the sensor and its sample
 (`sensors.air`), so two episodes on one condition share every sensor's
 noise and drop-outs, whatever their policies do: common random numbers, as
-a paired comparison wants. An experiment makes each episode's policy fresh
-from an entry (`PolicyEntry`): its factory, its settings and its seed. An
-episode's record comes with P23.2, and a policy held at barriers in a
-process of its own later still (decision 0061, stage C).
+a paired comparison wants. An episode's policy is made already, or made
+fresh from its entry (`PolicyEntry`) as the episode starts: its factory,
+its settings and its seed, which its record names. A policy held at
+barriers in a process of its own comes later (decision 0061, stage C).
 """
 
 import copy
 import hashlib
 import importlib
 import math
+import platform
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
+from importlib.metadata import version as installed_version
+from pathlib import Path
 from typing import Final, cast
 
+from greenhouse_protocol import experiment as records
 from greenhouse_protocol.actions import Identifier
 from greenhouse_protocol.budget import OBSERVATIONS_ONLY, InformationBudget
 from greenhouse_protocol.contracts.consumer import (
@@ -70,20 +77,28 @@ from greenhouse_protocol.contracts.policy import (
     PolicyPort,
     Revise,
 )
+from greenhouse_protocol.experiment import Condition as Condition
 from greenhouse_protocol.instant import Instant
 from greenhouse_protocol.outcome import ActionOutcome
 from greenhouse_protocol.plan import Plan, PlannedAction, Principal
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, NonNegativeInt, PositiveInt
+from pydantic import BaseModel, ConfigDict, JsonValue
 
+from greenhouse_sim.scenarios.registry import models_run
 from greenhouse_sim.services.forecasts import PERSISTENCE, Forecaster
 from greenhouse_sim.services.playback import Playback
 from greenhouse_sim.services.policy_port import RunPolicyPort
-from greenhouse_sim.services.runs import started_duration_s, started_weather
-from greenhouse_sim.services.scenarios import scenario
+from greenhouse_sim.services.runs import RunRequest, started_duration_s, started_weather
+from greenhouse_sim.services.scenario_files import file_digest
+from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, scenario, with_weather
 from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.services.system import UNKNOWN_COMMIT, source_commit
+from greenhouse_sim.services.weather import SERIES_EVERY_S, series_sha256
 
 # The plan an episode's policy steers by, unless it is named otherwise.
 PLAN_ID: Final = "policy"
+# The packages that ran an episode, as its record names them.
+PRODUCER: Final = "greenhouse-sim"
+PROTOCOL: Final = "greenhouse-protocol"
 # What a policy is, as its factory gives it: the protocol's `Policy`.
 POLICY_MEMBERS: Final = ("identity", "decide_every_s", "start", "decide", "stop")
 
@@ -91,33 +106,13 @@ POLICY_MEMBERS: Final = ("identity", "decide_every_s", "start", "decide", "stop"
 type PolicyFactory = Callable[[dict[str, JsonValue], int | None], Policy]
 
 
-class Condition(BaseModel):
-    """What an episode's run is made of besides its scenario (decision 0075):
-    its seed, its weather by name, and how many whole days it lasts, each its
-    scenario's own when none. A seed or a weather other than its own is
-    another run; fewer days are the same run, cut short."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    seed: NonNegativeInt | None = None
-    weather: str | None = None
-    duration_days: PositiveInt | None = None
-
-
 # The condition of a scenario's own run: its seed, its weather and its days.
 SCENARIOS_OWN: Final = Condition()
 
 
-class PolicyEntry(BaseModel):
-    """A policy as an experiment makes it, fresh for each episode: its
-    factory, by its import path (`module:callable`), given its settings, a
-    JSON object, and its seed, none for a policy that does not draw."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
-
-    factory: str = Field(pattern=r"^[A-Za-z_][\w.]*:[A-Za-z_][\w.]*$")
-    settings: dict[str, JsonValue] = Field(default_factory=dict)
-    seed: NonNegativeInt | None = None
+class PolicyEntry(records.PolicyEntry):
+    """A policy's entry in the protocol (`greenhouse_protocol.experiment`),
+    which makes it fresh for each episode."""
 
     def make(self) -> Policy:
         """A policy of its own, from the factory: given a copy of the
@@ -155,7 +150,8 @@ class Episode:
     able to serve."""
 
     scenario_id: str
-    policy: Policy
+    # Made already, or made fresh from its entry as the episode starts.
+    policy: Policy | PolicyEntry
     principal: Principal
     end_s: float
     layout: str | None = None
@@ -270,6 +266,66 @@ def run_episode(
     checked as a run started from it is: a weather the simulator does not
     have, or one named with a mark, is refused, as are more days than its
     scenario's."""
+    return _play(simulator, episode, timer, forecasters).summary
+
+
+def record_episode(
+    simulator: Simulator,
+    episode: Episode,
+    *,
+    place: records.EpisodePlace | None = None,
+    timer: Callable[[], float] = time.perf_counter,
+    forecasters: Sequence[Forecaster] = (PERSISTENCE,),
+) -> records.EpisodeRecord:
+    """Runs `episode` as `run_episode` does, and gives its record
+    (`greenhouse_protocol.experiment`), at `place` in its experiment if it
+    has one. The files its policy's entry names are digested before it
+    starts, so that the record names those it was made with."""
+    made = None
+    if isinstance(episode.policy, PolicyEntry):
+        made = records.PolicyMade(
+            entry=records.PolicyEntry.model_validate(episode.policy.model_dump()),
+            settings_sha256=records.settings_sha256(episode.policy.settings),
+            files=tuple(_policy_file(episode.policy, name) for name in episode.policy.files),
+        )
+    ran = _play(simulator, episode, timer, forecasters)
+    summary = ran.summary
+    return records.EpisodeRecord(
+        place=place,
+        run=_run_recorded(simulator, episode, ran.played, summary),
+        policy=records.EpisodePolicy(
+            identity=summary.policy,
+            made=made,
+            principal=episode.principal,
+            decide_every_s=ran.decide_every_s,
+            plan_id=episode.plan_id,
+            budget=summary.budget,
+            compute_budget_s=episode.compute_budget_s,
+        ),
+        software=_software(),
+        trace=ran.trace,
+        outcomes=summary.outcomes,
+        digest=summary.digest,
+    )
+
+
+@dataclass(frozen=True)
+class _Played:
+    """An episode played: its summary, its run, its policy's cadence and
+    its trace."""
+
+    summary: EpisodeSummary
+    played: Playback
+    decide_every_s: float
+    trace: tuple[records.DecisionTraced, ...]
+
+
+def _play(
+    simulator: Simulator,
+    episode: Episode,
+    timer: Callable[[], float],
+    forecasters: Sequence[Forecaster],
+) -> _Played:
     condition = episode.condition
     played = Playback(
         simulator,
@@ -281,12 +337,12 @@ def run_episode(
             scenario(simulator.catalogue, episode.scenario_id), condition.duration_days
         ),
     )
-    policy = episode.policy
     if not 0.0 <= episode.end_s <= played.end_s:
         raise ValueError(
             f"an episode ends within its run, 0 to {played.end_s:.15g} s, "
             f"not at {episode.end_s:.15g} s"
         )
+    policy = episode.policy.make() if isinstance(episode.policy, PolicyEntry) else episode.policy
     moments = _decision_moments(policy.decide_every_s, episode.end_s, played.end_s)
     port = RunPolicyPort(played, episode.principal, budget=episode.budget, forecasters=forecasters)
     budget = port.budget()
@@ -295,8 +351,8 @@ def run_episode(
     read = _Reader(port)
     given: list[Given] = []
     skipped: list[Skipped] = []
+    trace: list[records.DecisionTraced] = []
     digest = hashlib.sha256()
-    decisions = 0
     try:
         for moment_s in moments:
             at = played.start + timedelta(seconds=moment_s)
@@ -306,14 +362,25 @@ def run_episode(
             started = timer()
             decision = policy.decide(at, delivered)
             took_s = timer() - started
-            decisions += 1
-            if episode.compute_budget_s is not None and took_s > episode.compute_budget_s:
+            late = episode.compute_budget_s is not None and took_s > episode.compute_budget_s
+            receipt = None
+            if late:
                 skipped.append(Skipped(at=at, took_s=took_s))
             else:
                 receipt = _act(steering, decision)
                 if receipt is not None:
                     given.append(Given(at=at, receipt=receipt))
                     digest.update(receipt.model_dump_json().encode())
+            trace.append(
+                records.DecisionTraced(
+                    at=at,
+                    delivered=_delivered_logs(delivered),
+                    decision=decision,
+                    receipt=receipt,
+                    took_s=took_s,
+                    skipped=late,
+                )
+            )
         # The rest of the episode, to its end, without deciding again.
         played.step_to(episode.end_s)
     finally:
@@ -322,18 +389,84 @@ def run_episode(
     for outcome in outcomes:
         digest.update(outcome.model_dump_json().encode())
     run = port.run()
-    return EpisodeSummary(
+    summary = EpisodeSummary(
         scenario_id=episode.scenario_id,
         run_id=run.run_id,
         epoch=run.epoch,
         policy=policy.identity,
         principal=episode.principal,
         budget=budget,
-        decisions=decisions,
+        decisions=len(trace),
         given=tuple(given),
         outcomes=outcomes,
         skipped=tuple(skipped),
         digest=digest.hexdigest(),
+    )
+    return _Played(summary, played, policy.decide_every_s, tuple(trace))
+
+
+def _delivered_logs(delivered: Delivery) -> records.DeliveredLogs:
+    return records.DeliveredLogs(
+        observations=records.delivered(delivered.observations),
+        events=records.delivered(delivered.events),
+        outcomes=records.delivered(delivered.outcomes),
+        forecasts=records.delivered(delivered.forecasts),
+    )
+
+
+def _policy_file(entry: PolicyEntry, setting: str) -> records.PolicyFile:
+    """A file a policy's entry names, digested; one that cannot be read is
+    refused before the episode starts."""
+    path = Path(str(entry.settings[setting]))
+    try:
+        with path.open("rb") as file:
+            sha256 = hashlib.file_digest(file, "sha256").hexdigest()
+    except OSError as error:
+        raise ValueError(f"the policy's file {setting} cannot be read: {error}") from error
+    return records.PolicyFile(setting=setting, sha256=sha256)
+
+
+def _run_recorded(
+    simulator: Simulator, episode: Episode, played: Playback, summary: EpisodeSummary
+) -> records.EpisodeRun:
+    """The run an episode played, as its record names it."""
+    catalogue = simulator.catalogue
+    own = scenario(catalogue, episode.scenario_id)
+    weather = played.weather or DEFAULT_WEATHER
+    seeded = RunRequest(episode.scenario_id, weather=weather, seed=played.seed)
+    return records.EpisodeRun(
+        scenario_id=episode.scenario_id,
+        greenhouse_id=played.greenhouse_id,
+        layout=played.layout,
+        scenario_file_digest=file_digest(catalogue, episode.scenario_id),
+        run_id=summary.run_id,
+        epoch=summary.epoch,
+        condition=episode.condition,
+        seed=own.random_seed if played.seed is None else played.seed,
+        start=played.start,
+        duration_s=played.end_s,
+        episode_end_s=episode.end_s,
+        models=tuple(
+            records.ModelRan(part=part.value, model=ran.model, version=ran.version)
+            for part, ran in models_run(with_weather(own, weather)).items()
+        ),
+        weather=records.WeatherSeries(
+            every_s=SERIES_EVERY_S,
+            sha256=series_sha256(
+                catalogue, episode.scenario_id, seeded.weather_name(catalogue), played.end_s
+            ),
+        ),
+    )
+
+
+def _software() -> records.Software:
+    commit = source_commit()
+    return records.Software(
+        producer=PRODUCER,
+        producer_version=installed_version(PRODUCER),
+        protocol_version=installed_version(PROTOCOL),
+        python=platform.python_version(),
+        commit=None if commit == UNKNOWN_COMMIT else commit,
     )
 
 
