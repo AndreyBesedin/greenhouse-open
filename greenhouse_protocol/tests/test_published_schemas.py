@@ -1,6 +1,7 @@
 """Every JSON Schema the protocol publishes, from one list: the records a
 run's gateway takes and writes, and what its routes answer (decision 0046),
-and what a policy's port answers beside them (decision 0061), each committed file its
+and what a policy's port answers beside them (decision 0061), and an episode's
+record (P23.2), each committed file its
 model's export in the 2020-12 dialect, written one way. They live in the
 package (`greenhouse_protocol/schemas/`), for a consumer, a platform or an
 executor in another language to check documents against.
@@ -25,6 +26,7 @@ from greenhouse_protocol.budget import InformationBudget
 from greenhouse_protocol.context import CapabilityContext
 from greenhouse_protocol.contracts.consumer import ForecastBatch, OutcomeBatch
 from greenhouse_protocol.contracts.gateway import GatewayLimits, PlanState, Receipt
+from greenhouse_protocol.experiment import EpisodeRecord
 from greenhouse_protocol.forecast import Forecast
 from greenhouse_protocol.outcome import ActionOutcome
 from greenhouse_protocol.plan import ActionKey, ActionState, Plan
@@ -48,6 +50,7 @@ PUBLISHED: Final[dict[str, type[BaseModel]]] = {
     "information-budget.schema.json": InformationBudget,
     "forecast.schema.json": Forecast,
     "forecast-batch.schema.json": ForecastBatch,
+    "episode-record.schema.json": EpisodeRecord,
 }
 
 

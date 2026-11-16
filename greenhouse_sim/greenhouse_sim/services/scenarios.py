@@ -35,6 +35,7 @@ from greenhouse_sim.scenarios.registry import ModelRun, models_run
 from greenhouse_sim.scene.snapshot import SceneEntity, SceneSnapshot, greenhouse_scene
 from greenhouse_sim.services.crop_models import registration
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
+from greenhouse_sim.services.parameter_sets import SetRun, set_run
 from greenhouse_sim.units import FULL_TURN_DEG
 from greenhouse_sim.weather.presets import PRESETS
 from greenhouse_sim.weather.recorded import recorded_weathers
@@ -120,6 +121,11 @@ class RunManifest(BaseModel):
     # P14.2, decision 0054): the weather's, the air field's, the crop's and
     # the crop walk's.
     models: dict[str, ModelRun]
+    # The parameter set its crop grows with, by name, version and digest,
+    # with the version of its model it was made for, which may be another
+    # than the one its crop's model runs (decision 0077); none for a crop
+    # that names none.
+    parameter_set: SetRun | None
 
 
 class SceneChanges(BaseModel):
@@ -204,6 +210,7 @@ def run_manifest(catalogue: Scenarios, scenario_id: str, weather: str | None = N
         cloud_cover_pct=config.cloud_cover_pct,
         wind_from_deg=config.wind_from_deg,
         models={part.value: run for part, run in models_run(config).items()},
+        parameter_set=set_run(config),
     )
 
 
@@ -399,7 +406,7 @@ def _with_layout(catalogue: Scenarios, config: ScenarioConfig, name: str) -> Sce
     except KeyError:
         raise NotFound(f"{config.greenhouse_id} has no layout {name!r}") from None
     try:
-        return ScenarioConfig.model_validate(config.model_dump() | {"layout": other})
+        return ScenarioConfig.model_validate(dict(config) | {"layout": other})
     except ValidationError as error:
         raise InvalidRequest(f"no such layout: {error.errors()[0]['msg']}") from None
 
@@ -445,7 +452,8 @@ def _with_envelope(
         except ValueError as error:
             raise InvalidRequest(str(error)) from None
     try:
-        return ScenarioConfig.model_validate(config.model_dump() | update)
+        # Its parts as they are, so that what they carry, as a set or a recording, stays.
+        return ScenarioConfig.model_validate(dict(config) | update)
     except ValidationError as error:
         found = error.errors()[0]["msg"]
         if moves is None:

@@ -21,6 +21,34 @@ export const RUN_MANIFEST_SCHEMA = {
       ],
       "title": "ModelRun",
       "type": "object"
+    },
+    "SetRun": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        },
+        "digest": {
+          "title": "Digest",
+          "type": "string"
+        },
+        "made_for": {
+          "title": "Made For",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "digest",
+        "made_for"
+      ],
+      "title": "SetRun",
+      "type": "object"
     }
   },
   "properties": {
@@ -108,6 +136,16 @@ export const RUN_MANIFEST_SCHEMA = {
       },
       "title": "Models",
       "type": "object"
+    },
+    "parameter_set": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SetRun"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "required": [
@@ -125,7 +163,8 @@ export const RUN_MANIFEST_SCHEMA = {
     "weather_kind",
     "cloud_cover_pct",
     "wind_from_deg",
-    "models"
+    "models",
+    "parameter_set"
   ],
   "title": "RunManifest",
   "type": "object"

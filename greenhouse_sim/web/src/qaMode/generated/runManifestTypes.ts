@@ -24,6 +24,7 @@ export interface RunManifest {
   models: {
     [k: string]: ModelRun;
   };
+  parameter_set: SetRun | null;
 }
 /**
  * A part's model as a run runs it: its name and version.
@@ -31,4 +32,15 @@ export interface RunManifest {
 export interface ModelRun {
   model: string;
   version: number;
+}
+/**
+ * The parameter set a run grows its crop with, as its manifest answer
+ * gives it: its name, its version and its digest, and the version of its
+ * model it was made for, which may be another than the one run.
+ */
+export interface SetRun {
+  name: string;
+  version: number;
+  digest: string;
+  made_for: number;
 }

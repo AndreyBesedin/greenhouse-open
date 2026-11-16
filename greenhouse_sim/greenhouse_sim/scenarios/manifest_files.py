@@ -30,7 +30,13 @@ from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.scenarios.crop_parameters import HELD_AT_THE_TOP, WALK
+from greenhouse_sim.scenarios.crop_parameters import (
+    HELD_AT_THE_TOP,
+    WALK,
+    ReducedTomgroCrop,
+    VanthoorKatzinCrop,
+    runs_published,
+)
 from greenhouse_sim.scenarios.installation import (
     CannotRun,
     Installation,
@@ -158,9 +164,18 @@ def manifest_ids() -> list[str]:
 
 
 def load_manifest(scenario_id: str) -> ScenarioConfig:
-    """A scenario, read from its manifest and checked."""
+    """A scenario, read from its manifest and checked: a packaged scenario's
+    crop runs its model's published parameter set, the only sets the
+    simulator packages (decision 0077)."""
     path = MANIFESTS_DIR / f"{scenario_id}.json"
-    return scenario_from_manifest(scenario_id, json.loads(path.read_text()))
+    config = scenario_from_manifest(scenario_id, json.loads(path.read_text()))
+    crop = config.crop
+    if isinstance(crop, ReducedTomgroCrop | VanthoorKatzinCrop) and not runs_published(crop):
+        raise InvalidManifest(
+            f"{scenario_id}: a packaged scenario runs its crop model's published parameter "
+            f"set, {crop.PUBLISHED_SET}, not {crop.parameter_set} v{crop.parameter_set_version}"
+        )
+    return config
 
 
 def opening_day(scenario_id: str) -> int | None:

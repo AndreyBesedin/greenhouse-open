@@ -50,6 +50,7 @@ from greenhouse_sim.services.climate_runs import (
 )
 from greenhouse_sim.services.errors import NotFound
 from greenhouse_sim.services.grid import air_grid
+from greenhouse_sim.services.parameter_sets import set_identity
 from greenhouse_sim.services.runs import (
     Commanded,
     RunRequest,
@@ -251,7 +252,9 @@ def air_through_a_run(
             scenario(simulator.catalogue, scenario_id),
             SceneChanges(layout=climate.key[1], weather=climate.key[2]),
         )
-        # A run under recorded weather is told apart by its file's content.
+        # A run under recorded weather is told apart by its file's content,
+        # and one under a parameter set other than its model's published one
+        # by the set's digest (decision 0077).
         under = config.weather
         recorded = under.identity() if isinstance(under, RecordedWeather) else ""
         # A run whose targets are its scenario's own is named as it was before
@@ -260,6 +263,7 @@ def air_through_a_run(
         digest = _digest(
             repr(named)
             + recorded
+            + set_identity(config)
             + _models_told(config)
             + config.model_dump_json()
             + _cropped(config, run)
@@ -285,7 +289,12 @@ def air_through_a_run(
         }
     )
     own = config.airflow.field(f"{scenario_id}_{config.airflow.kind}", air)
-    digest = _digest(_models_told(config) + config.model_dump_json() + _cropped(config, run))
+    digest = _digest(
+        set_identity(config)
+        + _models_told(config)
+        + config.model_dump_json()
+        + _cropped(config, run)
+    )
     return (lambda _: own), f"{scenario_id}-{config.airflow.kind}-{digest}"
 
 
