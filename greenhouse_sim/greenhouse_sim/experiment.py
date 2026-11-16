@@ -3,11 +3,13 @@ simulator's process, steering a scenario's run through its port, decision
 by decision, at barriers to which the runner moves the run's clock.
 
 An episode is a scenario, a policy and its principal, how far into the run
-it goes, and the time a decision may take. Its runner owns everything but
-the policy's memory:
+it goes, and the time a decision may take, on a condition: its run's seed,
+its weather and its end (P23.1, decision 0075), each its scenario's own
+when none. Its runner owns everything but the policy's memory:
 
-- **the run:** a playback of the scenario's run of its own, served to no
-  one, its clock moved by the runner alone (`Playback.step_to`);
+- **the run:** a playback of its own of the scenario's run on the
+  condition, served to no one, its clock moved by the runner alone
+  (`Playback.step_to`);
 - **the port,** opened for the principal (`services.policy_port`), its
   logs read on at each decision;
 - **the plan:** one, named by the runner, each decision that changes it a
@@ -27,21 +29,28 @@ the policy's memory:
   it gave and what became of it, what it skipped, and a digest.
 
 The digest covers what the policy was given and what it gave: every
-delivery, every receipt and every outcome. The same scenario and policy
-give the same digest when the policy is deterministic, a property tested
-of a given policy, not promised of every one. The run's own randomness is
-its scenario's seed. An episode's record as an experiment names it, and
-a policy held at barriers in a process of its own, come later (decision
-0061, stage C).
+delivery, every receipt and every outcome. The same scenario, condition and
+policy give the same digest when the policy is deterministic, a property
+tested of a given policy, not promised of every one.
+
+A sensor's draws are keyed by the run's seed, the sensor and its sample
+(`sensors.air`), so two episodes on one condition share every sensor's
+noise and drop-outs, whatever their policies do: common random numbers, as
+a paired comparison wants. An experiment makes each episode's policy fresh
+from an entry (`PolicyEntry`): its factory, its settings and its seed. An
+episode's record comes with P23.2, and a policy held at barriers in a
+process of its own later still (decision 0061, stage C).
 """
 
+import copy
 import hashlib
+import importlib
 import math
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Final
+from typing import Final, cast
 
 from greenhouse_protocol.actions import Identifier
 from greenhouse_protocol.budget import OBSERVATIONS_ONLY, InformationBudget
@@ -64,30 +73,94 @@ from greenhouse_protocol.contracts.policy import (
 from greenhouse_protocol.instant import Instant
 from greenhouse_protocol.outcome import ActionOutcome
 from greenhouse_protocol.plan import Plan, PlannedAction, Principal
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, NonNegativeInt, PositiveInt
 
 from greenhouse_sim.services.forecasts import PERSISTENCE, Forecaster
 from greenhouse_sim.services.playback import Playback
 from greenhouse_sim.services.policy_port import RunPolicyPort
+from greenhouse_sim.services.runs import started_duration_s, started_weather
+from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.simulator import Simulator
 
 # The plan an episode's policy steers by, unless it is named otherwise.
 PLAN_ID: Final = "policy"
+# What a policy is, as its factory gives it: the protocol's `Policy`.
+POLICY_MEMBERS: Final = ("identity", "decide_every_s", "start", "decide", "stop")
+
+# A policy's factory: given its settings and its seed, a policy made fresh.
+type PolicyFactory = Callable[[dict[str, JsonValue], int | None], Policy]
+
+
+class Condition(BaseModel):
+    """What an episode's run is made of besides its scenario (decision 0075):
+    its seed, its weather by name, and how many whole days it lasts, each its
+    scenario's own when none. A seed or a weather other than its own is
+    another run; fewer days are the same run, cut short."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    seed: NonNegativeInt | None = None
+    weather: str | None = None
+    duration_days: PositiveInt | None = None
+
+
+# The condition of a scenario's own run: its seed, its weather and its days.
+SCENARIOS_OWN: Final = Condition()
+
+
+class PolicyEntry(BaseModel):
+    """A policy as an experiment makes it, fresh for each episode: its
+    factory, by its import path (`module:callable`), given its settings, a
+    JSON object, and its seed, none for a policy that does not draw."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
+
+    factory: str = Field(pattern=r"^[A-Za-z_][\w.]*:[A-Za-z_][\w.]*$")
+    settings: dict[str, JsonValue] = Field(default_factory=dict)
+    seed: NonNegativeInt | None = None
+
+    def make(self) -> Policy:
+        """A policy of its own, from the factory: given a copy of the
+        settings, so that what it does with them leaves the entry as it is.
+        A factory that cannot be found, or that gives no policy, is
+        refused."""
+        made = self._factory()(copy.deepcopy(self.settings), self.seed)
+        missing = [name for name in POLICY_MEMBERS if not hasattr(made, name)]
+        if missing:
+            raise TypeError(
+                f"{self.factory} gave {type(made).__name__}, not a policy: "
+                f"it has no {', '.join(missing)}"
+            )
+        return made
+
+    def _factory(self) -> PolicyFactory:
+        module_name, _, path = self.factory.partition(":")
+        try:
+            found: object = importlib.import_module(module_name)
+            for name in path.split("."):
+                found = getattr(found, name)
+        except (ImportError, AttributeError) as error:
+            raise ValueError(f"there is no policy factory {self.factory}: {error}") from error
+        if not callable(found):
+            raise TypeError(f"{self.factory} is not a policy factory: it cannot be called")
+        return cast(PolicyFactory, found)
 
 
 @dataclass(frozen=True)
 class Episode:
-    """A policy and its principal on a scenario's run, from its start to
-    `end_s` into it; `layout`, the scenario's own unless named; each
-    decision given `compute_budget_s` of the runner's timer, or any time if
-    None; its policy given `budget`, which the run's port must be able to
-    serve."""
+    """A policy and its principal on a scenario's run, on `condition`, from
+    its start to `end_s` into it; `layout`, the scenario's own unless named;
+    each decision given `compute_budget_s` of the runner's timer, or any
+    time if None; its policy given `budget`, which the run's port must be
+    able to serve."""
 
     scenario_id: str
     policy: Policy
     principal: Principal
     end_s: float
     layout: str | None = None
+    # The run's seed, weather and end.
+    condition: Condition = SCENARIOS_OWN
     plan_id: Identifier = PLAN_ID
     compute_budget_s: float | None = None
     # What it is given besides the observations and the clock.
@@ -193,8 +266,21 @@ def run_episode(
 ) -> EpisodeSummary:
     """Runs `episode` on a run of its own of the simulator's: see the
     module. `timer` measures each decision's time against its budget, and
-    `forecasters` are the providers its budget may name."""
-    played = Playback(simulator, episode.scenario_id, layout=episode.layout)
+    `forecasters` are the providers its budget may name. A condition is
+    checked as a run started from it is: a weather the simulator does not
+    have, or one named with a mark, is refused, as are more days than its
+    scenario's."""
+    condition = episode.condition
+    played = Playback(
+        simulator,
+        episode.scenario_id,
+        layout=episode.layout,
+        seed=condition.seed,
+        weather=started_weather(condition.weather),
+        end_s=started_duration_s(
+            scenario(simulator.catalogue, episode.scenario_id), condition.duration_days
+        ),
+    )
     policy = episode.policy
     if not 0.0 <= episode.end_s <= played.end_s:
         raise ValueError(

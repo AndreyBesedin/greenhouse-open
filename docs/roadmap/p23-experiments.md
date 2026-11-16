@@ -1,6 +1,6 @@
 # P23: Experiments: paired episodes, each with its record
 
-**Status:** proposed, not started. Stage 2 of item 7 of the
+**Status:** proposed, in progress (P23.1 is done). Stage 2 of item 7 of the
 [research priorities](research-validation-priorities.md), after
 [P15](archive/p15-policy-port.md), stage A of decision
 [0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md).
@@ -184,7 +184,7 @@ large enough to need it, within P18's limits.
 
 | Step | Scope | Pull request | Status |
 | --- | --- | --- | --- |
-| P23.1 | An episode's condition: its run's seed, weather and end given to its playback; a policy made from its factory, settings and seed. With no condition, P15.4's episodes and digests unchanged. Tests: a condition's run id is the one decision 0075 gives; two policies on one condition share every outside reading. | `feat(sim): an episode's condition and a policy's settings` | Proposed |
+| P23.1 | An episode's condition: its run's seed, weather and end given to its playback; a policy made from its factory, settings and seed. With no condition, P15.4's episodes and digests unchanged. Tests: a condition's run id is the one decision 0075 gives; two policies on one condition share every outside reading. | `feat(sim): an episode's condition and a policy's settings` | Done: `Episode.condition`, a `Condition` of a run's `seed`, `weather` and `duration_days`, each the scenario's own when none, given to the episode's playback and checked as a run started from it is (`started_weather`, `started_duration_s`): a weather with a mark or one the simulator does not have, and more days than the scenario's, are refused, and an episode past its condition's end too. `PolicyEntry` is a `factory` (`module:callable`), its `settings`, a JSON object without NaN or infinity, and its `seed`; `make()` calls the factory with a copy of the settings and the seed, so each policy is fresh, and refuses a factory it cannot find or call, or one that gives no policy. `Policy` and `EpisodeSummary` are unchanged, and no `Episode` holds an entry yet. With no condition, or the scenario's own seed, weather and days named, an episode is the one P15.4 ran: P15.4's tests pass unchanged, and the doors on the airflow box and example 03's rule give the digests they gave before. A condition's run id is that of the epoch `workers.queued` starts at its seed and weather, of its days or the whole run's; two policies, one heating and one not, on one condition of the climate box are given the same readings of the weather station's five instruments, and another seed gives others |
 | P23.2 | The episode's record in the protocol, with its schema; the runner builds it, with the models' versions, the weather's digest, the software and the trace by decision. | `feat(protocol): an episode's record` | Proposed |
 | P23.3 | The experiment's file and schema; the paired runner, its output directory and its two commands; the deliveries kept on request. | `feat(sim): an experiment of paired episodes` | Proposed |
 | P23.4 | An example and a guide: example 03's rule at two bands, on two weathers and two seeds, its records read back and compared. | `docs: run and read an experiment` | Proposed |
