@@ -164,12 +164,21 @@ def test_the_heat_is_held_below_each_networks_limit() -> None:
 
 
 @pytest.mark.parametrize(
-    ("start_w", "towards_w"), [(40_000.0, 80_000.0), (80_000.0, 40_000.0), (49_000.0, 51_000.0)]
+    ("start_w", "towards_w"),
+    [
+        # Rising through the limit within the step, then held at it.
+        (48_000.0, 100_000.0),
+        # Held at first, then falling below it within the step.
+        (52_000.0, 0.0),
+    ],
 )
 def test_a_step_crossing_the_limit_is_held_from_the_crossing(
     start_w: float, towards_w: float
 ) -> None:
     limit = 50_000.0
+    # The filter's output at the step's end lies across the limit from its start.
+    end_w = towards_w + (start_w - towards_w) * math.exp(-STEP / comparison.HEAT_TIME_CONSTANT_S)
+    assert (start_w - limit) * (end_w - limit) < 0
     samples = 100_000
     numeric = (
         sum(
