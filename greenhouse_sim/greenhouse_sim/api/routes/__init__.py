@@ -24,7 +24,9 @@ of its routes at its top:
 - `stored`: the runs kept in the run store, and the positions a viewer
   takes over them;
 - `lab`: the plant lab;
-- `builder`: the setup builder, its drafts and its first form.
+- `builder`: the setup builder, its drafts and its first form;
+- `parameter_sets`: a crop model's parameter sets, listed, read, compared,
+  downloaded, saved and uploaded.
 
 Each answers its GET routes in `get` and its POST routes in `post`, with
 None for a path not its own; `shared` holds what they read requests with
@@ -41,6 +43,7 @@ from greenhouse_sim.api.routes import (
     builder,
     checkpoints,
     lab,
+    parameter_sets,
     runs,
     scenarios,
     stored,
@@ -63,12 +66,14 @@ GETS: Final[tuple[Getting, ...]] = (
     stored.get,
     lab.get,
     builder.get,
+    parameter_sets.get,
 )
 POSTS: Final[tuple[Posting, ...]] = (
     scenarios.post,
     checkpoints.post,
     stored.post,
     builder.post,
+    parameter_sets.post,
 )
 
 
