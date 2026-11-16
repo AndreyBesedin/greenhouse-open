@@ -85,6 +85,12 @@ PINNED_RUNS = [
     ("airflow_box", "layout=open", "airflow_box-uniform-4acacb3e"),
     ("sensor_lab", "", "sensor_lab-gradient-0c377594"),
     ("sensor_lab", "layout=blocked", "sensor_lab-gradient-81e91e89"),
+    # A crop grown by area under its model's published parameter set is named
+    # as it was before a crop section named a set's version (decision 0077).
+    ("tomgro_house", "", "tomgro_house-climate-e1b1b3af"),
+    ("tomgro_house", "seed=3", "tomgro_house-climate-3815c8a3"),
+    ("vanthoor_house", "", "vanthoor_house-climate-65d45309"),
+    ("vanthoor_house", "weather=cold_spring_day", "vanthoor_house-climate-546edb41"),
 ]
 
 # What the sensor lab's sensors read through its run's first hour: its own

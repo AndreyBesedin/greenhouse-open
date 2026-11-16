@@ -89,7 +89,7 @@ def test_a_registration_answers_what_the_services_ask_of_a_crop_model(
     # day, and not on another.
     state = registered.state.model_validate({"plants": plants, "lived": lived})
     assert registered.state.model_validate_json(state.model_dump_json()) == state
-    assert registered.implausible(state, DAYS) == []
+    assert registered.implausible(state, DAYS, CONFIG) == []
     # Drawn, each plant in the scene; measured as a walk finds it.
     drawn = registered.plants.drawn(plants, CONFIG)
     assert {entity.properties.get("plant_id", entity.entity_id) for entity in drawn} == set(PLANTS)
@@ -106,7 +106,7 @@ def test_the_organs_registration_finds_what_no_run_of_it_reaches() -> None:
     plants, lived = _grown(CROP_MODELS["organ"])
     state = CROP_MODELS["organ"].state.model_validate({"plants": plants, "lived": lived[1:]})
 
-    (problem, *_) = CROP_MODELS["organ"].implausible(state, DAYS)
+    (problem, *_) = CROP_MODELS["organ"].implausible(state, DAYS, CONFIG)
     assert "thermal time" in problem
 
 
@@ -157,10 +157,12 @@ def test_reduced_tomgros_registration_answers_what_the_services_ask_of_it() -> N
     state = registered.state.model_validate({"instances": instances, "lived": lived})
     assert registered.state.model_validate_json(state.model_dump_json()) == state
     assert state.named == [scope.scope_id for scope in scopes] and state.plants == []
-    assert registered.implausible(state, DAYS) == []
+    assert registered.implausible(state, DAYS, TOMGRO_BOX) == []
     past = grown.model_copy(update={"lai": 5.0})
     (problem,) = registered.implausible(
-        state.model_copy(update={"instances": [AreaInstance(scope_id="row_1", state=past)]}), DAYS
+        state.model_copy(update={"instances": [AreaInstance(scope_id="row_1", state=past)]}),
+        DAYS,
+        TOMGRO_BOX,
     )
     assert problem == "row_1's leaf area index is 5, past 4"
     drawn = registered.area.drawn(instances, scopes, TOMGRO_BOX)
@@ -204,18 +206,20 @@ def test_vanthoors_registration_answers_what_the_services_ask_of_it() -> None:
     state = registered.state.model_validate({"instances": instances, "lived": lived})
     assert registered.state.model_validate_json(state.model_dump_json()) == state
     assert state.named == [scope.scope_id for scope in scopes] and state.plants == []
-    assert registered.implausible(state, DAYS) == []
+    assert registered.implausible(state, DAYS, VANTHOOR_BOX) == []
     # Its temperature sum is not of a day it did not live, nor are its
     # leaves less than none.
     (short_a_day,) = registered.implausible(
         state.model_copy(update={"instances": instances[:1], "lived": lived[HOURS_A_DAY:]}),
         DAYS,
+        VANTHOOR_BOX,
     )
     assert short_a_day == (
         "row_1's temperature sum is 880 °C day, and the hours it lived add up to 858"
     )
     leafless = AreaInstance[Any](scope_id="row_1", state=grown.model_copy(update={"c_leaf": -1.0}))
-    assert registered.implausible(state.model_copy(update={"instances": [leafless]}), DAYS) == [
+    leafless_state = state.model_copy(update={"instances": [leafless]})
+    assert registered.implausible(leafless_state, DAYS, VANTHOOR_BOX) == [
         "row_1's fruit, leaves, stems or fruit harvested are negative"
     ]
     drawn = registered.area.drawn(instances, scopes, VANTHOOR_BOX)
@@ -224,7 +228,7 @@ def test_vanthoors_registration_answers_what_the_services_ask_of_it() -> None:
     ]
     assert drawn[0].properties["lai"] == grown.leaf_area_index(rung.parameters)
     assert drawn[0].properties["fruit_ch2o_mg_m2"] == grown.c_fruit
-    assert registered.area.sampled(grown) == {
+    assert registered.area.sampled(grown, VANTHOOR_BOX) == {
         ObservationType.LEAF_AREA_INDEX: grown.leaf_area_index(rung.parameters)
     }
 

@@ -1,0 +1,2161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Action": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/SetLevel"
+        },
+        {
+          "$ref": "#/$defs/SetTarget"
+        },
+        {
+          "$ref": "#/$defs/Water"
+        },
+        {
+          "$ref": "#/$defs/Harvest"
+        },
+        {
+          "$ref": "#/$defs/Lower"
+        },
+        {
+          "$ref": "#/$defs/RemoveLeaf"
+        },
+        {
+          "$ref": "#/$defs/Inspect"
+        }
+      ]
+    },
+    "ActionEffect": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/LevelSet"
+        },
+        {
+          "$ref": "#/$defs/TargetSet"
+        },
+        {
+          "$ref": "#/$defs/Watered"
+        },
+        {
+          "$ref": "#/$defs/Harvested"
+        },
+        {
+          "$ref": "#/$defs/Lowered"
+        },
+        {
+          "$ref": "#/$defs/LeafRemoved"
+        },
+        {
+          "$ref": "#/$defs/Inspected"
+        }
+      ]
+    },
+    "ActionId": {
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "type": "string"
+    },
+    "ActionKey": {
+      "additionalProperties": false,
+      "description": "An action as a caller saw it, to cancel it: in a plan, a revision and\nan epoch. A key whose action a later revision replaced, or whose epoch\nhas ended, is stale: refused, and nothing cancelled. An occurrence of\nNone, for a recurring action, means every occurrence still to come.",
+      "properties": {
+        "plan_id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "epoch": {
+          "minimum": 0,
+          "title": "Epoch",
+          "type": "integer"
+        },
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "ref": {
+          "$ref": "#/$defs/ActionRef"
+        }
+      },
+      "required": [
+        "plan_id",
+        "epoch",
+        "revision",
+        "ref"
+      ],
+      "title": "ActionKey",
+      "type": "object"
+    },
+    "ActionOutcome": {
+      "additionalProperties": false,
+      "description": "One planned action's end. Its fields agree with its status: an action\nthat ran has its times and its executor; one that never started has\nneither, and says why; only a cancelled or superseded one names who did\nit, only a missed one its fallback, only one that ran its effect, which\nis its action's kind's. `resolved_at`, when the outcome was decided, is\nalways set and orders the log; `due` is None only for an\nas-soon-as-possible action dropped before it could start.",
+      "properties": {
+        "outcome_id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "greenhouse_id": {
+          "$ref": "#/$defs/Name"
+        },
+        "run_id": {
+          "$ref": "#/$defs/Name"
+        },
+        "epoch": {
+          "minimum": 0,
+          "title": "Epoch",
+          "type": "integer"
+        },
+        "plan_id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "ref": {
+          "$ref": "#/$defs/ActionRef"
+        },
+        "action": {
+          "$ref": "#/$defs/Action"
+        },
+        "timing": {
+          "$ref": "#/$defs/Timing"
+        },
+        "principal": {
+          "$ref": "#/$defs/Principal"
+        },
+        "status": {
+          "$ref": "#/$defs/OutcomeStatus"
+        },
+        "due": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Instant"
+            },
+            {
+              "$ref": "#/$defs/Window"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Due"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Instant"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Instant"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "resolved_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "delivered_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Instant"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "executor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExecutorRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "cancelled_by": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Principal"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "fallback": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ActionRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ActionEffect"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "event_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Name"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "outcome_id",
+        "greenhouse_id",
+        "run_id",
+        "epoch",
+        "plan_id",
+        "revision",
+        "ref",
+        "action",
+        "timing",
+        "principal",
+        "status",
+        "due",
+        "resolved_at"
+      ],
+      "title": "ActionOutcome",
+      "type": "object"
+    },
+    "ActionRef": {
+      "additionalProperties": false,
+      "description": "Which action a record is about: a planned action, one occurrence of a\nrecurring one, or the fallback carried out in its place. `str()` spells\nit for people, `harvest@3` or `vent/fallback`; records keep the parts.",
+      "properties": {
+        "action_id": {
+          "$ref": "#/$defs/ActionId"
+        },
+        "occurrence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Occurrence"
+        },
+        "fallback": {
+          "default": false,
+          "title": "Fallback",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "action_id"
+      ],
+      "title": "ActionRef",
+      "type": "object"
+    },
+    "Asap": {
+      "additionalProperties": false,
+      "description": "As soon as what it waits for is done, before its deadline if it has\none.",
+      "properties": {
+        "kind": {
+          "const": "asap",
+          "default": "asap",
+          "title": "Kind",
+          "type": "string"
+        },
+        "deadline": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Instant"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "Asap",
+      "type": "object"
+    },
+    "AssetKind": {
+      "enum": [
+        "prediction_model",
+        "calibration"
+      ],
+      "title": "AssetKind",
+      "type": "string"
+    },
+    "At": {
+      "additionalProperties": false,
+      "description": "Due at an instant.",
+      "properties": {
+        "kind": {
+          "const": "at",
+          "default": "at",
+          "title": "Kind",
+          "type": "string"
+        },
+        "at": {
+          "$ref": "#/$defs/Instant"
+        }
+      },
+      "required": [
+        "at"
+      ],
+      "title": "At",
+      "type": "object"
+    },
+    "CancelPlan": {
+      "additionalProperties": false,
+      "description": "The plan in force cancelled, what of it has not started.",
+      "properties": {
+        "kind": {
+          "const": "cancel_plan",
+          "default": "cancel_plan",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "title": "CancelPlan",
+      "type": "object"
+    },
+    "Condition": {
+      "additionalProperties": false,
+      "description": "What a run is made of besides its scenario: its seed, its weather by\nname, and how many whole days it lasts, each its scenario's own when\nnone.",
+      "properties": {
+        "seed": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Seed"
+        },
+        "weather": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Name"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "duration_days": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Days"
+        }
+      },
+      "title": "Condition",
+      "type": "object"
+    },
+    "Decision": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Keep"
+        },
+        {
+          "$ref": "#/$defs/Revise"
+        },
+        {
+          "$ref": "#/$defs/CancelPlan"
+        }
+      ]
+    },
+    "DecisionTraced": {
+      "additionalProperties": false,
+      "description": "One decision of an episode: see the module. A decision kept, or\nskipped, gave nothing and has no receipt; so has a cancellation of a\nplan never given.",
+      "properties": {
+        "at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "delivered": {
+          "$ref": "#/$defs/DeliveredLogs"
+        },
+        "decision": {
+          "$ref": "#/$defs/Decision"
+        },
+        "receipt": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Receipt"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "took_s": {
+          "minimum": 0,
+          "title": "Took S",
+          "type": "number"
+        },
+        "skipped": {
+          "title": "Skipped",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "at",
+        "delivered",
+        "decision",
+        "receipt",
+        "took_s",
+        "skipped"
+      ],
+      "title": "DecisionTraced",
+      "type": "object"
+    },
+    "Delivered": {
+      "additionalProperties": false,
+      "description": "What one log delivered at a decision: how many records, and the\nSHA-256 of their JSON, one line each, in delivery order (`delivered`).",
+      "properties": {
+        "count": {
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "sha256": {
+          "$ref": "#/$defs/Sha256"
+        }
+      },
+      "required": [
+        "count",
+        "sha256"
+      ],
+      "title": "Delivered",
+      "type": "object"
+    },
+    "DeliveredLogs": {
+      "additionalProperties": false,
+      "description": "What each of a policy's logs delivered at a decision.",
+      "properties": {
+        "observations": {
+          "$ref": "#/$defs/Delivered"
+        },
+        "events": {
+          "$ref": "#/$defs/Delivered"
+        },
+        "outcomes": {
+          "$ref": "#/$defs/Delivered"
+        },
+        "forecasts": {
+          "$ref": "#/$defs/Delivered"
+        }
+      },
+      "required": [
+        "observations",
+        "events",
+        "outcomes",
+        "forecasts"
+      ],
+      "title": "DeliveredLogs",
+      "type": "object"
+    },
+    "EpisodePlace": {
+      "additionalProperties": false,
+      "description": "Where an episode stands in its experiment: the experiment, and the\ncondition and policy it pairs, by their places in it from 0.",
+      "properties": {
+        "experiment_id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "condition": {
+          "minimum": 0,
+          "title": "Condition",
+          "type": "integer"
+        },
+        "policy": {
+          "minimum": 0,
+          "title": "Policy",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "experiment_id",
+        "condition",
+        "policy"
+      ],
+      "title": "EpisodePlace",
+      "type": "object"
+    },
+    "EpisodePolicy": {
+      "additionalProperties": false,
+      "description": "The policy an episode ran: see the module.",
+      "properties": {
+        "identity": {
+          "$ref": "#/$defs/PolicyIdentity"
+        },
+        "made": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PolicyMade"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "principal": {
+          "$ref": "#/$defs/Principal"
+        },
+        "decide_every_s": {
+          "exclusiveMinimum": 0,
+          "title": "Decide Every S",
+          "type": "number"
+        },
+        "plan_id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "budget": {
+          "$ref": "#/$defs/InformationBudget"
+        },
+        "compute_budget_s": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Compute Budget S"
+        }
+      },
+      "required": [
+        "identity",
+        "made",
+        "principal",
+        "decide_every_s",
+        "plan_id",
+        "budget",
+        "compute_budget_s"
+      ],
+      "title": "EpisodePolicy",
+      "type": "object"
+    },
+    "EpisodeRun": {
+      "additionalProperties": false,
+      "description": "The run an episode steered: see the module.",
+      "properties": {
+        "scenario_id": {
+          "$ref": "#/$defs/Name"
+        },
+        "greenhouse_id": {
+          "$ref": "#/$defs/Name"
+        },
+        "layout": {
+          "$ref": "#/$defs/Name"
+        },
+        "scenario_file_digest": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Name"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_id": {
+          "$ref": "#/$defs/Name"
+        },
+        "epoch": {
+          "minimum": 0,
+          "title": "Epoch",
+          "type": "integer"
+        },
+        "condition": {
+          "$ref": "#/$defs/Condition"
+        },
+        "seed": {
+          "minimum": 0,
+          "title": "Seed",
+          "type": "integer"
+        },
+        "start": {
+          "$ref": "#/$defs/Instant"
+        },
+        "duration_s": {
+          "exclusiveMinimum": 0,
+          "title": "Duration S",
+          "type": "number"
+        },
+        "episode_end_s": {
+          "minimum": 0,
+          "title": "Episode End S",
+          "type": "number"
+        },
+        "models": {
+          "items": {
+            "$ref": "#/$defs/ModelRan"
+          },
+          "title": "Models",
+          "type": "array"
+        },
+        "weather": {
+          "$ref": "#/$defs/WeatherSeries"
+        }
+      },
+      "required": [
+        "scenario_id",
+        "greenhouse_id",
+        "layout",
+        "scenario_file_digest",
+        "run_id",
+        "epoch",
+        "condition",
+        "seed",
+        "start",
+        "duration_s",
+        "episode_end_s",
+        "models",
+        "weather"
+      ],
+      "title": "EpisodeRun",
+      "type": "object"
+    },
+    "ExecutorKind": {
+      "enum": [
+        "simulated_run",
+        "person",
+        "robot",
+        "climate_computer"
+      ],
+      "title": "ExecutorKind",
+      "type": "string"
+    },
+    "ExecutorRef": {
+      "additionalProperties": false,
+      "description": "Who carries an action out: a kind of executor, and which one, or any\nof the kind when `id` is None.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ExecutorKind"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Name"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "ExecutorRef",
+      "type": "object"
+    },
+    "ForecastProvider": {
+      "additionalProperties": false,
+      "properties": {
+        "provider_id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "version": {
+          "$ref": "#/$defs/Name"
+        },
+        "basis": {
+          "$ref": "#/$defs/InformationBasis"
+        },
+        "quantities": {
+          "items": {
+            "$ref": "#/$defs/ObservationType"
+          },
+          "minItems": 1,
+          "title": "Quantities",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "issued_every_s": {
+          "exclusiveMinimum": 0,
+          "title": "Issued Every S",
+          "type": "number"
+        },
+        "horizon_s": {
+          "exclusiveMinimum": 0,
+          "title": "Horizon S",
+          "type": "number"
+        },
+        "uncertainty": {
+          "$ref": "#/$defs/ForecastUncertainty"
+        }
+      },
+      "required": [
+        "provider_id",
+        "version",
+        "basis",
+        "quantities",
+        "issued_every_s",
+        "horizon_s",
+        "uncertainty"
+      ],
+      "title": "ForecastProvider",
+      "type": "object"
+    },
+    "ForecastUncertainty": {
+      "description": "How a provider's forecasts state their uncertainty.",
+      "enum": [
+        "none",
+        "standard_deviation"
+      ],
+      "title": "ForecastUncertainty",
+      "type": "string"
+    },
+    "Harvest": {
+      "additionalProperties": false,
+      "else": {
+        "properties": {
+          "organ_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "organ_id"
+        ]
+      },
+      "if": {
+        "properties": {
+          "scope": {
+            "const": "ripe"
+          }
+        }
+      },
+      "properties": {
+        "kind": {
+          "const": "harvest",
+          "default": "harvest",
+          "title": "Kind",
+          "type": "string"
+        },
+        "plant_id": {
+          "$ref": "#/$defs/ItemName"
+        },
+        "scope": {
+          "$ref": "#/$defs/HarvestScope"
+        },
+        "organ_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ItemName"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "plant_id",
+        "scope"
+      ],
+      "then": {
+        "properties": {
+          "organ_id": {
+            "type": "null"
+          }
+        }
+      },
+      "title": "Harvest",
+      "type": "object"
+    },
+    "HarvestScope": {
+      "enum": [
+        "ripe",
+        "fruit",
+        "truss"
+      ],
+      "title": "HarvestScope",
+      "type": "string"
+    },
+    "Harvested": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "harvested",
+          "default": "harvested",
+          "title": "Kind",
+          "type": "string"
+        },
+        "fruit_count": {
+          "minimum": 0,
+          "title": "Fruit Count",
+          "type": "integer"
+        },
+        "fresh_mass_g": {
+          "minimum": 0.0,
+          "title": "Fresh Mass G",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fruit_count",
+        "fresh_mass_g"
+      ],
+      "title": "Harvested",
+      "type": "object"
+    },
+    "Identifier": {
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "type": "string"
+    },
+    "IfPrerequisiteFails": {
+      "enum": [
+        "cancel",
+        "proceed"
+      ],
+      "title": "IfPrerequisiteFails",
+      "type": "string"
+    },
+    "InformationBasis": {
+      "description": "What a forecast or an asset is made from.",
+      "enum": [
+        "observed",
+        "external",
+        "privileged"
+      ],
+      "title": "InformationBasis",
+      "type": "string"
+    },
+    "InformationBudget": {
+      "additionalProperties": false,
+      "description": "An episode's budget: see the module.",
+      "else": {
+        "properties": {
+          "oracle": {
+            "const": false
+          }
+        }
+      },
+      "if": {
+        "anyOf": [
+          {
+            "properties": {
+              "full_state": {
+                "const": true
+              }
+            },
+            "required": [
+              "full_state"
+            ]
+          },
+          {
+            "properties": {
+              "forecasts": {
+                "contains": {
+                  "properties": {
+                    "basis": {
+                      "const": "privileged"
+                    }
+                  },
+                  "required": [
+                    "basis"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "forecasts"
+            ]
+          },
+          {
+            "properties": {
+              "assets": {
+                "contains": {
+                  "properties": {
+                    "basis": {
+                      "const": "privileged"
+                    }
+                  },
+                  "required": [
+                    "basis"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "assets"
+            ]
+          }
+        ]
+      },
+      "properties": {
+        "budget_id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "forecasts": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ForecastProvider"
+          },
+          "title": "Forecasts",
+          "type": "array"
+        },
+        "assets": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PredictionAsset"
+          },
+          "title": "Assets",
+          "type": "array"
+        },
+        "full_state": {
+          "default": false,
+          "title": "Full State",
+          "type": "boolean"
+        },
+        "oracle": {
+          "default": false,
+          "title": "Oracle",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "budget_id"
+      ],
+      "then": {
+        "properties": {
+          "oracle": {
+            "const": true
+          }
+        },
+        "required": [
+          "oracle"
+        ]
+      },
+      "title": "InformationBudget",
+      "type": "object"
+    },
+    "Inspect": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "inspect",
+          "default": "inspect",
+          "title": "Kind",
+          "type": "string"
+        },
+        "plant_id": {
+          "$ref": "#/$defs/ItemName"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plant_id",
+        "reason"
+      ],
+      "title": "Inspect",
+      "type": "object"
+    },
+    "Inspected": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "inspected",
+          "default": "inspected",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "title": "Inspected",
+      "type": "object"
+    },
+    "Instant": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "ItemName": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "JsonValue": {},
+    "Keep": {
+      "additionalProperties": false,
+      "description": "The plan in force, kept as it is.",
+      "properties": {
+        "kind": {
+          "const": "keep",
+          "default": "keep",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "title": "Keep",
+      "type": "object"
+    },
+    "Lateness": {
+      "additionalProperties": false,
+      "else": {
+        "properties": {
+          "fallback": {
+            "type": "null"
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "on_late": {
+            "const": "fallback"
+          }
+        },
+        "required": [
+          "on_late"
+        ]
+      },
+      "properties": {
+        "tolerance_s": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Tolerance S",
+          "type": "number"
+        },
+        "on_late": {
+          "$ref": "#/$defs/OnLate",
+          "default": "run_late"
+        },
+        "fallback": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Action"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "then": {
+        "properties": {
+          "fallback": {
+            "not": {
+              "type": "null"
+            }
+          }
+        },
+        "required": [
+          "fallback"
+        ]
+      },
+      "title": "Lateness",
+      "type": "object"
+    },
+    "LeafRemoved": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "leaf_removed",
+          "default": "leaf_removed",
+          "title": "Kind",
+          "type": "string"
+        },
+        "leaf_id": {
+          "$ref": "#/$defs/Name"
+        }
+      },
+      "required": [
+        "leaf_id"
+      ],
+      "title": "LeafRemoved",
+      "type": "object"
+    },
+    "LevelSet": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "level_set",
+          "default": "level_set",
+          "title": "Kind",
+          "type": "string"
+        },
+        "device_id": {
+          "$ref": "#/$defs/Name"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "const": "auto",
+              "type": "string"
+            }
+          ],
+          "title": "Level"
+        }
+      },
+      "required": [
+        "device_id",
+        "level"
+      ],
+      "title": "LevelSet",
+      "type": "object"
+    },
+    "Lower": {
+      "additionalProperties": false,
+      "description": "Lower a plant's stem: by so many centimetres, by so many internodes,\nor until its top has so much head room under its wire. Exactly one.",
+      "oneOf": [
+        {
+          "properties": {
+            "by_cm": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "by_cm"
+          ]
+        },
+        {
+          "properties": {
+            "by_internodes": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "by_internodes"
+          ]
+        },
+        {
+          "properties": {
+            "to_head_room_m": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "to_head_room_m"
+          ]
+        }
+      ],
+      "properties": {
+        "kind": {
+          "const": "lower",
+          "default": "lower",
+          "title": "Kind",
+          "type": "string"
+        },
+        "plant_id": {
+          "$ref": "#/$defs/ItemName"
+        },
+        "by_cm": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "By Cm"
+        },
+        "by_internodes": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "By Internodes"
+        },
+        "to_head_room_m": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To Head Room M"
+        }
+      },
+      "required": [
+        "plant_id"
+      ],
+      "title": "Lower",
+      "type": "object"
+    },
+    "Lowered": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "lowered",
+          "default": "lowered",
+          "title": "Kind",
+          "type": "string"
+        },
+        "by_cm": {
+          "minimum": 0.0,
+          "title": "By Cm",
+          "type": "number"
+        }
+      },
+      "required": [
+        "by_cm"
+      ],
+      "title": "Lowered",
+      "type": "object"
+    },
+    "ModelRan": {
+      "additionalProperties": false,
+      "description": "A part of the run, the model it ran and that model's version.",
+      "properties": {
+        "part": {
+          "$ref": "#/$defs/Name"
+        },
+        "model": {
+          "$ref": "#/$defs/Name"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "part",
+        "model",
+        "version"
+      ],
+      "title": "ModelRan",
+      "type": "object"
+    },
+    "Name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "ObservationType": {
+      "description": "What an Observation measures. The value doubles as the unit-bearing\nfield name on the reconstructed state models (EnvironmentState,\nGreenhouseEnvironmentState), so a new greenhouse-level type is one enum\nmember plus one optional field, no mapping table.\n\nPlant-level readings come from a sensor or vision pass on one plant;\ngreenhouse-level readings (plant_id None) describe the compartment's\nclimate, its control state, or a manual sample across plants. Recorded\nsetpoints are observations of what the controller was asked to do, not\nevents: they are continuous 5-minute state, not discrete interventions.",
+      "enum": [
+        "soil_moisture_pct",
+        "visible_fruit_count",
+        "ripe_fruit_count",
+        "estimated_ripe_mass_g",
+        "visible_height_cm",
+        "plant_height_cm",
+        "leaf_count",
+        "leaf_length_cm",
+        "leaf_width_cm",
+        "truss_count",
+        "open_flower_count",
+        "green_fruit_count",
+        "coloured_fruit_count",
+        "air_temperature_c",
+        "relative_humidity_pct",
+        "humidity_deficit_g_m3",
+        "co2_ppm",
+        "par_umol_m2_s",
+        "air_speed_m_s",
+        "heating_pipe_temperature_c",
+        "energy_screen_position_pct",
+        "blackout_screen_position_pct",
+        "window_position_lee_pct",
+        "window_position_wind_pct",
+        "lamps_activation_pct",
+        "heating_temperature_setpoint_c",
+        "ventilation_temperature_setpoint_c",
+        "co2_setpoint_ppm",
+        "humidity_deficit_setpoint_g_m3",
+        "lamps_activation_setpoint_pct",
+        "energy_screen_setpoint_pct",
+        "blackout_screen_setpoint_pct",
+        "irrigation_interval_setpoint_min",
+        "minimum_pipe_temperature_setpoint_c",
+        "minimum_window_position_lee_setpoint_pct",
+        "heating_temperature_effective_c",
+        "ventilation_temperature_lee_effective_c",
+        "ventilation_temperature_wind_effective_c",
+        "co2_effective_ppm",
+        "humidity_deficit_effective_g_m3",
+        "energy_screen_effective_pct",
+        "blackout_screen_effective_pct",
+        "irrigation_interval_effective_min",
+        "minimum_pipe_temperature_effective_c",
+        "minimum_window_position_lee_effective_pct",
+        "co2_dosing_on",
+        "co2_dosing_minutes_since_reset",
+        "heating_energy_increment_mj_m2",
+        "lighting_electricity_increment_kwh_m2",
+        "co2_dosed_increment_kg_m2",
+        "heating_cost_increment_eur_m2",
+        "lighting_cost_increment_eur_m2",
+        "co2_cost_increment_eur_m2",
+        "fixed_cost_increment_eur_m2",
+        "irrigation_flow_duration_min",
+        "drain_water_volume_l_m2",
+        "drain_ec_ds_m",
+        "drain_ph",
+        "sampled_fruit_count_per_plant",
+        "sampled_fruit_fresh_weight_g_per_plant",
+        "plant_density_per_m2",
+        "leaf_area_index",
+        "above_ground_dry_weight_g_m2",
+        "fruit_dry_weight_g_m2",
+        "mature_fruit_dry_weight_g_m2",
+        "outside_air_temperature_c",
+        "outside_relative_humidity_pct",
+        "outside_humidity_deficit_g_m3",
+        "outside_absolute_humidity_g_m3",
+        "outside_global_radiation_w_m2",
+        "outside_radiation_sum_j_cm2",
+        "outside_wind_speed_m_s",
+        "outside_wind_direction_deg",
+        "outside_barometric_pressure_hpa",
+        "outside_cloud_cover_pct",
+        "outside_rain",
+        "outside_par_umol_m2_s",
+        "outside_heat_emission_w_m2",
+        "outside_co2_ppm",
+        "forecast_radiation_sum_today_j_cm2"
+      ],
+      "title": "ObservationType",
+      "type": "string"
+    },
+    "OnLate": {
+      "description": "What a gateway does with an action that cannot start by its due\ninstant and tolerance.",
+      "enum": [
+        "run_late",
+        "skip",
+        "critical",
+        "fallback",
+        "abort_plan"
+      ],
+      "title": "OnLate",
+      "type": "string"
+    },
+    "OutcomeStatus": {
+      "enum": [
+        "executed",
+        "late",
+        "missed",
+        "refused",
+        "failed",
+        "cancelled",
+        "superseded",
+        "unconfirmed"
+      ],
+      "title": "OutcomeStatus",
+      "type": "string"
+    },
+    "PlannedAction": {
+      "additionalProperties": false,
+      "properties": {
+        "action_id": {
+          "$ref": "#/$defs/ActionId"
+        },
+        "action": {
+          "$ref": "#/$defs/Action"
+        },
+        "timing": {
+          "$ref": "#/$defs/Timing"
+        },
+        "every": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Recurrence"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "after": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ActionId"
+          },
+          "title": "After",
+          "type": "array"
+        },
+        "if_prerequisite_fails": {
+          "$ref": "#/$defs/IfPrerequisiteFails",
+          "default": "cancel"
+        },
+        "lateness": {
+          "$ref": "#/$defs/Lateness",
+          "default": {
+            "tolerance_s": 0.0,
+            "on_late": "run_late",
+            "fallback": null
+          }
+        },
+        "expected_duration_s": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Duration S"
+        },
+        "executed_by": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/ExecutorRef"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Executed By"
+        },
+        "proposed_by": {
+          "$ref": "#/$defs/Principal"
+        }
+      },
+      "required": [
+        "action_id",
+        "action",
+        "timing",
+        "proposed_by"
+      ],
+      "title": "PlannedAction",
+      "type": "object"
+    },
+    "PolicyEntry": {
+      "additionalProperties": false,
+      "description": "A policy as an experiment makes it: its factory, by its import path\n(`module:callable`), given its settings, a JSON object, and its seed,\nnone for a policy that does not draw. `files` names the settings that\nare paths to files the policy reads, such as a network's weights.",
+      "properties": {
+        "factory": {
+          "pattern": "^[A-Za-z_][\\w.]*:[A-Za-z_][\\w.]*$",
+          "title": "Factory",
+          "type": "string"
+        },
+        "settings": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Settings",
+          "type": "object"
+        },
+        "files": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Name"
+          },
+          "title": "Files",
+          "type": "array"
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Seed"
+        }
+      },
+      "required": [
+        "factory"
+      ],
+      "title": "PolicyEntry",
+      "type": "object"
+    },
+    "PolicyFile": {
+      "additionalProperties": false,
+      "description": "A file a policy read, by the setting naming it, and its SHA-256.",
+      "properties": {
+        "setting": {
+          "$ref": "#/$defs/Name"
+        },
+        "sha256": {
+          "$ref": "#/$defs/Sha256"
+        }
+      },
+      "required": [
+        "setting",
+        "sha256"
+      ],
+      "title": "PolicyFile",
+      "type": "object"
+    },
+    "PolicyIdentity": {
+      "additionalProperties": false,
+      "description": "A policy, as an experiment names it: its name and its version.",
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "version": {
+          "$ref": "#/$defs/Name"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "PolicyIdentity",
+      "type": "object"
+    },
+    "PolicyMade": {
+      "additionalProperties": false,
+      "description": "A policy's entry, and the digests of its settings and its files.",
+      "properties": {
+        "entry": {
+          "$ref": "#/$defs/PolicyEntry"
+        },
+        "settings_sha256": {
+          "$ref": "#/$defs/Sha256"
+        },
+        "files": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PolicyFile"
+          },
+          "title": "Files",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entry",
+        "settings_sha256"
+      ],
+      "title": "PolicyMade",
+      "type": "object"
+    },
+    "PredictionAsset": {
+      "additionalProperties": false,
+      "description": "A prediction model or a calibration a policy is given: named,\nversioned, and pinned by its bytes' digest.",
+      "properties": {
+        "asset_id": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "kind": {
+          "$ref": "#/$defs/AssetKind"
+        },
+        "version": {
+          "$ref": "#/$defs/Name"
+        },
+        "sha256": {
+          "$ref": "#/$defs/Sha256"
+        },
+        "basis": {
+          "$ref": "#/$defs/InformationBasis"
+        }
+      },
+      "required": [
+        "asset_id",
+        "kind",
+        "version",
+        "sha256",
+        "basis"
+      ],
+      "title": "PredictionAsset",
+      "type": "object"
+    },
+    "Principal": {
+      "additionalProperties": false,
+      "description": "Who asks for an action, by identity: a person, a control policy, a\nschedule, a scenario's own plan, a platform.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/PrincipalKind"
+        },
+        "id": {
+          "$ref": "#/$defs/Name"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "title": "Principal",
+      "type": "object"
+    },
+    "PrincipalKind": {
+      "enum": [
+        "person",
+        "policy",
+        "schedule",
+        "scenario",
+        "platform"
+      ],
+      "title": "PrincipalKind",
+      "type": "string"
+    },
+    "Receipt": {
+      "additionalProperties": false,
+      "description": "A gateway's answer to a write. A request refused whole has its\nerrors and changed nothing; one accepted lists what it refused at once,\nwhat it cancelled, and the keys it would not act on.",
+      "properties": {
+        "accepted": {
+          "title": "Accepted",
+          "type": "boolean"
+        },
+        "plan_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Identifier"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "errors": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Errors",
+          "type": "array"
+        },
+        "refused": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ActionRef"
+          },
+          "title": "Refused",
+          "type": "array"
+        },
+        "cancelled": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ActionRef"
+          },
+          "title": "Cancelled",
+          "type": "array"
+        },
+        "stale": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ActionKey"
+          },
+          "title": "Stale",
+          "type": "array"
+        },
+        "not_permitted": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ActionKey"
+          },
+          "title": "Not Permitted",
+          "type": "array"
+        }
+      },
+      "required": [
+        "accepted"
+      ],
+      "title": "Receipt",
+      "type": "object"
+    },
+    "Recurrence": {
+      "additionalProperties": false,
+      "description": "Every `period`, `count` times or until an instant: occurrence `n`,\nfrom 0, is the planned action's timing moved by `n` periods. The timing\nis its one anchor.",
+      "oneOf": [
+        {
+          "properties": {
+            "count": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "count"
+          ]
+        },
+        {
+          "properties": {
+            "until": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "until"
+          ]
+        }
+      ],
+      "properties": {
+        "period": {
+          "format": "duration",
+          "title": "Period",
+          "type": "string"
+        },
+        "count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Count"
+        },
+        "until": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Instant"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "period"
+      ],
+      "title": "Recurrence",
+      "type": "object"
+    },
+    "RemoveLeaf": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "remove_leaf",
+          "default": "remove_leaf",
+          "title": "Kind",
+          "type": "string"
+        },
+        "plant_id": {
+          "$ref": "#/$defs/ItemName"
+        },
+        "leaf_id": {
+          "$ref": "#/$defs/ItemName"
+        }
+      },
+      "required": [
+        "plant_id",
+        "leaf_id"
+      ],
+      "title": "RemoveLeaf",
+      "type": "object"
+    },
+    "Revise": {
+      "additionalProperties": false,
+      "description": "The actions of the policy's plan's next revision, which the runner\nmakes and gives: from then on they replace those of the revision in\nforce not yet started, as the gateway's rule has it.",
+      "properties": {
+        "kind": {
+          "const": "revise",
+          "default": "revise",
+          "title": "Kind",
+          "type": "string"
+        },
+        "actions": {
+          "items": {
+            "$ref": "#/$defs/PlannedAction"
+          },
+          "title": "Actions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "actions"
+      ],
+      "title": "Revise",
+      "type": "object"
+    },
+    "SetLevel": {
+      "additionalProperties": false,
+      "description": "A device's level, from 0 (off) to 1 (full), or `auto` to hand the\ndevice back to whatever control loop runs it. A door or vent is a\ndevice, its level how far it is open.",
+      "properties": {
+        "kind": {
+          "const": "set_level",
+          "default": "set_level",
+          "title": "Kind",
+          "type": "string"
+        },
+        "device_id": {
+          "$ref": "#/$defs/ItemName"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "const": "auto",
+              "type": "string"
+            }
+          ],
+          "title": "Level"
+        }
+      },
+      "required": [
+        "device_id",
+        "level"
+      ],
+      "title": "SetLevel",
+      "type": "object"
+    },
+    "SetTarget": {
+      "additionalProperties": false,
+      "description": "A climate controller's heating setpoint, by day or by night, in °C.\nEach kind of target has its own unit and range: the venting and humidity\ntargets, when a controller has them, are members of their own beside\nthis one.",
+      "properties": {
+        "kind": {
+          "const": "set_target",
+          "default": "set_target",
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "enum": [
+            "heating_day",
+            "heating_night"
+          ],
+          "title": "Target",
+          "type": "string"
+        },
+        "value_c": {
+          "maximum": 40.0,
+          "minimum": 0.0,
+          "title": "Value C",
+          "type": "number"
+        }
+      },
+      "required": [
+        "target",
+        "value_c"
+      ],
+      "title": "SetTarget",
+      "type": "object"
+    },
+    "Sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "Software": {
+      "additionalProperties": false,
+      "description": "What ran the episode.",
+      "properties": {
+        "producer": {
+          "$ref": "#/$defs/Name"
+        },
+        "producer_version": {
+          "$ref": "#/$defs/Name"
+        },
+        "protocol_version": {
+          "$ref": "#/$defs/Name"
+        },
+        "python": {
+          "$ref": "#/$defs/Name"
+        },
+        "commit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Name"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "producer",
+        "producer_version",
+        "protocol_version",
+        "python",
+        "commit"
+      ],
+      "title": "Software",
+      "type": "object"
+    },
+    "TargetSet": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "target_set",
+          "default": "target_set",
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/Name"
+        },
+        "value_c": {
+          "title": "Value C",
+          "type": "number"
+        }
+      },
+      "required": [
+        "target",
+        "value_c"
+      ],
+      "title": "TargetSet",
+      "type": "object"
+    },
+    "Timing": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/At"
+        },
+        {
+          "$ref": "#/$defs/Window"
+        },
+        {
+          "$ref": "#/$defs/Asap"
+        }
+      ]
+    },
+    "Water": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "water",
+          "default": "water",
+          "title": "Kind",
+          "type": "string"
+        },
+        "plant_id": {
+          "$ref": "#/$defs/ItemName"
+        },
+        "amount_ml": {
+          "exclusiveMinimum": 0.0,
+          "maximum": 2000.0,
+          "title": "Amount Ml",
+          "type": "number"
+        }
+      },
+      "required": [
+        "plant_id",
+        "amount_ml"
+      ],
+      "title": "Water",
+      "type": "object"
+    },
+    "Watered": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "watered",
+          "default": "watered",
+          "title": "Kind",
+          "type": "string"
+        },
+        "amount_ml": {
+          "minimum": 0.0,
+          "title": "Amount Ml",
+          "type": "number"
+        }
+      },
+      "required": [
+        "amount_ml"
+      ],
+      "title": "Watered",
+      "type": "object"
+    },
+    "WeatherSeries": {
+      "additionalProperties": false,
+      "description": "The weather a run was under, from its start to its end, every\n`every_s`: the SHA-256 of each moment's state as its producer writes it,\none line each.",
+      "properties": {
+        "every_s": {
+          "exclusiveMinimum": 0,
+          "title": "Every S",
+          "type": "number"
+        },
+        "sha256": {
+          "$ref": "#/$defs/Sha256"
+        }
+      },
+      "required": [
+        "every_s",
+        "sha256"
+      ],
+      "title": "WeatherSeries",
+      "type": "object"
+    },
+    "Window": {
+      "additionalProperties": false,
+      "description": "Due between two instants: it starts at the earliest one in them an\nexecutor can honour and is free to take.",
+      "properties": {
+        "kind": {
+          "const": "window",
+          "default": "window",
+          "title": "Kind",
+          "type": "string"
+        },
+        "not_before": {
+          "$ref": "#/$defs/Instant"
+        },
+        "not_after": {
+          "$ref": "#/$defs/Instant"
+        }
+      },
+      "required": [
+        "not_before",
+        "not_after"
+      ],
+      "title": "Window",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "An episode, as its record names it: see the module.",
+  "properties": {
+    "record_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Record Version",
+      "type": "integer"
+    },
+    "place": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EpisodePlace"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "run": {
+      "$ref": "#/$defs/EpisodeRun"
+    },
+    "policy": {
+      "$ref": "#/$defs/EpisodePolicy"
+    },
+    "software": {
+      "$ref": "#/$defs/Software"
+    },
+    "trace": {
+      "items": {
+        "$ref": "#/$defs/DecisionTraced"
+      },
+      "title": "Trace",
+      "type": "array"
+    },
+    "outcomes": {
+      "items": {
+        "$ref": "#/$defs/ActionOutcome"
+      },
+      "title": "Outcomes",
+      "type": "array"
+    },
+    "digest": {
+      "$ref": "#/$defs/Sha256"
+    }
+  },
+  "required": [
+    "run",
+    "policy",
+    "software",
+    "trace",
+    "outcomes",
+    "digest"
+  ],
+  "title": "EpisodeRecord",
+  "type": "object"
+}

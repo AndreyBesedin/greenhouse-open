@@ -167,7 +167,7 @@ def _canopy_samples(config: ScenarioConfig) -> list[ObservationSource]:
     section, area = config.crop_walk, registration(config).area
     if not isinstance(section, CanopySample) or area is None:
         return []
-    kinds = area.sampled(area.rung(config).planted())
+    kinds = area.sampled(area.rung(config).planted(), config)
     return [
         ObservationSource(
             source_id=f"{CANOPY_SAMPLE_SOURCE}:{scope.scope_id}",

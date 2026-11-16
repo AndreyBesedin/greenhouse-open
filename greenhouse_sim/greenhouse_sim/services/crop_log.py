@@ -257,7 +257,7 @@ def sampled_truly(
     return {
         instance.scope_id: {
             kind: converted(value, scopes[instance.scope_id], basis, AreaBasis.FLOOR)
-            for kind, value in area.sampled(instance.state).items()
+            for kind, value in area.sampled(instance.state, config).items()
         }
         for instance in crop.at(day * DAY_S + WALK_S)
     }

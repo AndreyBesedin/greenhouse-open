@@ -12,6 +12,14 @@ content) names it in `recorded_weather`: the file's name and its digest, and,
 if the sender chose to send it, the CSV. A file whose CSV is not the digest's
 is refused; one without the CSV names a weather the receiver may not have
 (`ScenarioFile.recording_missing`).
+
+A scenario whose crop runs a parameter set other than its model's published
+one carries it in `parameter_sets`: the set's file, and each of its bases'
+that is not published, its own first (decision 0077), so that the file runs
+the same numbers wherever it is read, whatever its reader keeps. They are
+checked as sets where the scenario is registered
+(`greenhouse_sim.services.parameter_sets.with_carried`), which knows what a
+set is.
 """
 
 import json
@@ -26,6 +34,11 @@ from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios.catalogue import SCENARIO_ID
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.crop_parameters import (
+    ReducedTomgroCrop,
+    VanthoorKatzinCrop,
+    runs_published,
+)
 from greenhouse_sim.scenarios.installation import (
     CannotCopy,
     ScenarioHouse,
@@ -58,6 +71,7 @@ MAX_NESTING: Final = 64
 # What counts in a text for its depth: a string (whose brackets do not) or a bracket.
 _BRACKETS: Final = re.compile(r'"(?:[^"\\]|\\.)*"|[\[\]{}]')
 RECORDED_WEATHER: Final = "recorded_weather"
+PARAMETER_SETS: Final = "parameter_sets"
 _VERSION_KEY: Final = "schema_version"
 _INSTALLATION_KEY: Final = "installation"
 _SCENARIO_ID_KEY: Final = "greenhouse_id"
@@ -103,6 +117,8 @@ class ScenarioFile:
     config: ScenarioConfig
     recording: Recording | None
     digest: str
+    # The parameter sets it carries, as their files give them, unchecked.
+    parameter_sets: tuple[dict[str, JsonValue], ...] = ()
 
     @property
     def needs_recording(self) -> bool:
@@ -120,10 +136,11 @@ class ScenarioFile:
 def export_scenario_file(config: ScenarioConfig, *, with_recording: bool = True) -> str:
     """A scenario as a file: its manifest, with its layout written out. If it
     runs under a recorded weather the file names it and its digest, and
-    carries its CSV unless `with_recording` is False. Refused if the
-    scenario plants fewer positions than its layout's rows hold (an
-    installation's crop grows every position of a row), or holds a number
-    JSON cannot write."""
+    carries its CSV unless `with_recording` is False. If its crop runs a
+    parameter set other than its model's published one, and carries it, the
+    file carries it too. Refused if the scenario plants fewer positions than
+    its layout's rows hold (an installation's crop grows every position of a
+    row), or holds a number JSON cannot write."""
     try:
         installation = scenario_installation(config)
     except CannotCopy as error:
@@ -149,6 +166,15 @@ def export_scenario_file(config: ScenarioConfig, *, with_recording: bool = True)
         if with_recording:
             section["csv"] = content.decode()
         document[RECORDED_WEATHER] = section
+    crop = config.crop
+    # A section that names a set it does not carry, as a person writes one,
+    # names it only: its reader must keep it.
+    if (
+        isinstance(crop, ReducedTomgroCrop | VanthoorKatzinCrop)
+        and not runs_published(crop)
+        and crop.carried is not None
+    ):
+        document[PARAMETER_SETS] = list(crop.carried.files)
     try:
         return json.dumps(document, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
     except ValueError as error:
@@ -180,7 +206,11 @@ def import_scenario_file(text: str) -> ScenarioFile:
             _SCENARIO_ID_KEY,
             f"a scenario is named by lowercase letters, digits and _, not {scenario_id!r}",
         )
-    written = {key: value for key, value in document.items() if key != RECORDED_WEATHER}
+    written = {
+        key: value
+        for key, value in document.items()
+        if key not in (RECORDED_WEATHER, PARAMETER_SETS)
+    }
     try:
         config = scenario_from_manifest(scenario_id, written, layout_written=True)
     except ValidationError as error:
@@ -191,8 +221,9 @@ def import_scenario_file(text: str) -> ScenarioFile:
     recording = _recording(config, document.get(RECORDED_WEATHER))
     if recording is not None and recording.carried is not None:
         config = config.model_copy(update={"weather": recording.carried})
+    parameter_sets = _parameter_sets(config, document.get(PARAMETER_SETS))
     canonical = json.dumps(document, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-    return ScenarioFile(config, recording, short_digest(canonical, DIGEST_LENGTH))
+    return ScenarioFile(config, recording, short_digest(canonical, DIGEST_LENGTH), parameter_sets)
 
 
 def holds_an_installation(text: str) -> bool | None:
@@ -260,6 +291,27 @@ def _recording(config: ScenarioConfig, written: JsonValue) -> Recording | None:
     except ValueError as error:
         raise ScenarioFileError(f"{RECORDED_WEATHER}.csv", str(error)) from None
     return Recording(weather.file, digest, content, carried)
+
+
+def _parameter_sets(config: ScenarioConfig, written: JsonValue) -> tuple[dict[str, JsonValue], ...]:
+    """The parameter sets a file carries, each an object: only for a crop
+    that runs a set other than its model's published one."""
+    if written is None:
+        return ()
+    crop = config.crop
+    if not isinstance(crop, ReducedTomgroCrop | VanthoorKatzinCrop) or runs_published(crop):
+        raise ScenarioFileError(
+            PARAMETER_SETS,
+            "the scenario's crop runs no parameter set but its model's published one",
+        )
+    if not isinstance(written, list) or not written:
+        raise ScenarioFileError(PARAMETER_SETS, "a list of the parameter sets' files")
+    files: list[dict[str, JsonValue]] = []
+    for index, each in enumerate(written):
+        if not isinstance(each, dict):
+            raise ScenarioFileError(f"{PARAMETER_SETS}[{index}]", "a parameter set's file")
+        files.append(each)
+    return tuple(files)
 
 
 def _formats_read() -> str:
