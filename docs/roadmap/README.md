@@ -125,10 +125,11 @@ links there.
 | [P17](archive/p17-runs-and-playbacks.md) | Runs kept in a store, playbacks as positions, and a place to choose | Done: P17.1 to P17.11, its QA run for what is delivered and its clean-up closed; steering a running epoch moved to P22.1, the rest to [future work](future-work.md#runs-and-playbacks-after-p17) |
 | [P18](archive/p18-resources-and-deployment.md) | Resources counted and limited, and a run that can move | Done: P18.1 to P18.6, its final QA recorded; what it left is in [future work](future-work.md#resources-and-limits-after-p18) |
 | [P19](archive/p19-design-system.md) | The viewer's design system: its own tokens and components, with a guard against drift | Done: P19.1 to P19.12, its final QA recorded; what it left is in [future work](future-work.md#the-design-system-after-p19) |
-| [P20](p20-crop-parameter-assets.md) | Crop parameters as versioned assets, edited by forms and reproduced from their versions | In progress: P20.1 to P20.3 done; its plan, with [decision 0077](../decisions/0077-a-crop-parameter-set-is-a-file-named-and-versioned-and-told-apart-by-its-digest.md) |
+| [P20](p20-crop-parameter-assets.md) | Crop parameters as versioned assets, edited by forms and reproduced from their versions | In progress: P20.1 to P20.4 done; its plan, with [decision 0077](../decisions/0077-a-crop-parameter-set-is-a-file-named-and-versioned-and-told-apart-by-its-digest.md), accepted |
 | [P21](p21-rows-of-different-crops.md) | Rows of different crops in one house | Proposed |
 | [P22](archive/p22-watching-and-starting-a-run.md) | Watching and starting a run: one *Play*, steering from the replay, a new run's form | Done: P22.1 to P22.10, its QA recorded; what it left is in [future work](future-work.md#watching-and-starting-a-run-after-p22) |
 | [P23](p23-experiments.md) | Experiments: policies paired on a run's conditions, each episode with its record | In progress: P23.1 to P23.3 done |
+| [P24](p24-house-components-and-a-multi-node-climate.md) | A house's components, and a climate that carries them: screens, floors, pipes, walls and a transpiring crop, beside today's air | Proposed: its plan, with decisions [0078](../decisions/0078-a-multi-node-climate-is-a-model-of-the-houses-air-chosen-by-the-manifest.md), [0079](../decisions/0079-a-crop-and-the-houses-air-exchange-heat-water-and-co2-by-what-each-declares.md) and [0080](../decisions/0080-a-houses-components-and-materials-are-described-in-its-installation.md) |
 
 ## After a QA
 
@@ -155,6 +156,11 @@ archive: what it found to fix is fixed, and what it planned was done in
    crop parameters as versioned assets are the research priorities' last item, and
    their condition holds, both tomato models carrying versioned parameters, so P20
    goes on beside the other items; rows of different crops come after it.
+3. **[P24](p24-house-components-and-a-multi-node-climate.md), after the research
+   priorities' item 6:** the Modelica comparison's blockers become the simulator's
+   components, each held to its reference and the comparison run again after it. It
+   goes on beside P20 and P23, and the research's apportioning of the comparison's
+   gap orders its components (P24.1).
 
 ## Elsewhere
 

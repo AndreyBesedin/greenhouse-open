@@ -138,8 +138,26 @@ data.
    second. The indoor climate of the paper it was published with,
    Sourisseau et al. (2026), is reproduced for its Fig 8 and Fig 9 windows,
    within tolerances stated before the runs at every moment compared; July
-   misses one moment OpenModelica wrote off its grid. The comparison with
-   the simulator on matched inputs is still to come.
+   misses one moment OpenModelica wrote off its grid. The simulator's
+   indoor air temperature is compared with that reproduction on matched
+   inputs, as stated before its runs
+   ([the comparison](../../research/modelica/README.md#comparing-the-simulator-with-tigwerlib)):
+   its whole house, built from TiGwerLib's geometry and roof windows,
+   under TiGwerLib's recorded weather, its windows opened as TiGwerLib's
+   records open them and its heater giving the heat TiGwerLib's pipes
+   give, its own parameters its defaults. It agrees with TiGwerLib on no
+   day of either window by the paper's bar, a day's RMSE of 1.6 K: it
+   runs 4.2 K colder on average in January, most at night, and 2.3 K
+   warmer in July, by day, while July's nights agree to an RMSE of
+   0.66 K. The relative humidity is not compared, and five of
+   TiGwerLib's processes are recorded as blockers, not worked around:
+   its screens, its crop's exchanges with the air, the heat its floor,
+   soil, structure and crop store, its roof's radiation to the sky, and
+   walls on corridors rather than outside. The differences go the way
+   those blockers would push them, but the comparison does not apportion
+   them. Making the blockers the simulator's own components, each held to
+   its reference and the comparison run again after it, is
+   [P24](p24-house-components-and-a-multi-node-climate.md).
 7. **Benchmark greenhouse decisions, repeatably.** Not only an interface
    and a rule: a capability to compare decisions fairly (decision
    [0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md),
