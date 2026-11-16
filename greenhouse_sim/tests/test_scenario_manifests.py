@@ -397,6 +397,7 @@ def test_a_run_says_what_it_is_made_from() -> None:
                 "controller": "loops",
             }.items()
         },
+        parameter_set=None,
     )
 
 
@@ -491,8 +492,8 @@ def test_each_parts_model_and_its_parameters_are_read_from_its_section() -> None
 
 def test_a_manifest_chooses_vanthoors_model_for_its_rows_and_its_parameters() -> None:
     """Grown by area (decision 0062), its parameter set and driver profile
-    named, its canopy's height the manifest's; a set it does not have is
-    refused."""
+    named, its canopy's height the manifest's; a set named otherwise than a
+    set is, or a version that is none, is refused."""
     document = _manifest("climate_box")
     rows = [
         crop | {"crop_model": "vanthoor_katzin"} for crop in document["installation"]["row_crops"]
@@ -510,9 +511,10 @@ def test_a_manifest_chooses_vanthoors_model_for_its_rows_and_its_parameters() ->
         "greenlight_2_0_7",
         "house_hours",
     )
-    unknown = {"model": "vanthoor_katzin", "parameters": {"parameter_set": "x"}}
-    with pytest.raises(InvalidManifest, match="parameter_set"):
-        scenario_from_manifest("climate_box", _models(chosen, crop=unknown))
+    for unnamed in ({"parameter_set": "X y"}, {"parameter_set_version": 0}):
+        unknown = {"model": "vanthoor_katzin", "parameters": unnamed}
+        with pytest.raises(InvalidManifest, match="parameter_set"):
+            scenario_from_manifest("climate_box", _models(chosen, crop=unknown))
 
 
 def test_a_part_with_one_model_and_no_parameters_is_named_or_left_out() -> None:

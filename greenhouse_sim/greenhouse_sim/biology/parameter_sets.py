@@ -45,10 +45,13 @@ from greenhouse_sim.biology.tomato.vanthoor.parameters import VanthoorParameters
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
+from greenhouse_sim.scenarios.crop_parameters import (
+    SET_NAME,
+    ReducedTomgroCrop,
+    VanthoorKatzinCrop,
+)
 from greenhouse_sim.scenarios.registry import model
 
-# A set's name: lower-case letters, digits and underscores.
-SET_NAME: Final = r"^[a-z0-9][a-z0-9_]*$"
 # A set's digest: the whole SHA-256, in hexadecimal, under its scheme.
 DIGEST_SCHEME: Final = "sha256:"
 SET_DIGEST: Final = r"^sha256:[0-9a-f]{64}$"
@@ -61,8 +64,8 @@ PARAMETER_MODELS: Final[Mapping[str, type[BaseModel]]] = {
 }
 # Each one's published set: the name its crop section gives it, and what it is.
 PUBLISHED_NAMES: Final = {
-    CropModel.REDUCED_TOMGRO.value: "gnvman",
-    CropModel.VANTHOOR_KATZIN.value: "greenlight_2_0_7",
+    CropModel.REDUCED_TOMGRO.value: ReducedTomgroCrop.PUBLISHED_SET,
+    CropModel.VANTHOOR_KATZIN.value: VanthoorKatzinCrop.PUBLISHED_SET,
 }
 PUBLISHED_DESCRIPTIONS: Final = {
     CropModel.REDUCED_TOMGRO.value: (
@@ -175,7 +178,9 @@ def resolved(
     up among the published sets and `known`, with its own over them. Refused,
     by field, if a set of its line is not a set, its base is not known or
     not the digest it names, or its values are not its model's."""
-    sets = dict(known or {}) | {_key(published): published for published in PUBLISHED_SETS.values()}
+    sets = dict(known or {}) | {
+        set_key(published): published for published in PUBLISHED_SETS.values()
+    }
     return _resolved(parameter_set, sets, frozenset())
 
 
@@ -249,7 +254,8 @@ def parameter_set_json_schema() -> dict[str, JsonValue]:
     return {"$schema": JSON_SCHEMA_DIALECT, **schema, "oneOf": cases}
 
 
-def _key(parameter_set: ParameterSet) -> SetKey:
+def set_key(parameter_set: ParameterSet) -> SetKey:
+    """A set as the sets it may be based on are looked up by."""
     return parameter_set.model, parameter_set.name, parameter_set.version
 
 
@@ -261,7 +267,7 @@ def _resolved(
     problems = _problems(parameter_set)
     if problems:
         raise InvalidParameterSet(problems)
-    key = _key(parameter_set)
+    key = set_key(parameter_set)
     based_on = parameter_set.based_on
     base_values: dict[str, float] = {}
     if based_on is not None:

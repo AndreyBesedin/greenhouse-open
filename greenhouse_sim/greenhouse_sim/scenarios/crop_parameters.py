@@ -10,18 +10,20 @@ grown by area. A manifest gives them in its `models`
 (`greenhouse_sim.scenarios.registry`).
 """
 
-from typing import Any, ClassVar, Final, Literal
+from typing import Annotated, Any, ClassVar, Final, Literal
 
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    JsonValue,
     NonNegativeFloat,
     NonNegativeInt,
     PositiveFloat,
     PositiveInt,
     model_validator,
 )
+from pydantic.json_schema import SkipJsonSchema
 
 # The crop walk's one model.
 WALK: Final = "walk"
@@ -93,11 +95,38 @@ class OrganCrop(BaseModel):
     kind: Literal["organ"] = "organ"
 
 
+# What a parameter set is called: lower-case letters, digits and underscores.
+SET_NAME: Final = r"^[a-z0-9][a-z0-9_]*$"
+# The version a section names when it names none, its published set's.
+FIRST_SET_VERSION: Final = 1
+
+
+class CarriedSet(BaseModel):
+    """A parameter set other than its model's published one, as the
+    simulator that registered its scenario resolved it
+    (`greenhouse_sim.services.parameter_sets`, decision 0077): the files of
+    the set and of each of its bases that is not published, its own first;
+    every value it resolves to, by its model's parameters' fields; and its
+    digest."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    files: tuple[dict[str, JsonValue], ...]
+    values: dict[str, float]
+    digest: str
+
+
+def _first_version(version: int) -> bool:
+    """Whether a section names its set's first version, which it leaves
+    unwritten, so that a run under a published set is named as it was."""
+    return version == FIRST_SET_VERSION
+
+
 class ReducedTomgroCrop(BaseModel):
     """Reduced-State TOMGRO's settings, grown by area
     (`greenhouse_sim.biology.tomato.tomgro`, decisions 0060 and 0062): the
-    published parameter set it runs, the driver profile, named and
-    versioned, through which the run gives it its drivers
+    parameter set it runs, gnvman unless it names another, the driver
+    profile, named and versioned, through which the run gives it its drivers
     (`greenhouse_sim.core.drivers`), and the height above its planting
     positions at which the light above its canopy is read, which the model
     does not grow: the run's choice, in m, not the model's."""
@@ -105,34 +134,73 @@ class ReducedTomgroCrop(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     BY_AREA: ClassVar[bool] = True
+    PUBLISHED_SET: ClassVar[str] = "gnvman"
 
     kind: Literal["reduced_tomgro"] = "reduced_tomgro"
 
-    parameter_set: Literal["gnvman"] = "gnvman"
+    parameter_set: str = Field(default=PUBLISHED_SET, pattern=SET_NAME)
+    parameter_set_version: PositiveInt = Field(default=FIRST_SET_VERSION, exclude_if=_first_version)
     driver_profile: Literal["house_hours"] = "house_hours"
     driver_profile_version: Literal[1] = 1
     canopy_height_m: PositiveFloat = 2.0
+    carried: Annotated[SkipJsonSchema[CarriedSet | None], Field(exclude=True, repr=False)] = None
 
 
 class VanthoorKatzinCrop(BaseModel):
     """The settings of Vanthoor's model as Katzin simplified it, grown by
     area (`greenhouse_sim.biology.tomato.vanthoor`, decisions 0060 and
-    0062): the published parameter set it runs, GreenLight 2.0.7's, the
-    driver profile, named and versioned, through which the run gives it its
-    drivers (`greenhouse_sim.core.drivers`), and the height above its
-    planting positions at which the light above its canopy is read, which
-    the model does not grow: the run's choice, in m, not the model's."""
+    0062): the parameter set it runs, GreenLight 2.0.7's unless it names
+    another, the driver profile, named and versioned, through which the run
+    gives it its drivers (`greenhouse_sim.core.drivers`), and the height
+    above its planting positions at which the light above its canopy is
+    read, which the model does not grow: the run's choice, in m, not the
+    model's."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     BY_AREA: ClassVar[bool] = True
+    PUBLISHED_SET: ClassVar[str] = "greenlight_2_0_7"
 
     kind: Literal["vanthoor_katzin"] = "vanthoor_katzin"
 
-    parameter_set: Literal["greenlight_2_0_7"] = "greenlight_2_0_7"
+    parameter_set: str = Field(default=PUBLISHED_SET, pattern=SET_NAME)
+    parameter_set_version: PositiveInt = Field(default=FIRST_SET_VERSION, exclude_if=_first_version)
     driver_profile: Literal["house_hours"] = "house_hours"
     driver_profile_version: Literal[1] = 1
     canopy_height_m: PositiveFloat = 2.0
+    carried: Annotated[SkipJsonSchema[CarriedSet | None], Field(exclude=True, repr=False)] = None
+
+
+# A crop section grown by area names the parameter set it runs by name and
+# version, as it names its driver profile (decision 0077): its published set
+# (`PUBLISHED_SET`) unless it says otherwise. A set other than that one is
+# looked up among those its simulator keeps when its scenario is registered,
+# and carried, resolved, by the section (`carried`), as a recorded weather
+# carries its file; its written form names it.
+type WithASet = ReducedTomgroCrop | VanthoorKatzinCrop
+
+
+def runs_published(section: WithASet) -> bool:
+    """Whether a section runs its model's published set."""
+    return (section.parameter_set, section.parameter_set_version) == (
+        section.PUBLISHED_SET,
+        FIRST_SET_VERSION,
+    )
+
+
+def carried_set(section: WithASet) -> CarriedSet | None:
+    """The set a section carries: none for its model's published set.
+    Refused for a set it names and does not carry, rather than run with
+    another's."""
+    if runs_published(section):
+        return None
+    carried = section.carried
+    if carried is None:
+        raise ValueError(
+            f"the parameter set {section.parameter_set} v{section.parameter_set_version} of "
+            f"{section.kind} is not carried: a scenario is registered with the set it runs"
+        )
+    return carried
 
 
 class CropWalk(BaseModel):

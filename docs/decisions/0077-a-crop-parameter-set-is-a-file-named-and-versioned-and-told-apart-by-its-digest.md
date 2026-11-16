@@ -116,6 +116,9 @@ it keeps, and refuses a run that names one it has not.
   under recorded weather is by its file's.
 - A run's manifest answer lists its set's name, version and digest
   beside its model and the model's version.
+- A set made for another version of its model than the one run is run,
+  not refused, and said so: the manifest answer gives the set's
+  `made_for` beside the model's version.
 
 **Where sets live.**
 
@@ -127,11 +130,17 @@ it keeps, and refuses a run that names one it has not.
   recording. An upload is matched by digest, and refused if the simulator
   keeps a set of the same name and version with another digest.
 - *With an epoch:* the store keeps the set an epoch runs beside its
-  manifest, so that its worker, a resume and a fork run the same numbers
-  whatever is kept or deleted after.
+  manifest, in the scenario file the manifest names, with its recording
+  (decision 0067), so that its worker, a resume and a fork run the same
+  numbers whatever is kept or deleted after.
 - *As a research result:* beside the study that made it, under
-  `research/`, in this format. It is neither packaged nor kept by a
-  simulator until someone uploads it.
+  `research/`, in this format, and cited by its name, version and digest.
+  It is kept by a simulator only once someone uploads it.
+- *Never packaged, but for the published:* the simulator packages only
+  its models' published sets, and a packaged scenario runs only those. A
+  calibrated set stays a research result, before its model's validation
+  and after it, so that what every simulator offers is what the models'
+  sources published.
 
 **A row names the set it grows.** An installation's row crop gives its
 model, its variety and its set, by name and version. The crop section's
@@ -169,14 +178,8 @@ parameter model can then have sets without a change to this decision.
 
 ## Open questions
 
-1. **Packaging a calibration:** whether a calibrated set is ever
-   packaged, so that every simulator offers it: before its model's
-   validation (milestone C), after it, or never.
-2. **Names across simulators:** two simulators may each save
+1. **Names across simulators:** two simulators may each save
    `agc4_pretrial_2023` v1 with other numbers. Their digests tell them
    apart, and an upload of the second where the first is kept is refused.
    Whether that is enough, or whether names need a namespace, such as the
    party or the source.
-3. **Another model version:** whether a run under a set made for another
-   version of its model is refused, or run and said so. Proposed: run,
-   with `made_for` beside the model's version in its manifest answer.

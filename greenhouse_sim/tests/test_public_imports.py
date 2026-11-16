@@ -38,6 +38,7 @@ PUBLIC_IMPORTS: dict[str, tuple[str, ...]] = {
         "Episode",
         "EpisodeSummary",
         "PolicyEntry",
+        "record_episode",
         "run_episode",
     ),
     # Looking at a simulation.
