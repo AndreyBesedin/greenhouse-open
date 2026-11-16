@@ -208,35 +208,48 @@ def build_global_model(
     *,
     variables: str | None = None,
     output_format: str = "mat",
+    model: str = MODEL,
+    sources: Sequence[str] = (),
 ) -> Measured:
     """Builds TiGwerLib's global model in `workdir`, from its experiment's
     start to `stop_s`, with a result at each of its intervals: of every
     variable, or of those whose names match `variables`, a regular
-    expression."""
+    expression. Another `model` is built in its place if given, from the
+    files in `workdir` named in `sources`, loaded after TiGwerLib."""
     _require_docker()
     workdir.mkdir(parents=True, exist_ok=True)
-    for output in (BUILT, *RESULTS):
+    for output in (model, *results_of(model)):
         (workdir / output).unlink(missing_ok=True)
-    script = _build_script(stop_s, variables=variables, output_format=output_format)
+    script = _build_script(
+        stop_s, variables=variables, output_format=output_format, model=model, sources=sources
+    )
     (workdir / "build.mos").write_text(script, encoding="utf-8")
     build = _measured_step(folder, workdir, "build", "omc", "build.mos")
-    if not (workdir / BUILT).is_file():
+    if not (workdir / model).is_file():
         raise CheckFailed(f"the model did not build: see {workdir / 'build.log'}")
     return build
 
 
-def simulate_global_model(folder: Path, workdir: Path, solver: str = SOLVER) -> Measured:
+def simulate_global_model(
+    folder: Path, workdir: Path, solver: str = SOLVER, *, model: str = MODEL
+) -> Measured:
     """Simulates the model built in `workdir` with `solver`, its results at
     its intervals alone, not at its events too."""
-    for output in RESULTS:
+    for output in results_of(model):
         (workdir / output).unlink(missing_ok=True)
     simulate = _measured_step(
-        folder, workdir, "simulate", f"./{BUILT}", f"-s={solver}", "-noEventEmit", "-lv=LOG_STATS"
+        folder, workdir, "simulate", f"./{model}", f"-s={solver}", "-noEventEmit", "-lv=LOG_STATS"
     )
     log = (workdir / "simulate.log").read_text(encoding="utf-8", errors="replace")
     if FINISHED not in log:
         raise CheckFailed(f"the model was not simulated to its end: see {workdir / 'simulate.log'}")
     return simulate
+
+
+def results_of(model: str) -> tuple[str, str]:
+    """What a simulation of `model` writes its results to: a MAT file and a
+    CSV."""
+    return (f"{model}_res.mat", f"{model}_res.csv")
 
 
 def verify_pins() -> None:
@@ -438,14 +451,26 @@ def _omc_script(folder: Path, name: str, *calls: str) -> None:
     subprocess.run(_command(folder, folder, "omc", name), check=True)
 
 
-def _build_script(stop_s: int, *, variables: str | None, output_format: str) -> str:
+def _build_script(
+    stop_s: int,
+    *,
+    variables: str | None,
+    output_format: str,
+    model: str = MODEL,
+    sources: Sequence[str] = (),
+) -> str:
     kept = "" if variables is None else f', variableFilter="{variables}"'
+    loaded = "".join(
+        f'if not loadFile("{WORK}/{source}") then print(getErrorString()); exit(1); end if;\n'
+        for source in sources
+    )
     return (
         f'if not loadModel(Modelica, {{"4.0.0"}}) then print(getErrorString()); exit(1); end if;\n'
         f'if not loadModel(Buildings, {{"9.1.0"}}) then print(getErrorString()); exit(1); end if;\n'
         f'if not loadFile("{TIGWERLIB_MOUNT}/TiGwerLib/package.mo") then '
         f"print(getErrorString()); exit(1); end if;\n"
-        f"buildModel({MODEL}, startTime={START_S}, stopTime={stop_s}, "
+        f"{loaded}"
+        f"buildModel({model}, startTime={START_S}, stopTime={stop_s}, "
         f"numberOfIntervals={(stop_s - START_S) // INTERVAL_S}, tolerance={TOLERANCE}, "
         f'outputFormat="{output_format}"{kept});\n'
         f"print(getErrorString());\n"

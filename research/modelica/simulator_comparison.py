@@ -473,18 +473,38 @@ def _part(differences: Mapping[int, float], keeps: Callable[[int], bool]) -> dic
     return {"compared": len(kept), "mean_difference": _mean(kept), "rmse_difference": _rmse(kept)}
 
 
-def run(folder: Path, workdir: Path, at: Window) -> dict[str, Any]:
+def run(
+    folder: Path,
+    workdir: Path,
+    at: Window,
+    *,
+    model: str = om.MODEL,
+    sources: Sequence[str] = (),
+) -> dict[str, Any]:
     """Runs TiGwerLib to the window's end in `workdir`, then the simulator
     through the window on the same inputs, compares them, and answers the
-    report."""
+    report. Another model of TiGwerLib's greenhouse is run in its global
+    model's place if given, from the files in `workdir` named in
+    `sources`."""
     main_path, weather_path = folder / MAIN_DATA, folder / WEATHER_DATA
     for path in (main_path, weather_path):
         if not path.is_file():
             raise om.PinRefused(f"{path} is not there: run `openmodelica setup {folder}` first")
     given = manifest()
-    build = om.build_global_model(folder, workdir, at.end_s, variables=KEPT, output_format="csv")
-    simulate_step = om.simulate_global_model(folder, workdir, given["tigwerlib"]["solver"])
-    tigwerlib = repro.our_series(workdir / om.RESULTS[1])
+    build = om.build_global_model(
+        folder,
+        workdir,
+        at.end_s,
+        variables=KEPT,
+        output_format="csv",
+        model=model,
+        sources=sources,
+    )
+    simulate_step = om.simulate_global_model(
+        folder, workdir, given["tigwerlib"]["solver"], model=model
+    )
+    results = workdir / om.results_of(model)[1]
+    tigwerlib = repro.our_series(results)
     missing_start = at.start_s not in tigwerlib["MainAir.T"]
     if missing_start or at.start_s not in tigwerlib["MainAir.RH"]:
         raise om.CheckFailed(f"TiGwerLib's results hold no air at the window's start, {at.start_s}")
@@ -515,10 +535,10 @@ def run(folder: Path, workdir: Path, at: Window) -> dict[str, Any]:
         bar=float(given["bar"]["MainAir.T"]),
     )
     tigwerlib_heat_j = sum(heat.values()) * om.INTERVAL_S
-    pipes = pipes_heat_w(workdir / om.RESULTS[1])
+    pipes = pipes_heat_w(results)
     return {
         "window": {"name": at.name, **repro.manifest()["windows"][at.name]},
-        "stated_in": _last_commit(MANIFEST),
+        "stated_in": last_commit(MANIFEST),
         "run": {
             "image": om.IMAGE,
             "solver": given["tigwerlib"]["solver"],
@@ -580,7 +600,7 @@ def _simulator_version() -> str:
     return _git(["describe", "--always", "--dirty", "--abbrev=40"])
 
 
-def _last_commit(path: Path) -> str:
+def last_commit(path: Path) -> str:
     return _git(["log", "-1", "--format=%H", "--", str(path.relative_to(HERE))])
 
 

@@ -314,3 +314,46 @@ The difference is the simulator's temperature less TiGwerLib's.
 - **What it took:** TiGwerLib, in January 17 s to build and 12 minutes for
   its 47 days, in July 15 s and 59 minutes for its 235 days; the
   simulator, 7 minutes for each window's 11 days.
+
+## Apportioning the gap among the blockers
+
+How much of that gap each blocker accounts for is measured by taking it
+out of TiGwerLib, in the comparison's own harness, one at a time and all
+together, on the same two windows:
+
+```bash
+python -m research.modelica.blockers run ~/.greenhouse-open/modelica /tmp/fig8-screens fig8 screens
+python -m research.modelica.blockers apportion
+```
+
+A variant is a model of its own, written into the run's working folder,
+that extends TiGwerLib's global model, unchanged, with modifiers on its
+components: each sets a parameter, or the value a component gives, and
+none edits an equation. [`blockers.json`](blockers.json), committed before
+any run, states each variant's modifiers, what each takes out, what could
+not be made without an edit, and how the gap is attributed:
+
+| Variant | Takes out |
+| --- | --- |
+| `screens` | the thermal and shading screens, held open |
+| `crop` | the crop's transpiration: its minimum stomatal resistance a million times TiGwerLib's |
+| `storage` | the heat stored in the floor, the soil, the roof, the walls, the structure, the gutters and the growing medium: each capacity a hundredth of TiGwerLib's |
+| `ground` | the floor's tie to the deep soil at 18.1 °C: the soil's conductivities a hundredth |
+| `sky` | the cold sky: the roof and the south wall radiate to a sky at the outside air's temperature |
+| `walls` | the corridors: the east and north walls face air at the outside air's temperature |
+| `all` | the six together |
+
+Not made, since each needs an edit: a west wall, which TiGwerLib does not
+have; walls with the outside's wind and sky beyond them; a crop that
+exchanges no heat; no heat capacity at all; and screens taken out rather
+than held open.
+
+A blocker's part, in each window, over all its moments and with the sun up
+and down, is how far taking it out moves the RMSE and the mean of the
+simulator's difference from TiGwerLib, from the comparison's own reports.
+The blockers are ranked by the RMSE each takes away. The six moves need
+not add up to the move all six make together: their sum is given beside
+it, and the difference as the interaction, nothing rescaled. What the
+`all` variant leaves is the gap no variant could close. The reports, in
+`results/blockers/<variant>_<window>.json`, hold the comparison's numbers
+alone.
