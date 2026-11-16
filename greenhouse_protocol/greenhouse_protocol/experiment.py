@@ -8,8 +8,9 @@ episodes apart, run one again and check it, and score it later.
   digest when the scenario is not packaged with its producer, its id and
   epoch, its condition (`Condition`: its seed, weather and days) and the
   seed it was at, how long it lasted and where the episode ended, each
-  model it ran with its version, and the SHA-256 of the weather it ran
-  under, sampled every so often.
+  model it ran with its version and, for a model that grows with one, its
+  parameter set, and the SHA-256 of the weather it ran under, sampled every
+  so often.
 - **The policy:** its identity; its entry, if it was made from one
   (`PolicyEntry`: its factory, settings, files and seed), with its
   settings' and files' digests; its principal, cadence, plan, information
@@ -108,14 +109,30 @@ class EpisodePlace(BaseModel):
     policy: NonNegativeInt
 
 
+class ParameterSetRan(BaseModel):
+    """The parameter set a model ran with: its name, version and digest, and
+    the version of the model it was made for, which may be another than the
+    one run."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: Name
+    version: PositiveInt
+    digest: Name
+    made_for: PositiveInt
+
+
 class ModelRan(BaseModel):
-    """A part of the run, the model it ran and that model's version."""
+    """A part of the run, the model it ran and that model's version, and the
+    parameter set it ran with: none for a model that names none, as in every
+    record written before sets were named."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     part: Name
     model: Name
     version: PositiveInt
+    parameter_set: ParameterSetRan | None = None
 
 
 class WeatherSeries(BaseModel):

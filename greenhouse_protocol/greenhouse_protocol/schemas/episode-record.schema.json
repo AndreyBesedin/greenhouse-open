@@ -1275,7 +1275,7 @@
     },
     "ModelRan": {
       "additionalProperties": false,
-      "description": "A part of the run, the model it ran and that model's version.",
+      "description": "A part of the run, the model it ran and that model's version, and the\nparameter set it ran with: none for a model that names none, as in every\nrecord written before sets were named.",
       "properties": {
         "part": {
           "$ref": "#/$defs/Name"
@@ -1287,6 +1287,17 @@
           "exclusiveMinimum": 0,
           "title": "Version",
           "type": "integer"
+        },
+        "parameter_set": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParameterSetRan"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -1413,6 +1424,36 @@
       ],
       "title": "OutcomeStatus",
       "type": "string"
+    },
+    "ParameterSetRan": {
+      "additionalProperties": false,
+      "description": "The parameter set a model ran with: its name, version and digest, and\nthe version of the model it was made for, which may be another than the\none run.",
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/Name"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        },
+        "digest": {
+          "$ref": "#/$defs/Name"
+        },
+        "made_for": {
+          "exclusiveMinimum": 0,
+          "title": "Made For",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "digest",
+        "made_for"
+      ],
+      "title": "ParameterSetRan",
+      "type": "object"
     },
     "PlannedAction": {
       "additionalProperties": false,
