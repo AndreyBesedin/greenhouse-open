@@ -247,7 +247,9 @@ Recorded 2026-11-11, as [P22](archive/p22-watching-and-starting-a-run.md) closed
 ## Greenhouse R&D workflows and Modelica comparison
 
 Recorded 2026-10-24, exploratory work after P14, alongside the crop-model
-research above; its first comparison is item 6 of the research priorities.
+research above; its first comparison is item 6 of the research priorities,
+and the components that comparison found missing are
+[P24](p24-house-components-and-a-multi-node-climate.md).
 Modelica and its tools, including OpenModelica and Dymola, already support
 substantial greenhouse climate, energy and crop models. The question is not whether the simulator can replace
 their equation-based modelling. It is whether it adds a useful *experimental
