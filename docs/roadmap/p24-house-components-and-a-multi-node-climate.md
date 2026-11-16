@@ -121,10 +121,13 @@ keep only how the model computes.
   polycarbonate, polyethylene film), or given by its properties: shortwave
   transmittance, beam and diffuse; longwave emissivity and transmittance; its
   thickness, conductivity and heat capacity. Each property has its unit, source and
-  range in the schema, as P20's parameters do.
+  range in the schema, as P20's parameters do. A described cover gives `grid` and
+  `whole_house` their U and transmittance too; a manifest that gives both a cover's
+  material and `glazing_u_w_m2k` is refused, naming both.
 - **Each wall's boundary:** the outside (the default), a neighbouring space at a
   temperature (a corridor, a headhouse, another house), constant or recorded, or
-  nothing (no heat crosses it).
+  nothing (no heat crosses it). A recorded temperature is a file of its own,
+  digested into the run's identity as a recorded weather is.
 - **The floor:** its surface (concrete, soil, a white film), its layers down to a
   depth, each with its thickness, conductivity, density and heat capacity, its
   shortwave reflectance and longwave emissivity, and the deep soil's temperature.
@@ -146,9 +149,12 @@ do not (decision 0077): a correction is a new name.
 
 ### A multi-node climate (decision 0078)
 
-A third model of the house air part, `multi_node`, version 1, beside `grid` and
+A third model of the house air part, `vanthoor`, version 1, beside `grid` and
 `whole_house`, chosen by the manifest
 ([decision 0054](../decisions/0054-models-are-chosen-by-the-manifest-from-a-registry.md)).
+It is named after its source, Vanthoor's (2011) model, and documents where it
+departs from it: its default ventilation law, TiGwerLib's walls, and the house's own
+description.
 
 - **Its nodes** follow the house's description: the inside air (its temperature,
   water and CO₂); the air above a drawn screen; the cover, which holds the
@@ -199,7 +205,8 @@ A third model of the house air part, `multi_node`, version 1, beside `grid` and
 - **The crop gives the canopy its leaf area,** per m² of floor, and takes the CO₂ its
   assimilation declares from the air. Each is a typed port a crop model declares,
   held through the crop's step, in its units; a model that declares neither is not
-  coupled.
+  coupled. The organ crop gives its plants' leaf area, each leaf's from its length
+  and its plant's form, summed over its scope, and takes no CO₂.
 - **Or the canopy is prescribed:** the house air's parameters give a leaf area, a
   constant or a recorded series, so that a comparison can match the reference's, and
   a crop that does not couple can still stand in a house that transpires. The
@@ -217,13 +224,13 @@ A third model of the house air part, `multi_node`, version 1, beside `grid` and
 
 | Difference | Proposed | Why |
 | --- | --- | --- |
-| Ventilation: De Jong's function against the orifice flows | An option of `multi_node`'s: `orifice` (today's, its default), `vanthoor` (after Boulard and Baille, as GreenLight) or `de_jong` (as TiGwerLib) | Each is a published law with its own range of validity; a comparison chooses its reference's |
+| Ventilation: De Jong's function against the orifice flows | An option of `vanthoor`'s: `orifice` (today's, its default), `boulard_baille` (after Boulard and Baille, as Vanthoor and GreenLight) or `de_jong` (as TiGwerLib) | Each is a published law with its own range of validity; a comparison chooses its reference's |
 | Leakage: power laws against a rate | An option: `rate` (today's, its default) or `power_law`, by the pressure across the cover | TiGwerLib's corridors leak by the pressure, which a rate cannot say |
 | Light: measured diffuse against Erbs's split | A weather that records diffuse radiation is read as measured; Erbs's split stays for one that does not | A matched input, not a model's choice |
 | Light: transmission | Deliberate: the simulator's ray tracing through the cover's material stays; the material gives the transmittances a reference uses | The geometry is the simulator's own strength; the numbers are matched through the material |
 | Where the heaters' heat goes | A component: a pipe network gives its heat by convection and radiation; a unit heater warms the air | Not a difference of law, but of equipment |
-| The air's volume | `multi_node` takes the envelope's exact volume; the grid's cells stay the grid's, documented | The grid's volume is its resolution's |
-| The roof's glazed area taken as its projection | `multi_node` takes the slopes' own area; `whole_house` keeps its projection, documented | Changing it would move every whole-house run |
+| The air's volume | `vanthoor` takes the envelope's exact volume; the grid's cells stay the grid's, documented | The grid's volume is its resolution's |
+| The roof's glazed area taken as its projection | `vanthoor` takes the slopes' own area; `whole_house` keeps its projection, documented | Changing it would move every whole-house run |
 
 ### Setups in step with TiGwerLib and GreenLight
 
@@ -246,6 +253,9 @@ canopy's leaf area) read from TiGwerLib's records and stated before the run. No
 parameter is set to meet the bar. Its report is committed as written, and a table
 in [`research/modelica`](../../research/modelica/README.md) records the progress: the
 days within the bar, the RMSE by day and by night, for each window, at each step.
+Once the canopy transpires, the air's relative humidity is reported beside its
+temperature, with no bar. P24 sets no number of days within the bar as its target:
+it is done when its steps are, and the table says how far they took the comparison.
 
 ### Licences
 
@@ -280,22 +290,22 @@ walls for January's nights, the canopy and the shading for July's days.
 | --- | --- | --- | --- |
 | P24.1 | **Ordered by the apportioning:** once the research's apportioning of the first comparison's gap lands, P24.4 to P24.9 are put in the order of the share each blocker carries, in this document | Each step's place cites the share its blocker carries, and the document says what moved | Proposed |
 | P24.2 | **Components described** (decision 0080), in two pull requests: the installation's schema gains the cover's materials, each wall's boundary, the floor and its layers, screens and pipe networks, with the catalogue of named materials; then the weather's sky temperature, longwave and diffuse radiation, as optional fields and outside observation types. `grid` and `whole_house` refuse what they cannot model, naming it | An installation with every component reads back the same; a value outside its range is refused by field; a house with a screen run under `whole_house` is refused, naming the screen; no packaged run id, checkpoint or replay digest moves | Proposed |
-| P24.3 | **The multi-node model's frame** (decision 0078), in two pull requests: `multi_node` registered with the inside air, the cover and the sky, the cover's own area and the envelope's volume, its solver, its edges, its checkpoint and its replay, and today's 7 minutes measured; then the floor and its soil layers | Its fluxes agree with GreenLight's at the same states; its course agrees with scipy's BDF at tight tolerances within a stated bound; at its limit it gives the whole house's numbers; a run is the same when repeated and resumed; its cost is within budget; the comparison is run again and recorded | Proposed |
+| P24.3 | **The multi-node model's frame** (decision 0078), in two pull requests: `vanthoor` registered with the inside air, the cover and the sky, the cover's own area and the envelope's volume, its solver, its edges, its checkpoint and its replay, and today's 7 minutes measured; then the floor and its soil layers | Its fluxes agree with GreenLight's at the same states; its course agrees with scipy's BDF at tight tolerances within a stated bound; at its limit it gives the whole house's numbers; a run is the same when repeated and resumed; its cost is within budget; the comparison is run again and recorded | Proposed |
 | P24.4 | **The thermal screen,** with the air above it, its material, its drive and a screen loop | Its fluxes agree with GreenLight's; a screen closed at night keeps the air warmer than none, as GreenLight's does; the comparison is run again, the screen closed as TiGwerLib's records close it, and recorded | Proposed |
 | P24.5 | **Walls' boundaries:** a wall on a neighbouring space or on nothing | A wall on nothing passes no heat; one on a space at the air's temperature passes none either; agreement with TiGwerLib's corridors on the same temperatures; the comparison is run again, the corridors at their measured temperatures, and recorded | Proposed |
-| P24.6 | **The canopy, both ways** (decision 0079), in two pull requests: the canopy as a node, prescribed, with its transpiration and condensation on the cover and screens; then the crop's ports, Vanthoor's model and Reduced-State TOMGRO giving their leaf area and Vanthoor's its uptake, read back through `house_canopy` | Its fluxes agree with GreenLight's; water and CO₂ are conserved; a crop that does not couple runs as before; the comparison is run again with TiGwerLib's leaf area prescribed, its relative humidity reported beside its temperature, and recorded | Proposed |
+| P24.6 | **The canopy, both ways** (decision 0079), in two pull requests: the canopy as a node, prescribed, with its transpiration and condensation on the cover and screens; then the crop's ports, Vanthoor's model, Reduced-State TOMGRO and the organ crop giving their leaf area and Vanthoor's its uptake, read back through `house_canopy` | Its fluxes agree with GreenLight's; water and CO₂ are conserved; a crop that does not couple runs as before; the comparison is run again with TiGwerLib's leaf area prescribed, its relative humidity reported beside its temperature, and recorded | Proposed |
 | P24.7 | **The shading and blackout screens,** each with its material and its drive | Their light and heat agree with GreenLight's (blackout) and TiGwerLib's (shading); the comparison is run again, the shading drawn as TiGwerLib's records draw it, and recorded | Proposed |
 | P24.8 | **Pipe networks:** pipes as nodes, their heat by convection and radiation, given the heat a record gives or the water's temperature | Their split agrees with GreenLight's pipe rail's and grow pipe's; the heat given over a window matches the record's as the first comparison's does; the comparison is run again and recorded | Proposed |
-| P24.9 | **Known differences as options:** the ventilation laws (`vanthoor`, `de_jong`), power-law leakage, and measured diffuse light read | Each law agrees with its reference on the same openings and weather; the defaults change no run; the comparison is run again with TiGwerLib's choices, and recorded | Proposed |
+| P24.9 | **Known differences as options:** the ventilation laws (`boulard_baille`, `de_jong`), power-law leakage, and measured diffuse light read | Each law agrees with its reference on the same openings and weather; the defaults change no run; the comparison is run again with TiGwerLib's choices, and recorded | Proposed |
 | P24.10 | **Setups in step:** an installation written to TiGwerLib's and GreenLight's parameters and read back, the fields with no counterpart reported; the comparison's harness builds its house through it | An installation written and read back is the same in every field mapped; the comparison's house built through the mapping gives the numbers it gave | Proposed |
-| P24.11 | **In the builder:** every component placed and edited from the published schema, the materials chosen from the catalogue, a house without a component's model refused in words | A browser test describes a screen, a wall on a corridor and a floor, and runs the house under `multi_node` | Proposed |
+| P24.11 | **In the builder:** every component placed and edited from the published schema, the materials chosen from the catalogue, a house without a component's model refused in words | A browser test describes a screen, a wall on a corridor and a floor, and runs the house under `vanthoor` | Proposed |
 | P24.12 | The QA scenario below, run and recorded | Each step passes as it says | Proposed |
 
 ## QA scenario (proposed)
 
 In the builder: describe TiGwerLib's house, its cover's glass, a wall on each
 corridor, a concrete floor over soil, a thermal and a shading screen, two pipe
-networks and a crop, and run it under `multi_node` for a winter week. The screens
+networks and a crop, and run it under `vanthoor` for a winter week. The screens
 close as their loop says, the floor holds the day's heat into the night, and the
 crop's transpiration shows in the air's humidity. Run the same house under
 `whole_house`: refused, naming what it cannot model. Write the house to GreenLight's
@@ -305,21 +315,12 @@ table: each step's days within the bar and its RMSE, by day and by night.
 
 ## Open questions
 
-1. **The solver:** stretches linearised and solved exactly (proposed), or a general
-   stiff solver with event location, as GreenLight solves.
-2. **The budget's numbers:** under 1 s per simulated day for the model's own work,
-   and 1.5 times today's window end to end (proposed).
-3. **`multi_node`'s default ventilation law:** the simulator's orifice flows
-   (proposed), Vanthoor's or De Jong's.
-4. **A third decision:** 0080, the components in the installation, apart (proposed),
-   or folded into 0078.
-5. **The cover's U:** a described material gives `grid` and `whole_house` their U
-   and transmittance, and a manifest that gives both a material and a U is refused
-   (proposed); or those models keep their parameter and refuse a material.
-6. **A neighbouring space's recorded temperature:** a file of its own, digested
-   into the run's identity as a recorded weather is (proposed), or columns of the
-   weather's file.
-7. **The relative humidity's bar,** once the canopy transpires: reported without
-   one (proposed), or a bar stated before a run.
-8. **What counts as done:** P24 states no number of days within the bar as its
-   target, and records the progress (proposed), or a target is set before P24.3.
+None: the questions it was proposed with are answered in its design and in
+decisions 0078 to 0080. The solver linearises stretches and solves them exactly; the
+budget is under 1 s per simulated day and 1.5 times today's window; the model is
+named after its source, `vanthoor`; its default ventilation law is the simulator's
+orifice flows; the canopy's balance is the climate's, coupled at the crop's own step,
+the organ crop by its plants' leaf area; 0080 stands apart; a described cover gives
+every model its glass; a neighbour's record is a file of its own; the mapping lives
+under `research/`; the relative humidity is reported with no bar; and P24 records
+its progress with no target number of days.

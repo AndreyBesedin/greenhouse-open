@@ -49,10 +49,17 @@
 
 ## Decision
 
-**A third model of the house air part.** `multi_node`, version 1, is
+**A third model of the house air part.** `vanthoor`, version 1, is
 registered beside `grid` and `whole_house`, its parameters under the
-manifest's `climate` section with `multi_node` as their `kind`. `grid`
+manifest's `climate` section with `vanthoor` as their `kind`. `grid`
 stays the default. A manifest that does not name it runs as it ran.
+
+**It is named after its source,** Vanthoor's (2011) greenhouse climate
+model, whose equations it takes. The name does not say Vanthoor's model
+unchanged: where it departs, by its default ventilation law, a component
+of TiGwerLib's, or the house's own description, its module and its
+parameters' documentation say so, and a source of its own would name a
+model of its own.
 
 **Its nodes follow the house's description** (decision 0080): the inside
 air, with its temperature, water and CO₂; the air above a drawn screen,
@@ -90,7 +97,7 @@ humidity and its cloud cover, by a named formula.
 - a general stiff solver at tight tolerances is its check, in the tests,
   not its method.
 
-**The whole house decides.** The loops read `multi_node`'s inside air,
+**The whole house decides.** The loops read `vanthoor`'s inside air,
 as they read the whole house's, and switch at their edges. Its air is
 drawn the same in every cell, as the whole house's is.
 
@@ -127,7 +134,7 @@ references under `research/`.
 ## Consequences
 
 - **The packaged scenarios do not move:** no run id, checkpoint or replay
-  digest changes, since none names `multi_node` and today's models keep
+  digest changes, since none names `vanthoor` and today's models keep
   their versions.
 - **The weather and the protocol change,** by optional quantities and new
   outside observation types; a recorded weather's file may give them.
@@ -146,9 +153,7 @@ references under `research/`.
 
 ## Open questions
 
-1. **The solver:** stretches linearised and solved exactly (proposed), or
-   a general stiff solver with event location, as GreenLight solves.
-2. **The budget's numbers:** a second per simulated day, and one and a
-   half times the whole house's window (proposed).
-3. **Its name:** `multi_node` (proposed), or one that names its source,
-   such as `vanthoor`, which would read as Vanthoor's model unchanged.
+None: the three it was proposed with are answered above (stretches
+linearised and solved exactly; a second per simulated day, and one and a
+half times the whole house's window; named after its source, `vanthoor`,
+its departures documented).

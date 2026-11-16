@@ -31,14 +31,16 @@
 - **The run's parts step at their own rates.** The climate advances by
   stretches of at most a minute; Vanthoor's crop by the hour and
   Reduced-State TOMGRO's by the day (decision 0064).
-- **Most crop models will not couple soon.** The organ and simple crops
-  have no leaf area per m² of floor, and a study may want a one-way crop
-  in a house that transpires, or a canopy matched to a reference's.
+- **Not every crop model can couple.** The simple crop has no leaves. The
+  organ crop's plants have leaves of their own, each with its length and
+  its plant's form, but no leaf area per m² of floor, and it takes no CO₂:
+  the air's CO₂ only scales its growth. A study may also want a one-way
+  crop in a house that transpires, or a canopy matched to a reference's.
 
 ## Decision
 
 **The canopy is a node of the climate,** in a house air model that has
-one (`multi_node`, decision 0078). Its temperature, its transpiration by
+one (`vanthoor`, decision 0078). Its temperature, its transpiration by
 Stanghellini's stomatal resistance as Vanthoor's model has it, its
 convection with the air and its radiation with the cover, the screens,
 the pipes, the floor and the sky are the climate's.
@@ -52,6 +54,11 @@ area, converted to the floor's explicitly (decision 0062):
   step.
 
 A model that declares neither is not coupled.
+
+**The organ crop couples by its leaf area.** Its plants' leaves, each
+leaf's area from its length and its plant's form, are summed over its
+scope and divided by the scope's floor. It declares no uptake, so the
+air loses no CO₂ to it.
 
 **The manifest chooses the canopy:** none, prescribed, or the crop's.
 
@@ -93,7 +100,8 @@ their versions, as decision 0062 has a profile's.
   digests.
 - **Vanthoor's model and Reduced-State TOMGRO gain their ports:** both
   their leaf areas, and Vanthoor's its uptake, in versions that change no
-  number of a one-way run.
+  number of a one-way run. The organ crop gains its leaf area's port the
+  same way.
 - **The air's relative humidity can be compared** with a reference's once
   the canopy transpires.
 - **The crop's checkpoint and the climate's stay apart,** each under its
@@ -111,9 +119,7 @@ their versions, as decision 0062 has a profile's.
 
 ## Open questions
 
-1. **Whose balance:** the canopy's in the climate (proposed), or each
-   crop model's own.
-2. **The coupling step:** the crop's own, explicit (proposed), or shorter,
-   or iterated to agreement within a step.
-3. **The organ crop:** whether its plants' leaf area, summed over its
-   scope, should couple, or it stays one-way.
+None: the three it was proposed with are answered above (the canopy's
+balance is the climate's; the coupling step is the crop's own, explicit,
+in a fixed order; the organ crop couples by its plants' leaf area summed
+over its scope).

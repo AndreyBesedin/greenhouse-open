@@ -57,6 +57,15 @@ values never change once published; a correction is a new name.
 tolerances, its choices. What the house is stays in the installation, and
 a model reads it from there.
 
+**A described cover gives every model its glass.** A cover's material
+gives `grid` and `whole_house` their U and their transmittance, and the
+sunlight its transmittance. A manifest that gives both a cover's
+material and the house air model's `glazing_u_w_m2k` is refused, naming
+both; a manifest that gives no material runs on the parameter, as today.
+
+**A neighbouring space's recorded temperature is a file of its own,**
+digested into the run's identity as a recorded weather is.
+
 **A model that cannot model a described component refuses the house,**
 naming the component, as a run refuses rows of crops it cannot grow. It
 never runs as if the component were not there.
@@ -82,8 +91,7 @@ beside the references it maps to, until a package needs it.
   the viewer's contracts are generated again.
 - **The glass's U and transmittance gain a second source:** a cover's
   described material, beside the house air model's `glazing_u_w_m2k` and
-  the sunlight's constant. Which wins, or whether a manifest that gives
-  both is refused, is settled before P24.2.
+  the sunlight's constant. A manifest gives one or the other, never both.
 - **Today's models refuse a house they cannot model,** such as one with a
   screen under `whole_house`, where today they could not be told of one.
 - **The builder grows palettes** for screens, floors and pipe networks,
@@ -96,12 +104,8 @@ beside the references it maps to, until a package needs it.
 
 ## Open questions
 
-1. **The cover's U:** a described material gives `grid` and `whole_house`
-   their U and transmittance, and a manifest that gives both is refused
-   (proposed); or those models keep their parameter and refuse a material.
-2. **A neighbouring space's recorded temperature:** a file of its own,
-   digested into the run's identity as a recorded weather is (proposed),
-   or columns of the weather's file.
-3. **Apart, or in 0078:** this record apart (proposed), since the
-   sunlight and the grid read a material too, or folded into decision
-   0078.
+None: the three it was proposed with are answered above (a described
+cover gives every model its glass, and a manifest giving both is refused;
+a neighbouring space's record is a file of its own; and this record
+stands apart from decision 0078, since the sunlight and the grid read a
+material too).
