@@ -83,13 +83,13 @@ from greenhouse_protocol.outcome import ActionOutcome
 from greenhouse_protocol.plan import Plan, PlannedAction, Principal
 from pydantic import BaseModel, ConfigDict, JsonValue
 
-from greenhouse_sim.scenarios.registry import models_run
+from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.services.forecasts import PERSISTENCE, Forecaster
 from greenhouse_sim.services.playback import Playback
 from greenhouse_sim.services.policy_port import RunPolicyPort
 from greenhouse_sim.services.runs import RunRequest, started_duration_s, started_weather
 from greenhouse_sim.services.scenario_files import file_digest
-from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, scenario, with_weather
+from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, run_manifest, scenario
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.system import UNKNOWN_COMMIT, source_commit
 from greenhouse_sim.services.weather import SERIES_EVERY_S, series_sha256
@@ -433,6 +433,10 @@ def _run_recorded(
     catalogue = simulator.catalogue
     own = scenario(catalogue, episode.scenario_id)
     weather = played.weather or DEFAULT_WEATHER
+    # Its models, and its crop's parameter set, as its manifest answer gives them.
+    manifest = run_manifest(catalogue, episode.scenario_id, weather)
+    crop_set = manifest.parameter_set
+    grown_with = None if crop_set is None else records.ParameterSetRan(**crop_set.model_dump())
     seeded = RunRequest(episode.scenario_id, weather=weather, seed=played.seed)
     return records.EpisodeRun(
         scenario_id=episode.scenario_id,
@@ -447,8 +451,13 @@ def _run_recorded(
         duration_s=played.end_s,
         episode_end_s=episode.end_s,
         models=tuple(
-            records.ModelRan(part=part.value, model=ran.model, version=ran.version)
-            for part, ran in models_run(with_weather(own, weather)).items()
+            records.ModelRan(
+                part=part,
+                model=ran.model,
+                version=ran.version,
+                parameter_set=grown_with if part == Part.CROP else None,
+            )
+            for part, ran in manifest.models.items()
         ),
         weather=records.WeatherSeries(
             every_s=SERIES_EVERY_S,

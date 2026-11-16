@@ -17,7 +17,13 @@ from greenhouse_protocol.authorisation import AuthorisationConfig, Authorisation
 from greenhouse_protocol.budget import OBSERVATIONS_ONLY, InformationBudget
 from greenhouse_protocol.context import CapabilityContext
 from greenhouse_protocol.contracts.policy import Decision, Delivery, Keep, PolicyIdentity, Revise
-from greenhouse_protocol.experiment import EpisodePlace, EpisodeRecord, delivered, settings_sha256
+from greenhouse_protocol.experiment import (
+    EpisodePlace,
+    EpisodeRecord,
+    ParameterSetRan,
+    delivered,
+    settings_sha256,
+)
 from greenhouse_protocol.plan import Asap, PlannedAction, Principal, PrincipalKind
 from pydantic import JsonValue
 
@@ -25,7 +31,7 @@ from greenhouse_sim.experiment import Condition, Episode, PolicyEntry, record_ep
 from greenhouse_sim.scenarios.registry import models_run
 from greenhouse_sim.services.run_store import FolderStore
 from greenhouse_sim.services.scenario_files import carry
-from greenhouse_sim.services.scenarios import scenario, with_weather
+from greenhouse_sim.services.scenarios import run_manifest, scenario, with_weather
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.units import DAY_S, HOUR_S
 
@@ -241,3 +247,21 @@ def test_a_scenario_not_packaged_is_named_by_its_files_digest(tmp_path: Path) ->
 
         kept = carry(fresh.catalogue, FolderStore(tmp_path), "recorded_box")
     assert kept is not None and record.run.scenario_file_digest == kept
+
+
+def test_a_record_names_its_crops_parameter_set_as_its_manifest_answer_does(
+    simulator: Simulator,
+) -> None:
+    record = record_episode(
+        simulator,
+        Episode(scenario_id="tomgro_house", policy=_Doors({}), principal=POLICY, end_s=HOUR_S),
+    )
+
+    named = {m.part: m.parameter_set for m in record.run.models}
+    answer = run_manifest(simulator.catalogue, "tomgro_house").parameter_set
+    assert answer is not None
+    assert named.pop("crop") == ParameterSetRan(**answer.model_dump())
+    assert set(named.values()) == {None}
+    # A crop that names no set, as the airflow box's simple crop, has none.
+    plain = record_episode(simulator, _episode(_Doors({})))
+    assert {m.parameter_set for m in plain.run.models} == {None}

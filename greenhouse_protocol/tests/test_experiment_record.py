@@ -15,6 +15,8 @@ from greenhouse_protocol.experiment import (
     Delivered,
     DeliveredLogs,
     EpisodeRun,
+    ModelRan,
+    ParameterSetRan,
     PolicyEntry,
     PolicyFile,
     PolicyMade,
@@ -102,3 +104,12 @@ def test_an_episode_ends_within_its_run() -> None:
             models=(),
             weather=WeatherSeries(every_s=600.0, sha256="0" * 64),
         )
+
+
+def test_a_model_written_before_sets_were_named_reads_with_none() -> None:
+    written = ModelRan.model_validate_json('{"part": "crop", "model": "simple", "version": 1}')
+    grown = ParameterSetRan(name="gnvman", version=1, digest="sha256:2c83", made_for=1)
+
+    assert written.parameter_set is None
+    with_set = written.model_copy(update={"parameter_set": grown})
+    assert ModelRan.model_validate_json(with_set.model_dump_json()) == with_set
