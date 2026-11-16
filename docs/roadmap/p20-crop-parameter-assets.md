@@ -2,7 +2,7 @@
 
 **Status:** proposed, in progress (P20.1 to P20.4 are done): the steps below, with decision
 [0077](../decisions/0077-a-crop-parameter-set-is-a-file-named-and-versioned-and-told-apart-by-its-digest.md),
-proposed. It was P12.4 and part of P12.6 in
+accepted with P20.4, its questions settled. It was P12.4 and part of P12.6 in
 [the setup builder](archive/p12-setup-builder.md), which closes without it. Part of the
 [simulator roadmap](README.md).
 

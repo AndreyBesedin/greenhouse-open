@@ -1,6 +1,6 @@
 # 0077: A crop parameter set is a file, named and versioned, and told apart by its digest
 
-**Status:** Proposed, with [P20](../roadmap/p20-crop-parameter-assets.md)'s plan
+**Status:** Accepted, with [P20](../roadmap/p20-crop-parameter-assets.md)'s fourth step
 **Date:** 2026-11-11
 
 ## Context
