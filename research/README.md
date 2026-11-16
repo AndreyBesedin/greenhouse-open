@@ -23,7 +23,10 @@ call for that is not part of the packages: nothing in `greenhouse_sim`,
 - [`modelica/`](modelica/README.md): OpenModelica in its container, with
   TiGwerLib and the libraries it uses, pinned, for the Modelica comparison
   (item 6), a check that builds and simulates a day of TiGwerLib's
-  global model, and the reproduction of the indoor climate of the paper
-  it was published with, Sourisseau et al. (2026).
+  global model, the reproduction of the indoor climate of the paper
+  it was published with, Sourisseau et al. (2026), and the simulator's
+  indoor temperature compared with it on matched inputs: it agrees on no
+  day by the paper's bar, colder in January and warmer on July's days,
+  with five of TiGwerLib's processes recorded as blockers.
 
 The memos that plan this work are in [`docs/research/`](../docs/research/README.md).

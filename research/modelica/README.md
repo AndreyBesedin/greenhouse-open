@@ -269,3 +269,48 @@ store, its roof's radiation to the sky, and walls that face corridors
 rather than the outside. The report, in `results/simulator_<window>.json`,
 holds the comparison's numbers alone, none of either model's series or of
 the data's.
+
+### What it found
+
+Each window ran once, from the commit that states it, on a Linux machine
+with 32 CPUs and Docker Engine:
+[`results/simulator_fig8.json`](results/simulator_fig8.json) and
+[`results/simulator_fig9.json`](results/simulator_fig9.json), committed as
+written.
+
+| Window | Moments compared | Days within 1.6 K | Mean difference | RMSE of the difference | Sun up: mean, RMSE | Sun down: mean, RMSE | Largest difference |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `fig8` | 3,169 of 3,169 | 0 of 11 | −4.24 K | 5.20 K | −1.74 K, 3.17 K | −5.69 K, 6.08 K | −11.1 K, 18 January 19:45 |
+| `fig9` | 3,168 of 3,169 | 0 of 11 | +2.29 K | 3.57 K | +3.67 K, 4.44 K | −0.16 K, 0.66 K | +12.2 K, 25 July 12:00 |
+
+The difference is the simulator's temperature less TiGwerLib's.
+
+- **The simulator does not agree with TiGwerLib on any day,** by the bar
+  stated: a day's RMSE of the difference runs from 3.0 to 7.7 K in
+  January and from 2.1 to 5.1 K in July. Against the measurements, a
+  day's RMSE is 3.0 to 7.7 K for the simulator in January and 2.3 to
+  6.3 K in July, where TiGwerLib's is 0.25 to 1.15 K and 0.54 to 2.20 K.
+- **The inputs were matched as stated.** The heat each model was given
+  over a window is the same to a part in 10¹²: 36.3 GJ in January and
+  31.1 GJ in July. Each step's heat, worked out here, lies within 252 W
+  in January and 100 W in July of the mean of TiGwerLib's own at the
+  step's two ends, the pipes giving 38 and 33 kW on average. July's
+  comparison misses the moment OpenModelica wrote off its grid, 22 July at
+  13:05, as the reproduction does, and so do the heat's checks of the two
+  steps on either side of it.
+- **Where they differ, the blockers stated would push the simulator that
+  way, but this comparison cannot tell them apart.** In January the
+  simulator is coldest at night, 5.7 K below on average: it has no
+  thermal screen to draw, stores no heat but in its air, and loses heat
+  through four walls of glass, 937 m² of its 1,974 m², where TiGwerLib
+  loses it to the outside through its south wall alone, 177 m², and its
+  roof. In July it is warmer by day, 3.7 K on average and up to 12 K at
+  noon: it has no shading screen and no transpiring crop. July's nights,
+  with the vents open and no heat to give, are the closest: 0.16 K
+  colder on average, an RMSE of 0.66 K. Which blocker accounts for how
+  much is not measured: no run here adds or removes one.
+- **The house's air** is 7,225 m³ on the simulator's grid, 5.5 % less than
+  TiGwerLib's 7,646 m³.
+- **What it took:** TiGwerLib, in January 17 s to build and 12 minutes for
+  its 47 days, in July 15 s and 59 minutes for its 235 days; the
+  simulator, 7 minutes for each window's 11 days.
