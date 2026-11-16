@@ -60,10 +60,7 @@ from greenhouse_sim.biology.tomato.tomgro.parameters import (
 from greenhouse_sim.biology.tomato.vanthoor.parameters import (
     INITIAL_STATE as VANTHOOR_PLANTED,
 )
-from greenhouse_sim.biology.tomato.vanthoor.parameters import (
-    VanthoorParameters,
-    VanthoorState,
-)
+from greenhouse_sim.biology.tomato.vanthoor.parameters import VanthoorParameters, VanthoorState
 from greenhouse_sim.core.area_crop import AreaInstance
 from greenhouse_sim.core.crop import OrganRung
 from greenhouse_sim.core.drivers import DriverProfile, driver_profile
@@ -74,7 +71,12 @@ from greenhouse_sim.domain.crop import CropModel, FruitStatus
 from greenhouse_sim.domain.organs import FruitStage
 from greenhouse_sim.domain.scopes import AreaBasis
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.scenarios.crop_parameters import ReducedTomgroCrop, VanthoorKatzinCrop
+from greenhouse_sim.scenarios.crop_parameters import (
+    ReducedTomgroCrop,
+    VanthoorKatzinCrop,
+    WithASet,
+    carried_set,
+)
 from greenhouse_sim.scene.plants import crop_entities
 from greenhouse_sim.scene.snapshot import SceneEntity, canopy_entities, simple_plant_entities
 from greenhouse_sim.units import DAY_S, HOUR_S
@@ -196,15 +198,16 @@ class AreaAdapter[StateT: BaseModel]:
     """What the services ask of a crop model grown by area (decision 0062):
     its rung, built from a scenario; the driver profile through which the
     run gives it its drivers, as its parameters name it; how its instances
-    are drawn, none of them as plants; and what a sample of a state reads,
-    each quantity per m² of the model's basis, without a sample's errors."""
+    are drawn, none of them as plants; and what a sample of a state of a
+    scenario's crop reads, each quantity per m² of the model's basis,
+    without a sample's errors."""
 
     rung: Callable[[ScenarioConfig], AreaRung[StateT]]
     profile: Callable[[ScenarioConfig], DriverProfile]
     drawn: Callable[
         [Sequence[AreaInstance[StateT]], Sequence[CropScope], ScenarioConfig], list[SceneEntity]
     ]
-    sampled: Callable[[StateT], Mapping[ObservationType, float]]
+    sampled: Callable[[StateT, ScenarioConfig], Mapping[ObservationType, float]]
 
 
 @dataclass(frozen=True)
@@ -224,7 +227,7 @@ class CropRegistration[PlantT: CropPlant]:
     state: type[CropModelState]
     # What no run of the model reaches in a checkpoint's state on its day,
     # which fits its run's shape, as reasons; none if it is plausible.
-    implausible: Callable[[Any, int], list[str]]
+    implausible: Callable[[Any, int, ScenarioConfig], list[str]]
     # How it grows single plants, or by area: one of the two.
     plants: PlantAdapter[PlantT] | None
     area: AreaAdapter[Any] | None
@@ -236,7 +239,7 @@ class CropRegistration[PlantT: CropPlant]:
             raise ValueError(f"the {self.name} crop model grows single plants or by area: one")
 
 
-def _organ_implausible(state: CropState, day: int) -> list[str]:
+def _organ_implausible(state: CropState, day: int, _config: ScenarioConfig) -> list[str]:
     """A plant that breaks the structure's rules, or whose thermal time is
     not what the days it lived add up to."""
     problems: list[str] = []
@@ -297,7 +300,7 @@ def _organ_probed(plants: Sequence[Plant]) -> tuple[int, float]:
     return organs, thermal_cd
 
 
-def _simple_implausible(state: SimpleCropState, day: int) -> list[str]:
+def _simple_implausible(state: SimpleCropState, day: int, _config: ScenarioConfig) -> list[str]:
     """A plant not as many days old as the checkpoint's day."""
     return [
         f"{plant.plant_id} is {plant.plant.age_days} days old on day {day}"
@@ -352,9 +355,13 @@ def _simple_probed(_plants: Sequence[SimplePlant]) -> tuple[int, float]:
     return 0, 0.0
 
 
-# Reduced-State TOMGRO's parameter sets, by the name a scenario's section
-# gives (`ReducedTomgroCrop.parameter_set`).
-TOMGRO_PARAMETERS: Final = {"gnvman": TomgroParameters()}
+def _set_values[ParametersT: BaseModel](
+    section: WithASet, parameters: type[ParametersT]
+) -> ParametersT:
+    """The values of the parameter set a section runs: its model's published
+    set's, or those it carries."""
+    carried = carried_set(section)
+    return parameters() if carried is None else parameters.model_validate(carried.values)
 
 
 def _tomgro_crop(config: ScenarioConfig) -> ReducedTomgroCrop:
@@ -369,16 +376,16 @@ def _tomgro_rung(config: ScenarioConfig) -> TomgroRung:
     """The model with its section's parameter set, its light read at its
     section's canopy height."""
     section = _tomgro_crop(config)
-    return TomgroRung(TOMGRO_PARAMETERS[section.parameter_set], section.canopy_height_m)
+    return TomgroRung(_set_values(section, TomgroParameters), section.canopy_height_m)
 
 
-def _tomgro_implausible(state: TomgroCropState, day: int) -> list[str]:
+def _tomgro_implausible(state: TomgroCropState, day: int, config: ScenarioConfig) -> list[str]:
     """A canopy that is not finite; whose nodes or leaf area index are
-    negative, or the leaf area index past the most any parameter set grows;
+    negative, or the leaf area index past the most its parameter set grows;
     or, on the run's first day, that is not as the model plants it. Its
     weights may fall, as its net growth may be negative, and are not
     bounded."""
-    most = max(parameters.lai_max for parameters in TOMGRO_PARAMETERS.values())
+    most = _set_values(_tomgro_crop(config), TomgroParameters).lai_max
     problems = []
     for instance in state.instances:
         canopy = instance.state
@@ -432,7 +439,7 @@ def _tomgro_drawn(
     return drawn
 
 
-def _tomgro_sampled(state: TomgroState) -> dict[ObservationType, float]:
+def _tomgro_sampled(state: TomgroState, _config: ScenarioConfig) -> dict[ObservationType, float]:
     """Its leaf area index and its dry weights, in its own quantities. Its
     nodes are a plant's, not an area's."""
     return {
@@ -441,13 +448,6 @@ def _tomgro_sampled(state: TomgroState) -> dict[ObservationType, float]:
         ObservationType.FRUIT_DRY_WEIGHT_G_M2: state.wf,
         ObservationType.MATURE_FRUIT_DRY_WEIGHT_G_M2: state.wm,
     }
-
-
-# Vanthoor's model's parameter sets, by the name a scenario's section gives
-# (`VanthoorKatzinCrop.parameter_set`): GreenLight 2.0.7's, as its
-# reproduction's manifest records each with its unit and source
-# (`research/reproductions/vanthoor_katzin/manifest.json`).
-VANTHOOR_PARAMETERS: Final = {"greenlight_2_0_7": VanthoorParameters()}
 
 
 def _vanthoor_crop(config: ScenarioConfig) -> VanthoorKatzinCrop:
@@ -462,10 +462,10 @@ def _vanthoor_rung(config: ScenarioConfig) -> VanthoorRung:
     """The model with its section's parameter set, its light read at its
     section's canopy height."""
     section = _vanthoor_crop(config)
-    return VanthoorRung(VANTHOOR_PARAMETERS[section.parameter_set], section.canopy_height_m)
+    return VanthoorRung(_set_values(section, VanthoorParameters), section.canopy_height_m)
 
 
-def _vanthoor_implausible(state: VanthoorCropState, day: int) -> list[str]:
+def _vanthoor_implausible(state: VanthoorCropState, day: int, _config: ScenarioConfig) -> list[str]:
     """A canopy that is not finite; whose fruit, leaves, stems or fruit
     harvested are less than none; whose temperature sum is not what the
     hours it lived add up to; or, on the run's first day, that is not as the
@@ -535,11 +535,11 @@ def _vanthoor_drawn(
     return drawn
 
 
-def _vanthoor_sampled(state: VanthoorState) -> dict[ObservationType, float]:
-    """Its leaf area index, by its one parameter set's specific leaf area.
-    Its pools are carbohydrate equivalents, not the dry weights a sample
-    reads, and no observation is of them yet."""
-    (parameters,) = VANTHOOR_PARAMETERS.values()
+def _vanthoor_sampled(state: VanthoorState, config: ScenarioConfig) -> dict[ObservationType, float]:
+    """Its leaf area index, by its parameter set's specific leaf area. Its
+    pools are carbohydrate equivalents, not the dry weights a sample reads,
+    and no observation is of them yet."""
+    parameters = _set_values(_vanthoor_crop(config), VanthoorParameters)
     return {ObservationType.LEAF_AREA_INDEX: state.leaf_area_index(parameters)}
 
 

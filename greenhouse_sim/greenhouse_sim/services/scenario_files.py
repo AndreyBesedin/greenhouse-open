@@ -46,6 +46,7 @@ from greenhouse_sim.services.errors import (
     ServiceError,
     first_reason,
 )
+from greenhouse_sim.services.parameter_sets import kept_sets, with_parameter_set
 from greenhouse_sim.services.run_store import ObjectStore, StoreCorrupt
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
@@ -154,7 +155,8 @@ def upload(simulator: Simulator, text: str) -> ScenarioUploaded | InstallationUp
     """A scenario file validated, registered and, if the simulator has a run
     store, kept, or an installation's file read. The same scenario file again
     is the scenario already registered. Refused (400) if it is neither kind of
-    file or not a good one of its kind, naming each field at fault; a conflict
+    file or not a good one of its kind, naming each field at fault, or if its
+    crop runs a parameter set the simulator does not keep; a conflict
     (409) if its scenario's identifier is a packaged scenario's or another's
     registered."""
     try:
@@ -188,7 +190,8 @@ def carry(catalogue: Scenarios, objects: ObjectStore, scenario_id: str) -> str |
         read = import_scenario_file(text)
     except ScenarioFileError as error:
         raise InvalidRequest(str(error), [(error.field, error.message)]) from None
-    if config_digest(read.config) != config_digest(config):
+    read_back = with_parameter_set(read.config, kept_sets(objects))
+    if config_digest(read_back) != config_digest(config):
         raise InvalidRequest(f"{scenario_id!r} does not read back from its file as it is")
     name = kept_name(read.digest)
     if objects.size(name) is None:
@@ -290,6 +293,7 @@ def _registered(simulator: Simulator, text: str) -> ScenarioUploaded:
         raise InvalidRequest(f"not a scenario file: {first_reason(error)}") from None
     summary = None
     if missing is None:
+        config = with_parameter_set(config, kept_sets(simulator.runs))
         try:
             simulator.catalogue.register(config)
         except ScenarioRefused as error:

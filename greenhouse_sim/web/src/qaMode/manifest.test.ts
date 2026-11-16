@@ -31,6 +31,7 @@ const SERVED_MANIFEST = {
     crop: { model: "organ", version: 1 },
     crop_walk: { model: "walk", version: 1 },
   },
+  parameter_set: null,
 };
 
 const MANIFEST: RunManifest = {
