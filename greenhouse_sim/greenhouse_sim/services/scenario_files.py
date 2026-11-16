@@ -192,7 +192,8 @@ def carry(catalogue: Scenarios, objects: ObjectStore, scenario_id: str) -> str |
         read = import_scenario_file(text)
     except ScenarioFileError as error:
         raise InvalidRequest(str(error), [(error.field, error.message)]) from None
-    if config_digest(read.config) != config_digest(config):
+    read_back = with_parameter_set(read.config, kept_sets(objects))
+    if config_digest(read_back) != config_digest(config):
         raise InvalidRequest(f"{scenario_id!r} does not read back from its file as it is")
     name = kept_name(read.digest)
     if objects.size(name) is None:

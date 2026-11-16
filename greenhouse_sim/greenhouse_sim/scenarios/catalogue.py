@@ -20,6 +20,11 @@ from typing import Final, Protocol
 
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.crop_parameters import (
+    ReducedTomgroCrop,
+    VanthoorKatzinCrop,
+    carried_set,
+)
 from greenhouse_sim.scenarios.layout_files import DEFAULT_LAYOUT, layout_names
 from greenhouse_sim.scenarios.manifest_files import (
     DIGEST_LENGTH,
@@ -32,6 +37,8 @@ from greenhouse_sim.scenarios.manifest_files import (
 # What a registered scenario may be called: as a manifest's file is, since
 # its identifier is part of every address and run id that names it.
 SCENARIO_ID: Final = re.compile(r"[a-z0-9_]+")
+# What a configuration's digest names its crop's parameter set's digest by.
+PARAMETER_SET_DIGEST: Final = "parameter_set_digest"
 
 
 class ScenarioRefused(ValueError):
@@ -73,10 +80,17 @@ class Scenarios(Protocol):
 
 
 def config_digest(config: ScenarioConfig) -> str:
-    """What tells one configuration from another, however it is written."""
-    canonical = json.dumps(
-        config.model_dump(mode="json"), sort_keys=True, separators=(",", ":"), ensure_ascii=False
-    )
+    """What tells one configuration from another, however it is written: its
+    crop's parameter set too, by digest, where it carries one other than its
+    model's published one, since a set's name and version do not tell its
+    numbers apart (decision 0077)."""
+    written = config.model_dump(mode="json")
+    crop = config.crop
+    if isinstance(crop, ReducedTomgroCrop | VanthoorKatzinCrop):
+        carried = carried_set(crop)
+        if carried is not None:
+            written[PARAMETER_SET_DIGEST] = carried.digest
+    canonical = json.dumps(written, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return short_digest(canonical, DIGEST_LENGTH)
 
 

@@ -21,7 +21,7 @@ from greenhouse_sim.biology.tomato.tomgro.parameters import TomgroParameters
 from greenhouse_sim.core.area_crop import AreaCrop
 from greenhouse_sim.core.tomgro_crop import TomgroRung
 from greenhouse_sim.scenarios import manifest_files
-from greenhouse_sim.scenarios.catalogue import PACKAGED
+from greenhouse_sim.scenarios.catalogue import PACKAGED, ScenarioRefused
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.crop_parameters import (
     ReducedTomgroCrop,
@@ -133,8 +133,19 @@ def test_a_run_is_told_apart_by_its_sets_digest_not_its_name(store: FolderStore)
 
     here, _ = _grown(store, parameter_set="brighter")
     there, _ = _grown(elsewhere, parameter_set="brighter")
+    with _uploaded(store, parameter_set="brighter") as simulator:
+        registered = simulator.catalogue.entry(HOUSE)
+        assert registered is not None
 
     assert here != there
+    # The scenario's version, which a checkpoint of its run names, is told
+    # apart too: a checkpoint of one is not taken up by the other, and the
+    # same scenario under other numbers is not registered over it.
+    with _uploaded(elsewhere, parameter_set="brighter") as simulator:
+        other = simulator.catalogue.entry(HOUSE)
+        assert other is not None and other.version != registered.version
+        with pytest.raises(ScenarioRefused, match="registered as another scenario"):
+            simulator.catalogue.register(registered.config)
 
 
 def test_a_runs_manifest_answer_names_its_set_and_what_it_was_made_for(
