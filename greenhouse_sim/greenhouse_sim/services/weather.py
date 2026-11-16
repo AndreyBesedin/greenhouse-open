@@ -7,8 +7,7 @@ A run's moments are seconds from its start (`ScenarioConfig.run_start`), and
 lie within a run, as a climate field's do (`greenhouse_sim.services.fields`),
 on the run's clock (`greenhouse_sim.core.clock`).
 A scenario is asked for under its own weather or a preset's, by name, as
-its climate is. A run's weather is digested for an episode's record
-(`series_sha256`, P23.2).
+its climate is.
 """
 
 import hashlib

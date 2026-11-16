@@ -9,36 +9,19 @@ from collections.abc import Iterator
 from datetime import datetime
 from importlib.metadata import version
 from pathlib import Path
-from typing import Final
+from typing import ClassVar, Final
 
 import pytest
 from greenhouse_protocol.actions import ActionKind, SetLevel
 from greenhouse_protocol.authorisation import AuthorisationConfig, AuthorisationGroup, Grant
 from greenhouse_protocol.budget import OBSERVATIONS_ONLY, InformationBudget
 from greenhouse_protocol.context import CapabilityContext
-from greenhouse_protocol.contracts.policy import (
-    Decision,
-    Delivery,
-    Keep,
-    PolicyIdentity,
-    Revise,
-)
-from greenhouse_protocol.experiment import (
-    EpisodePlace,
-    EpisodeRecord,
-    delivered,
-    settings_sha256,
-)
+from greenhouse_protocol.contracts.policy import Decision, Delivery, Keep, PolicyIdentity, Revise
+from greenhouse_protocol.experiment import EpisodePlace, EpisodeRecord, delivered, settings_sha256
 from greenhouse_protocol.plan import Asap, PlannedAction, Principal, PrincipalKind
 from pydantic import JsonValue
 
-from greenhouse_sim.experiment import (
-    Condition,
-    Episode,
-    PolicyEntry,
-    record_episode,
-    run_episode,
-)
+from greenhouse_sim.experiment import Condition, Episode, PolicyEntry, record_episode, run_episode
 from greenhouse_sim.scenarios.registry import models_run
 from greenhouse_sim.services.run_store import FolderStore
 from greenhouse_sim.services.scenario_files import carry
@@ -74,16 +57,19 @@ def simulator() -> Iterator[Simulator]:
 
 class _Doors:
     """Opens its first door to `level` at each decision, every hour, or
-    keeps its plan if `level` is none; keeps what it was given."""
+    keeps its plan if `level` is none; keeps what it was given. Each one
+    made is kept, to read what it was given."""
 
     identity: Final = PolicyIdentity(name="doors", version="1")
     decide_every_s: Final = HOUR_S
+    made: ClassVar[list[_Doors]] = []
 
     def __init__(self, settings: dict[str, JsonValue], seed: int | None = None) -> None:
         level = settings.get("level")
         assert level is None or isinstance(level, float)
         self._level = level
         self.deliveries: list[Delivery] = []
+        _Doors.made.append(self)
 
     def start(self, context: CapabilityContext, budget: InformationBudget) -> None:
         self._door = min(device.device_id for device in context.devices)
@@ -108,15 +94,6 @@ class _Doors:
     def stop(self) -> None: ...
 
 
-# The policy an entry made last, to read what it was given.
-MADE: list[_Doors] = []
-
-
-def _kept_doors(settings: dict[str, JsonValue], seed: int | None) -> _Doors:
-    MADE.append(_Doors(settings, seed))
-    return MADE[-1]
-
-
 def _episode(
     policy: _Doors | PolicyEntry, condition: Condition = CONDITION, **fields: object
 ) -> Episode:
@@ -136,7 +113,7 @@ def test_a_record_names_its_run_its_policy_its_software_and_each_decision(
     weights = tmp_path / "weights.bin"
     weights.write_bytes(b"\x00\x01weights")
     entry = PolicyEntry(
-        factory=f"{__name__}:_kept_doors",
+        factory=f"{__name__}:_Doors",
         settings={"level": 0.5, "weights": str(weights)},
         files=("weights",),
         seed=3,
@@ -154,38 +131,36 @@ def test_a_record_names_its_run_its_policy_its_software_and_each_decision(
         summary.digest,
         summary.outcomes,
     )
-    run = record.run
-    assert (run.scenario_id, run.greenhouse_id, run.layout, run.scenario_file_digest) == (
-        SCENARIO,
-        SCENARIO,
-        "default",
-        None,
-    )
-    assert (run.run_id, run.condition, run.seed, run.duration_s, run.episode_end_s) == (
-        summary.run_id,
-        CONDITION,
-        7,
-        DAY_S,
-        SIX_HOURS_S,
-    )
+    assert record.run.model_dump(exclude={"start", "models", "weather"}) == {
+        "scenario_id": SCENARIO,
+        "greenhouse_id": SCENARIO,
+        "layout": "default",
+        "scenario_file_digest": None,
+        "run_id": summary.run_id,
+        "epoch": summary.epoch,
+        "condition": CONDITION.model_dump(),
+        "seed": 7,
+        "duration_s": DAY_S,
+        "episode_end_s": SIX_HOURS_S,
+    }
     under = models_run(with_weather(scenario(simulator.catalogue, SCENARIO), "cold_spring_day"))
-    assert {m.part: (m.model, m.version) for m in run.models} == {
+    assert {m.part: (m.model, m.version) for m in record.run.models} == {
         part.value: (ran.model, ran.version) for part, ran in under.items()
     }
-    policy = record.policy
-    assert policy.made is not None
-    assert policy.made.entry.model_dump() == entry.model_dump()
-    assert policy.made.settings_sha256 == settings_sha256(entry.settings)
-    assert [(f.setting, f.sha256) for f in policy.made.files] == [
-        ("weights", hashlib.sha256(weights.read_bytes()).hexdigest())
-    ]
-    assert (policy.identity, policy.principal, policy.decide_every_s, policy.plan_id) == (
-        _Doors.identity,
-        POLICY,
-        HOUR_S,
-        "policy",
-    )
-    assert (policy.budget, policy.compute_budget_s) == (OBSERVATIONS_ONLY, None)
+    weights_sha256 = hashlib.sha256(weights.read_bytes()).hexdigest()
+    assert record.policy.model_dump(exclude={"budget"}) == {
+        "identity": _Doors.identity.model_dump(),
+        "made": {
+            "entry": entry.model_dump(),
+            "settings_sha256": settings_sha256(entry.settings),
+            "files": ({"setting": "weights", "sha256": weights_sha256},),
+        },
+        "principal": POLICY.model_dump(),
+        "decide_every_s": HOUR_S,
+        "plan_id": "policy",
+        "compute_budget_s": None,
+    }
+    assert record.policy.budget == OBSERVATIONS_ONLY
     software = record.software
     assert (software.producer_version, software.protocol_version, software.python) == (
         version("greenhouse-sim"),
@@ -194,7 +169,7 @@ def test_a_record_names_its_run_its_policy_its_software_and_each_decision(
     )
     # Each decision: when, what each log delivered, what it gave and its
     # receipt, and its time on the runner's timer.
-    given = MADE[-1].deliveries
+    given = _Doors.made[-1].deliveries
     assert len(record.trace) == summary.decisions == len(given) == 7
     assert [traced.receipt for traced in record.trace] == [g.receipt for g in summary.given]
     assert [traced.at for traced in record.trace] == [g.at for g in summary.given]
@@ -244,15 +219,15 @@ def test_a_policys_file_that_cannot_be_read_is_refused_before_it_starts(
     simulator: Simulator, tmp_path: Path
 ) -> None:
     entry = PolicyEntry(
-        factory=f"{__name__}:_kept_doors",
+        factory=f"{__name__}:_Doors",
         settings={"weights": str(tmp_path / "missing.bin")},
         files=("weights",),
     )
-    made = len(MADE)
+    made = len(_Doors.made)
 
     with pytest.raises(ValueError, match="the policy's file weights cannot be read"):
         record_episode(simulator, _episode(entry))
-    assert len(MADE) == made
+    assert len(_Doors.made) == made
 
 
 def test_a_scenario_not_packaged_is_named_by_its_files_digest(tmp_path: Path) -> None:

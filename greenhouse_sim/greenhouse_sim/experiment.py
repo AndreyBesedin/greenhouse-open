@@ -58,6 +58,7 @@ from importlib.metadata import version as installed_version
 from pathlib import Path
 from typing import Final, cast
 
+from greenhouse_protocol import experiment as records
 from greenhouse_protocol.actions import Identifier
 from greenhouse_protocol.budget import OBSERVATIONS_ONLY, InformationBudget
 from greenhouse_protocol.contracts.consumer import (
@@ -76,25 +77,7 @@ from greenhouse_protocol.contracts.policy import (
     PolicyPort,
     Revise,
 )
-from greenhouse_protocol.experiment import (
-    Condition as Condition,  # Re-exported: an episode is run on one.
-)
-from greenhouse_protocol.experiment import (
-    DecisionTraced,
-    DeliveredLogs,
-    EpisodePlace,
-    EpisodePolicy,
-    EpisodeRecord,
-    EpisodeRun,
-    ModelRan,
-    PolicyFile,
-    PolicyMade,
-    Software,
-    WeatherSeries,
-    settings_sha256,
-)
-from greenhouse_protocol.experiment import PolicyEntry as EntryOfAPolicy
-from greenhouse_protocol.experiment import delivered as delivered_records
+from greenhouse_protocol.experiment import Condition as Condition
 from greenhouse_protocol.instant import Instant
 from greenhouse_protocol.outcome import ActionOutcome
 from greenhouse_protocol.plan import Plan, PlannedAction, Principal
@@ -127,7 +110,7 @@ type PolicyFactory = Callable[[dict[str, JsonValue], int | None], Policy]
 SCENARIOS_OWN: Final = Condition()
 
 
-class PolicyEntry(EntryOfAPolicy):
+class PolicyEntry(records.PolicyEntry):
     """A policy's entry in the protocol (`greenhouse_protocol.experiment`),
     which makes it fresh for each episode."""
 
@@ -290,27 +273,27 @@ def record_episode(
     simulator: Simulator,
     episode: Episode,
     *,
-    place: EpisodePlace | None = None,
+    place: records.EpisodePlace | None = None,
     timer: Callable[[], float] = time.perf_counter,
     forecasters: Sequence[Forecaster] = (PERSISTENCE,),
-) -> EpisodeRecord:
+) -> records.EpisodeRecord:
     """Runs `episode` as `run_episode` does, and gives its record
     (`greenhouse_protocol.experiment`), at `place` in its experiment if it
     has one. The files its policy's entry names are digested before it
     starts, so that the record names those it was made with."""
     made = None
     if isinstance(episode.policy, PolicyEntry):
-        made = PolicyMade(
-            entry=EntryOfAPolicy.model_validate(episode.policy.model_dump()),
-            settings_sha256=settings_sha256(episode.policy.settings),
+        made = records.PolicyMade(
+            entry=records.PolicyEntry.model_validate(episode.policy.model_dump()),
+            settings_sha256=records.settings_sha256(episode.policy.settings),
             files=tuple(_policy_file(episode.policy, name) for name in episode.policy.files),
         )
     ran = _play(simulator, episode, timer, forecasters)
     summary = ran.summary
-    return EpisodeRecord(
+    return records.EpisodeRecord(
         place=place,
         run=_run_recorded(simulator, episode, ran.played, summary),
-        policy=EpisodePolicy(
+        policy=records.EpisodePolicy(
             identity=summary.policy,
             made=made,
             principal=episode.principal,
@@ -334,7 +317,7 @@ class _Played:
     summary: EpisodeSummary
     played: Playback
     decide_every_s: float
-    trace: tuple[DecisionTraced, ...]
+    trace: tuple[records.DecisionTraced, ...]
 
 
 def _play(
@@ -368,7 +351,7 @@ def _play(
     read = _Reader(port)
     given: list[Given] = []
     skipped: list[Skipped] = []
-    trace: list[DecisionTraced] = []
+    trace: list[records.DecisionTraced] = []
     digest = hashlib.sha256()
     try:
         for moment_s in moments:
@@ -389,7 +372,7 @@ def _play(
                     given.append(Given(at=at, receipt=receipt))
                     digest.update(receipt.model_dump_json().encode())
             trace.append(
-                DecisionTraced(
+                records.DecisionTraced(
                     at=at,
                     delivered=_delivered_logs(delivered),
                     decision=decision,
@@ -422,16 +405,16 @@ def _play(
     return _Played(summary, played, policy.decide_every_s, tuple(trace))
 
 
-def _delivered_logs(delivered: Delivery) -> DeliveredLogs:
-    return DeliveredLogs(
-        observations=delivered_records(delivered.observations),
-        events=delivered_records(delivered.events),
-        outcomes=delivered_records(delivered.outcomes),
-        forecasts=delivered_records(delivered.forecasts),
+def _delivered_logs(delivered: Delivery) -> records.DeliveredLogs:
+    return records.DeliveredLogs(
+        observations=records.delivered(delivered.observations),
+        events=records.delivered(delivered.events),
+        outcomes=records.delivered(delivered.outcomes),
+        forecasts=records.delivered(delivered.forecasts),
     )
 
 
-def _policy_file(entry: PolicyEntry, setting: str) -> PolicyFile:
+def _policy_file(entry: PolicyEntry, setting: str) -> records.PolicyFile:
     """A file a policy's entry names, digested; one that cannot be read is
     refused before the episode starts."""
     path = Path(str(entry.settings[setting]))
@@ -440,18 +423,18 @@ def _policy_file(entry: PolicyEntry, setting: str) -> PolicyFile:
             sha256 = hashlib.file_digest(file, "sha256").hexdigest()
     except OSError as error:
         raise ValueError(f"the policy's file {setting} cannot be read: {error}") from error
-    return PolicyFile(setting=setting, sha256=sha256)
+    return records.PolicyFile(setting=setting, sha256=sha256)
 
 
 def _run_recorded(
     simulator: Simulator, episode: Episode, played: Playback, summary: EpisodeSummary
-) -> EpisodeRun:
+) -> records.EpisodeRun:
     """The run an episode played, as its record names it."""
     catalogue = simulator.catalogue
     own = scenario(catalogue, episode.scenario_id)
     weather = played.weather or DEFAULT_WEATHER
     seeded = RunRequest(episode.scenario_id, weather=weather, seed=played.seed)
-    return EpisodeRun(
+    return records.EpisodeRun(
         scenario_id=episode.scenario_id,
         greenhouse_id=played.greenhouse_id,
         layout=played.layout,
@@ -464,10 +447,10 @@ def _run_recorded(
         duration_s=played.end_s,
         episode_end_s=episode.end_s,
         models=tuple(
-            ModelRan(part=part.value, model=ran.model, version=ran.version)
+            records.ModelRan(part=part.value, model=ran.model, version=ran.version)
             for part, ran in models_run(with_weather(own, weather)).items()
         ),
-        weather=WeatherSeries(
+        weather=records.WeatherSeries(
             every_s=SERIES_EVERY_S,
             sha256=series_sha256(
                 catalogue, episode.scenario_id, seeded.weather_name(catalogue), played.end_s
@@ -476,9 +459,9 @@ def _run_recorded(
     )
 
 
-def _software() -> Software:
+def _software() -> records.Software:
     commit = source_commit()
-    return Software(
+    return records.Software(
         producer=PRODUCER,
         producer_version=installed_version(PRODUCER),
         protocol_version=installed_version(PROTOCOL),

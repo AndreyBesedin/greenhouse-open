@@ -190,15 +190,13 @@ def carry(catalogue: Scenarios, objects: ObjectStore, scenario_id: str) -> str |
 
 
 def file_digest(catalogue: Scenarios, scenario_id: str) -> str | None:
-    """The digest of a scenario's file, as an epoch of it names it (`carry`),
-    without keeping it; none for a packaged scenario."""
+    """`carry`'s digest, the file not kept."""
     carried = _carried(catalogue, scenario_id)
     return None if carried is None else carried[1]
 
 
 def _carried(catalogue: Scenarios, scenario_id: str) -> tuple[str, str] | None:
-    """A scenario's file, with its recording inside, and its digest; none for
-    a packaged scenario. Refused as `carry` says."""
+    """A scenario's file and its digest, as `carry` refuses them; none if packaged."""
     config = scenario(catalogue, scenario_id)
     entry = catalogue.entry(scenario_id)
     if entry is not None and entry.packaged:
