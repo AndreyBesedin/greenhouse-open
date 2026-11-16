@@ -7,9 +7,12 @@ A run's moments are seconds from its start (`ScenarioConfig.run_start`), and
 lie within a run, as a climate field's do (`greenhouse_sim.services.fields`),
 on the run's clock (`greenhouse_sim.core.clock`).
 A scenario is asked for under its own weather or a preset's, by name, as
-its climate is.
+its climate is. A run's weather is digested for an episode's record
+(`series_sha256`, P23.2).
 """
 
+import hashlib
+import math
 from datetime import datetime, timedelta
 from typing import Final
 
@@ -29,6 +32,9 @@ from greenhouse_sim.world.site import Site
 
 # How often the weather through a day is given, in seconds.
 DAY_EVERY_S: Final = 600.0
+# How often a run's weather is sampled for its digest (`series_sha256`):
+# as often as through a day, so that a season's takes about a second.
+SERIES_EVERY_S: Final = DAY_EVERY_S
 
 
 class WeatherAtAMoment(BaseModel):
@@ -125,3 +131,20 @@ def through_the_day(
         sun=suns,
         sun_directions=[sun.direction(config.site) for sun in suns],
     )
+
+
+def series_sha256(
+    catalogue: Scenarios,
+    scenario_id: str,
+    weather: str | None,
+    until_s: float,
+    every_s: float = SERIES_EVERY_S,
+) -> str:
+    """The SHA-256 of the weather a scenario's run is under, its seed's mark
+    and all, every `every_s` from its start through `until_s`: each state's
+    JSON, one line each. Two runs under one weather and seed share it."""
+    run = _under(catalogue, scenario_id, weather).run_weather()
+    digest = hashlib.sha256()
+    for step in range(math.floor(until_s / every_s) + 1):
+        digest.update(run.at(step * every_s).model_dump_json().encode() + b"\n")
+    return digest.hexdigest()
