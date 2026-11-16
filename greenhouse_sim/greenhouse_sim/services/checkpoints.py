@@ -461,7 +461,7 @@ def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
             raise InvalidRequest(
                 "a checkpoint's air runs a dehumidifying loop, and its run has none"
             )
-    problems = _implausible(uploaded)
+    problems = _implausible(uploaded, its_run)
     if problems:
         raise InvalidRequest(f"a checkpoint no run reaches: {problems[0]}")
     return uploaded
@@ -496,10 +496,10 @@ def _check_crop(uploaded: Checkpoint, its_run: ScenarioConfig) -> None:
         raise InvalidRequest(f"a crop on day {uploaded.day} has lived {said}")
 
 
-def _implausible(checkpoint: Checkpoint) -> list[str]:
+def _implausible(checkpoint: Checkpoint, its_run: ScenarioConfig) -> list[str]:
     """What, in a checkpoint that fits its run's shape, no run could have
     reached: air out of bounds, what a plant lived not finite, or a crop
-    its model does not reach (`CropRegistration.implausible`)."""
+    its model does not reach in its run (`CropRegistration.implausible`)."""
     problems = [
         f"its house's air {when}: {problem}"
         for when, air in (("on its day", checkpoint.house), ("before it", checkpoint.house_before))
@@ -515,7 +515,7 @@ def _implausible(checkpoint: Checkpoint) -> list[str]:
         return problems
     kept = checkpoint.models.get(Part.CROP)
     crop = None if kept is None else CROP_MODELS.get(kept.model)
-    return [] if crop is None else crop.implausible(checkpoint.crop, checkpoint.day)
+    return [] if crop is None else crop.implausible(checkpoint.crop, checkpoint.day, its_run)
 
 
 def _finite(value: object) -> bool:

@@ -19,6 +19,35 @@
       ],
       "title": "ModelRun",
       "type": "object"
+    },
+    "SetRun": {
+      "description": "The parameter set a run grows its crop with, as its manifest answer\ngives it: its name, its version and its digest, and the version of its\nmodel it was made for, which may be another than the one run.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        },
+        "digest": {
+          "title": "Digest",
+          "type": "string"
+        },
+        "made_for": {
+          "title": "Made For",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "digest",
+        "made_for"
+      ],
+      "title": "SetRun",
+      "type": "object"
     }
   },
   "description": "What a scenario's run is made from, as QA mode shows it (P09.6): its\nmanifest's format and version, its seed and days, and the models it\nruns, under the weather the run is asked for.",
@@ -107,6 +136,16 @@
       },
       "title": "Models",
       "type": "object"
+    },
+    "parameter_set": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SetRun"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "required": [
@@ -124,7 +163,8 @@
     "weather_kind",
     "cloud_cover_pct",
     "wind_from_deg",
-    "models"
+    "models",
+    "parameter_set"
   ],
   "title": "RunManifest",
   "type": "object"

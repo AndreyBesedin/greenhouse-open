@@ -794,13 +794,19 @@
     },
     "ReducedTomgroCrop": {
       "additionalProperties": false,
-      "description": "Reduced-State TOMGRO's settings, grown by area\n(`greenhouse_sim.biology.tomato.tomgro`, decisions 0060 and 0062): the\npublished parameter set it runs, the driver profile, named and\nversioned, through which the run gives it its drivers\n(`greenhouse_sim.core.drivers`), and the height above its planting\npositions at which the light above its canopy is read, which the model\ndoes not grow: the run's choice, in m, not the model's.",
+      "description": "Reduced-State TOMGRO's settings, grown by area\n(`greenhouse_sim.biology.tomato.tomgro`, decisions 0060 and 0062): the\nparameter set it runs, gnvman unless it names another, the driver\nprofile, named and versioned, through which the run gives it its drivers\n(`greenhouse_sim.core.drivers`), and the height above its planting\npositions at which the light above its canopy is read, which the model\ndoes not grow: the run's choice, in m, not the model's.",
       "properties": {
         "parameter_set": {
-          "const": "gnvman",
           "default": "gnvman",
+          "pattern": "^[a-z0-9][a-z0-9_]*$",
           "title": "Parameter Set",
           "type": "string"
+        },
+        "parameter_set_version": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Parameter Set Version",
+          "type": "integer"
         },
         "driver_profile": {
           "const": "house_hours",
@@ -1260,13 +1266,19 @@
     },
     "VanthoorKatzinCrop": {
       "additionalProperties": false,
-      "description": "The settings of Vanthoor's model as Katzin simplified it, grown by\narea (`greenhouse_sim.biology.tomato.vanthoor`, decisions 0060 and\n0062): the published parameter set it runs, GreenLight 2.0.7's, the\ndriver profile, named and versioned, through which the run gives it its\ndrivers (`greenhouse_sim.core.drivers`), and the height above its\nplanting positions at which the light above its canopy is read, which\nthe model does not grow: the run's choice, in m, not the model's.",
+      "description": "The settings of Vanthoor's model as Katzin simplified it, grown by\narea (`greenhouse_sim.biology.tomato.vanthoor`, decisions 0060 and\n0062): the parameter set it runs, GreenLight 2.0.7's unless it names\nanother, the driver profile, named and versioned, through which the run\ngives it its drivers (`greenhouse_sim.core.drivers`), and the height\nabove its planting positions at which the light above its canopy is\nread, which the model does not grow: the run's choice, in m, not the\nmodel's.",
       "properties": {
         "parameter_set": {
-          "const": "greenlight_2_0_7",
           "default": "greenlight_2_0_7",
+          "pattern": "^[a-z0-9][a-z0-9_]*$",
           "title": "Parameter Set",
           "type": "string"
+        },
+        "parameter_set_version": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Parameter Set Version",
+          "type": "integer"
         },
         "driver_profile": {
           "const": "house_hours",
