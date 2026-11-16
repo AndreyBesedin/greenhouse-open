@@ -231,6 +231,32 @@ export const CONTRACTS: readonly Contract[] = [
     ["src/builder", "drafts"],
     "DRAFTS_SCHEMA",
   ),
+  // A crop model's parameter sets (P20.4), which the builder's form for a
+  // set reads (P20.5).
+  contract(
+    `${SERVICES}/parameter_set_listed.schema.json`,
+    "SetListed",
+    ["src/builder", "parameterSetListed"],
+    "PARAMETER_SET_LISTED_SCHEMA",
+  ),
+  contract(
+    `${SERVICES}/parameter_set_read.schema.json`,
+    "SetRead",
+    ["src/builder", "parameterSetRead"],
+    "PARAMETER_SET_READ_SCHEMA",
+  ),
+  contract(
+    `${SERVICES}/parameter_set_comparison.schema.json`,
+    "SetComparison",
+    ["src/builder", "parameterSetComparison"],
+    "PARAMETER_SET_COMPARISON_SCHEMA",
+  ),
+  contract(
+    `${SERVICES}/parameter_set_download.schema.json`,
+    "SetDownload",
+    ["src/builder", "parameterSetDownload"],
+    "PARAMETER_SET_DOWNLOAD_SCHEMA",
+  ),
   contract(
     "greenhouse_sim/biology/tomato/organ/plant.schema.json",
     "Plant",
