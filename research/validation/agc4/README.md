@@ -213,6 +213,24 @@ plant by each date.
 | | `t_end_sum` | 1,035 | 1,388 | 200 to 1,500 |
 | | `rg_fruit` | 0.328 | 0.254 | 0.15 to 0.8 |
 
+Each calibration is also a crop parameter set (decision 0077), so that a
+study cites its numbers by a name, a version and a digest:
+[`sets/tomgro.json`](sets/tomgro.json) and
+[`sets/vanthoor_katzin.json`](sets/vanthoor_katzin.json), written from the
+reports by [`sets.py`](sets.py) (`python -m research.validation.agc4.sets`).
+Each is based on its model's published set, and changes only the four
+parameters its report calibrates, each saying where its value comes from.
+The digest is the SHA-256 of the model and every value the set resolves to.
+A test holds each set to its report, and holds its values to those the test
+on 2024 ran (`tests/test_agc4_sets.py`). The sets name no cultivar, since
+the pre-trial's is not verified. Like the reports, they are research results,
+never packaged with the simulator.
+
+| Model | Set | Based on | Digest |
+| --- | --- | --- | --- |
+| Reduced-State TOMGRO (`reduced_tomgro`, version 1) | `agc4_pretrial_2023` v1 | `gnvman` v1 | `sha256:7a1162b8b0959d76504ad93fb5eabbf9b255e10964d1acae37295aa64d0c04fd` |
+| Vanthoor's model (`vanthoor_katzin`, version 1) | `agc4_pretrial_2023` v1 | `greenlight_2_0_7` v1 | `sha256:28572d6877e1459efda05b5e0559c65406cca8dcfd27ce78cfb4928889b98858` |
+
 The fit on the calibration data: the bias is the mean relative error, and
 the share within two standard errors counts the targets that have a
 spread.

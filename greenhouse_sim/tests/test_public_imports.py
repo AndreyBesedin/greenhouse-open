@@ -33,7 +33,13 @@ PUBLIC_IMPORTS: dict[str, tuple[str, ...]] = {
         "observation_accuracy",
     ),
     # Steering a run as a policy (decision 0061).
-    "greenhouse_sim.experiment": ("Episode", "EpisodeSummary", "run_episode"),
+    "greenhouse_sim.experiment": (
+        "Condition",
+        "Episode",
+        "EpisodeSummary",
+        "PolicyEntry",
+        "run_episode",
+    ),
     # Looking at a simulation.
     "greenhouse_sim.world.envelope": ("Envelope",),
     "greenhouse_sim.world.geometry": (

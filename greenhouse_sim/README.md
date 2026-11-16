@@ -121,7 +121,9 @@ and its own plans, as its own principal, and nothing of the simulated
 world's truth.
 - **In the process,** an experiment steps a run for it, decision by
   decision (`greenhouse_sim.experiment.run_episode`), as
-  `examples/03_close_the_loop.py` does.
+  `examples/03_close_the_loop.py` does: on its scenario's own run, or on a
+  condition, its run's seed, weather and days (`Condition`), and with a
+  policy made from its factory, settings and seed (`PolicyEntry`).
 - **In a process of its own,** given only a port's address and its token,
   it reads the port's server (`python -m greenhouse_sim.api.policy_server`)
   through the protocol's client
