@@ -118,6 +118,9 @@ data.
    ([the result](../../research/validation/agc4/README.md#the-result)):
    both models predict too little fruit, by 47 and 51 % on average, and
    neither beats the baseline, the pre-trial's crop at the same age.
+   Each calibration is also a crop parameter set, P20's format, cited by
+   its name, version and digest
+   ([the sets](../../research/validation/agc4/README.md#the-calibration)).
    Oliveira et al.'s observations are assessed
    ([the memo](../research/oliveira-observations.md)): usable for
    non-commercial research, with anything derived marked and kept out of

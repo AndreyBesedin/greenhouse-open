@@ -1,0 +1,25 @@
+{
+ "model": "vanthoor_katzin",
+ "name": "agc4_pretrial_2023",
+ "version": 1,
+ "based_on": {
+  "name": "greenlight_2_0_7",
+  "version": 1,
+  "digest": "sha256:4a0593e96cb0daae94d7286255dc52406173fdc7cf36af905d0eba87a05f8978"
+ },
+ "parameters": {
+  "sla": 4.255706652265946e-05,
+  "alpha": 0.38396807583800807,
+  "t_end_sum": 1388.3332633934647,
+  "rg_fruit": 0.2541290612434611
+ },
+ "why": {
+  "sla": "Calibrated on AGC4's 2023 pre-trial (decision 0076), within 2e-05 to 6e-05; published 2.66e-05.",
+  "alpha": "Calibrated on AGC4's 2023 pre-trial (decision 0076), within 0.25 to 0.5; published 0.385.",
+  "t_end_sum": "Calibrated on AGC4's 2023 pre-trial (decision 0076), within 200 to 1500; published 1035.",
+  "rg_fruit": "Calibrated on AGC4's 2023 pre-trial (decision 0076), within 0.15 to 0.8; published 0.328."
+ },
+ "made_for": 1,
+ "cultivar": null,
+ "description": "greenlight_2_0_7 v1 with the parameters calibrated on WUR AGC4's 2023 pre-trial (decision 0076), as research/validation/agc4/calibrated/vanthoor_katzin.json reports them and as the test on 2024's fruit ran them. A research result, not the model's published defaults. The pre-trial's cultivar is not verified (the AGC4 memo, §2), so the set names none."
+}
