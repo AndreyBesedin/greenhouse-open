@@ -1,0 +1,57 @@
+{
+  "what": "the simulator's indoor air temperature beside TiGwerLib's global model's, reproduced in OpenModelica (sourisseau_2026.json), on matched inputs, over the windows of Sourisseau et al. (2026)'s Fig 8 and Fig 9. A comparison of two models of different fidelity, not a validation of either, and no claim that the simulator does what Modelica does.",
+  "windows": "fig8, 9 to 19 January 2015, and fig9, 15 to 25 July 2015, as sourisseau_2026.json gives them, on the dataset's clock",
+  "tigwerlib": {
+    "model": "TiGwerLib.Applications.CTIFLGreenhouse.GlobalModels.UsingStatuses.CTIFLGreenhouseBaseModel, TiGwerLib 0.7.0 unchanged",
+    "tool": "OpenModelica 1.25.0, the image research/modelica/openmodelica.py pins, with the libraries it pins",
+    "solver": "dassl",
+    "tolerance": 1e-05,
+    "run": "from the season's start to the window's end, as sourisseau_2026 runs it, with results every 300 s of MainAir.T and MainAir.RH, and of the heat its three heating networks give (LowPipesTotDissip, CanopyPipesTotDissip and PEPipesTotDissip), to check the heat the simulator is given against",
+    "data": "its own records of the CTIFL greenhouse, read by the simulator's side too: Data/CTIFL/WeatherData.txt and Data/CTIFL/MainData.txt in TiGwerLib's archive (MIT), fetched by `openmodelica setup`, never committed"
+  },
+  "simulator": {
+    "model": "the run's whole house (the house_air part's whole_house model, P14.6): one well-mixed volume of air, through the services' climate run, as every scenario's",
+    "version": "the commit the run is made at, given in the report",
+    "parameters": "each the simulator's default, none set from TiGwerLib or from these windows: glazing U 6 W/m²K at 4 m/s of wind (single glass, as CTIFL's 4 mm roof is), infiltration 0.25 of the air an hour and 0.1 more for each m/s of wind, and 0.7 of the sun's shortwave reaching the floor given to the air as heat",
+    "start": "the window's start, its air TiGwerLib's MainAir.T and MainAir.RH then; the air alone holds heat, and forgets where it started within the hour"
+  },
+  "matched": {
+    "weather": "WeatherData.txt's records every 300 s through the window, its ends included, as a recorded weather: the outside air's temperature (column 2) and relative humidity (4), the pressure (5, in hPa), the measured global horizontal radiation (7), the wind's speed (12) and the bearing it blows from (11). The simulator interpolates them linearly; TiGwerLib's reader smoothly.",
+    "site": "Carquefou, 47.28 N, 1.46 W, 29 m, as the weather file's location line gives it; the dataset's clock, UTC+1, as the site's time zone (Etc/GMT-1), for the sun",
+    "geometry": "TiGwerLib's: 43.2 m long, 24 m wide, 6.97 m to the gutters and 7.78 m to the ridges, its length at 331°. Six spans of 4 m give its roof slope, 22°, its phi; nine bays of 4.8 m are assumed, TiGwerLib giving none",
+    "roof windows": "TiGwerLib's: 4.05 m by 1.4 m, swung up to 44° when fully open, top-hung near the ridge. It has 0.021 a m² of floor on the windward slopes and 0.023 on the leeward, 21.8 and 23.8; since either orientation can face the wind, the simulator has 23 on each, every other bay. At each 300 s step, the windows on the slopes that face within 90° of the wind's bearing then open as MainData.txt's windward record (column 6), the others as its leeward (column 5), each record held through its step as TiGwerLib's table holds it",
+    "heating": "the heat TiGwerLib's pipes give the greenhouse: each network's energy each step (MainData.txt columns 20, 23 and 26, kWh per m² of floor, never below 0), held through its step, filtered with its 3600 s time constant from the season's start and held below its limit (210, 100 and 50 kW), as the model has it (LowPipesTotDissip and the others), worked out exactly as each step's mean. The simulator's one heater, of 360 kW, the three limits together, runs at that mean's share of its power through the step"
+  },
+  "compared": {
+    "MainAir.T": "the simulator's whole house's air temperature, in K, against TiGwerLib's MainAir.T from the OpenModelica run, at every 300 s moment of the window, its two ends included; and each against the measured process air temperature (MainData.txt column 9, T_inAirProcess_meas, the measurement the paper compares its model with)"
+  },
+  "bar": {
+    "MainAir.T": 1.6,
+    "units": {
+      "MainAir.T": "K"
+    },
+    "rule": "a day, midnight to midnight, is within the bar when the RMSE of the simulator's temperature less TiGwerLib's over its moments is at most 1.6 K",
+    "why": "the bar the paper holds its own model to against the measurements, a day's RMSE of 1.6 K (its Fig 10, after Baptista, 2007). The simulator would agree with TiGwerLib as closely as the paper asks of TiGwerLib against the greenhouse only on a day within it. It is stated before any run, and no parameter of either model is set to meet it."
+  },
+  "reported": "over the window, the mean difference, the RMSE of the difference and the largest difference, with its moment; the same with the sun above the horizon at the site and below it; each day's mean difference and RMSE of the difference, whether it is within the bar, and the RMSE against the measurements of the simulator and of TiGwerLib; the heat each model was given over the window, and the largest difference between a step's heat as the simulator is given it and the mean of TiGwerLib's own (its run's LowPipesTotDissip, CanopyPipesTotDissip and PEPipesTotDissip) at the step's two ends; the simulator's house's air volume and glazed area beside TiGwerLib's volume; and the runs' times and versions. The report holds the comparison's numbers alone, none of either model's series or the data's",
+  "not_compared": {
+    "MainAir.RH": "blocked: the simulator's air takes no water from a crop, so its humidity has no counterpart to TiGwerLib's, whose canopy transpires and whose cover and screens condense. Comparing it would measure the missing crop, not a matched process.",
+    "CO2, energy, crop": "out of scope here, as the reproduction compared neither: the simulator's crop takes no CO2 from the air and TiGwerLib's CO2 injection is weekly totals, the heat is an input on both sides, and the crops are different models"
+  },
+  "blockers": {
+    "screens": "TiGwerLib draws a thermal and a shading screen as MainData.txt records them (columns 7 and 8); the simulator's house has none, so its light and its losses at night are those of a house without screens",
+    "crop": "TiGwerLib's canopy transpires, and exchanges heat with the air, the pipes and the cover; the simulator's air exchanges nothing with its crop, and takes 0.7 of the sun's shortwave reaching its floor as heat in place of what the canopy and the ground would do with it",
+    "heat stored": "TiGwerLib stores heat in its floor and soil, down to a deep soil at 18.1 °C, its structure, walls, screens and canopy; the simulator's whole house stores it in its air alone",
+    "the sky": "TiGwerLib's roof radiates to a sky whose temperature it takes from the measured infrared; the simulator's glass passes U times the difference between the air inside and out, its U set by the wind alone",
+    "walls": "TiGwerLib's east and north walls face corridors at their measured temperatures, its west wall exchanges nothing, and only its south wall faces outside; the simulator's house stands alone, its four walls glazed to the outside air"
+  },
+  "known_differences": {
+    "ventilation": "TiGwerLib's roof windows pass air by De Jong's (1990) ventilation function, with their leakage; the simulator's by its orifice flows driven by the wind's pressure and the stack, and the exchange of each opening on its own",
+    "leakage": "TiGwerLib's roof and corridors leak by power laws of the pressure across them; the simulator's house by its infiltration rate",
+    "light": "TiGwerLib reads the measured diffuse radiation, and its roof's transmittances precomputed; the simulator splits the measured global radiation by Erbs's correlation and passes it through its own glass, shaded by its structure",
+    "heating": "TiGwerLib's pipes give their heat to the air by convection and to the surfaces by radiation; the simulator's heater gives all of it to the air",
+    "volume": "the simulator's air is the cells of its grid, 0.5 m on a side, that its house encloses; TiGwerLib's volume is its floor times its mean height; both are reported",
+    "glazing": "the simulator's roof passes heat through its projection on the floor, not its slopes"
+  },
+  "commands": "python -m research.modelica.simulator_comparison FOLDER WORKDIR fig8, and fig9, FOLDER made by `python -m research.modelica.openmodelica setup FOLDER`"
+}

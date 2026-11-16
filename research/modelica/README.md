@@ -5,8 +5,9 @@ compares the simulator with a Modelica model: one documented, measured
 interval of TiGwerLib reproduced in OpenModelica, then compared on matched
 inputs. This folder sets OpenModelica up for it, apart from the
 repository's own environment, checks the setup on TiGwerLib's global
-model, and reproduces the indoor climate of the paper that model was
-published with ([below](#reproducing-sourisseau-et-al-2026)).
+model, reproduces the indoor climate of the paper that model was
+published with ([below](#reproducing-sourisseau-et-al-2026)), and compares
+the simulator's with it ([further below](#comparing-the-simulator-with-tigwerlib)).
 
 ## What it runs on
 
@@ -223,3 +224,48 @@ Each window ran once, at the commit that states it, on an Apple M2 with
 - **What it took:** in January, a build of 64 s at a peak of 3.0 GB and
   47 days simulated in 8 minutes at 0.7 GB; in July, a build of 126 s at
   2.8 GB and 235 days in 44 minutes at 1.0 GB, other applications open.
+
+## Comparing the simulator with TiGwerLib
+
+The simulator's indoor air temperature is compared with TiGwerLib's, as
+OpenModelica reproduces it above, on matched inputs, over the same two
+windows:
+
+```bash
+python -m research.modelica.simulator_comparison ~/.greenhouse-open/modelica /tmp/fig8 fig8
+```
+
+It runs TiGwerLib to the window's end, as the reproduction does, then the
+simulator's whole house through the window, and compares the two at every
+5-minute moment. The simulator's side is built from TiGwerLib's own
+records of the greenhouse, its `WeatherData.txt` and `MainData.txt`
+(MIT), read from the folder `setup` made:
+
+- **the house:** TiGwerLib's geometry, 43.2 by 24 m, 6.97 m to the
+  gutters and 7.78 m to the ridges, its length at 331°, on six spans whose
+  slope is its roof's, 22°; and its roof windows, 4.05 by 1.4 m, opening
+  to 44°, 23 on each side of the roof, as many as its two sides have on
+  average;
+- **the weather:** TiGwerLib's records every 5 minutes, as a recorded
+  weather, at Carquefou, on the dataset's clock (UTC+1);
+- **the windows:** at each 5-minute step, those on the side of the roof
+  facing the wind open as TiGwerLib's windward record, the others as its
+  leeward;
+- **the heating:** a heater giving, through each step, the heat
+  TiGwerLib's pipes give the greenhouse: the energy each network took,
+  filtered and limited as the model does, worked out exactly;
+- **the start:** TiGwerLib's air at the window's start.
+
+Each of the simulator's own parameters is its default. What is compared,
+what cannot be, and the bar a day is held to are stated in
+[`simulator_comparison.json`](simulator_comparison.json), committed before
+any run: the temperature alone, a day within the bar when the RMSE of the
+difference over it is at most 1.6 K, the bar the paper holds its own model
+to against the measurements. The relative humidity is not compared: the
+simulator's air takes no water from a crop. Five processes TiGwerLib has
+are recorded as blockers, not worked around: its screens, its crop's
+exchanges with the air, the heat its floor, soil, structure and crop
+store, its roof's radiation to the sky, and walls that face corridors
+rather than the outside. The report, in `results/simulator_<window>.json`,
+holds the comparison's numbers alone, none of either model's series or of
+the data's.
