@@ -39,6 +39,7 @@ from greenhouse_sim.climate.glazing import GlazingAt
 from greenhouse_sim.climate.house import HouseTrace
 from greenhouse_sim.climate.openings import OpeningsAt
 from greenhouse_sim.climate.probes import ClimateProbes
+from greenhouse_sim.experiment.paired import experiment_json_schema
 from greenhouse_sim.fields.field import field_json_schema
 from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT, answer_json_schema, schema_text
 from greenhouse_sim.scenarios.layout_files import LAYOUT_SCHEMA_FILE, layout_json_schema
@@ -131,6 +132,8 @@ PUBLISHED: Final[dict[Path, Callable[[], Mapping[str, object]]]] = {
     ),
     # A crop model's parameter set as a file (P20.2).
     PACKAGE / "biology" / "parameter_set.schema.json": parameter_set_json_schema,
+    # An experiment of paired episodes, as its file holds it (P23.3).
+    PACKAGE / "experiment" / "experiment.schema.json": experiment_json_schema,
     **{path: partial(answer_json_schema, answered) for path, answered in ANSWERS.items()},
 }
 
