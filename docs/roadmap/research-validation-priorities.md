@@ -132,7 +132,11 @@ data.
    1.25.0 in its container, with TiGwerLib 0.7.0 and the libraries it
    uses, each pinned. TiGwerLib's global model builds and simulates a day
    with DASSL; CVODE, the solver its experiment names, stops in the first
-   second.
+   second. The indoor climate of the paper it was published with,
+   Sourisseau et al. (2026), is reproduced for its Fig 8 and Fig 9 windows,
+   within tolerances stated before the runs at every moment compared; July
+   misses one moment OpenModelica wrote off its grid. The comparison with
+   the simulator on matched inputs is still to come.
 7. **Benchmark greenhouse decisions, repeatably.** Not only an interface
    and a rule: a capability to compare decisions fairly (decision
    [0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md),
