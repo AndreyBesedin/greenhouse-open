@@ -155,7 +155,9 @@ data.
    soil, structure and crop store, its roof's radiation to the sky, and
    walls on corridors rather than outside. The differences go the way
    those blockers would push them, but the comparison does not apportion
-   them.
+   them. Making the blockers the simulator's own components, each held to
+   its reference and the comparison run again after it, is
+   [P24](p24-house-components-and-a-multi-node-climate.md).
 7. **Benchmark greenhouse decisions, repeatably.** Not only an interface
    and a rule: a capability to compare decisions fairly (decision
    [0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md),
