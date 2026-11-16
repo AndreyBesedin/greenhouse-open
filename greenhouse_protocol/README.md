@@ -43,6 +43,12 @@ implement. Part of [greenhouse-open](../README.md). Apache-2.0.
     moment or a period, with its issue time and its uncertainty.
 
   Their JSON Schemas are published beside the others.
+- **An episode's record** (`experiment`, P23): `EpisodeRecord`, what made
+  an episode of a policy on a run what it was: its place in its
+  experiment, the run (its condition, models and weather's digest), the
+  policy (its entry, `PolicyEntry`, with its settings' and files'
+  digests), the software, the trace by decision, the outcomes and the
+  episode's digest. Its JSON Schema is published beside the others.
 
 Chronology is the timestamp alone, always timezone-aware: every record
 refuses a naive time (`greenhouse_protocol.instant.Instant`).
