@@ -94,6 +94,9 @@ decision that changes course is a new record that supersedes the old one.
 | [0078](0078-a-multi-node-climate-is-a-model-of-the-houses-air-chosen-by-the-manifest.md) | A multi-node climate is a model of the house's air, chosen by the manifest | Proposed |
 | [0079](0079-a-crop-and-the-houses-air-exchange-heat-water-and-co2-by-what-each-declares.md) | A crop and the house's air exchange heat, water and CO₂, by what each declares | Proposed |
 | [0080](0080-a-houses-components-and-materials-are-described-in-its-installation.md) | A house's components and materials are described in its installation | Proposed |
+| [0081](0081-a-benchmarks-measures-are-versioned-definitions-frozen-before-its-baselines.md) | A benchmark's measures are versioned definitions, frozen before its baselines | Proposed |
+| [0082](0082-the-evaluator-reads-an-episodes-truth-after-its-policy-stops.md) | The evaluator reads an episode's truth after its policy stops | Proposed |
+| [0083](0083-a-baseline-is-a-policy-with-its-provenance-and-a-reference-test.md) | A baseline is a policy with its provenance and a reference test | Proposed |
 
 ## Template
 

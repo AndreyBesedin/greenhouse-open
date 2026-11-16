@@ -171,10 +171,13 @@ data.
    2. an experiment harness: the policy's identity, its actions' trace,
       paired seeds and weather ([P23](p23-experiments.md), proposed);
    3. the measures, defined exactly, with the evaluator's instrumentation
-      and the constraints' handling;
+      and the constraints' handling
+      ([P25](p25-measures-and-baselines.md), proposed);
    4. a portfolio of baselines, from the literature and from growers'
-      practice and simple rules, each with its provenance;
-   5. comparisons with policies of increasing complexity.
+      practice and simple rules, each with its provenance
+      ([P25](p25-measures-and-baselines.md), proposed);
+   5. comparisons with policies of increasing complexity (the
+      [future work](future-work.md#intelligence-components), after P25).
    Climate-only experiments can run early; claims on yield or economics
    wait for the crop models of item 4. Forecasts and perception stay with
    the intelligence components, on the same foundation.
