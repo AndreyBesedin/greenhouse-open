@@ -1,10 +1,13 @@
 """An experiment that steps a run (P15.4, decision 0061): a playback
 stepped to a moment in the caller's thread, and a policy steering a run
 through its port at the runner's barriers, deterministically when the
-policy is, its stale revisions given again, its slow decisions skipped."""
+policy is, its stale revisions given again, its slow decisions skipped. An
+episode on a condition, its run's seed, weather and end, and a policy made
+from its factory, settings and seed (P23.1)."""
 
 from collections.abc import Iterator, Sequence
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Final
 
 import pytest
@@ -22,6 +25,7 @@ from greenhouse_protocol.contracts.policy import (
     CancelPlan,
     Decision,
     Delivery,
+    Keep,
     PolicyIdentity,
     Revise,
 )
@@ -30,12 +34,16 @@ from greenhouse_protocol.forecast import Forecast
 from greenhouse_protocol.observation import Observation
 from greenhouse_protocol.outcome import OutcomeStatus
 from greenhouse_protocol.plan import Asap, At, Plan, PlannedAction, Principal, PrincipalKind
+from pydantic import JsonValue, ValidationError
 
-from greenhouse_sim.experiment import Episode, Steering, run_episode
-from greenhouse_sim.services.errors import Conflict, InvalidRequest
+from greenhouse_sim.experiment import Condition, Episode, PolicyEntry, Steering, run_episode
+from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.playback import Playback, PlaybackCommand
 from greenhouse_sim.services.policy_port import RunPolicyPort
+from greenhouse_sim.services.run_store import FolderStore
+from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.services.workers import queued
 from greenhouse_sim.units import DAY_S, HOUR_S
 
 # Its run's days cost next to nothing, and it has doors to set.
@@ -363,3 +371,195 @@ def test_a_plan_a_manager_revised_is_cancelled_as_it_stands(simulator: Simulator
 
     assert receipt is not None and receipt.accepted, receipt
     assert [ref.action_id for ref in receipt.cancelled] == ["shut"]
+
+
+class _SetDoors(_Doors):
+    """`_Doors` as a factory makes it, from its settings and its seed."""
+
+    def __init__(self, settings: dict[str, JsonValue], seed: int | None) -> None:
+        level = settings["level"]
+        assert isinstance(level, float)
+        super().__init__(level=level)
+        self.settings = settings
+        self.seed = seed
+
+
+def _not_a_policy(settings: dict[str, JsonValue], seed: int | None) -> object:
+    return settings
+
+
+def test_a_policy_is_made_fresh_from_its_factory_its_settings_and_its_seed(
+    simulator: Simulator,
+) -> None:
+    entry = PolicyEntry.model_validate_json(
+        f'{{"factory": "{__name__}:_SetDoors", "settings": {{"level": 0.5}}, "seed": 3}}'
+    )
+
+    first, second = entry.make(), entry.make()
+
+    assert isinstance(first, _SetDoors) and isinstance(second, _SetDoors)
+    assert first is not second
+    assert (first.settings, first.seed) == ({"level": 0.5}, 3)
+    # What a policy does with its settings is its own.
+    first.settings["level"] = 1.0
+    assert entry.settings == {"level": 0.5} and second.settings == {"level": 0.5}
+    # Its settings make it what it is.
+    made = run_episode(simulator, _episode(second))
+    assert made.digest == run_episode(simulator, _episode(_Doors(level=0.5))).digest
+
+
+@pytest.mark.parametrize(
+    ("factory", "refused", "says"),
+    [
+        (f"{__name__}:_missing", ValueError, "no policy factory"),
+        ("greenhouse_sim.no_such_module:make", ValueError, "no policy factory"),
+        (f"{__name__}:SIX_HOURS_S", TypeError, "cannot be called"),
+        (f"{__name__}:_not_a_policy", TypeError, "not a policy: it has no identity"),
+    ],
+)
+def test_an_entry_that_makes_no_policy_is_refused(
+    factory: str, refused: type[Exception], says: str
+) -> None:
+    with pytest.raises(refused, match=says):
+        PolicyEntry(factory=factory).make()
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"factory": "_SetDoors"},
+        {"factory": f"{__name__}:_SetDoors", "settings": [0.5]},
+        {"factory": f"{__name__}:_SetDoors", "settings": {"level": float("nan")}},
+        {"factory": f"{__name__}:_SetDoors", "seed": -1},
+    ],
+)
+def test_an_entry_names_its_factory_by_module_and_its_settings_as_json(
+    fields: dict[str, object],
+) -> None:
+    with pytest.raises(ValidationError):
+        PolicyEntry.model_validate(fields)
+
+
+def test_an_episode_on_a_condition_runs_on_the_run_decision_0075_gives(
+    simulator: Simulator, tmp_path: Path
+) -> None:
+    condition = Condition(seed=7, weather="cold_spring_day", duration_days=1)
+
+    summary = run_episode(simulator, _episode(_Doors(), end_s=DAY_S, condition=condition))
+
+    # The run a person starting it with that seed, weather and duration has,
+    # the whole run at that seed and weather cut short; not the scenario's.
+    whole = queued(simulator, FolderStore(tmp_path), SCENARIO, seed=7, weather="cold_spring_day")
+    shorter = queued(
+        simulator,
+        FolderStore(tmp_path),
+        SCENARIO,
+        seed=7,
+        weather="cold_spring_day",
+        duration_days=1,
+    )
+    assert summary.run_id == shorter.run_id == whole.run_id
+    assert summary.run_id != Playback(simulator, SCENARIO).run_id
+    # It ends where its condition does: every hour of its day but its last.
+    assert summary.decisions == 24
+    with pytest.raises(ValueError, match="ends within its run, 0 to 86400 s"):
+        run_episode(simulator, _episode(_Doors(), end_s=DAY_S + 1, condition=condition))
+
+
+def test_an_episode_on_its_scenarios_own_condition_is_the_episode_on_none(
+    simulator: Simulator,
+) -> None:
+    own = scenario(simulator.catalogue, SCENARIO)
+    condition = Condition(seed=own.random_seed, weather="default", duration_days=own.duration_days)
+
+    named = run_episode(simulator, _episode(_Doors(), condition=condition))
+    unnamed = run_episode(simulator, _episode(_Doors()))
+
+    assert named == unnamed
+    assert named.run_id == Playback(simulator, SCENARIO).run_id
+
+
+@pytest.mark.parametrize(
+    ("condition", "refused", "says"),
+    [
+        (Condition(weather="cold_spring_day#3"), InvalidRequest, "by its name alone"),
+        (Condition(weather="nowhere"), NotFound, "no weather 'nowhere'"),
+        (Condition(duration_days=11), InvalidRequest, "a scenario of its own"),
+    ],
+)
+def test_a_condition_no_run_could_be_started_on_is_refused(
+    simulator: Simulator, condition: Condition, refused: type[Exception], says: str
+) -> None:
+    with pytest.raises(refused, match=says):
+        run_episode(simulator, _episode(_Doors(), condition=condition))
+
+
+# What the climate box's weather station reads, which no policy moves.
+OUTSIDE: Final = frozenset(
+    {
+        ObservationType.OUTSIDE_AIR_TEMPERATURE_C,
+        ObservationType.OUTSIDE_RELATIVE_HUMIDITY_PCT,
+        ObservationType.OUTSIDE_WIND_SPEED_M_S,
+        ObservationType.OUTSIDE_WIND_DIRECTION_DEG,
+        ObservationType.OUTSIDE_BAROMETRIC_PRESSURE_HPA,
+    }
+)
+
+
+class _Heating:
+    """Its heater on from its first decision, or never, and every reading
+    it was given kept."""
+
+    identity: Final = PolicyIdentity(name="heating", version="1")
+    decide_every_s: Final = HOUR_S
+
+    def __init__(self, *, on: bool) -> None:
+        self._on = on
+        self.readings: list[Observation] = []
+
+    def start(self, context: CapabilityContext, budget: InformationBudget) -> None:
+        self._heater = next(d.device_id for d in context.devices if "heats" in d.does)
+        self._started = False
+
+    def decide(self, at: datetime, delivered: Delivery) -> Decision:
+        self.readings += delivered.observations
+        if not self._on or self._started:
+            return Keep()
+        self._started = True
+        return Revise(actions=(_level("heat", self._heater, 1.0),))
+
+    def stop(self) -> None: ...
+
+
+def test_two_policies_on_one_condition_are_given_the_same_outside_readings(
+    simulator: Simulator,
+) -> None:
+    def readings(policy: _Heating, seed: int) -> tuple[list[Observation], list[Observation]]:
+        run_episode(
+            simulator,
+            Episode(
+                scenario_id="climate_box",
+                policy=policy,
+                principal=POLICY,
+                end_s=2 * HOUR_S,
+                condition=Condition(seed=seed, weather="cold_spring_day"),
+            ),
+        )
+        outside = [o for o in policy.readings if o.observation_type in OUTSIDE]
+        inside = [
+            o for o in policy.readings if o.observation_type == ObservationType.AIR_TEMPERATURE_C
+        ]
+        return outside, inside
+
+    heated_outside, heated_inside = readings(_Heating(on=True), seed=7)
+    cold_outside, cold_inside = readings(_Heating(on=False), seed=7)
+    other_seed, _ = readings(_Heating(on=False), seed=8)
+
+    # Each of the station's five instruments, every reading the same, noise,
+    # drop-outs and all: common random numbers.
+    assert len({o.sensor_id for o in heated_outside}) == len(OUTSIDE)
+    assert heated_outside == cold_outside
+    # Not because nothing differs: the heater warmed the house, and another
+    # seed draws other noise.
+    assert [o.value for o in heated_inside] != [o.value for o in cold_inside]
+    assert [o.value for o in other_seed] != [o.value for o in cold_outside]
