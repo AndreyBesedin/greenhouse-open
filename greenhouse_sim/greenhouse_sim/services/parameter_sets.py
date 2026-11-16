@@ -120,12 +120,17 @@ def keep(objects: ObjectStore, document: Mapping[str, JsonValue]) -> ResolvedSet
 
 
 def with_carried(
-    known: Mapping[SetKey, ParameterSet], files: Sequence[Mapping[str, JsonValue]]
+    known: Mapping[SetKey, ParameterSet],
+    files: Sequence[Mapping[str, JsonValue]],
+    *,
+    checked: bool,
 ) -> dict[SetKey, ParameterSet]:
-    """`known` with the sets a scenario's file carries (`files`), each read
-    and checked, refused by field under `parameter_sets[i]`; a conflict if
-    the simulator keeps, or publishes, a set of its name and version with
-    other numbers, which a reader would take for this one."""
+    """`known` with the sets a scenario's file carries (`files`) over them,
+    each read and checked, refused by field under `parameter_sets[i]`: the
+    file runs its own numbers, as a restart or a worker reads it again,
+    whatever is kept since. A file `checked`, as an upload is, is a conflict
+    if the simulator keeps, or publishes, a set of a carried one's name and
+    version with other numbers, which a reader would take for it."""
     carried: dict[SetKey, ParameterSet] = {}
     for index, document in enumerate(files):
         try:
@@ -136,14 +141,14 @@ def with_carried(
             ]
             raise InvalidRequest(f"parameter_sets[{index}]: {error}", problems) from None
         carried[set_key(read)] = read
-    sets = dict(known) | {key: each for key, each in carried.items() if key not in known}
+    sets = dict(known) | carried
     published = {set_key(each): each for each in PUBLISHED_SETS.values()}
-    for key, each in carried.items():
+    for key, each in carried.items() if checked else ():
         already = published.get(key) or known.get(key)
+        if already is None:
+            continue
         try:
-            different = already is not None and (
-                resolved(already, sets).digest != resolved(each, carried | sets).digest
-            )
+            different = resolved(already, known).digest != resolved(each, sets).digest
         except InvalidParameterSet as error:
             raise InvalidRequest(f"{each.name} v{each.version} of {each.model}: {error}") from None
         if different:

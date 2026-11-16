@@ -171,7 +171,7 @@ def upload(simulator: Simulator, text: str) -> ScenarioUploaded | InstallationUp
         raise InvalidRequest(f"{NEITHER_KIND}, which the builder's Download buttons make")
     if is_installation:
         return InstallationUploaded(assessed=assess(text))
-    uploaded = _registered(simulator, text)
+    uploaded = _registered(simulator, text, checked=True)
     if uploaded.scenario is None or simulator.runs is None:
         return uploaded
     simulator.runs.put(kept_name(uploaded.file_digest), text.encode())
@@ -192,7 +192,8 @@ def carry(catalogue: Scenarios, objects: ObjectStore, scenario_id: str) -> str |
         read = import_scenario_file(text)
     except ScenarioFileError as error:
         raise InvalidRequest(str(error), [(error.field, error.message)]) from None
-    read_back = with_parameter_set(read.config, kept_sets(objects))
+    sets = with_carried(kept_sets(objects), read.parameter_sets, checked=False)
+    read_back = with_parameter_set(read.config, sets)
     if config_digest(read_back) != config_digest(config):
         raise InvalidRequest(f"{scenario_id!r} does not read back from its file as it is")
     name = kept_name(read.digest)
@@ -207,7 +208,7 @@ def take_up(simulator: Simulator, objects: ObjectStore, digest: str) -> None:
     data = objects.get(kept_name(digest))
     if data is None:
         raise StoreCorrupt(f"the scenario file {digest} an epoch names is gone")
-    if _registered(simulator, data.decode()).file_digest != digest:
+    if _registered(simulator, data.decode(), checked=False).file_digest != digest:
         raise StoreCorrupt(f"the scenario file {digest} an epoch names is not what it says")
 
 
@@ -259,7 +260,8 @@ def _restored(simulator: Simulator, name: str) -> bool | None:
         data = simulator.runs.get(name)
         if data is None:
             raise NotFound(f"{name} is gone")
-        return None if _registered(simulator, data.decode()).scenario is None else True
+        registered = _registered(simulator, data.decode(), checked=False)
+        return None if registered.scenario is None else True
     except (ServiceError, UnicodeDecodeError) as error:
         _not_restored(name, getattr(error, "message", str(error)))
         return False
@@ -274,7 +276,10 @@ def _not_restored(name: str, why: str) -> None:
     )
 
 
-def _registered(simulator: Simulator, text: str) -> ScenarioUploaded:
+def _registered(simulator: Simulator, text: str, *, checked: bool) -> ScenarioUploaded:
+    """A scenario file registered: `checked` as an upload is, its carried
+    sets against those kept (`parameter_sets.with_carried`); one read again
+    from the store, by a restart or a worker, runs the sets it carries."""
     try:
         read = import_scenario_file(text)
     except ScenarioFileError as error:
@@ -295,7 +300,7 @@ def _registered(simulator: Simulator, text: str) -> ScenarioUploaded:
         raise InvalidRequest(f"not a scenario file: {first_reason(error)}") from None
     summary = None
     if missing is None:
-        known = with_carried(kept_sets(simulator.runs), read.parameter_sets)
+        known = with_carried(kept_sets(simulator.runs), read.parameter_sets, checked=checked)
         config = with_parameter_set(config, known)
         try:
             simulator.catalogue.register(config)

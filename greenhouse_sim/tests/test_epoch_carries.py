@@ -226,12 +226,13 @@ def test_a_fork_of_an_uploaded_scenario_runs_in_a_worker_under_its_weather_and_s
     ]
 
 
-def test_a_run_under_a_kept_set_resumes_and_forks_in_a_worker_once_the_set_is_deleted(
+def test_a_run_under_a_kept_set_resumes_and_forks_in_a_worker_once_the_set_is_replaced(
     tmp_path: Path,
 ) -> None:
     """The acceptance of P20.3: the epoch's scenario file carries the set its
     crop runs (decision 0077), so that a worker with only the store runs the
-    same numbers under the same id, whatever is kept or deleted after."""
+    same numbers under the same id, whatever is kept or deleted after: here
+    the set deleted, and other numbers kept under its name and version."""
     objects = FolderStore(tmp_path / "runs")
     house = short_runs.cut("tomgro_house", days=DAYS, season=True).model_copy(
         update={
@@ -248,6 +249,7 @@ def test_a_run_under_a_kept_set_resumes_and_forks_in_a_worker_once_the_set_is_de
         assert execute(first, kept, Stepped([DAY_S])) == Status.INTERRUPTED
     for name in objects.names(parameter_sets.KEPT_FOLDER):
         objects.delete(name)
+    parameter_sets.keep(objects, _brighter() | {"parameters": {"qe": 0.09}})
 
     with Simulator(runs=objects) as second:
         second.scheduler = Scheduler(second, objects.root, limit=1)
