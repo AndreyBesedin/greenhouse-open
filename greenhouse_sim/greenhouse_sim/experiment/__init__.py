@@ -276,19 +276,15 @@ def record_episode(
     place: records.EpisodePlace | None = None,
     timer: Callable[[], float] = time.perf_counter,
     forecasters: Sequence[Forecaster] = (PERSISTENCE,),
+    kept: Callable[[Delivery], None] | None = None,
 ) -> records.EpisodeRecord:
     """Runs `episode` as `run_episode` does, and gives its record
     (`greenhouse_protocol.experiment`), at `place` in its experiment if it
-    has one. The files its policy's entry names are digested before it
-    starts, so that the record names those it was made with."""
-    made = None
-    if isinstance(episode.policy, PolicyEntry):
-        made = records.PolicyMade(
-            entry=records.PolicyEntry.model_validate(episode.policy.model_dump()),
-            settings_sha256=records.settings_sha256(episode.policy.settings),
-            files=tuple(_policy_file(episode.policy, name) for name in episode.policy.files),
-        )
-    ran = _play(simulator, episode, timer, forecasters)
+    has one, each decision's delivery given to `kept` if asked. The files
+    its policy's entry names are digested before it starts, so that the
+    record names those it was made with."""
+    made = made_from(episode.policy) if isinstance(episode.policy, PolicyEntry) else None
+    ran = _play(simulator, episode, timer, forecasters, kept)
     summary = ran.summary
     return records.EpisodeRecord(
         place=place,
@@ -309,6 +305,17 @@ def record_episode(
     )
 
 
+def made_from(entry: PolicyEntry) -> records.PolicyMade:
+    """An entry, as a record names it: with its settings' digest and those
+    of the files it names, as they are now. A file that cannot be read is
+    refused."""
+    return records.PolicyMade(
+        entry=records.PolicyEntry.model_validate(entry.model_dump()),
+        settings_sha256=records.settings_sha256(entry.settings),
+        files=tuple(_policy_file(entry, name) for name in entry.files),
+    )
+
+
 @dataclass(frozen=True)
 class _Played:
     """An episode played: its summary, its run, its policy's cadence and
@@ -325,6 +332,7 @@ def _play(
     episode: Episode,
     timer: Callable[[], float],
     forecasters: Sequence[Forecaster],
+    kept: Callable[[Delivery], None] | None = None,
 ) -> _Played:
     condition = episode.condition
     played = Playback(
@@ -358,6 +366,8 @@ def _play(
             at = played.start + timedelta(seconds=moment_s)
             played.step_to(moment_s)
             delivered = read.since_last()
+            if kept is not None:
+                kept(delivered)
             digest.update(delivered.model_dump_json().encode())
             started = timer()
             decision = policy.decide(at, delivered)
