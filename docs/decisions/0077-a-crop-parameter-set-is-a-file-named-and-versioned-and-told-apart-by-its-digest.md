@@ -130,8 +130,9 @@ it keeps, and refuses a run that names one it has not.
   recording. An upload is matched by digest, and refused if the simulator
   keeps a set of the same name and version with another digest.
 - *With an epoch:* the store keeps the set an epoch runs beside its
-  manifest, so that its worker, a resume and a fork run the same numbers
-  whatever is kept or deleted after.
+  manifest, in the scenario file the manifest names, with its recording
+  (decision 0067), so that its worker, a resume and a fork run the same
+  numbers whatever is kept or deleted after.
 - *As a research result:* beside the study that made it, under
   `research/`, in this format, and cited by its name, version and digest.
   It is kept by a simulator only once someone uploads it.

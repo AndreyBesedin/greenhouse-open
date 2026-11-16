@@ -177,6 +177,36 @@ def test_a_run_under_a_set_the_simulator_does_not_keep_is_refused(store: FolderS
         )
 
 
+def test_a_scenarios_file_carries_its_set_and_runs_it_where_none_is_kept(
+    store: FolderStore,
+) -> None:
+    """The file carries the set and each of its bases that is not published,
+    its own first, so that a simulator keeping none runs the same run; one
+    keeping the set's name and version with other numbers refuses it."""
+    base = keep(store, _set())
+    keep(store, _set(name="brighter_still", qe=0.12) | {"based_on": base.named.model_dump()})
+    with _uploaded(store, parameter_set="brighter_still") as simulator:
+        run_id = air_through_a_run(simulator, RunRequest(HOUSE))[1]
+        text = scenario_files.download(simulator, HOUSE, with_recording=True).text
+    carried = json.loads(text)["parameter_sets"]
+
+    assert [each["name"] for each in carried] == ["brighter_still", "brighter"]
+    with Simulator() as elsewhere:
+        scenario_files.upload(elsewhere, text)
+        assert air_through_a_run(elsewhere, RunRequest(HOUSE))[1] == run_id
+    other = FolderStore(store.root / "other")
+    keep(other, _set(qe=0.09))
+    with Simulator(runs=other) as keeping, pytest.raises(Conflict, match="other numbers"):
+        scenario_files.upload(keeping, text)
+    published = json.loads(export_scenario_file(_house())) | {"parameter_sets": carried}
+    with Simulator() as simulator, pytest.raises(InvalidRequest, match="parameter_sets"):
+        scenario_files.upload(simulator, json.dumps(published))
+    unread = json.loads(text) | {"parameter_sets": [carried[0] | {"made_for": 0}]}
+    with Simulator() as simulator, pytest.raises(InvalidRequest) as refused:
+        scenario_files.upload(simulator, json.dumps(unread))
+    assert [field for field, _ in refused.value.problems] == ["parameter_sets[0].made_for"]
+
+
 def test_a_set_is_kept_once_under_its_name_and_version(store: FolderStore) -> None:
     kept = keep(store, _set())
 

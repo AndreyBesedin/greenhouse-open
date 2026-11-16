@@ -19,19 +19,21 @@ from greenhouse_protocol.observation import Observation
 from pydantic import JsonValue
 
 from greenhouse_sim.api.routes import respond
+from greenhouse_sim.biology.parameter_sets import PUBLISHED_SETS, resolved
 from greenhouse_sim.builder.basic import BasicSetup, basic_installation
 from greenhouse_sim.builder.drafts import DraftStore
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios.catalogue import PACKAGED
 from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.crop_parameters import ReducedTomgroCrop
 from greenhouse_sim.scenarios.installation import Installation
 from greenhouse_sim.scenarios.scenario_files import (
     ScenarioFile,
     export_scenario_file,
     import_scenario_file,
 )
-from greenhouse_sim.services import drafts, scenario_files, scheduler
+from greenhouse_sim.services import drafts, parameter_sets, scenario_files, scheduler
 from greenhouse_sim.services.errors import Conflict, InvalidRequest
 from greenhouse_sim.services.playback import FIRST_EPOCH, Epochs, Playback
 from greenhouse_sim.services.run_store import (
@@ -58,6 +60,7 @@ import workers_support
 
 SHORT: Final = workers_support.SHORT
 UPLOADED: Final = "uploaded_box"
+UNDER_A_SET: Final = "house_under_a_set"
 DRAFT: Final = "built_house"
 WAIT_S: Final = 240.0
 # Slow enough that the first day is committed well before the second.
@@ -221,6 +224,65 @@ def test_a_fork_of_an_uploaded_scenario_runs_in_a_worker_under_its_weather_and_s
     assert [_reading(o) for o in kept.observations().records] == [
         _reading(o) for o in parent.observations(after=first_day).records
     ]
+
+
+def test_a_run_under_a_kept_set_resumes_and_forks_in_a_worker_once_the_set_is_deleted(
+    tmp_path: Path,
+) -> None:
+    """The acceptance of P20.3: the epoch's scenario file carries the set its
+    crop runs (decision 0077), so that a worker with only the store runs the
+    same numbers under the same id, whatever is kept or deleted after."""
+    objects = FolderStore(tmp_path / "runs")
+    house = short_runs.cut("tomgro_house", days=DAYS, season=True).model_copy(
+        update={
+            "greenhouse_id": UNDER_A_SET,
+            "crop": ReducedTomgroCrop(parameter_set="brighter"),
+        }
+    )
+    with Simulator(runs=objects) as first:
+        parameter_sets.keep(objects, _brighter())
+        scenario_files.upload(first, export_scenario_file(house))
+        whole = queued(first, FolderStore(tmp_path / "whole"), UNDER_A_SET)
+        assert execute(first, whole, Free()) == Status.FINISHED
+        kept = queued(first, objects, UNDER_A_SET)
+        assert execute(first, kept, Stepped([DAY_S])) == Status.INTERRUPTED
+    for name in objects.names(parameter_sets.KEPT_FOLDER):
+        objects.delete(name)
+
+    with Simulator(runs=objects) as second:
+        second.scheduler = Scheduler(second, objects.root, limit=1)
+        assert second.scheduler.resume(kept.run_id, kept.epoch).run_id == whole.run_id
+        _until(lambda: kept.manifest().status == Status.FINISHED, "the epoch to end")
+        answer = respond(
+            second, "POST", f"/api/runs/{kept.run_id}/epochs/{kept.epoch}/forks?t={DAY_S}"
+        )
+        assert answer.status == HTTPStatus.OK and isinstance(answer.body, dict)
+        fork = EpochStore(objects, kept.run_id, int(str(answer.body["epoch"])))
+        _until(lambda: fork.manifest().status == Status.FINISHED, "the fork to finish")
+
+    assert [c.digest for c in kept.commits()] == [c.digest for c in whole.commits()]
+    kept.verify()
+    fork.verify()
+    first_day = whole.commits()[0].counts[Kind.OBSERVATIONS]
+    assert [_reading(o) for o in fork.observations().records] == [
+        _reading(o) for o in whole.observations(after=first_day).records
+    ]
+
+
+def _brighter() -> dict[str, JsonValue]:
+    """A set of Reduced-State TOMGRO's, its quantum efficiency other than
+    the published one's."""
+    return {
+        "model": "reduced_tomgro",
+        "name": "brighter",
+        "version": 1,
+        "based_on": resolved(PUBLISHED_SETS["reduced_tomgro"]).named.model_dump(mode="json"),
+        "parameters": {"qe": 0.1},
+        "why": {"qe": "a test's"},
+        "made_for": 1,
+        "cultivar": None,
+        "description": "",
+    }
 
 
 def _reading(observation: Observation) -> tuple[object, ...]:

@@ -7,7 +7,9 @@ store.
   (`kept_name`). The same numbers again are the version kept; other numbers
   under a name and version kept, a published one's included, are refused.
 - **Looked up** (`with_parameter_set`): as a scenario is registered, the set
-  its crop section names, among the published and the kept, resolved and
+  its crop section names, among the published, the kept and those its file
+  carries (`with_carried`, refused where it carries a set kept under its
+  name and version with other numbers), resolved and
   carried by the section (`CarriedSet`), so that its runs grow those numbers
   whatever is kept or deleted after. A set it does not have is refused.
 - **Told** (`set_identity`, `set_run`): what tells a run under a set apart,
@@ -19,7 +21,7 @@ store.
 
 import json
 import logging
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict, JsonValue
@@ -115,6 +117,41 @@ def keep(objects: ObjectStore, document: Mapping[str, JsonValue]) -> ResolvedSet
             "correction is a version of its own"
         )
     return kept
+
+
+def with_carried(
+    known: Mapping[SetKey, ParameterSet], files: Sequence[Mapping[str, JsonValue]]
+) -> dict[SetKey, ParameterSet]:
+    """`known` with the sets a scenario's file carries (`files`), each read
+    and checked, refused by field under `parameter_sets[i]`; a conflict if
+    the simulator keeps, or publishes, a set of its name and version with
+    other numbers, which a reader would take for this one."""
+    carried: dict[SetKey, ParameterSet] = {}
+    for index, document in enumerate(files):
+        try:
+            read = read_parameter_set(document)
+        except InvalidParameterSet as error:
+            problems = [
+                (f"parameter_sets[{index}].{field}", why) for field, why in error.problems.items()
+            ]
+            raise InvalidRequest(f"parameter_sets[{index}]: {error}", problems) from None
+        carried[set_key(read)] = read
+    sets = dict(known) | {key: each for key, each in carried.items() if key not in known}
+    published = {set_key(each): each for each in PUBLISHED_SETS.values()}
+    for key, each in carried.items():
+        already = published.get(key) or known.get(key)
+        try:
+            different = already is not None and (
+                resolved(already, sets).digest != resolved(each, carried | sets).digest
+            )
+        except InvalidParameterSet as error:
+            raise InvalidRequest(f"{each.name} v{each.version} of {each.model}: {error}") from None
+        if different:
+            raise Conflict(
+                f"{each.name} v{each.version} of {each.model} is kept here with other numbers"
+                " than the file carries: keep the file's under a name or version of its own"
+            )
+    return sets
 
 
 def with_parameter_set(

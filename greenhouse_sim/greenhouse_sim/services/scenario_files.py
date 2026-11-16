@@ -17,9 +17,10 @@ settings; nothing is registered, and no draft is kept or changed.
 
 An epoch of a scenario that is not packaged carries its file too (decision
 0067): written beside the uploaded ones when the epoch is started, with its
-recording inside, and named by its manifest, so that a worker needs only the
-store (`carry`, `take_up`). A simulator started on the store knows these
-scenarios again as it knows the uploaded ones.
+recording and its crop's parameter set inside (decision 0077), and named
+by its manifest, so that a worker needs only the store (`carry`,
+`take_up`), whatever sets are kept or deleted after. A simulator started on
+the store knows these scenarios again as it knows the uploaded ones.
 """
 
 import logging
@@ -46,7 +47,7 @@ from greenhouse_sim.services.errors import (
     ServiceError,
     first_reason,
 )
-from greenhouse_sim.services.parameter_sets import kept_sets, with_parameter_set
+from greenhouse_sim.services.parameter_sets import kept_sets, with_carried, with_parameter_set
 from greenhouse_sim.services.run_store import ObjectStore, StoreCorrupt
 from greenhouse_sim.services.scenarios import (
     DEFAULT_WEATHER,
@@ -156,7 +157,8 @@ def upload(simulator: Simulator, text: str) -> ScenarioUploaded | InstallationUp
     store, kept, or an installation's file read. The same scenario file again
     is the scenario already registered. Refused (400) if it is neither kind of
     file or not a good one of its kind, naming each field at fault, or if its
-    crop runs a parameter set the simulator does not keep; a conflict
+    crop runs a parameter set it neither carries nor the simulator keeps; a
+    conflict if it carries a set the simulator keeps with other numbers, or
     (409) if its scenario's identifier is a packaged scenario's or another's
     registered."""
     try:
@@ -292,7 +294,8 @@ def _registered(simulator: Simulator, text: str) -> ScenarioUploaded:
         raise InvalidRequest(f"not a scenario file: {first_reason(error)}") from None
     summary = None
     if missing is None:
-        config = with_parameter_set(config, kept_sets(simulator.runs))
+        known = with_carried(kept_sets(simulator.runs), read.parameter_sets)
+        config = with_parameter_set(config, known)
         try:
             simulator.catalogue.register(config)
         except ScenarioRefused as error:
