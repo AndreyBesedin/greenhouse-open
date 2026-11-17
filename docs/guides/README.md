@@ -19,6 +19,10 @@ misleads anyone.
 | A viewer panel, with its loader | [add-a-viewer-panel.md](add-a-viewer-panel.md) |
 | An API route, with its service | [add-an-api-route.md](add-an-api-route.md) |
 
+| To use | Guide |
+| --- | --- |
+| An experiment: its file, its run, its records and their comparison | [run-an-experiment.md](run-an-experiment.md) |
+
 The rules behind them are in [the engineering conventions](../engineering.md)
 and [the decisions](../decisions/README.md); what to run before a commit,
 and which files are generated, in [AGENTS.md](../../AGENTS.md).
