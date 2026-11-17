@@ -125,7 +125,11 @@ world's truth.
   condition, its run's seed, weather and days (`Condition`), and with a
   policy made from its factory, settings and seed (`PolicyEntry`). Its
   record (`record_episode`, `greenhouse_protocol.experiment`) names its run,
-  its policy, the software and each decision.
+  its policy, the software and each decision. An experiment's file pairs
+  policies on conditions (`greenhouse_sim.experiment.paired`):
+  `python -m greenhouse_sim.experiment run experiment.json --out results/`
+  writes a record per episode, and `... check results/episodes/3.json`
+  runs one again and compares its digest.
 - **In a process of its own,** given only a port's address and its token,
   it reads the port's server (`python -m greenhouse_sim.api.policy_server`)
   through the protocol's client

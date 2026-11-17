@@ -39,6 +39,7 @@ from greenhouse_sim.climate.glazing import GlazingAt
 from greenhouse_sim.climate.house import HouseTrace
 from greenhouse_sim.climate.openings import OpeningsAt
 from greenhouse_sim.climate.probes import ClimateProbes
+from greenhouse_sim.experiment.paired import experiment_json_schema
 from greenhouse_sim.fields.field import field_json_schema
 from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT, answer_json_schema, schema_text
 from greenhouse_sim.scenarios.layout_files import LAYOUT_SCHEMA_FILE, layout_json_schema
@@ -51,6 +52,12 @@ from greenhouse_sim.services.crop import CropPlant, PlantsLight
 from greenhouse_sim.services.drafts import DraftListed
 from greenhouse_sim.services.fields import FieldNames
 from greenhouse_sim.services.interventions import ChangeAsked, EpochChanges
+from greenhouse_sim.services.parameter_set_library import (
+    SetComparison,
+    SetDownload,
+    SetListed,
+    SetRead,
+)
 from greenhouse_sim.services.plants import LabChecks
 from greenhouse_sim.services.run_state import RunState
 from greenhouse_sim.services.run_store import StoredRun
@@ -105,6 +112,12 @@ ANSWERS: Final[dict[Path, type[object]]] = {
     # a draft's too, and the drafts.
     SERVICES / "builder.schema.json": Assessed,
     SERVICES / "drafts.schema.json": list[DraftListed],
+    # A crop model's parameter sets (P20.4): one as its list, a save and an
+    # upload answer it, one read, two compared, and one as a download.
+    SERVICES / "parameter_set_listed.schema.json": SetListed,
+    SERVICES / "parameter_set_read.schema.json": SetRead,
+    SERVICES / "parameter_set_comparison.schema.json": SetComparison,
+    SERVICES / "parameter_set_download.schema.json": SetDownload,
     PACKAGE / "biology" / "tomato" / "organ" / "plant.schema.json": Plant,
     CLIMATE / "house.schema.json": HouseTrace,
     CLIMATE / "probes.schema.json": ClimateProbes,
@@ -131,6 +144,8 @@ PUBLISHED: Final[dict[Path, Callable[[], Mapping[str, object]]]] = {
     ),
     # A crop model's parameter set as a file (P20.2).
     PACKAGE / "biology" / "parameter_set.schema.json": parameter_set_json_schema,
+    # An experiment of paired episodes, as its file holds it (P23.3).
+    PACKAGE / "experiment" / "experiment.schema.json": experiment_json_schema,
     **{path: partial(answer_json_schema, answered) for path, answered in ANSWERS.items()},
 }
 

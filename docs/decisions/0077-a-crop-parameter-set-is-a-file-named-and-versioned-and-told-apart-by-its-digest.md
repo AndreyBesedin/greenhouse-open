@@ -1,6 +1,6 @@
 # 0077: A crop parameter set is a file, named and versioned, and told apart by its digest
 
-**Status:** Proposed, with [P20](../roadmap/p20-crop-parameter-assets.md)'s plan
+**Status:** Accepted, with [P20](../roadmap/p20-crop-parameter-assets.md)'s fourth step
 **Date:** 2026-11-11
 
 ## Context
@@ -66,7 +66,15 @@ sets of the same numbers have one digest.
 the next version of that name. Saved with numbers a version of it already
 has, it is that version. A version once saved is never changed or reused,
 and a correction is a new version. A simulator refuses a set under a
-name and version it keeps with another digest.
+name and version it keeps with another digest. A published set's name is
+its model's: no other set is saved or uploaded under it.
+
+**Names need no namespace across simulators.** Two simulators may each
+keep `agc4_pretrial_2023` v1 with other numbers: their digests tell the
+two apart wherever either is cited, and an upload of one where the other is
+kept under the same name and version is refused. A namespace, such as the
+party or the source, can be added to a name later without breaking a file
+written before, which names none.
 
 **A study cites a set by all three:** its model, name and version, and its
 digest, as in `vanthoor_katzin`, `agc4_pretrial_2023` v1, `sha256:…`,
@@ -178,8 +186,6 @@ parameter model can then have sets without a change to this decision.
 
 ## Open questions
 
-1. **Names across simulators:** two simulators may each save
-   `agc4_pretrial_2023` v1 with other numbers. Their digests tell them
-   apart, and an upload of the second where the first is kept is refused.
-   Whether that is enough, or whether names need a namespace, such as the
-   party or the source.
+None: the three it was proposed with are answered above (a calibration is
+never packaged; a set made for another model version is run and said so;
+names need no namespace).
