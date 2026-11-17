@@ -1,7 +1,7 @@
 # Run and read an experiment
 
 An experiment compares policies on the same conditions
-([P23](../roadmap/p23-experiments.md),
+([P23](../roadmap/archive/p23-experiments.md),
 [decision 0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md)).
 Every policy runs on every condition. The episodes on one condition share
 their run's weather and its chance, so what differs between them is the

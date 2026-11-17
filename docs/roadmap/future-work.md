@@ -253,6 +253,33 @@ Recorded 2026-11-11, as [P22](archive/p22-watching-and-starting-a-run.md) closed
   computing run is refused, as designed, and the browser's console reports the 409 as a
   failed load.
 
+## Experiments, after P23
+
+Recorded 2026-11-17, as [P23](archive/p23-experiments.md) closed (decisions 0061 and
+0075). The measures, the evaluator's instruments and stage 5's start are
+[P25](p25-measures-and-baselines.md)'s. Left, from P23, each in its design or its
+final QA:
+
+- **A policy in a process of its own, stepped at the runner's barriers,** which P15 left
+  as a design of its own: until then such a policy steers a run on the wall clock, and
+  an experiment does not run it.
+- **A later start:** a held-out period that begins after the scenario's start needs a
+  run that starts part-way through; a condition varies a run's seed, weather and
+  length, not its start. P25 leaves it too.
+- **Episodes run apart,** in processes or on workers of their own, once an experiment
+  is large enough to need it, within P18's limits: they run one after another in the
+  runner's process.
+- **A factory refused late:** it is imported as its first episode starts, so a run
+  refused for one leaves its folder begun, to be removed before the experiment runs
+  again.
+- **The grant a run was given:** a record does not name its authorisation, so a record
+  checked without the grant it ran under gives another digest, not why.
+- **A policy's file changed since its run** (the final QA): `check` refuses it, and no
+  test holds that refusal.
+- **A record's integrity as a file** (the final QA): `check` compares what an episode
+  delivered, received and caused. A record whose settings and settings digest are both
+  changed by hand, to settings that behave the same, checks as the same digest.
+
 ## Greenhouse R&D workflows and Modelica comparison
 
 Recorded 2026-10-24, exploratory work after P14, alongside the crop-model

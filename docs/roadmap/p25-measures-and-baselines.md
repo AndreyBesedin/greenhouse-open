@@ -7,7 +7,7 @@ and
 proposed. Stages 3 and 4 of item 7 of the
 [research priorities](research-validation-priorities.md), and the start of
 its stage 5 with one published controller, after
-[P23](p23-experiments.md); stages B and C of decision
+[P23](archive/p23-experiments.md); stages B and C of decision
 [0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md).
 Part of the [simulator roadmap](README.md).
 

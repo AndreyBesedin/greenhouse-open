@@ -84,7 +84,7 @@ with TiGwerLib found, or the comparison says which remain and why.
 ## When
 
 After the first comparison, as item 6's next work, beside
-[P20](p20-crop-parameter-assets.md) and [P23](p23-experiments.md). It touches the
+[P20](p20-crop-parameter-assets.md) and [P23](archive/p23-experiments.md). It touches the
 house air part, the installation's format, the weather's quantities and the crop's
 ports; not P20's parameter sets or P23's runner. P24.2 and P24.3, the description
 and the model's frame, come first whatever the apportioning finds; the components
