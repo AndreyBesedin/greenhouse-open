@@ -49,6 +49,18 @@ implement. Part of [greenhouse-open](../README.md). Apache-2.0.
   policy (its entry, `PolicyEntry`, with its settings' and files'
   digests), the software, the trace by decision, the outcomes and the
   episode's digest. Its JSON Schema is published beside the others.
+- **A benchmark's measures, and an episode's scores** (`benchmark`, P25,
+  decision 0081): `MeasureDefinition`, a measure as a versioned definition
+  (its class, what it measures, its unit and denominators, its window and
+  aggregation, its source and what it leaves out), digested as its JSON
+  with keys sorted; the first measures, packaged under `measures/`, one
+  file a version (`packaged_measures`); `EpisodeScores`, each measure's
+  value for an episode, a number or *not comparable* with its reason,
+  named with its definition's digest, the record's and the benchmark's;
+  and `refused_by_class`, what a benchmark of a class may compare and may
+  only report. `measuring` holds the arithmetic each definition implies, on
+  plain series and on an episode's record. Their JSON Schemas are published
+  beside the others.
 
 Chronology is the timestamp alone, always timezone-aware: every record
 refuses a naive time (`greenhouse_protocol.instant.Instant`).

@@ -1,0 +1,20 @@
+{
+  "definition_version": 1,
+  "name": "actions-by-status",
+  "version": 1,
+  "measure_class": "record",
+  "description": "The policy's actions, counted by their outcome's status: executed, late, missed, refused, failed, cancelled, superseded or unconfirmed.",
+  "unit": "actions",
+  "per": [],
+  "by": "status",
+  "window": "episode",
+  "aggregation": "count",
+  "quantile": null,
+  "goal": null,
+  "between_samples": null,
+  "source": {
+    "kind": "record",
+    "field": "outcomes.status"
+  },
+  "leaves_out": "The equipment's own switches: an action is what the policy gave, not what a device did."
+}

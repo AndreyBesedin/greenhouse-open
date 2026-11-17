@@ -1,0 +1,23 @@
+{
+  "definition_version": 1,
+  "name": "harvest",
+  "version": 1,
+  "measure_class": "crop",
+  "description": "The fresh fruit the crop model harvested over the window, per m² of floor: the model's prediction.",
+  "unit": "g m⁻²",
+  "per": [
+    "floor_m2"
+  ],
+  "by": null,
+  "window": "after_warm_up",
+  "aggregation": "total",
+  "quantile": null,
+  "goal": null,
+  "between_samples": null,
+  "source": {
+    "kind": "instrument",
+    "instrument": "harvest",
+    "quantity": "fresh_mass"
+  },
+  "leaves_out": "Dry matter, the fruit still on the plants, and a measured yield: it is the crop model's prediction, reported, never compared."
+}

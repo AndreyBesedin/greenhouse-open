@@ -1,8 +1,9 @@
 """Every JSON Schema the protocol publishes, from one list: the records a
 run's gateway takes and writes, and what its routes answer (decision 0046),
-and what a policy's port answers beside them (decision 0061), and an episode's
-record (P23.2), each committed file its
-model's export in the 2020-12 dialect, written one way. They live in the
+what a policy's port answers beside them (decision 0061), an episode's
+record (P23.2), and a benchmark's measure and an episode's scores (P25.1),
+each committed file its model's export in the 2020-12 dialect, written one
+way. They live in the
 package (`greenhouse_protocol/schemas/`), for a consumer, a platform or an
 executor in another language to check documents against.
 
@@ -22,6 +23,7 @@ from pydantic import BaseModel
 
 from greenhouse_protocol.assignment import Assignment, ExecutionReport
 from greenhouse_protocol.authorisation import AuthorisationConfig
+from greenhouse_protocol.benchmark import EpisodeScores, MeasureDefinition
 from greenhouse_protocol.budget import InformationBudget
 from greenhouse_protocol.context import CapabilityContext
 from greenhouse_protocol.contracts.consumer import ForecastBatch, OutcomeBatch
@@ -51,6 +53,8 @@ PUBLISHED: Final[dict[str, type[BaseModel]]] = {
     "forecast.schema.json": Forecast,
     "forecast-batch.schema.json": ForecastBatch,
     "episode-record.schema.json": EpisodeRecord,
+    "measure-definition.schema.json": MeasureDefinition,
+    "episode-scores.schema.json": EpisodeScores,
 }
 
 

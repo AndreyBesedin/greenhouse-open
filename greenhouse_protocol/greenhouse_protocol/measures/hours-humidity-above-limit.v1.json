@@ -1,0 +1,21 @@
+{
+  "definition_version": 1,
+  "name": "hours-humidity-above-limit",
+  "version": 1,
+  "measure_class": "climate",
+  "description": "The hours of the window the house's air relative humidity is above its limit.",
+  "unit": "h",
+  "per": [],
+  "by": null,
+  "window": "after_warm_up",
+  "aggregation": "hours_outside",
+  "quantile": null,
+  "goal": "air-humidity",
+  "between_samples": "held",
+  "source": {
+    "kind": "instrument",
+    "instrument": "house_air",
+    "quantity": "relative_humidity"
+  },
+  "leaves_out": "Condensation on the crop and the cover, and the air at any one place: it is the mean of the house's air cells."
+}
