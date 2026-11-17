@@ -104,6 +104,15 @@ Left here:
   policy's evaluation and the viewer work with nothing from outside. A
   harvest planner and a forecast from a crop model are the first candidates;
   a rule-based climate strategy is the research priorities' conventional baseline.
+- **Comparisons with richer policies,** the rest of item 7's stage 5, which
+  [P25](p25-measures-and-baselines.md) starts with one published economic
+  controller, given an oracle's information: a matched version of it, from the
+  observations a policy gets and a forecast with its errors; other published MPC
+  and learning controllers, each reproduced and its source checked first, given
+  prediction models as versioned assets in their information budget, perhaps in
+  a process of their own held at the runner's barriers; then crop and economic
+  benchmarks, once the crop models are validated. P25's benchmark, measures and
+  baselines are what they are compared on.
 - **The most complex components from outside,** proprietary or public,
   through the same interface: the repository holds their contract and its
   conformance tests, and evaluates them against its ground truth, not the
