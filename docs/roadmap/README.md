@@ -130,7 +130,7 @@ links there.
 | [P22](archive/p22-watching-and-starting-a-run.md) | Watching and starting a run: one *Play*, steering from the replay, a new run's form | Done: P22.1 to P22.10, its QA recorded; what it left is in [future work](future-work.md#watching-and-starting-a-run-after-p22) |
 | [P23](p23-experiments.md) | Experiments: policies paired on a run's conditions, each episode with its record | In progress: P23.1 to P23.3 done |
 | [P24](p24-house-components-and-a-multi-node-climate.md) | A house's components, and a climate that carries them: screens, floors, pipes, walls and a transpiring crop, beside today's air | Proposed: its plan, with decisions [0078](../decisions/0078-a-multi-node-climate-is-a-model-of-the-houses-air-chosen-by-the-manifest.md), [0079](../decisions/0079-a-crop-and-the-houses-air-exchange-heat-water-and-co2-by-what-each-declares.md) and [0080](../decisions/0080-a-houses-components-and-materials-are-described-in-its-installation.md) |
-| [P25](p25-measures-and-baselines.md) | A benchmark's measures and baselines: measures defined and frozen, the evaluator's instruments, and a portfolio of baselines with their provenance, on a first climate-only benchmark | Proposed: its plan, with decisions [0081](../decisions/0081-a-benchmarks-measures-are-versioned-definitions-frozen-before-its-baselines.md), [0082](../decisions/0082-the-evaluator-reads-an-episodes-truth-after-its-policy-stops.md) and [0083](../decisions/0083-a-baseline-is-a-policy-with-its-provenance-and-a-reference-test.md) |
+| [P25](p25-measures-and-baselines.md) | A benchmark's measures and baselines: measures defined and frozen, the evaluator's instruments, a portfolio of baselines with their provenance, and one published controller, on a first climate-only benchmark | Proposed: its plan, with decisions [0081](../decisions/0081-a-benchmarks-measures-are-versioned-definitions-frozen-before-its-baselines-and-a-baseline-carries-its-provenance.md) and [0082](../decisions/0082-the-evaluator-reads-an-episodes-truth-after-its-policy-stops.md) |
 
 ## After a QA
 
@@ -165,7 +165,7 @@ archive: what it found to fix is fixed, and what it planned was done in
 4. **[P25](p25-measures-and-baselines.md), as [P23](p23-experiments.md) finishes:**
    the research priorities' item 7, stages 3 and 4: a first climate-only benchmark,
    its measures frozen before its baselines run, then the baselines, each with its
-   provenance. It goes on beside P24.
+   provenance, and stage 5's start, one published controller. It goes on beside P24.
 
 ## Elsewhere
 

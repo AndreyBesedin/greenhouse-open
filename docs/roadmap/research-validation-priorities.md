@@ -176,8 +176,10 @@ data.
    4. a portfolio of baselines, from the literature and from growers'
       practice and simple rules, each with its provenance
       ([P25](p25-measures-and-baselines.md), proposed);
-   5. comparisons with policies of increasing complexity (the
-      [future work](future-work.md#intelligence-components), after P25).
+   5. comparisons with policies of increasing complexity, started in
+      [P25](p25-measures-and-baselines.md) with one published controller
+      (proposed); the rest in the
+      [future work](future-work.md#intelligence-components).
    Climate-only experiments can run early; claims on yield or economics
    wait for the crop models of item 4. Forecasts and perception stay with
    the intelligence components, on the same foundation.

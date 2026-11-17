@@ -41,16 +41,20 @@
   carried out, a `RunRequest` of the scenario's run on the episode's
   condition with the plan its revisions left, after `stop`.
 - **The evaluator's instruments,** in `greenhouse_sim.evaluation`:
-  - the house's air through time: the air the run draws, every minute,
-    its temperature, relative humidity and CO₂;
+  - the house's air through time: the air the run draws, averaged over
+    the house's air cells, every minute, its temperature, relative
+    humidity and CO₂;
   - the heat given: the heaters' heat to the air, from the house's own
     count, over any window;
   - the equipment's states through time: each device's level, and each
     switch with its moment, its level, and whether a loop or a command set
-    it.
+    it;
+  - the crop's harvest: the run's harvest events, read for a harvest
+    reported as the crop model's prediction (decision 0081), never
+    compared.
 - **None reaches a policy:** not the port, the consumer interface or the
   capability context. The dependency test holds the port's modules, and
-  the baselines' (decision 0083), to importing none of them.
+  the baselines' (decision 0081), to importing none of them.
 - **A record scored later is run again first,** by `check`, and scored only
   if its digest is the record's. A record that does not replay is not
   scored, and says so; a policy whose episodes cannot be run again, such
