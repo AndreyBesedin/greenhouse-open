@@ -128,7 +128,7 @@ links there.
 | [P20](p20-crop-parameter-assets.md) | Crop parameters as versioned assets, edited by forms and reproduced from their versions | In progress: P20.1 to P20.4 done; its plan, with [decision 0077](../decisions/0077-a-crop-parameter-set-is-a-file-named-and-versioned-and-told-apart-by-its-digest.md), accepted |
 | [P21](p21-rows-of-different-crops.md) | Rows of different crops in one house | Proposed |
 | [P22](archive/p22-watching-and-starting-a-run.md) | Watching and starting a run: one *Play*, steering from the replay, a new run's form | Done: P22.1 to P22.10, its QA recorded; what it left is in [future work](future-work.md#watching-and-starting-a-run-after-p22) |
-| [P23](p23-experiments.md) | Experiments: policies paired on a run's conditions, each episode with its record | In progress: P23.1 to P23.5 done, its final QA recorded |
+| [P23](archive/p23-experiments.md) | Experiments: policies paired on a run's conditions, each episode with its record | Done: P23.1 to P23.5, its final QA recorded; what it left is in [future work](future-work.md#experiments-after-p23) |
 | [P24](p24-house-components-and-a-multi-node-climate.md) | A house's components, and a climate that carries them: screens, floors, pipes, walls and a transpiring crop, beside today's air | Proposed: its plan, with decisions [0078](../decisions/0078-a-multi-node-climate-is-a-model-of-the-houses-air-chosen-by-the-manifest.md), [0079](../decisions/0079-a-crop-and-the-houses-air-exchange-heat-water-and-co2-by-what-each-declares.md) and [0080](../decisions/0080-a-houses-components-and-materials-are-described-in-its-installation.md) |
 | [P25](p25-measures-and-baselines.md) | A benchmark's measures and baselines: measures defined and frozen, the evaluator's instruments, a portfolio of baselines with their provenance, and one published controller, on a first climate-only benchmark | Proposed: its plan, with decisions [0081](../decisions/0081-a-benchmarks-measures-are-versioned-definitions-frozen-before-its-baselines-and-a-baseline-carries-its-provenance.md) and [0082](../decisions/0082-the-evaluator-reads-an-episodes-truth-after-its-policy-stops.md) |
 
@@ -160,9 +160,9 @@ archive: what it found to fix is fixed, and what it planned was done in
 3. **[P24](p24-house-components-and-a-multi-node-climate.md), after the research
    priorities' item 6:** the Modelica comparison's blockers become the simulator's
    components, each held to its reference and the comparison run again after it. It
-   goes on beside P20 and P23, and the research's apportioning of the comparison's
+   goes on beside P20 and P25, and the research's apportioning of the comparison's
    gap orders its components (P24.1).
-4. **[P25](p25-measures-and-baselines.md), as [P23](p23-experiments.md) finishes:**
+4. **[P25](p25-measures-and-baselines.md), after [P23](archive/p23-experiments.md):**
    the research priorities' item 7, stages 3 and 4: a first climate-only benchmark,
    its measures frozen before its baselines run, then the baselines, each with its
    provenance, and stage 5's start, one published controller. It goes on beside P24.
@@ -174,10 +174,11 @@ archive: what it found to fix is fixed, and what it planned was done in
   day, actions and plans after P13, CO₂ and light targets, intelligence components
   beyond control policies, crop models from plant research beyond the tomato's two,
   models and devices after P14, runs and playbacks after P17, resources and limits after
-  P18, the design system after P19, watching and starting a run after P22, a Modelica comparison, the test suite and
-  CI time, a second repository audit, and an assistant in the viewer.
+  P18, the design system after P19, watching and starting a run after P22, experiments
+  after P23, a Modelica comparison, the test suite and CI time, a second repository
+  audit, and an assistant in the viewer.
 - **[The archive](archive/README.md):** the documents of finished projects, read
-  when a task cites their steps: P-1 to P19 and P22, the clean-ups of
+  when a task cites their steps: P-1 to P19, P22 and P23, the clean-ups of
   [P03](archive/p03-cleanup.md), [P14](archive/p14-cleanup.md) and
   [P17](archive/p17-cleanup.md),
   [the frontend maintenance](archive/frontend-maintenance.md) that followed the

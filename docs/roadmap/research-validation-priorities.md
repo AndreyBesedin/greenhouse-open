@@ -169,7 +169,7 @@ data.
       security, and the clock, for policies in the process and remote
       ([P15](archive/p15-policy-port.md));
    2. an experiment harness: the policy's identity, its actions' trace,
-      paired seeds and weather ([P23](p23-experiments.md), proposed);
+      paired seeds and weather ([P23](archive/p23-experiments.md), done);
    3. the measures, defined exactly, with the evaluator's instrumentation
       and the constraints' handling
       ([P25](p25-measures-and-baselines.md), proposed);
