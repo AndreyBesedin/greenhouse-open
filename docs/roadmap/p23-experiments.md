@@ -1,6 +1,6 @@
 # P23: Experiments: paired episodes, each with its record
 
-**Status:** proposed, in progress (P23.1 to P23.4 are done). Stage 2 of item 7 of the
+**Status:** proposed, in progress (P23.1 to P23.5 are done). Stage 2 of item 7 of the
 [research priorities](research-validation-priorities.md), after
 [P15](archive/p15-policy-port.md), stage A of decision
 [0061](../decisions/0061-greenhouse-decisions-are-benchmarked-through-interfaces-built-for-it.md).
@@ -190,7 +190,7 @@ large enough to need it, within P18's limits.
 | P23.2 | The episode's record in the protocol, with its schema; the runner builds it, with the models' versions, the weather's digest, the software and the trace by decision. | `feat(protocol): an episode's record` | Done, in two pull requests, the record and then the runner building it: `greenhouse_protocol.experiment` holds `EpisodeRecord` and its parts, published as `episode-record.schema.json`. `Condition` and `PolicyEntry` (a factory, its settings, the settings that name its files, and its seed) moved there from P23.1 as data; the simulator's `PolicyEntry` subclasses it to make the policy. An `Episode`'s policy is made already or is an entry, made fresh as the episode starts, so the entry the record names is the one that made it. `record_episode` runs an episode as `run_episode` does and returns its record. It names the run's scenario, greenhouse, layout, scenario file's digest when not packaged (`scenario_files.file_digest`, as an epoch names it), run id, epoch, condition and seed, its length and the episode's end, each part's model and version under its weather, and the SHA-256 of its weather every 600 s through its end (`weather.series_sha256`). It names the policy's identity, its entry with its settings' digest (sorted, compact JSON) and its files' digests (read before it starts), its principal, cadence, plan, information and compute budgets. It names the producer's, protocol's and Python's versions and the commit, if run from a checkout. Its trace gives each decision's moment, each log's delivery counted and digested (one JSON line a record), the decision, its receipt, its time and whether it was skipped. Then come the outcomes and P15.4's digest, which the record keeps and in which times have no part: the doors on the airflow box and example 03's rule give the digests they gave before. A record reads back from its JSON as it was; two episodes on one condition share their run id and weather digest. A model's entry is an object, so that the crop's parameter set joined it after P20.3, optional, as the manifest answer gives it (name, version, digest, the model version it was made for), with no record or digest moved |
 | P23.3 | The experiment's file and schema; the paired runner, its output directory and its two commands; the deliveries kept on request. | `feat(sim): an experiment of paired episodes` | Done: `greenhouse_sim.experiment` is a package; `experiment.paired` holds `Experiment`, the file (`experiment/experiment.schema.json`): its id, scenario, layout, principal, end, conditions and policies, each policy an entry with the seeds of its trials (none, one trial at no seed), its plan, its compute and information budgets, and the episodes whose deliveries are kept, by number. `run_experiment` checks every condition against the scenario before any episode runs, then runs, for each condition, each policy, each seed, an episode of its own, numbered from 0, into a directory new or empty: the file as given and its `sha256sum` line, `episodes/N.json` with its place filled, and `deliveries/N.jsonl` when asked, a `Delivery` a decision line. `check_record` makes the policy again from the record's entry, its files checked against their digests first, runs the episode on the record's run, condition, principal, plan and budgets, and compares the digests. `python -m greenhouse_sim.experiment run experiment.json --out results/` and `check results/episodes/N.json`, each with `--authorisation FILE` (decision 0052): `check` exits 1 for another digest or a record that is not one, such as one whose settings were changed by hand, saying why. Tests: six episodes of two policies on two conditions in the file's order, each condition's sharing its run and weather; the deliveries kept are those their record counts and digests; a record checked gives its digest, and one of other settings another; the commands, with and without the grant the run was given |
 | P23.4 | An example and a guide: example 03's rule at two bands, on two weathers and two seeds, its records read back and compared. | `docs: run and read an experiment` | Done: example 06 (`examples/06_run_an_experiment.py`) writes an experiment of example 03's rule at two bands, 15 to 17 °C and 17 to 19 °C, on the climate box's own weather and the cold spring day, each at seeds 1 and 2, for half an hour: four conditions, two policies, eight episodes. It writes the grant its policy acts under, runs the experiment into a folder, given or temporary, and reads the records back from their files: the two episodes on each condition share their run id and weather digest, and each band's revisions, outcomes and minutes of heating are set side by side; the first episode's deliveries are kept and agree with what its record counts and digests. The rule is made from `naive_heating:NaiveHeating` (`examples/naive_heating.py`), example 03's with its band as its settings, since an example's numbered file cannot be imported by name; a test holds it to example 03's digest at example 03's band. It takes about half a minute, so `tests/test_examples.py` runs it with the slow checks, as example 05, and runs only the numbered files. The guide, [run an experiment](../guides/run-an-experiment.md), indexed among the guides, gives the policy's entry, the experiment's file and its fields, the grant, the `run` and `check` commands with `--authorisation` before the command, the output folder, what a record holds, how records are compared, what `check` refuses, and keeping deliveries; the commands it gives, run from the command line on example 06's files, give the example's digests |
-| P23.5 | The QA scenario below, run and recorded. | `test: an experiment's QA scenario` | Proposed |
+| P23.5 | The QA scenario below, run and recorded. | `test: an experiment's QA scenario` | Done: run and recorded [at `bd5a0aba`](#recorded-at-bd5a0aba); its five steps passed. Example 03's rule at 15 to 17 °C and 17 to 19 °C, on the climate box's own weather and the cold spring day at seeds 1 and 2, ran from the command into an empty folder: eight records, with the digests example 06 and the guide give. Read back, each validates against its schema and names the file's condition, factory, settings and seed in the file's order, and each pair shares its run id and weather digest. `check` gave a record's digest. A record whose settings were changed by hand was refused, as not a record, saying so. The first band's record given the second band's settings gave the second band's digest. Episode 0's seven kept deliveries are counted and digested as its record says. The experiment took 35 s, about 4.4 s an episode, and its eight records 95 kB, its kept deliveries 34 kB. Seen beside it: a policy's file changed since its run is refused by `check`, which no test holds, and a settings change that does not change what a policy does gives the same digest, since a digest is of what an episode delivered, received and caused. No defect was found |
 
 ## Acceptance criteria
 
@@ -220,6 +220,67 @@ On the climate box, with example 03's rule:
 4. One episode's deliveries are kept and read: their counts and digests
    are those its record gives.
 5. The time the experiment took, and its records' size, are recorded.
+
+### Recorded at `bd5a0aba`
+
+Run on 17 November 2026 on `bd5a0aba`, `main`, from a checkout with
+nothing changed: an Intel Core i9-14900K, 32 threads, 31 GB, Linux,
+Python 3.14.4, `greenhouse-sim` and the protocol 0.7.0. The machine was
+shared with other work, at a load average of 7 to 8. Everything ran in a
+folder of its own, empty at the start. The experiment's file and its grant
+were written by hand from the [guide](../guides/run-an-experiment.md)'s
+JSON, not by example 06, so that the guide was tried as well. Example 06
+was then run on its own into another empty folder, and its results were
+compared with the command's. The records were read with a script outside
+the repository, which reads them with `EpisodeRecord`, as a tool outside
+the simulator would. It validates each record and the experiment's file
+against their published schemas with `jsonschema`, which the workspace
+does not install, so it ran as `uv run --with jsonschema`.
+
+| Step | Result | What was seen |
+| --- | --- | --- |
+| 1. The rule at two bands, on the scenario's own weather and a preset, with two seeds, run from the command into a directory | Passed | The file: `climate_box`, principal `policy:naive_heating`, `end_s` 1800. Its four conditions are seeds 1 and 2 on the scenario's own weather and on `cold_spring_day`. Its two policies are `naive_heating:NaiveHeating`, at 15 to 17 °C and at 17 to 19 °C, with no seeds of their own, and it keeps episode 0's deliveries. `PYTHONPATH=examples uv run python -m greenhouse_sim.experiment --authorisation authorisation.json run experiment.json --out results` exited 0. It printed eight lines, `episode 0: condition 0, policy 0, seed None: digest 3c9248fbd0d61848` to `episode 7: condition 3, policy 1, seed None: digest af2b541cef4fd41c`. The first two digests are the guide's. The folder held `experiment.json`, the same bytes as the file given, `experiment.sha256` (`sha256sum -c`: OK), `episodes/0.json` to `7.json` and `deliveries/0.jsonl`, and nothing else. Example 06 gave the same eight digests and the same four run ids. Its records were equal to the command's line for line, but for each decision's `took_s`, and its deliveries byte for byte. |
+| 2. Eight records read back: conditions, policies and seeds as the file has them, each pair sharing its run id and weather digest | Passed | The file validates against `experiment.schema.json`, and each record against `episode-record.schema.json`. Each record reads back with `EpisodeRecord` and dumps to the JSON it was read from. In the file's order, record *n* is condition ⌊*n*/2⌋ and policy *n* mod 2, each in `place` with the experiment's id. Its `run.condition` is the file's condition, and its `policy.made.entry` is the file's factory and settings at seed none. Its `settings_sha256` is that of the settings: `5898857864be…` for the first band, `28aefcf75ab0…` for the second. Each pair has one run id and one weather digest: condition 0 `climate_box-climate-eeef710d` and condition 1 `…-573a6f34`, both at weather `8297c5ac5383…`, the scenario's own constant night, which draws nothing; condition 2 `…-15b8582b` at `2a5fdcd9c7ff…`, and condition 3 `…-2d9b02f7` at `0a37fabbe3a6…`, the gusty cold spring day, a weather of each seed. Each record ran at its condition's seed, at epoch 0. Each names its eight parts' models and versions (`weather` `constant` 1, …, `crop` `simple` 2, `sensors` `sampled` 1, `controller` `none` 1), the weather every 600 s, and the software, `greenhouse-sim` 0.7.0, the protocol 0.7.0, Python 3.14.4 and the commit `bd5a0aba`. Each traces seven decisions, one every 300 s from the start to the end at 1800 s. On the own weather the first band revised 3 times and the second twice, the heater on 20 and 30 of the 30 minutes as example 06 prints it; on the cold spring day each band revised once. |
+| 3. `check` passes on one record; with the record's settings changed by hand, it fails and says why | Passed | `check results/episodes/4.json`, with the grant, said `the same digest, 562f879ccf83…` and exited 0, in 5.7 s. A copy with `on_below_c` changed from 15.0 to 16.0 in its text, and nothing else, was refused before any run: `refused: policy.made: Value error, a policy's settings digest is not that of its settings`, exit 1. Record 0 with its settings made the second band's, its settings digest computed again so that it reads as a record, said `another digest: the record's 3c9248fbd0d6…, again 57f9e1f03cd6…` and exited 1. That second digest is record 1's, the second band's on the same condition. Record 0 checked without the grant gave `another digest`, as the guide says it would. |
+| 4. One episode's deliveries kept and read: their counts and digests are its record's | Passed | `deliveries/0.jsonl` holds seven lines, one a decision of record 0, 82 readings in all, read with `Delivery`. For each line, `delivered` of its observations, events, outcomes and forecasts equals that decision's `delivered` in the record. No other episode's deliveries were kept. |
+| 5. The time the experiment took, and its records' size | Recorded | The command took 35.1 s of wall time, 35.8 s of user time and 1.4 s of system time, at most 219 MB resident. That is about 4.4 s an episode of half an hour of the climate box, Python's start and the imports included. Example 06 reported its own experiment at 34 s. The 56 decisions' times on the runner's timer added up to 0.5 ms, at most 51 µs each: the time is the run's, not the rule's. The eight records take 95,246 bytes: 14,524 for each of the first band's on the own weather, 12,426 for the second's, and 10,335 to 10,337 on the cold spring day, where fewer revisions are traced. The kept deliveries take 33,880 bytes, and the whole folder 129,766. |
+
+The tests that hold the rest pass on this commit: the runner's, the
+record's, the episode's and the published schemas' (138, in
+`greenhouse_sim`, and 41 of the protocol's), with P15.4's episodes and
+digests unchanged when no condition is given; `examples/naive_heating.py`
+held to example 03's digest; and example 06 as the slow checks run it.
+
+Seen beside the steps: `check` compares what an episode delivered,
+received and caused, not its settings. A record whose settings are changed
+by hand together with their digest, to a band that behaves the same over
+its half hour, is checked as `the same digest`. Record 4 at 16 to 17 °C on
+the cold spring day, whose rule heats from the first reading at either
+band, and record 0 at 16 to 17 °C on the own weather, both did. The record
+itself is another: its settings digest names the settings it holds. This
+is what the design says a digest is. A record's integrity as a file is not
+something `check` tests.
+
+Walked beside the steps, as the guide gives them:
+- **A policy that names a file.** The rule, its band read from a JSON file
+  that its settings name in `files`, was made by a factory in a module
+  outside the repository. Run as an experiment of one episode, it gave
+  episode 0's digest, `3c9248fbd0d6…`, and its record kept the file's
+  SHA-256. `check` passed. With the file's band changed, `check` said
+  `refused: a file its policy names is not the one it ran with`. With the
+  file removed, it said `refused: the policy's file band cannot be read: …`.
+  Each exited 1. No test runs `check` on a file changed since its run.
+- **A weather the simulator does not have.** The experiment's file with
+  `no_such_day` in place of the cold spring day was refused before
+  anything was written: `refused: there is no weather 'no_such_day'; there
+  are default, cold_spring_day, hot_dry_summer_day, windy_autumn_day,
+  example_day`, exit 1, and no output folder.
+
+Not walked: a policy with seeds of its own, whose trials the file lists;
+a compute budget that skips a decision; a condition of fewer days than the
+scenario's; a factory that cannot be imported. Each is held by
+`test_paired_experiment.py`, `test_episode_record.py` or
+`test_experiment.py`.
 
 ## Open questions
 
