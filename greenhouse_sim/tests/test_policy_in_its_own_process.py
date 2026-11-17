@@ -38,6 +38,7 @@ from urllib.request import Request, urlopen
 import pytest
 from greenhouse_protocol.actions import SetLevel
 from greenhouse_protocol.authorisation import AuthorisationConfig
+from greenhouse_protocol.contracts.policy import Policy
 from greenhouse_protocol.contracts.policy_client import HttpPolicyPort, PortRefused
 from greenhouse_protocol.outcome import ActionOutcome, OutcomeStatus
 from greenhouse_protocol.plan import PrincipalKind
@@ -98,6 +99,8 @@ def _example(name: str) -> ModuleType:
 
 REMOTE = _example("05_policy_in_its_own_process")
 IN_PROCESS = _example("03_close_the_loop")
+# Example 03's rule, made from its settings: the policy example 06 runs.
+SETTLED = _example("naive_heating")
 
 
 def _simulator(authorisation: AuthorisationConfig) -> Simulator:
@@ -329,22 +332,30 @@ def test_the_same_policy_through_the_runner_steers_the_heater_alike(
     assert stepped.decisions == int(END_S // REMOTE.STEP_S) + 1
 
 
-def test_examples_03_and_05_hold_the_same_rule() -> None:
+def test_examples_03_05_and_06_hold_the_same_rule() -> None:
     # Example 05's policy is example 03's, kept by hand in a file that
-    # imports the protocol alone: the two give the same run the same digest.
-    def digest(example: ModuleType) -> str:
-        with simulator_of(CUT, authorisation=example.AUTHORISATION) as simulator:
+    # imports the protocol alone, and so is the one example 06 makes from
+    # its settings (`naive_heating`), at example 03's band: the three give
+    # the same run the same digest.
+    def digest(policy: Policy) -> str:
+        with simulator_of(CUT, authorisation=IN_PROCESS.AUTHORISATION) as simulator:
             return run_episode(
                 simulator,
                 Episode(
                     scenario_id=IN_PROCESS.SCENARIO,
-                    policy=example.NaiveHeating(),
-                    principal=example.POLICY,
+                    policy=policy,
+                    principal=IN_PROCESS.POLICY,
                     end_s=SAME_RULE_END_S,
                 ),
             ).digest
 
-    assert digest(REMOTE) == digest(IN_PROCESS)
+    band = {"on_below_c": IN_PROCESS.ON_BELOW_C, "off_above_c": IN_PROCESS.OFF_ABOVE_C}
+    assert REMOTE.POLICY == IN_PROCESS.POLICY
+    assert (
+        digest(IN_PROCESS.NaiveHeating())
+        == digest(REMOTE.NaiveHeating())
+        == digest(SETTLED.NaiveHeating(band, None))
+    )
 
 
 @pytest.mark.slow
