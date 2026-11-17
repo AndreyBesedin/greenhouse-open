@@ -1,0 +1,23 @@
+{
+  "definition_version": 1,
+  "name": "device-level-hours",
+  "version": 1,
+  "measure_class": "climate",
+  "description": "Each device's level, from 0 off to 1 at full, integrated through the window, per day: the hours it ran, at full level.",
+  "unit": "h d⁻¹",
+  "per": [
+    "day"
+  ],
+  "by": "device",
+  "window": "after_warm_up",
+  "aggregation": "integral",
+  "quantile": null,
+  "goal": null,
+  "between_samples": "held",
+  "source": {
+    "kind": "instrument",
+    "instrument": "equipment_states",
+    "quantity": "level"
+  },
+  "leaves_out": "Electricity and wear: a device's power is not stated, so its hours are not energy."
+}

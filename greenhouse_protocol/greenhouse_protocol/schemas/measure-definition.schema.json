@@ -1,0 +1,326 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Aggregation": {
+      "description": "How a measure makes one value of its source, over its window.",
+      "enum": [
+        "total",
+        "integral",
+        "hours_outside",
+        "integral_outside",
+        "changes",
+        "count",
+        "quantile",
+        "weighted_sum"
+      ],
+      "title": "Aggregation",
+      "type": "string"
+    },
+    "BetweenSamples": {
+      "description": "How a quantity sampled through time is taken between its samples.",
+      "enum": [
+        "held"
+      ],
+      "title": "BetweenSamples",
+      "type": "string"
+    },
+    "By": {
+      "description": "What a measure's value is broken down by, one value each.",
+      "enum": [
+        "device",
+        "status"
+      ],
+      "title": "By",
+      "type": "string"
+    },
+    "FromInstrument": {
+      "additionalProperties": false,
+      "description": "A measure made from one quantity of one of the evaluator's instruments,\nsuch as the house air's `temperature`.",
+      "properties": {
+        "kind": {
+          "const": "instrument",
+          "default": "instrument",
+          "title": "Kind",
+          "type": "string"
+        },
+        "instrument": {
+          "$ref": "#/$defs/Instrument"
+        },
+        "quantity": {
+          "$ref": "#/$defs/Identifier"
+        }
+      },
+      "required": [
+        "instrument",
+        "quantity"
+      ],
+      "title": "FromInstrument",
+      "type": "object"
+    },
+    "FromMeasures": {
+      "additionalProperties": false,
+      "description": "A priced score's source: the measures it weighs, each at its price.",
+      "properties": {
+        "kind": {
+          "const": "measures",
+          "default": "measures",
+          "title": "Kind",
+          "type": "string"
+        },
+        "terms": {
+          "items": {
+            "$ref": "#/$defs/PricedTerm"
+          },
+          "minItems": 1,
+          "title": "Terms",
+          "type": "array"
+        }
+      },
+      "required": [
+        "terms"
+      ],
+      "title": "FromMeasures",
+      "type": "object"
+    },
+    "FromRecord": {
+      "additionalProperties": false,
+      "description": "A measure made from a field of the episode's record.",
+      "properties": {
+        "kind": {
+          "const": "record",
+          "default": "record",
+          "title": "Kind",
+          "type": "string"
+        },
+        "field": {
+          "$ref": "#/$defs/RecordField"
+        }
+      },
+      "required": [
+        "field"
+      ],
+      "title": "FromRecord",
+      "type": "object"
+    },
+    "Identifier": {
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "type": "string"
+    },
+    "Instrument": {
+      "description": "The evaluator's instruments, which read an episode's truth once its\npolicy has stopped (decision 0082).",
+      "enum": [
+        "house_air",
+        "heat_given",
+        "equipment_states",
+        "harvest"
+      ],
+      "title": "Instrument",
+      "type": "string"
+    },
+    "MeasureClass": {
+      "enum": [
+        "climate",
+        "record",
+        "crop",
+        "economic",
+        "priced"
+      ],
+      "title": "MeasureClass",
+      "type": "string"
+    },
+    "MeasureName": {
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "type": "string"
+    },
+    "MeasureNamed": {
+      "additionalProperties": false,
+      "description": "A measure as another names it: its name and version.",
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/MeasureName"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "MeasureNamed",
+      "type": "object"
+    },
+    "MeasureSource": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/FromRecord"
+        },
+        {
+          "$ref": "#/$defs/FromInstrument"
+        },
+        {
+          "$ref": "#/$defs/FromMeasures"
+        }
+      ]
+    },
+    "MeasureWindow": {
+      "enum": [
+        "episode",
+        "after_warm_up"
+      ],
+      "title": "MeasureWindow",
+      "type": "string"
+    },
+    "Name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "Per": {
+      "description": "What a measure's value is divided by.",
+      "enum": [
+        "floor_m2",
+        "day"
+      ],
+      "title": "Per",
+      "type": "string"
+    },
+    "PricedTerm": {
+      "additionalProperties": false,
+      "description": "One measure a priced score weighs, at its benchmark's price by name.",
+      "properties": {
+        "measure": {
+          "$ref": "#/$defs/MeasureNamed"
+        },
+        "price": {
+          "$ref": "#/$defs/Identifier"
+        }
+      },
+      "required": [
+        "measure",
+        "price"
+      ],
+      "title": "PricedTerm",
+      "type": "object"
+    },
+    "RecordField": {
+      "description": "A field of the episode's record a `record` measure is made from.",
+      "enum": [
+        "outcomes.status",
+        "trace.skipped",
+        "trace.took_s"
+      ],
+      "title": "RecordField",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A measure, as its file defines it: see the module.",
+  "properties": {
+    "definition_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Definition Version",
+      "type": "integer"
+    },
+    "name": {
+      "$ref": "#/$defs/MeasureName"
+    },
+    "version": {
+      "exclusiveMinimum": 0,
+      "title": "Version",
+      "type": "integer"
+    },
+    "measure_class": {
+      "$ref": "#/$defs/MeasureClass"
+    },
+    "description": {
+      "$ref": "#/$defs/Name"
+    },
+    "unit": {
+      "$ref": "#/$defs/Name"
+    },
+    "per": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Per"
+      },
+      "title": "Per",
+      "type": "array"
+    },
+    "by": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/By"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "window": {
+      "$ref": "#/$defs/MeasureWindow"
+    },
+    "aggregation": {
+      "$ref": "#/$defs/Aggregation"
+    },
+    "quantile": {
+      "anyOf": [
+        {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Quantile"
+    },
+    "goal": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Identifier"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "between_samples": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BetweenSamples"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source": {
+      "$ref": "#/$defs/MeasureSource"
+    },
+    "leaves_out": {
+      "$ref": "#/$defs/Name"
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "measure_class",
+    "description",
+    "unit",
+    "window",
+    "aggregation",
+    "source",
+    "leaves_out"
+  ],
+  "title": "MeasureDefinition",
+  "type": "object"
+}

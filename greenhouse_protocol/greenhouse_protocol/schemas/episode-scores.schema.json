@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "BenchmarkNamed": {
+      "additionalProperties": false,
+      "description": "A benchmark as a score names it: its name, version and digest.",
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/Name"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        },
+        "digest": {
+          "$ref": "#/$defs/Sha256"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "digest"
+      ],
+      "title": "BenchmarkNamed",
+      "type": "object"
+    },
+    "MeasureName": {
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "type": "string"
+    },
+    "MeasureScored": {
+      "additionalProperties": false,
+      "description": "A measure's value for an episode: the measure by name, version and\ndigest, what the value is of when the measure is broken down (a device's\nid, a status), and the value.",
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/MeasureName"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        },
+        "digest": {
+          "$ref": "#/$defs/Sha256"
+        },
+        "of": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Name"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "value": {
+          "$ref": "#/$defs/MeasureValue"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "digest",
+        "value"
+      ],
+      "title": "MeasureScored",
+      "type": "object"
+    },
+    "MeasureValue": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "$ref": "#/$defs/NotComparable"
+        }
+      ]
+    },
+    "Name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "NotComparable": {
+      "additionalProperties": false,
+      "description": "A value a measure cannot give with a common basis, and why.",
+      "properties": {
+        "not_comparable": {
+          "$ref": "#/$defs/Name"
+        }
+      },
+      "required": [
+        "not_comparable"
+      ],
+      "title": "NotComparable",
+      "type": "object"
+    },
+    "Sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "Software": {
+      "additionalProperties": false,
+      "description": "What ran the episode.",
+      "properties": {
+        "producer": {
+          "$ref": "#/$defs/Name"
+        },
+        "producer_version": {
+          "$ref": "#/$defs/Name"
+        },
+        "protocol_version": {
+          "$ref": "#/$defs/Name"
+        },
+        "python": {
+          "$ref": "#/$defs/Name"
+        },
+        "commit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Name"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "producer",
+        "producer_version",
+        "protocol_version",
+        "python",
+        "commit"
+      ],
+      "title": "Software",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "An episode's scores: see the module.",
+  "properties": {
+    "scores_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Scores Version",
+      "type": "integer"
+    },
+    "record_digest": {
+      "$ref": "#/$defs/Sha256"
+    },
+    "benchmark": {
+      "$ref": "#/$defs/BenchmarkNamed"
+    },
+    "measures": {
+      "items": {
+        "$ref": "#/$defs/MeasureScored"
+      },
+      "title": "Measures",
+      "type": "array"
+    },
+    "software": {
+      "$ref": "#/$defs/Software"
+    }
+  },
+  "required": [
+    "record_digest",
+    "benchmark",
+    "measures",
+    "software"
+  ],
+  "title": "EpisodeScores",
+  "type": "object"
+}

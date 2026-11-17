@@ -1,0 +1,49 @@
+{
+  "definition_version": 1,
+  "name": "priced-score",
+  "version": 1,
+  "measure_class": "priced",
+  "description": "The heat given and the constraints' integrals weighed in money, per m² of floor, at the prices its benchmark states and in their currency: the heat at its price, each integral at its penalty price.",
+  "unit": "currency m⁻²",
+  "per": [],
+  "by": null,
+  "window": "after_warm_up",
+  "aggregation": "weighted_sum",
+  "quantile": null,
+  "goal": null,
+  "between_samples": null,
+  "source": {
+    "kind": "measures",
+    "terms": [
+      {
+        "measure": {
+          "name": "heat-given",
+          "version": 1
+        },
+        "price": "heat"
+      },
+      {
+        "measure": {
+          "name": "temperature-outside-band-by-day",
+          "version": 1
+        },
+        "price": "temperature-by-day-penalty"
+      },
+      {
+        "measure": {
+          "name": "temperature-outside-band-by-night",
+          "version": 1
+        },
+        "price": "temperature-by-night-penalty"
+      },
+      {
+        "measure": {
+          "name": "humidity-above-limit",
+          "version": 1
+        },
+        "price": "humidity-penalty"
+      }
+    ]
+  },
+  "leaves_out": "A greenhouse's cost or margin: its penalties are a convention its benchmark states, not a loss a greenhouse measured, and its heat is priced through a stated efficiency, not a modelled boiler. No electricity, crop or labour."
+}

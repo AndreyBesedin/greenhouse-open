@@ -1,0 +1,23 @@
+{
+  "definition_version": 1,
+  "name": "heat-given",
+  "version": 1,
+  "measure_class": "climate",
+  "description": "The heat the heaters gave the house's air over the window, per m² of floor.",
+  "unit": "MJ m⁻²",
+  "per": [
+    "floor_m2"
+  ],
+  "by": null,
+  "window": "after_warm_up",
+  "aggregation": "total",
+  "quantile": null,
+  "goal": null,
+  "between_samples": null,
+  "source": {
+    "kind": "instrument",
+    "instrument": "heat_given",
+    "quantity": "heat"
+  },
+  "leaves_out": "Fuel, electricity, cost and emissions: it is the heat given to the air, not what made it, and no boiler's or pipe's loss."
+}

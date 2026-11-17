@@ -1,0 +1,23 @@
+{
+  "definition_version": 1,
+  "name": "device-switches",
+  "version": 1,
+  "measure_class": "climate",
+  "description": "The times each device's level changes, whether its controller's loop or a command changed it, per day of the window.",
+  "unit": "switches d⁻¹",
+  "per": [
+    "day"
+  ],
+  "by": "device",
+  "window": "after_warm_up",
+  "aggregation": "changes",
+  "quantile": null,
+  "goal": null,
+  "between_samples": null,
+  "source": {
+    "kind": "instrument",
+    "instrument": "equipment_states",
+    "quantity": "level"
+  },
+  "leaves_out": "Wear and electricity: a switch is any change of level, whatever its size."
+}
