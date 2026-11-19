@@ -17,6 +17,9 @@ store.
   that one is named as it was; and the set as a run's manifest answer gives
   it, with the version of its model it was made for beside the model's own,
   which a run under a set made for another version is not refused for.
+- **Offered** (`scenario_set`, P20.5): the set a scenario's crop grows with,
+  as its summary gives it, and why its runs take no other where they do
+  not: a packaged scenario runs its model's published set alone.
 """
 
 import json
@@ -36,6 +39,7 @@ from greenhouse_sim.biology.parameter_sets import (
     resolved,
     set_key,
 )
+from greenhouse_sim.scenarios.catalogue import CatalogueEntry
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.crop_parameters import (
     CarriedSet,
@@ -51,6 +55,27 @@ logger = logging.getLogger(__name__)
 
 # Where in the run store the sets kept are, by model, name and version.
 KEPT_FOLDER: Final = "parameter_sets/"
+# Why a packaged scenario's runs take no set but its crop model's published
+# one (decision 0077), in a person's words, as its summary and a refusal say it.
+PACKAGED_RUNS_PUBLISHED: Final = (
+    "A packaged scenario runs its crop model's published set alone. Its house runs "
+    "under another as a new scenario made from it in the builder."
+)
+
+
+class ScenarioSet(BaseModel):
+    """The parameter set a scenario's crop grows with, by name and version,
+    as its summary gives it (P20.5), and why its runs take no other, if they
+    take none; a scenario registered from a draft or a file runs under
+    another as a scenario of its own (`services.scenario_sets`)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    version: int
+    # Why no other set is chosen for its runs, in a person's words; none if
+    # one may be.
+    fixed: str | None
 
 
 class SetRun(BaseModel):
@@ -223,6 +248,19 @@ def set_run(config: ScenarioConfig) -> SetRun | None:
         version=section.parameter_set_version,
         digest=carried.digest,
         made_for=ParameterSet.model_validate(carried.files[0]).made_for,
+    )
+
+
+def scenario_set(entry: CatalogueEntry) -> ScenarioSet | None:
+    """The set a scenario's crop grows with, as its summary gives it, fixed
+    for a packaged scenario; none for a crop that has no sets."""
+    section = entry.config.crop
+    if not isinstance(section, ReducedTomgroCrop | VanthoorKatzinCrop):
+        return None
+    return ScenarioSet(
+        name=section.parameter_set,
+        version=section.parameter_set_version,
+        fixed=PACKAGED_RUNS_PUBLISHED if entry.packaged else None,
     )
 
 

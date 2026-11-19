@@ -35,7 +35,7 @@ from greenhouse_sim.scenarios.registry import ModelRun, models_run
 from greenhouse_sim.scene.snapshot import SceneEntity, SceneSnapshot, greenhouse_scene
 from greenhouse_sim.services.crop_models import registration
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
-from greenhouse_sim.services.parameter_sets import SetRun, set_run
+from greenhouse_sim.services.parameter_sets import ScenarioSet, SetRun, scenario_set, set_run
 from greenhouse_sim.units import FULL_TURN_DEG
 from greenhouse_sim.weather.presets import PRESETS
 from greenhouse_sim.weather.recorded import recorded_weathers
@@ -87,6 +87,9 @@ class ScenarioSummary(BaseModel):
     # The heater a thermostat runs by the house's air, if it has one
     # (`climate.thermostat`).
     thermostat: str | None = None
+    # The parameter set its crop grows with, and why its runs take no other
+    # if they take none (P20.5); none for a crop that has no sets.
+    parameter_set: ScenarioSet | None = None
 
 
 class RunManifest(BaseModel):
@@ -166,6 +169,7 @@ def _summary(entry: CatalogueEntry) -> ScenarioSummary:
         layouts=list(entry.layouts),
         weathers=weather_names(),
         thermostat=None if entry.config.thermostat is None else entry.config.thermostat.actuator_id,
+        parameter_set=scenario_set(entry),
     )
 
 

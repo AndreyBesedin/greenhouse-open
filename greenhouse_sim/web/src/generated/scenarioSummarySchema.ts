@@ -33,6 +33,36 @@ export const SCENARIO_SUMMARY_SCHEMA = {
       "maximum": 1,
       "minimum": 0,
       "type": "number"
+    },
+    "ScenarioSet": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        },
+        "fixed": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Fixed"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "fixed"
+      ],
+      "title": "ScenarioSet",
+      "type": "object"
     }
   },
   "properties": {
@@ -111,6 +141,17 @@ export const SCENARIO_SUMMARY_SCHEMA = {
       ],
       "default": null,
       "title": "Thermostat"
+    },
+    "parameter_set": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ScenarioSet"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [
@@ -125,7 +166,8 @@ export const SCENARIO_SUMMARY_SCHEMA = {
     "opening_day",
     "layouts",
     "weathers",
-    "thermostat"
+    "thermostat",
+    "parameter_set"
   ],
   "title": "ScenarioSummary",
   "type": "object"

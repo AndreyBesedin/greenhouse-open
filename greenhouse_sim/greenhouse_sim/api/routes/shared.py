@@ -155,6 +155,13 @@ def seed(query: Query) -> int | None:
     return int(text)
 
 
+def set_version(written: str) -> int:
+    """A parameter set's version as a path writes it: a whole number from 1."""
+    if not written.isascii() or not written.isdigit() or int(written) < 1:
+        raise InvalidRequest(f"a set's version is a whole number from 1, not {written!r}")
+    return int(written)
+
+
 def pace(query: Query) -> float | None:
     """The real seconds a playback plays a simulated day in, if the query
     gives them."""

@@ -4,18 +4,22 @@ and those its simulator keeps, grows the same numbers when its run is
 repeated and others than the published set's; the run is told apart by the
 set's digest, and its manifest answer names the set; a run under a
 published set is named as it was, and the packaged scenarios run only
-those."""
+those. A scenario registered from a draft or a file runs its house under
+another set as a scenario of its own, which a packaged one does not
+(P20.5)."""
 
 import json
 import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
+from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Final
 
 import pytest
 from pydantic import JsonValue
 
+from greenhouse_sim.api.routes import respond
 from greenhouse_sim.biology.parameter_sets import PUBLISHED_SETS, read_parameter_set, resolved
 from greenhouse_sim.biology.tomato.tomgro.parameters import TomgroParameters
 from greenhouse_sim.core.area_crop import AreaCrop
@@ -33,12 +37,24 @@ from greenhouse_sim.scenarios.scenario_files import export_scenario_file
 from greenhouse_sim.services import scenario_files
 from greenhouse_sim.services.crop import scenario_crop
 from greenhouse_sim.services.crop_models import registration
-from greenhouse_sim.services.errors import Conflict, InvalidRequest
+from greenhouse_sim.services.errors import Conflict, InvalidRequest, NotFound
 from greenhouse_sim.services.fields import air_through_a_run
-from greenhouse_sim.services.parameter_sets import SetRun, keep, kept_name
+from greenhouse_sim.services.parameter_sets import (
+    PACKAGED_RUNS_PUBLISHED,
+    ScenarioSet,
+    SetRun,
+    keep,
+    kept_name,
+)
 from greenhouse_sim.services.run_store import FolderStore
 from greenhouse_sim.services.runs import RunRequest
-from greenhouse_sim.services.scenarios import run_manifest
+from greenhouse_sim.services.scenario_sets import under_set
+from greenhouse_sim.services.scenarios import (
+    ScenarioSummary,
+    run_manifest,
+    scenario,
+    scenario_summary,
+)
 from greenhouse_sim.services.simulator import Simulator
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -282,3 +298,104 @@ def test_the_packaged_scenarios_run_only_their_models_published_sets(
 
     with pytest.raises(InvalidManifest, match="published parameter set, gnvman"):
         load_manifest("tomgro_house")
+
+
+def test_a_registered_scenario_runs_under_another_set_as_a_scenario_of_its_own(
+    store: FolderStore,
+) -> None:
+    """The house a file registered, under a set the simulator keeps: the same
+    house, its crop naming the set, under an identifier of its own beside
+    the house's; its manifest answer names the set, it grows the set's
+    numbers, and the file an epoch of it carries runs it where nothing is
+    kept."""
+    made = keep(store, _set())
+    with _uploaded(store) as simulator:
+        house = scenario_summary(simulator.catalogue, HOUSE)
+        under = under_set(simulator, HOUSE, "brighter", 1)
+        again = under_set(simulator, HOUSE, "brighter", 1)
+        own = under_set(simulator, HOUSE, "gnvman", 1)
+        config = scenario(simulator.catalogue, under.id)
+        answer = run_manifest(simulator.catalogue, under.id)
+        crop = scenario_crop(simulator, RunRequest(under.id))
+        run_id = air_through_a_run(simulator, RunRequest(under.id))[1]
+        house_run = air_through_a_run(simulator, RunRequest(HOUSE))[1]
+        digest = scenario_files.carry(simulator.catalogue, store, under.id)
+    # The house uploaded under the set, as P20.3 has it, elsewhere: a simulator
+    # on `store` would know the house again, under its published set.
+    apart = FolderStore(store.root / "apart")
+    keep(apart, _set())
+    _, as_uploaded = _grown(apart, parameter_set="brighter")
+
+    assert house.parameter_set == ScenarioSet(name="gnvman", version=1, fixed=None)
+    assert (under.id, under.name) == (f"{HOUSE}_brighter_v1", f"{house.name} under brighter v1")
+    assert under.parameter_set == ScenarioSet(name="brighter", version=1, fixed=None)
+    assert (again, own) == (under, house)
+    assert answer.parameter_set == SetRun(
+        name="brighter", version=1, digest=made.digest, made_for=1
+    )
+    changed = {"greenhouse_id", "name", "crop"}
+    assert config.model_dump(exclude=changed) == _house().model_dump(exclude=changed)
+    assert isinstance(crop, AreaCrop) and run_id != house_run
+    assert [each.state for each in crop.instances_on(DAYS)] == [each.state for each in as_uploaded]
+    assert digest is not None
+    text = (store.get(scenario_files.kept_name(digest)) or b"").decode()
+    assert [each["name"] for each in json.loads(text)["parameter_sets"]] == ["brighter"]
+    with Simulator() as elsewhere:
+        scenario_files.upload(elsewhere, text)
+        assert air_through_a_run(elsewhere, RunRequest(under.id))[1] == run_id
+
+
+def test_a_packaged_scenario_runs_only_its_published_set_and_nothing_refused_is_registered(
+    store: FolderStore,
+) -> None:
+    keep(store, _set())
+    with _uploaded(store) as simulator:
+        before = simulator.catalogue.ids()
+        packaged = scenario_summary(simulator.catalogue, "tomgro_house")
+        own = under_set(simulator, "tomgro_house", "gnvman", 1)
+        with pytest.raises(InvalidRequest) as refused:
+            under_set(simulator, "tomgro_house", "brighter", 1)
+        with pytest.raises(InvalidRequest) as unknown:
+            under_set(simulator, HOUSE, "brighter", 2)
+        with pytest.raises(InvalidRequest, match="organ crop, which has no parameter sets"):
+            under_set(simulator, "reference_greenhouse", "brighter", 1)
+        with pytest.raises(NotFound):
+            under_set(simulator, "no_such_house", "brighter", 1)
+        taken = _house().model_copy(update={"greenhouse_id": f"{HOUSE}_brighter_v1"})
+        simulator.catalogue.register(taken)
+        with pytest.raises(Conflict, match="registered as another scenario"):
+            under_set(simulator, HOUSE, "brighter", 1)
+        after = simulator.catalogue.ids()
+
+    assert packaged.parameter_set == ScenarioSet(
+        name="gnvman", version=1, fixed=PACKAGED_RUNS_PUBLISHED
+    )
+    assert own == packaged
+    assert refused.value.problems == (("parameter_set", PACKAGED_RUNS_PUBLISHED),)
+    assert unknown.value.problems == (
+        ("crop.parameter_set", "no set brighter v2 of reduced_tomgro is kept"),
+    )
+    assert scenario_summary(PACKAGED, "reference_greenhouse").parameter_set is None
+    assert after == [*before, taken.greenhouse_id]
+
+
+def test_the_api_answers_a_scenario_under_a_set_as_the_list_shows_it(store: FolderStore) -> None:
+    keep(store, _set())
+    with _uploaded(store) as simulator:
+        under = respond(simulator, "POST", f"/api/scenarios/{HOUSE}/under/brighter/1")
+        packaged = respond(simulator, "POST", "/api/scenarios/tomgro_house/under/brighter/1")
+        unversioned = respond(simulator, "POST", f"/api/scenarios/{HOUSE}/under/brighter/0")
+        unknown = respond(simulator, "POST", "/api/scenarios/no_such_house/under/brighter/1")
+        listed = respond(simulator, "GET", "/api/scenarios")
+
+    assert under.status == HTTPStatus.OK, under.body
+    assert ScenarioSummary.model_validate(under.body).id == f"{HOUSE}_brighter_v1"
+    scenarios: Any = listed.body
+    assert [each["id"] for each in scenarios][-2:] == [HOUSE, f"{HOUSE}_brighter_v1"]
+    assert (packaged.status, unversioned.status, unknown.status) == (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.NOT_FOUND,
+    )
+    refused: Any = packaged.body
+    assert refused["problems"] == [{"field": "parameter_set", "message": PACKAGED_RUNS_PUBLISHED}]

@@ -16,6 +16,7 @@ export interface ScenarioSummary {
   layouts: string[];
   weathers: string[];
   thermostat: string | null;
+  parameter_set: ScenarioSet | null;
 }
 /**
  * Set one piece of equipment to a level at a time of day, every day of
@@ -25,4 +26,15 @@ export interface DailyCommand {
   time_of_day_s: number;
   actuator_id: string;
   level: Level;
+}
+/**
+ * The parameter set a scenario's crop grows with, by name and version,
+ * as its summary gives it (P20.5), and why its runs take no other, if they
+ * take none; a scenario registered from a draft or a file runs under
+ * another as a scenario of its own (`services.scenario_sets`).
+ */
+export interface ScenarioSet {
+  name: string;
+  version: number;
+  fixed: string | null;
 }
