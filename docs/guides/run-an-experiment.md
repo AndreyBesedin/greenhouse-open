@@ -129,8 +129,8 @@ PYTHONPATH=examples uv run python -m greenhouse_sim.experiment \
   run my-experiment/experiment.json --out results/
 ```
 
-`--authorisation` comes before `run` or `check`: it is the command's, not
-the subcommand's. `--out` is a folder that does not exist yet or is empty.
+`--authorisation` comes before `run`, `check` or `score`: it is the
+command's, not the subcommand's. `--out` is a folder that does not exist yet or is empty.
 The command says each episode's digest as it ends:
 
 ```text
@@ -163,6 +163,10 @@ results/
     7.json
   deliveries/
     0.jsonl            what episode 0's policy was given, kept on request
+  scores/
+    0.json             each episode's scores, beside its record
+    ...
+    7.json
 ```
 
 `sha256sum -c experiment.sha256`, in the folder, checks that the file is
@@ -197,9 +201,9 @@ so that a tool outside the simulator reads it:
   times are not in it, since they vary from one machine and run to the
   next.
 
-Two records name the same episode when their digests agree. A record has
-no measures of its own yet: they come in a later stage, beside a record
-rather than inside its digest.
+Two records name the same episode when their digests agree. A record
+holds no measures: an episode's scores are written beside it, never inside
+its digest ([below](#score-the-records)).
 
 ## Compare records
 
@@ -270,6 +274,58 @@ A check needs the grant the run had. Without it the policy's actions are
 refused, and `check` reports another digest, not why: the record does not
 name the authorisation its run was given.
 
+## Score the records
+
+As each episode's policy stops, the runner scores it (decisions
+[0081](../decisions/0081-a-benchmarks-measures-are-versioned-definitions-frozen-before-its-baselines-and-a-baseline-carries-its-provenance.md)
+and
+[0082](../decisions/0082-the-evaluator-reads-an-episodes-truth-after-its-policy-stops.md))
+and writes `scores/N.json` beside its record: an `EpisodeScores`
+(`greenhouse_protocol.benchmark`), published as
+`greenhouse_protocol/greenhouse_protocol/schemas/episode-scores.schema.json`.
+It names the record by its digest, each value's measure by its name,
+version and digest, and the software that scored it. Its measures are
+those the protocol packages, under
+`greenhouse_protocol/greenhouse_protocol/measures/`: from the record, the
+actions by status, the decisions skipped and their times; from the run the
+episode carried out, which its policy never read, the heat given, each
+device's switches and hours run, and the harvest, the crop model's
+prediction.
+
+No benchmark scores these episodes yet, so `benchmark` is null and the
+window is the whole episode. A measure against a goal's bounds, such as
+the temperature outside its band, and the priced score are *not
+comparable*, and say why: their goals and prices are a benchmark's.
+
+```python
+from greenhouse_protocol.benchmark import EpisodeScores
+
+scores = EpisodeScores.model_validate_json(Path("results/scores/0.json").read_text())
+values = {(scored.name, scored.of): scored.value for scored in scores.measures}
+```
+
+In example 06's first episode, example 03's rule at its band on the still
+night turns the heater on at 5 minutes, off at 20 and on at 25: its 10 kW
+for 20 of the 30 minutes over the box's 76.8 m² give `heat-given` 0.15625
+MJ m⁻², and the heater's `device-level-hours` are 16 h d⁻¹ and its
+`device-switches` 144 d⁻¹, each per day of the half hour.
+
+```bash
+PYTHONPATH=examples uv run python -m greenhouse_sim.experiment \
+  --authorisation my-experiment/authorisation.json \
+  score results/
+```
+
+`score` runs each record's episode again, as `check` does, and scores it
+only if it gives the record's digest: from the record as it was written,
+and the run it carries out again. So its scores are those the runner
+wrote, and a new version of a measure scores records already written. It
+says `episode N: scored, the same digest …` of each record scored, its
+scores written in place of those there, or `episode N: not scored: …`
+with why, its scores left as they were, and exits 1 if any was not scored.
+It needs the grant the run had, as `check` does: without it an episode
+whose policy acts replays to another digest, and is not scored.
+
 ## Keep the deliveries
 
 A record counts and digests what each decision was given, but does not
@@ -298,12 +354,14 @@ record is about 10 to 15 kB.
 
 ```bash
 uv run pytest greenhouse_sim/tests/test_paired_experiment.py \
-  greenhouse_sim/tests/test_episode_record.py greenhouse_sim/tests/test_experiment.py
+  greenhouse_sim/tests/test_episode_record.py greenhouse_sim/tests/test_experiment.py \
+  greenhouse_sim/tests/test_scoring.py
 uv run pytest greenhouse_sim/tests/test_policy_in_its_own_process.py -k same_rule
 uv run pytest tests/test_examples.py -m slow -k 06
 ```
 
-The first are the runner's, the record's and the episode's; the second
+The first are the runner's, the record's, the episode's and the scores';
+the second
 holds `examples/naive_heating.py` to example 03's rule, by its digest on
 the same run; the last runs example 06, which the fast checks leave out.
 
