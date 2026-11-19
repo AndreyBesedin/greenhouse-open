@@ -9,11 +9,12 @@ house alone (`WholeHouseAir`), and the air cell by cell beside it
 (`GridAir`), which mixes too.
 """
 
-from typing import Annotated, Literal
+from typing import Annotated, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, PositiveFloat
 
 from greenhouse_sim.climate.glazing import most_u_w_m2k
+from greenhouse_sim.domain.components import Component
 from greenhouse_sim.units import HOUR_S
 
 type Percent = Annotated[float, Field(ge=0.0, le=100.0)]
@@ -24,6 +25,12 @@ class HouseSettings(BaseModel):
     house's air is worked out from (`greenhouse_sim.climate.house`)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
+
+    # The components a house describes that its model models (P24.2,
+    # decision 0080): a house describing another is refused, naming it.
+    # Neither of today's two models any: their glass is their glazing's U,
+    # every wall faces the outside, and the air alone holds heat.
+    MODELLED: ClassVar[frozenset[Component]] = frozenset()
 
     # The air's temperature and relative humidity everywhere inside when the
     # run starts.
