@@ -2,7 +2,16 @@
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { button, click, enter, type Rendered, render, said, select } from "../testing/render";
+import {
+  button,
+  choose,
+  click,
+  enter,
+  type Rendered,
+  render,
+  said,
+  select,
+} from "../testing/render";
 import { ParameterSets } from "./ParameterSets";
 import type { SetListed, SetRead } from "./parameterSetLibrary";
 
@@ -63,30 +72,38 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
 }
 
+/** The simulator's refusal of αF, by its field. */
+function refusedAlpha(message: string): Response {
+  return json(
+    {
+      error: `parameters.alpha_f: ${message}`,
+      problems: [{ field: "parameters.alpha_f", message }],
+    },
+    400,
+  );
+}
+
 /** The simulator, stood in for: Reduced-State TOMGRO's published set, and the
- * one a save keeps, refusing an αF above 1 as its range does. */
-function serving(): { saves: unknown[] } {
+ * one a save keeps, or that it keeps already; refusing an αF that is no
+ * number, or above 1, as its range does. */
+function serving({ kept = false } = {}): { saves: unknown[] } {
   const saves: unknown[] = [];
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     if (init?.method === "POST") {
       const file = JSON.parse(String(init.body));
-      if (file.parameters.alpha_f > 1) {
-        return json(
-          {
-            error: "parameters.alpha_f: Input should be less than or equal to 1",
-            problems: [
-              { field: "parameters.alpha_f", message: "Input should be less than or equal to 1" },
-            ],
-          },
-          400,
-        );
+      const alpha: unknown = file.parameters.alpha_f;
+      if (alpha !== undefined && typeof alpha !== "number") {
+        return refusedAlpha("Input should be a valid number");
+      }
+      if (typeof alpha === "number" && alpha > 1) {
+        return refusedAlpha("Input should be less than or equal to 1");
       }
       saves.push(file);
       return json(SAVED);
     }
     const answers: Record<string, unknown> = {
-      [SETS]: saves.length === 0 ? [PUBLISHED] : [PUBLISHED, SAVED],
+      [SETS]: saves.length === 0 && !kept ? [PUBLISHED] : [PUBLISHED, SAVED],
       [`${SETS}/schema`]: SCHEMA,
       [`${SETS}/gnvman/1`]: read(PUBLISHED, { alpha_f: 0.8, d: 2.59 }),
       [`${SETS}/brighter/1`]: read(SAVED, { alpha_f: 0.7, d: 2.59 }),
@@ -162,7 +179,8 @@ describe("a crop model's parameter sets, edited beside the rows (P20.5)", () => 
     expect(alpha.value).toBe("0.8");
     expect(alpha.readOnly).toBe(false);
     expect(described(alpha)).toBe("In fraction d⁻¹, from 0 to 1.");
-    expect([alpha.min, alpha.max]).toEqual(["0", "1"]);
+    // Held as typed, for the simulator to check, and entered as a decimal.
+    expect([alpha.type, alpha.inputMode]).toEqual(["text", "decimal"]);
     expect(shown.container.textContent).toContain("Oliveira et al. v0.4.0");
     expect(shown.container.textContent).toContain("Its most, 1: a share, of all of it at most");
     // A fixed parameter is read only, and says why.
@@ -241,6 +259,47 @@ describe("a crop model's parameter sets, edited beside the rows (P20.5)", () => 
     click(button(shown.container, "Download its file"));
     await settled();
     expect(await Promise.all(files)).toEqual(['{"name": "brighter"}\n']);
+  });
+
+  it("sends an entry that reads as no number, for the simulator to refuse, not as unchanged", async () => {
+    const { saves } = serving();
+    shown = render(<ParameterSets model="reduced_tomgro" />);
+    await settled();
+
+    enter(labelled(shown.container, "Name"), "brighter");
+    enter(control(shown.container, "alpha_f"), "1e");
+    expect(control(shown.container, "alpha_f").value).toBe("1e");
+    enter(labelled(shown.container, "Why alpha_f"), "a typo");
+    click(button(shown.container, "Save this version"));
+    await settled();
+
+    expect(saves).toEqual([]);
+    expect(described(control(shown.container, "alpha_f"))).toBe(
+      "In fraction d⁻¹, from 0 to 1. | Input should be a valid number",
+    );
+  });
+
+  it("acts on the set chosen only once it is read, and keeps nothing typed meanwhile", async () => {
+    serving({ kept: true });
+    shown = render(<ParameterSets model="reduced_tomgro" />);
+    await settled();
+    const saveButton = () => button(shown?.container ?? document, "Save this version");
+    expect(button(shown.container, "Download its file").disabled).toBe(false);
+
+    choose(select(shown.container, "Parameter set"), "brighter v1");
+
+    // Asked for, not yet read: what is shown is still gnvman's.
+    expect(control(shown.container, "alpha_f").value).toBe("0.8");
+    expect(control(shown.container, "alpha_f").disabled).toBe(true);
+    expect(button(shown.container, "Download its file").disabled).toBe(true);
+    expect(button(shown.container, "Compare with its base").disabled).toBe(true);
+    expect(saveButton().disabled).toBe(true);
+    await settled();
+
+    expect(control(shown.container, "alpha_f").value).toBe("0.7");
+    expect(control(shown.container, "alpha_f").disabled).toBe(false);
+    expect(button(shown.container, "Compare with its base").disabled).toBe(false);
+    expect(saveButton().disabled).toBe(false);
   });
 
   it("says why the rows' model has no sets, and that rows of none have no model", async () => {

@@ -189,8 +189,10 @@ export interface VersionForm {
 }
 
 /** The value typed for a parameter, if it differs from its base's: a number
- * as a number, so that the simulator says what is wrong with it; nothing for
- * a field left empty or as its base has it. */
+ * as a number, so that the simulator says what is wrong with it, and an entry
+ * that reads as none, such as `1e`, as NaN, which JSON writes as null and the
+ * simulator refuses as no number; nothing for a field left empty or as its
+ * base has it. */
 export function changedValue(typed: string | undefined, base: number): number | null {
   const text = (typed ?? "").trim();
   if (text === "") {

@@ -60,6 +60,7 @@ function ParameterValue({
   base,
   form,
   problems,
+  disabled,
   onValue,
   onWhy,
 }: {
@@ -67,6 +68,8 @@ function ParameterValue({
   base: SetRead;
   form: VersionForm;
   problems: Readonly<Record<string, string>>;
+  /** While the set chosen is being read: what is typed would be overwritten. */
+  disabled: boolean;
   onValue: (text: string) => void;
   onWhy: (text: string) => void;
 }) {
@@ -82,15 +85,17 @@ function ParameterValue({
         className="builder-give-field"
       >
         {(control) => (
+          // Text, not a number's input, which holds nothing for an entry it
+          // cannot read, such as `1e`: what is typed is sent, and the
+          // simulator says what is wrong with it, as with a value outside
+          // the range.
           <input
             {...control}
             name={field.name}
-            type="number"
-            step="any"
-            // The simulator says what is outside the range; an input bounds
-            // only what its ends allow.
-            min={least === null || least.exclusive ? undefined : least.value}
-            max={most === null || most.exclusive ? undefined : most.value}
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            disabled={disabled}
             readOnly={field.fixed !== null}
             placeholder={shown(base.values[field.name])}
             value={form.values[field.name] ?? ""}
@@ -281,10 +286,13 @@ export function ParameterSets({ model }: { model: string | null }) {
   const { sets, fields } = library.value;
   const madeFor = sets.find((each) => each.published)?.made_for;
   const listedChosen = chosen === null ? undefined : sets.find((each) => sameKey(each, chosen));
+  // The set chosen is read: until then the form, a comparison and a download
+  // would be of the set chosen before.
+  const ready = base !== null && chosen !== null && sameKey(base, chosen);
 
   async function compare(): Promise<void> {
     const basedOn = base?.based_on;
-    if (model === null || base === null || basedOn == null) {
+    if (model === null || base === null || !ready || basedOn == null) {
       return;
     }
     setBusy(true);
@@ -299,7 +307,7 @@ export function ParameterSets({ model }: { model: string | null }) {
   }
 
   async function download(): Promise<void> {
-    if (model === null || base === null) {
+    if (model === null || base === null || !ready) {
       return;
     }
     const answer = await downloadSet(model, base);
@@ -312,7 +320,7 @@ export function ParameterSets({ model }: { model: string | null }) {
 
   async function save(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    if (model === null || base === null || madeFor === undefined) {
+    if (model === null || base === null || !ready || madeFor === undefined) {
       return;
     }
     setBusy(true);
@@ -388,12 +396,12 @@ export function ParameterSets({ model }: { model: string | null }) {
       <div className="builder-actions">
         <Button
           size="compact"
-          disabled={busy || base?.based_on == null}
+          disabled={busy || !ready || base?.based_on == null}
           onClick={() => void compare()}
         >
           Compare with its base
         </Button>
-        <Button size="compact" disabled={busy || base === null} onClick={() => void download()}>
+        <Button size="compact" disabled={busy || !ready} onClick={() => void download()}>
           Download its file
         </Button>
       </div>
@@ -425,7 +433,10 @@ export function ParameterSets({ model }: { model: string | null }) {
                 <input
                   {...control}
                   value={form.name}
-                  onChange={(event) => setForm({ ...form, name: event.target.value })}
+                  onChange={(event) => {
+                    const name = event.target.value;
+                    setForm((now) => ({ ...now, name }));
+                  }}
                 />
               )}
             </Field>
@@ -440,7 +451,10 @@ export function ParameterSets({ model }: { model: string | null }) {
                 <input
                   {...control}
                   value={form.cultivar}
-                  onChange={(event) => setForm({ ...form, cultivar: event.target.value })}
+                  onChange={(event) => {
+                    const cultivar = event.target.value;
+                    setForm((now) => ({ ...now, cultivar }));
+                  }}
                 />
               )}
             </Field>
@@ -454,7 +468,10 @@ export function ParameterSets({ model }: { model: string | null }) {
                 <input
                   {...control}
                   value={form.description}
-                  onChange={(event) => setForm({ ...form, description: event.target.value })}
+                  onChange={(event) => {
+                    const description = event.target.value;
+                    setForm((now) => ({ ...now, description }));
+                  }}
                 />
               )}
             </Field>
@@ -465,13 +482,14 @@ export function ParameterSets({ model }: { model: string | null }) {
                 base={base}
                 form={form}
                 problems={problems}
+                disabled={!ready}
                 onValue={(text) => typed(field.name, text)}
                 onWhy={(text) =>
                   setForm((now) => ({ ...now, why: { ...now.why, [field.name]: text } }))
                 }
               />
             ))}
-            <Button type="submit" size="compact" disabled={busy || madeFor === undefined}>
+            <Button type="submit" size="compact" disabled={busy || !ready || madeFor === undefined}>
               Save this version
             </Button>
           </form>
