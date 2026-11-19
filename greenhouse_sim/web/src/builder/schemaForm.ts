@@ -3,7 +3,8 @@
  * (P12, "one schema"): each field's label is its title, its input follows
  * its type, a choice offers its enumeration's values, and the form starts
  * from the schema's first example. No field is written twice, here and in
- * the simulator.
+ * the simulator. A crop model's parameters are read with what its schema
+ * says of each, its unit, source and range (P20.5).
  */
 
 import { isObject } from "../loadJson";
@@ -180,6 +181,83 @@ export function modelFields(
       },
     ];
   });
+}
+
+/** An end of a parameter's range: the value, and whether it is exclusive, a
+ * value having to be above or below it rather than at least or at most. */
+export interface RangeEnd {
+  value: number;
+  exclusive: boolean;
+}
+
+/**
+ * A crop model's parameter as the schema of its parameters describes it
+ * (P20.1, decision 0077), for a parameter set's form (P20.5): what it is, its
+ * unit, where its published value comes from, its range with where each end
+ * comes from, and, if no set may change it, why.
+ */
+export interface ParameterField {
+  name: string;
+  /** What it is, in the schema's words, or else its title. */
+  what: string;
+  unit: string;
+  source: string;
+  least: RangeEnd | null;
+  most: RangeEnd | null;
+  leastFrom: string;
+  mostFrom: string;
+  /** Why no set changes it, if none does: its value is then read only. */
+  fixed: string | null;
+}
+
+function words(value: unknown, otherwise = ""): string {
+  return typeof value === "string" ? value : otherwise;
+}
+
+function rangeEnd(
+  field: Record<string, unknown>,
+  inclusive: "minimum" | "maximum",
+  exclusive: "exclusiveMinimum" | "exclusiveMaximum",
+): RangeEnd | null {
+  const at = field[inclusive];
+  const beyond = field[exclusive];
+  if (typeof at === "number") {
+    return { value: at, exclusive: false };
+  }
+  return typeof beyond === "number" ? { value: beyond, exclusive: true } : null;
+}
+
+/** The parameters a model's schema describes, in its order. */
+export function parameterFields(schema: Record<string, unknown>): ParameterField[] {
+  const properties = isObject(schema.properties) ? schema.properties : {};
+  return Object.entries(properties).map(([name, property]) => {
+    const field = isObject(property) ? property : {};
+    const from = isObject(field.range_from) ? field.range_from : {};
+    return {
+      name,
+      what: words(field.description, words(field.title, name)),
+      unit: words(field.unit),
+      source: words(field.source),
+      least: rangeEnd(field, "minimum", "exclusiveMinimum"),
+      most: rangeEnd(field, "maximum", "exclusiveMaximum"),
+      leastFrom: words(from.least),
+      mostFrom: words(from.most),
+      fixed: field.readOnly === true ? words(field.fixed, "fixed") : null,
+    };
+  });
+}
+
+/** A parameter's range in words: "from 0 to 1", "above 0", "at least 0 and
+ * below 1", or "any number" where neither end is bounded. */
+export function rangeText({ least, most }: Pick<ParameterField, "least" | "most">): string {
+  if (least !== null && most !== null && !least.exclusive && !most.exclusive) {
+    return `from ${least.value} to ${most.value}`;
+  }
+  const ends = [
+    least === null ? "" : `${least.exclusive ? "above" : "at least"} ${least.value}`,
+    most === null ? "" : `${most.exclusive ? "below" : "at most"} ${most.value}`,
+  ].filter((end) => end !== "");
+  return ends.length === 0 ? "any number" : ends.join(" and ");
 }
 
 /** What the form shows at first: the schema's first example, each value as
