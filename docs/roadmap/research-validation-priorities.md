@@ -158,8 +158,9 @@ data.
    ([the apportioning](../../research/modelica/README.md#apportioning-the-gap-among-the-blockers))
    finds that in January the screens account for the most, then the heat
    stored, the corridors and the deep soil, while the cold sky hides part
-   of the gap; that in July none taken out accounts for much; and that the
-   crop's part is not measured, since its variant took nothing out. Making
+   of the gap; and that in July the crop's transpiration accounts for the
+   day's warmth, all six out bringing July's RMSE to 1.89 K, while in
+   January it hides part of the gap, as the sky does. Making
    the blockers the simulator's own components, each held to
    its reference and the comparison run again after it, is
    [P24](p24-house-components-and-a-multi-node-climate.md).
