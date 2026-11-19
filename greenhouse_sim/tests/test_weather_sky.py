@@ -63,25 +63,27 @@ WRITTEN_BEFORE = {
     "barometric_pressure_hpa",
 }
 # The weather a packaged scenario's run is under through its first day, as
-# its digest was before the sky's quantities were added (main at b3a0c354).
+# its digest was before the sky's quantities were added (main at b3a0c354):
+# the constant and the recorded weathers', the same on macOS and on CI's
+# Linux. A synthetic or seasonal day's sun and cosines differ in their last
+# bits from one platform's maths library to another's, and so do their
+# digests; they are held to their states' JSON instead.
 DIGESTS_BEFORE = [
     ("climate_box", None, "fd83ed94ea6b9ddae2728d2ea790724ff90c8d458f2f9144995190c0ca6eb338"),
-    (
-        "climate_box",
-        "cold_spring_day",
-        "cd9f7232657f16febeca24c03c4262f7138fec11de84b685e6d3d6c4dbdcd1bd",
-    ),
     (
         "climate_box",
         "example_day",
         "d1b5b05c6ab29a22c1228b32147d4bc4e3b45a5e1d6bbe2546a3418b7ad64391",
     ),
-    (
-        "reference_greenhouse",
-        None,
-        "54afbe65a291a728963847735138fc82e631d5d9d41b43c56ca0df1d77f14102",
-    ),
 ]
+# A packaged scenario under each kind of weather.
+WEATHERS = [
+    ("climate_box", None),
+    ("climate_box", "cold_spring_day"),
+    ("climate_box", "example_day"),
+    ("reference_greenhouse", None),
+]
+WEATHER_KINDS = ["constant", "synthetic", "recorded", "seasonal"]
 # Stefan and Boltzmann's constant, W/m²K⁴ (CODATA 2018), and 0 °C in kelvin.
 SIGMA = 5.670374419e-8
 KELVIN = 273.15
@@ -174,6 +176,20 @@ def test_a_packaged_scenarios_weather_has_the_digest_it_had(
     assert weather.series_sha256(PACKAGED, scenario_id, under, DAY_S) == digest
 
 
+@pytest.mark.parametrize(("scenario_id", "under"), WEATHERS, ids=WEATHER_KINDS)
+def test_a_packaged_weather_is_written_as_a_state_was_before(
+    scenario_id: str, under: str | None
+) -> None:
+    """What a weather's digest is made of, each state's JSON, is what a
+    state of the fields before wrote, so that the digest does not move on
+    any platform."""
+    day = weather.through_the_day(PACKAGED, scenario_id, under)
+
+    assert len(day.weather) == 145
+    for state in day.weather:
+        assert state.model_dump_json() == state.model_dump_json(include=WRITTEN_BEFORE)
+
+
 def test_where_a_recording_does_not_know_them_it_gives_none_and_the_run_goes_on() -> None:
     at = _source(
         HEADER
@@ -193,12 +209,10 @@ def test_where_a_recording_does_not_know_them_it_gives_none_and_the_run_goes_on(
     assert at(_at(1.5)).downward_longwave_w_m2 == pytest.approx(310.0)
 
 
-@pytest.mark.parametrize(
-    ("scenario_id", "under"),
-    [("climate_box", None), ("climate_box", "cold_spring_day"), ("reference_greenhouse", None)],
-    ids=["constant", "synthetic", "seasonal"],
-)
-def test_no_weather_but_a_recording_gives_them(scenario_id: str, under: str | None) -> None:
+@pytest.mark.parametrize(("scenario_id", "under"), WEATHERS, ids=WEATHER_KINDS)
+def test_no_packaged_weather_gives_them(scenario_id: str, under: str | None) -> None:
+    """Only a recording that records them gives them: no constant, synthetic
+    or seasonal weather, nor the example day, which records none."""
     day = weather.through_the_day(PACKAGED, scenario_id, under)
 
     assert {getattr(state, name) for state in day.weather for name in RECORDED_ONLY} == {None}
