@@ -63,6 +63,23 @@
         "sky",
         "walls"
       ]
+    },
+    "transpiration": {
+      "removes": "the crop's transpiration, as `crop` meant to: its canopy's transpiration in TiGwerLib's Custom mode, whose calibration parameters' defaults are Stanghellini's constants (param10 and param11 read in thousandths), with its minimum stomatal resistance, param1, a million times its 82 s/m. `crop` set param1 alone, which TiGwerLib reads in the Custom mode only; its global model runs the Stanghellini mode, where r_min is 82 in the equations, so `crop` took nothing out and its reports equal the comparison's",
+      "modifiers": {
+        "CanTranspi": "mode=TiGwerLib.Types.Enumerations.TranspirationMode.Custom, param1=82e6"
+      }
+    },
+    "all_six": {
+      "removes": "the six as `all` meant to take them out, the crop's transpiration by `transpiration` in place of `crop`: `all` took out the other five",
+      "of": [
+        "screens",
+        "transpiration",
+        "storage",
+        "ground",
+        "sky",
+        "walls"
+      ]
     }
   },
   "not made": {
@@ -79,5 +96,6 @@
     "interactions": "the six moves need not add up to the move all six make together: the report gives their sum beside the all-at-once move, and the difference between them as the interaction. No share is rescaled to make them add up",
     "what is left": "the all-at-once variant's RMSE and mean difference: the gap TiGwerLib's physics cannot be brought closer on without an edit, the comparison's known differences and what no variant could make"
   },
-  "commands": "python -m research.modelica.blockers run FOLDER WORKDIR WINDOW VARIANT, for each window and variant, each in a working folder of its own; then python -m research.modelica.blockers apportion, which reads the committed reports and prints the attribution"
+  "commands": "python -m research.modelica.blockers run FOLDER WORKDIR WINDOW VARIANT, for each window and variant, each in a working folder of its own; then python -m research.modelica.blockers apportion, which reads the committed reports and prints the attribution",
+  "added after the first runs": "`transpiration` and `all_six`, stated in a commit of their own after the first fourteen reports and before either ran: those reports found `crop` a no-op. The first seven variants and their fourteen reports stand as they ran; `all_six`'s interaction is with its own six"
 }
