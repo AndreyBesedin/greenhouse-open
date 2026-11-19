@@ -1,0 +1,20 @@
+{
+  "definition_version": 1,
+  "name": "decision-time-largest",
+  "version": 1,
+  "measure_class": "record",
+  "description": "The longest time a decision of the policy's took, on the runner's timer, skipped ones included.",
+  "unit": "s",
+  "per": [],
+  "by": null,
+  "window": "episode",
+  "aggregation": "quantile",
+  "quantile": 1.0,
+  "goal": null,
+  "between_samples": null,
+  "source": {
+    "kind": "record",
+    "field": "trace.took_s"
+  },
+  "leaves_out": "The machine: it depends on the one that ran it, so it is not compared across machines."
+}

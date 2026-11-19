@@ -1,0 +1,20 @@
+{
+  "definition_version": 1,
+  "name": "decisions-skipped",
+  "version": 1,
+  "measure_class": "record",
+  "description": "The policy's decisions skipped, each having taken longer than its compute budget.",
+  "unit": "decisions",
+  "per": [],
+  "by": null,
+  "window": "episode",
+  "aggregation": "count",
+  "quantile": null,
+  "goal": null,
+  "between_samples": null,
+  "source": {
+    "kind": "record",
+    "field": "trace.skipped"
+  },
+  "leaves_out": "What a skipped decision would have given; and the machine: it depends on the one that ran it, so it is not compared across machines."
+}

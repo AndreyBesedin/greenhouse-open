@@ -1,0 +1,21 @@
+{
+  "definition_version": 1,
+  "name": "temperature-outside-band-by-night",
+  "version": 1,
+  "measure_class": "climate",
+  "description": "How far the house's air temperature is outside its band by night, integrated through the window's hours of night: below its lower bound or above its upper.",
+  "unit": "K·h",
+  "per": [],
+  "by": null,
+  "window": "after_warm_up",
+  "aggregation": "integral_outside",
+  "quantile": null,
+  "goal": "air-temperature-by-night",
+  "between_samples": "held",
+  "source": {
+    "kind": "instrument",
+    "instrument": "house_air",
+    "quantity": "temperature"
+  },
+  "leaves_out": "A leaf's or a fruit's temperature, and the air at any one place: it is the mean of the house's air cells."
+}

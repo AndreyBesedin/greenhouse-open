@@ -80,7 +80,11 @@ uv run python examples/02_store_and_query.py         # store, query, and never s
 uv run python examples/03_close_the_loop.py          # observe, decide, act, observe again
 uv run python examples/04_score_against_ground_truth.py  # how noisy is the sensing?
 uv run python examples/05_policy_in_its_own_process.py  # a policy that knows only a port's address and token
+uv run python examples/06_run_an_experiment.py      # two policies on four conditions, their records compared
 ```
+
+[Run and read an experiment](docs/guides/run-an-experiment.md) follows
+example 06: the experiment's file, its commands, and what its records hold.
 
 Recorded data, with nothing heavier than about 10 MB downloaded:
 
