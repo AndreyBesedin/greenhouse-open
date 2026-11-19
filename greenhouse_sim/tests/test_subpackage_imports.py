@@ -1,9 +1,9 @@
 """The simulator's subpackages tangle no further (decision 0037).
 
 Until its layers are drawn, the pairs of subpackages that import each other
-are the ones listed here: a new pair fails, and a pair that is untangled
-leaves the list, which only shrinks. A top-level module counts as a
-subpackage of its own.
+are the ones listed here: a new pair fails, unless it is added here in the
+open, with its reason, and a pair that is untangled leaves the list. A
+top-level module counts as a subpackage of its own.
 """
 
 import ast
@@ -22,6 +22,10 @@ TANGLED: frozenset[tuple[str, str]] = frozenset(
         ("climate", "core"),
         ("climate", "weather"),
         ("core", "scenarios"),
+        # The evaluator's instruments read the run an episode carried out
+        # through its services (decision 0082), which serve people each
+        # sensor's truth from `evaluation.sensor_truth` (decision 0036).
+        ("evaluation", "services"),
         ("solar", "weather"),
     }
 )

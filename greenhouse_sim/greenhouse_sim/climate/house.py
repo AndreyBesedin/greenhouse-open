@@ -481,17 +481,27 @@ class WholeHouse:
         return min(switches, key=lambda switch: switch[0]) if switches else None
 
     def _through(
-        self, air: HouseAir, start_s: float, end_s: float, until_s: float | None = None
+        self,
+        air: HouseAir,
+        start_s: float,
+        end_s: float,
+        until_s: float | None = None,
+        *,
+        seen: Callable[[float, HouseAir], None] | None = None,
     ) -> HouseAir:
         """The air through one stretch of its run, from `start_s` to `end_s`,
         or only to `until_s` within it: under the weather and the sun at its
         middle, its levels held but for those its loops run, each switched
-        the moment the air reaches one of its loop's edges."""
+        the moment the air reaches one of its loop's edges. `seen` is shown
+        the air at its start, once its loops have decided, and at each
+        switch, with the moment."""
         middle = (start_s + end_s) / 2
         outside = self.run.weather.at(middle)
         sun = self.run.solar_heat_total_w(middle)
         now, end = start_s, end_s if until_s is None else until_s
         air = self._decided(now, air, outside)
+        if seen is not None:
+            seen(now, air)
         while now < end:
             steady = self._held(self._levels(now, air))
             course = self._course(air, steady, outside, now, sun)
@@ -501,6 +511,8 @@ class WholeHouse:
             now = end if switch is None else now + span
             if switch is not None:
                 air = switch[1](air)
+                if seen is not None:
+                    seen(now, air)
         return air
 
     def _stretch_around(self, time_s: float) -> tuple[float, float]:
@@ -521,10 +533,59 @@ class WholeHouse:
         start, end = self._stretch_around(time_s)
         with self._working:
             air = self._through(self.air_at(start), start, end, time_s)
+        return self._controlled(time_s, air)
+
+    def _controlled(self, time_s: float, air: HouseAir) -> dict[str, float]:
         levels = self._levels(time_s, air) | self._openings(time_s, air)
         return {
             device: level for device, level in levels.items() if self.run.controls(device, time_s)
         }
+
+    def controlled_through(
+        self, from_s: float, until_s: float
+    ) -> list[tuple[float, dict[str, float]]]:
+        """The levels its controller runs its devices at from `from_s` to
+        `until_s`, in seconds, as `controlled_at` gives them: at `from_s`,
+        then at each moment before `until_s` that they change, as one of its
+        loops switches the moment the air reaches its edge, or a command
+        takes a device over. Its air is worked through again, stretch by
+        stretch from the air kept at each step, as it was worked out, so the
+        moments are its own to the last digit, two in one minute included: a
+        second pass over its air (P25.2)."""
+        if not 0.0 <= from_s <= until_s:
+            raise ValueError(f"a stretch of a run, from 0 s, not {from_s:.15g} to {until_s:.15g}")
+        levels = self.controlled_at(from_s)
+        changes = [(from_s, levels)]
+        commanded = set(self.run.schedule.moments())
+        loops: tuple[bool, int, bool, bool] | None = None
+
+        def seen(moment: float, air: HouseAir) -> None:
+            # Its levels change only as a loop's state does, or at a command.
+            nonlocal levels, loops
+            stood = (air.heating, air.vent_stage, air.dehumidifying, air.drier)
+            if stood == loops and moment not in commanded:
+                return
+            loops = stood
+            if moment <= from_s:
+                return
+            then = self._controlled(moment, air)
+            if then != levels:
+                levels = then
+                changes.append((moment, then))
+
+        now, _ = self._stretch_around(from_s)
+        air = self.air_at(now)
+        while now < until_s:
+            _, end = self._stretch_around(now)
+            # A stretch at a time, so that a request for its air waits no longer.
+            with self._working:
+                walked = self._through(air, now, end, min(end, until_s), seen=seen)
+            if end >= until_s:
+                break
+            # The air its next stretch was worked from: kept at each step.
+            air = self.air_at(end) if end % STEP_S == 0 else walked
+            now = end
+        return changes
 
     def heater_level_at(self, time_s: float) -> float:
         """The level its thermostat runs its heater at, at `time_s`: on from

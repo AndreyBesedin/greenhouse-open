@@ -204,6 +204,49 @@ def test_the_grid_follows_what_the_house_decides() -> None:
         assert day.run.levels_at(time_s)["fan"] == decided["fan"]
 
 
+def test_the_controllers_levels_through_a_stretch_change_at_each_switch_to_the_moment() -> None:
+    """Worked through again from its kept air, the house gives each switch
+    of its loops at its moment: every one halving a minute finds, and the
+    pairs within one minute it cannot; the fans with the vents; from a
+    moment within, the same switches from there (P25.2)."""
+    house = _day().house
+    through = house.controlled_through(0.0, 6 * HOUR_S)
+    vents = [(moment, levels["roof_vent"]) for moment, levels in through]
+    switched = [now for before, now in pairwise(vents) if now[1] != before[1]]
+    found = _switches(house, "roof_vent", 6 * HOUR_S)
+    later = 2 * HOUR_S + 17.0
+    from_later = house.controlled_through(later, 6 * HOUR_S)
+
+    assert len(switched) > len(found) >= 4
+    for halved, then in found:
+        assert any(
+            level == then and moment == pytest.approx(halved, abs=SWITCH_S)
+            for moment, level in switched
+        )
+    for (_, before), (moment, level) in pairwise([vents[0], *switched]):
+        assert house.controlled_at(moment - SWITCH_S)["roof_vent"] == before
+        assert house.controlled_at(moment + SWITCH_S)["roof_vent"] == level
+    assert through[0] == (0.0, house.controlled_at(0.0))
+    for _, levels in through:
+        assert levels["fan"] == (ON if levels["roof_vent"] >= 1.0 else OFF)
+    assert from_later[0] == (later, house.controlled_at(later))
+    assert from_later[1:] == [change for change in through if change[0] > later]
+    with pytest.raises(ValueError, match="a stretch of a run"):
+        house.controlled_through(HOUR_S, 0.0)
+
+
+def test_a_command_to_a_vent_changes_the_controllers_levels_at_its_own_moment() -> None:
+    """Taken out of the loop's hands between two minutes, the roof vent
+    leaves the levels the controller runs, and the fans follow it open."""
+    at_s = HOUR_S + 30.0
+    held = Schedule.of([*HEATED.commands, Command(time_s=at_s, actuator_id="roof_vent", level=1.0)])
+    through = _day(schedule=held).house.controlled_through(0.0, 2 * HOUR_S)
+
+    assert next(moment for moment, levels in through if "roof_vent" not in levels) == at_s
+    assert all("roof_vent" in levels for moment, levels in through if moment < at_s)
+    assert all(levels["fan"] == ON for moment, levels in through if moment >= at_s)
+
+
 def test_a_heating_loop_alone_is_the_thermostat_it_was_to_the_last_digit() -> None:
     heating = HeatingLoop(actuator_id="heater", day_c=16.0, night_c=16.0)
     as_control = _day(control=Control(heating=heating), schedule=Schedule()).house

@@ -55,6 +55,11 @@ def heats(config: ScenarioConfig) -> bool:
     return any(can(piece, Heats) for piece in config.layout.equipment)
 
 
+def floor_m2(config: ScenarioConfig) -> float:
+    """The house's floor, in m², which its heat is given per."""
+    return config.envelope.length * config.envelope.width
+
+
 def heat_records(
     simulator: Simulator, run: RunRequest, day: int, start: datetime, run_id: str
 ) -> list[Observation]:
@@ -66,7 +71,7 @@ def heat_records(
     if not heats(config):
         return []
     _, climate = climate_run(simulator, run)
-    floor_m2 = config.envelope.length * config.envelope.width
+    floor = floor_m2(config)
     kind = ObservationType.HEATING_ENERGY_INCREMENT_MJ_M2
     source = RecordSource(type=SourceType.SIMULATION, source_id=run_id)
     hours = range(round(DAY_S / EVERY_S))
@@ -82,7 +87,7 @@ def heat_records(
                 plant_id=None,
                 timestamp=at,
                 observation_type=kind,
-                value=round(heated_j / J_PER_MJ / floor_m2, DECIMALS),
+                value=round(heated_j / J_PER_MJ / floor, DECIMALS),
                 source=source,
             )
         )

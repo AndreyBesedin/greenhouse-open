@@ -61,11 +61,11 @@ def climate_probes(
         climate_day(simulator, key).drawn(until_s),
         everything_off(simulator, key).drawn(until_s),
         probed,
-        _moments(until_s, window_start(until_s)),
+        probe_moments(until_s, window_start(until_s)),
     )
 
 
-def _moments(until_s: float, from_s: float = 0.0) -> list[float]:
+def probe_moments(until_s: float, from_s: float = 0.0) -> list[float]:
     """Every `PROBE_EVERY_S` from `from_s` to `until_s`, and `until_s`."""
     first = int(from_s // PROBE_EVERY_S)
     times = [step * PROBE_EVERY_S for step in range(first, int(until_s // PROBE_EVERY_S) + 1)]
@@ -98,7 +98,7 @@ def house_air(
     return house_trace(
         climate_day(simulator, key).house,
         everything_off(simulator, key).house if all_off else None,
-        _moments(until_s, first),
+        probe_moments(until_s, first),
     )
 
 
