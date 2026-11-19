@@ -132,8 +132,18 @@ class ObservationType(StrEnum):
     OUTSIDE_CLOUD_COVER_PCT = "outside_cloud_cover_pct"
     OUTSIDE_RAIN = "outside_rain"  # 1 raining, 0 dry
     OUTSIDE_PAR_UMOL_M2_S = "outside_par_umol_m2_s"
+    # a pyrgeometer's net longwave: what a level surface receives of the
+    # sky's less what it emits, below 0 as it loses heat to the sky
     OUTSIDE_HEAT_EMISSION_W_M2 = "outside_heat_emission_w_m2"
     OUTSIDE_CO2_PPM = "outside_co2_ppm"
+    # the sky's longwave onto a level surface, downward only
+    OUTSIDE_DOWNWARD_LONGWAVE_W_M2 = "outside_downward_longwave_w_m2"
+    # the sky's effective temperature: a black body's that radiates the
+    # downward longwave
+    OUTSIDE_SKY_TEMPERATURE_C = "outside_sky_temperature_c"
+    # the diffuse part of the global radiation, from the sky but for the
+    # sun's disc, onto a level surface, measured
+    OUTSIDE_DIFFUSE_RADIATION_W_M2 = "outside_diffuse_radiation_w_m2"
 
     # site weather forecast, as known at the observation's timestamp: the
     # forecast total radiation for the current local day, revised during it

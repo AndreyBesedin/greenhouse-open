@@ -438,6 +438,9 @@
         "outside_par_umol_m2_s",
         "outside_heat_emission_w_m2",
         "outside_co2_ppm",
+        "outside_downward_longwave_w_m2",
+        "outside_sky_temperature_c",
+        "outside_diffuse_radiation_w_m2",
         "forecast_radiation_sum_today_j_cm2"
       ],
       "title": "ObservationType",
