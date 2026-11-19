@@ -53,12 +53,10 @@ import copy
 import hashlib
 import importlib
 import math
-import platform
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
-from importlib.metadata import version as installed_version
 from pathlib import Path
 from typing import Final, cast
 
@@ -95,14 +93,11 @@ from greenhouse_sim.services.runs import RunRequest, started_duration_s, started
 from greenhouse_sim.services.scenario_files import file_digest
 from greenhouse_sim.services.scenarios import DEFAULT_WEATHER, run_manifest, scenario
 from greenhouse_sim.services.simulator import Simulator
-from greenhouse_sim.services.system import UNKNOWN_COMMIT, source_commit
+from greenhouse_sim.services.system import software
 from greenhouse_sim.services.weather import SERIES_EVERY_S, series_sha256
 
 # The plan an episode's policy steers by, unless it is named otherwise.
 PLAN_ID: Final = "policy"
-# The packages that ran an episode, as its record names them.
-PRODUCER: Final = "greenhouse-sim"
-PROTOCOL: Final = "greenhouse-protocol"
 # What a policy is, as its factory gives it: the protocol's `Policy`.
 POLICY_MEMBERS: Final = ("identity", "decide_every_s", "start", "decide", "stop")
 
@@ -331,7 +326,7 @@ def carry_out_episode(
             budget=summary.budget,
             compute_budget_s=episode.compute_budget_s,
         ),
-        software=_software(),
+        software=software(),
         trace=ran.trace,
         outcomes=summary.outcomes,
         digest=summary.digest,
@@ -510,17 +505,6 @@ def _run_recorded(
                 catalogue, episode.scenario_id, seeded.weather_name(catalogue), played.end_s
             ),
         ),
-    )
-
-
-def _software() -> records.Software:
-    commit = source_commit()
-    return records.Software(
-        producer=PRODUCER,
-        producer_version=installed_version(PRODUCER),
-        protocol_version=installed_version(PROTOCOL),
-        python=platform.python_version(),
-        commit=None if commit == UNKNOWN_COMMIT else commit,
     )
 
 
