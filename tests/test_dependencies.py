@@ -86,14 +86,18 @@ def test_ground_truth_is_read_only_by_the_simulators_evaluation() -> None:
 
 
 # What a policy's port is made of in the simulator's process (decision
-# 0061), and what of the simulated world it imports nothing of: the ground
-# truth and the evaluation that reads it, the air's fields and flows, the
-# crop's state, the weather's series, the scene, the timeline, and the
-# local API.
+# 0061), with its capability context, the consumer interface's batches it
+# reads by, and the port served over the network; and what of the simulated
+# world it imports nothing of: the ground truth and the evaluation that
+# reads it, the evaluator's instruments among it (decision 0082), the air's
+# fields and flows, the crop's state, the weather's series, the scene, the
+# timeline, and the local API.
 POLICY_PORT_MODULES: Final = (
     "greenhouse_sim/greenhouse_sim/services/policy_port.py",
     "greenhouse_sim/greenhouse_sim/services/forecasts.py",
     "greenhouse_sim/greenhouse_sim/services/policy_context.py",
+    "greenhouse_sim/greenhouse_sim/services/consumer.py",
+    "greenhouse_sim/greenhouse_sim/services/policy_requests.py",
 )
 NOT_A_POLICYS: Final = (
     "greenhouse_sim.ground_truth",
@@ -122,9 +126,33 @@ def test_a_policys_port_imports_nothing_a_policy_may_not_read() -> None:
         (path, lineno, module)
         for path in POLICY_PORT_MODULES
         for lineno, module in _modules_imported(OPEN / path)
-        if any(module == banned or module.startswith(f"{banned}.") for banned in NOT_A_POLICYS)
+        if _not_a_policys(module)
     )
     assert not imported, imported
+
+
+# What the runner hands the evaluator alone once a policy has stopped: the
+# run as carried out, which the playback gives (decision 0082).
+RUN_CARRIED_OUT: Final = "run_carried_out"
+
+
+def test_a_policys_port_reads_nothing_of_what_its_evaluator_reads() -> None:
+    """The evaluator's instruments are a module the port's may not import,
+    and none of them asks the playback for the run as carried out."""
+    asked = sorted(
+        (path, node.lineno)
+        for path in POLICY_PORT_MODULES
+        for node in ast.walk(ast.parse((OPEN / path).read_text(), path))
+        if isinstance(node, ast.Attribute) and node.attr == RUN_CARRIED_OUT
+    )
+    assert _not_a_policys("greenhouse_sim.evaluation.instruments")
+    assert _not_a_policys("greenhouse_sim.evaluation.instruments.Instruments")
+    assert not _not_a_policys("greenhouse_sim.evaluations")
+    assert not asked, asked
+
+
+def _not_a_policys(module: str) -> bool:
+    return any(module == banned or module.startswith(f"{banned}.") for banned in NOT_A_POLICYS)
 
 
 def _modules_imported(path: pathlib.Path) -> list[tuple[int, str]]:
