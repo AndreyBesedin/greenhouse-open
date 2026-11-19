@@ -154,8 +154,13 @@ data.
    its screens, its crop's exchanges with the air, the heat its floor,
    soil, structure and crop store, its roof's radiation to the sky, and
    walls on corridors rather than outside. The differences go the way
-   those blockers would push them, but the comparison does not apportion
-   them. Making the blockers the simulator's own components, each held to
+   those blockers would push them. Taking each out of TiGwerLib in turn
+   ([the apportioning](../../research/modelica/README.md#apportioning-the-gap-among-the-blockers))
+   finds that in January the screens account for the most, then the heat
+   stored, the corridors and the deep soil, while the cold sky hides part
+   of the gap; that in July none taken out accounts for much; and that the
+   crop's part is not measured, since its variant took nothing out. Making
+   the blockers the simulator's own components, each held to
    its reference and the comparison run again after it, is
    [P24](p24-house-components-and-a-multi-node-climate.md).
 7. **Benchmark greenhouse decisions, repeatably.** Not only an interface

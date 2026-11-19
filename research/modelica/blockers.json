@@ -1,0 +1,83 @@
+{
+  "what": "how much of the gap between the simulator's indoor air temperature and TiGwerLib's, as simulator_comparison.json states and its reports found it, each of the blockers recorded there accounts for: TiGwerLib run again with one blocker taken out at a time, and with all of them at once, the simulator and the comparison unchanged",
+  "baseline": "the comparison's own reports, results/simulator_fig8.json and results/simulator_fig9.json, as committed: TiGwerLib's global model unchanged",
+  "windows": "fig8 and fig9, as sourisseau_2026.json gives them",
+  "harness": "simulator_comparison.py's, unchanged: the same matched inputs, the simulator's same house, defaults and commands, its air starting as the variant's does at the window's start, and the same measures. TiGwerLib runs as the reproduction does, from the season's start to the window's end, in OpenModelica 1.25.0 with DASSL at 1e-5; the variant in place of its global model",
+  "how a variant is made": "a model of its own, written into the run's working folder, that extends TiGwerLib's CTIFLGreenhouseBaseModel, unchanged, with the modifiers below on its components: each sets a parameter or the binding of a component's own value, and none edits an equation. Its name is CTIFLWithout_<variant>",
+  "variants": {
+    "screens": {
+      "removes": "the thermal and shading screens: held open throughout, their recorded positions (MainData.txt columns 7 and 8) replaced by 0, the south wall's curtain with the thermal screen",
+      "modifiers": {
+        "SC_UScr": "y=0",
+        "SC_LScr": "y=0"
+      }
+    },
+    "crop": {
+      "removes": "the crop's transpiration: its minimum stomatal resistance (Stanghellini's r_min, CanTranspi.param1) a million times its 82 s/m, so that it gives the air no water and takes no latent heat from it",
+      "modifiers": {
+        "CanTranspi": "param1=82e6"
+      }
+    },
+    "storage": {
+      "removes": "most of the heat stored but in the air: the heat capacity of the floor, the soil's layers, the roof, the three walls and the south wall's curtain, the structure, the gutters and the growing medium, each a hundredth of TiGwerLib's, by its density or its mass",
+      "modifiers": {
+        "Floor": "rho=17",
+        "Soil": "rho_t1=17, rho_t2=24",
+        "Roof": "rho=25",
+        "EWall": "rho=25",
+        "NWall": "rho=25",
+        "SouthWall": "rho_wall=25, rho_scr=1.55",
+        "ThermalLoads": "m_struct=124, m_gmedium=79.6, m_gutters=60.8"
+      }
+    },
+    "ground": {
+      "removes": "the floor's tie to the deep soil, held at 18.1 °C: the soil's conductivities a hundredth of TiGwerLib's",
+      "modifiers": {
+        "Soil": "lambda_t1=0.01, lambda_t2=0.022"
+      }
+    },
+    "sky": {
+      "removes": "the cold sky: the roof and the south wall radiate to a sky at the outside air's temperature, in place of the one TiGwerLib takes from the measured infrared",
+      "modifiers": {
+        "TBlkSky": "y=T_outAir_meas",
+        "SouthWall": "SkyBlkBodyTempVarInput=T_outAir_meas"
+      }
+    },
+    "walls": {
+      "removes": "the corridors: the east and north walls face air at the outside's temperature and the walls beyond the corridors radiate at it, and the air the corridors leak is the outside's, in place of the corridors' measured air",
+      "modifiers": {
+        "TEastCorr": "y=T_outAir_meas",
+        "TNorthCorr": "y=T_outAir_meas",
+        "TEqWallEast": "y=T_outAir_meas",
+        "TEqWallNorth": "y=T_outAir_meas",
+        "NECorridorsAir": "Tair=T_outAir_meas, RH=RH_outAir_meas"
+      }
+    },
+    "all": {
+      "removes": "every one of the six above at once: the closest TiGwerLib comes, without an edit to its equations, to the simulator's physics; what is left of the gap is the comparison's known differences and what no variant could make",
+      "of": [
+        "screens",
+        "crop",
+        "storage",
+        "ground",
+        "sky",
+        "walls"
+      ]
+    }
+  },
+  "not made": {
+    "the west wall": "TiGwerLib's greenhouse has no west wall: it exchanges nothing there. The simulator's west wall is glass to the outside. Adding one to TiGwerLib takes components and connections of its own, to the air and to its thermal radiation network: an edit, not made",
+    "walls of outside glass": "the walls variant gives the east and north walls the outside air's temperature beyond them, but not the outside's wind or sky: their outer side keeps the corridors' free convection, and radiates to a wall at the outside air's temperature",
+    "a crop that exchanges no heat": "the crop's convection, its radiation and its share of the light are connections of TiGwerLib's equations; taking them out is an edit, not made. The crop variant takes out its transpiration alone, so that the light it takes becomes heat it gives the air and the surfaces, much as the simulator gives the air 0.7 of the light reaching its floor",
+    "no heat stored": "a heat capacity of zero divides by zero in TiGwerLib's components: the storage variant leaves a hundredth of each",
+    "screens taken out": "a screen held open keeps its fabric's small heat capacity and its leakage path; taking it out is an edit, not made"
+  },
+  "measured": "for each variant and window, the comparison's own report: the difference between the simulator's temperature and the variant's (simulator less TiGwerLib), over the window and with the sun up and down, its mean and its RMSE, each day's, the days within the comparison's bar, and each day's RMSE of TiGwerLib against the measurements, which a variant moves away from them",
+  "attributed": {
+    "a blocker's part": "for each window, and over all its moments, with the sun up and with it down: how far taking the blocker out moves the RMSE of the difference (the baseline's less the variant's, positive where it closes the gap) and its mean (the variant's less the baseline's), and the share of the baseline's mean difference that move is",
+    "ranking": "the blockers ranked, for each window, by how far each takes the RMSE of the difference down over all the window's moments",
+    "interactions": "the six moves need not add up to the move all six make together: the report gives their sum beside the all-at-once move, and the difference between them as the interaction. No share is rescaled to make them add up",
+    "what is left": "the all-at-once variant's RMSE and mean difference: the gap TiGwerLib's physics cannot be brought closer on without an edit, the comparison's known differences and what no variant could make"
+  },
+  "commands": "python -m research.modelica.blockers run FOLDER WORKDIR WINDOW VARIANT, for each window and variant, each in a working folder of its own; then python -m research.modelica.blockers apportion, which reads the committed reports and prints the attribution"
+}
