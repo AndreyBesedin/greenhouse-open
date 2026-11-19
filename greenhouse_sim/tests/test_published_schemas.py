@@ -204,6 +204,28 @@ def test_an_answer_leaves_out_what_is_not_json_schema() -> None:
     assert schema["items"] == {"$ref": "#/$defs/_Answer"}
 
 
+class _Measured(BaseModel):
+    """A value with what a schema says for people (P24.2), and a field called
+    as one of those words is."""
+
+    depth_m: float = Field(
+        gt=0.0, json_schema_extra={"unit": "m", "range_from": {"least": "its type's"}}
+    )
+    unit: str
+
+
+def test_an_answer_leaves_out_what_its_schema_says_for_people_but_a_field_so_called() -> None:
+    """The viewer's validator, strict, refuses a keyword JSON Schema has
+    not; a file's schema keeps them, for whoever writes the file."""
+    schema = answer_json_schema(_Measured)
+
+    assert schema["properties"] == {
+        "depth_m": {"exclusiveMinimum": 0.0, "title": "Depth M", "type": "number"},
+        "unit": {"title": "Unit", "type": "string"},
+    }
+    assert _Measured.model_json_schema()["properties"]["depth_m"]["unit"] == "m"
+
+
 def write_schemas() -> list[Path]:
     """Writes every published schema from its export, and says which."""
     for path, export in PUBLISHED.items():
