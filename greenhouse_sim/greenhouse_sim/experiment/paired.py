@@ -14,13 +14,21 @@ into a directory of its own:
 - `episodes/N.json`, each episode's record, its place filled;
 - `deliveries/N.jsonl`, for each episode the file asks to keep them, what
   each decision was given, a `Delivery` a line, which the record's trace
-  counts and digests.
+  counts and digests;
+- `scores/N.json`, each episode's scores (P25.3, decisions 0081 and 0082),
+  worked out by the evaluator once its policy has stopped, from its record
+  and the run it carried out (`evaluation.scoring`): beside its record,
+  never in its digest.
 
 A record is checked by running its episode again from what it names, its
 policy made again from its entry, and comparing the digests
 (`check_record`): the test of a deterministic replay decision 0061 asks of
-a given policy, not a promise of every one. Who may do what on the runs is
-the simulator's (decision 0052), given to `run` and `check` alike.
+a given policy, not a promise of every one. A record is scored later the
+same way (`score_record`): its episode run again, and scored on the run it
+carries out again only if its digest is the record's, so that a new
+version of a measure scores records already written; `score_experiment`
+scores a directory's records so. Who may do what on the runs is the
+simulator's (decision 0052), given to `run`, `check` and `score` alike.
 """
 
 import hashlib
@@ -30,6 +38,7 @@ from typing import Annotated, Final, Self, TextIO
 
 from greenhouse_protocol import experiment as records
 from greenhouse_protocol.actions import Identifier
+from greenhouse_protocol.benchmark import EpisodeScores
 from greenhouse_protocol.budget import OBSERVATIONS_ONLY, InformationBudget
 from greenhouse_protocol.contracts.policy import Delivery
 from greenhouse_protocol.plan import Principal
@@ -40,11 +49,21 @@ from pydantic import (
     JsonValue,
     NonNegativeInt,
     PositiveFloat,
+    ValidationError,
     model_validator,
 )
 
-from greenhouse_sim.experiment import PLAN_ID, Episode, PolicyEntry, made_from, record_episode
+from greenhouse_sim.evaluation.scoring import score_episode
+from greenhouse_sim.experiment import (
+    PLAN_ID,
+    Episode,
+    EpisodeCarriedOut,
+    PolicyEntry,
+    carry_out_episode,
+    made_from,
+)
 from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT
+from greenhouse_sim.services.errors import ServiceError
 from greenhouse_sim.services.runs import started_duration_s, started_weather
 from greenhouse_sim.services.scenarios import scenario
 from greenhouse_sim.services.simulator import Simulator
@@ -54,6 +73,7 @@ EXPERIMENT_FILE: Final = "experiment.json"
 DIGEST_FILE: Final = "experiment.sha256"
 EPISODES: Final = "episodes"
 DELIVERIES: Final = "deliveries"
+SCORES: Final = "scores"
 
 
 class ExperimentPolicy(BaseModel):
@@ -142,12 +162,13 @@ def run_experiment(
     """Runs the experiment `given`, a file's bytes, into `out`, a directory
     that does not exist or is empty: see the module. Every condition is
     checked against the scenario before any episode runs. `said` is told of
-    each episode as it ends."""
+    each episode as it ends, its scores written."""
     experiment = Experiment.model_validate_json(given)
     _check_conditions(simulator, experiment)
     if out.exists() and any(out.iterdir()):
         raise ValueError(f"{out} holds files already: an experiment is written where none are")
     (out / EPISODES).mkdir(parents=True)
+    (out / SCORES).mkdir()
     (out / EXPERIMENT_FILE).write_bytes(given)
     digest = hashlib.sha256(given).hexdigest()
     (out / DIGEST_FILE).write_text(f"{digest}  {EXPERIMENT_FILE}\n")
@@ -156,12 +177,15 @@ def run_experiment(
         if number in experiment.keep_deliveries:
             (out / DELIVERIES).mkdir(exist_ok=True)
             with (out / DELIVERIES / f"{number}.jsonl").open("w") as kept:
-                record = record_episode(
+                carried = carry_out_episode(
                     simulator, episode, place=place, kept=lambda d: _keep(kept, d)
                 )
         else:
-            record = record_episode(simulator, episode, place=place)
+            carried = carry_out_episode(simulator, episode, place=place)
+        record = carried.record
         (out / EPISODES / f"{number}.json").write_text(record.model_dump_json(indent=2))
+        # Its policy stopped: the evaluator reads the run it carried out.
+        _write_scores(out, number, score_episode(simulator, record, carried.run))
         assert record.policy.made is not None
         said(
             f"episode {number}: condition {place.condition}, policy {place.policy}, "
@@ -173,6 +197,10 @@ def run_experiment(
 
 def _keep(file: TextIO, delivered: Delivery) -> None:
     file.write(delivered.model_dump_json() + "\n")
+
+
+def _write_scores(out: Path, number: int, scores: EpisodeScores) -> None:
+    (out / SCORES / f"{number}.json").write_text(scores.model_dump_json(indent=2))
 
 
 def _check_conditions(simulator: Simulator, experiment: Experiment) -> None:
@@ -203,6 +231,69 @@ def check_record(simulator: Simulator, record: records.EpisodeRecord) -> Checked
     """Runs a record's episode again from what it names and gives both
     digests. Refused if its policy was not made from an entry, or a file
     its entry names is not the one it ran with."""
+    return Checked(recorded=record.digest, again=_again(simulator, record).record.digest)
+
+
+def score_record(simulator: Simulator, record: records.EpisodeRecord) -> EpisodeScores:
+    """A record's scores, as the runner writes them beside it: its episode
+    run again, as `check_record` runs it, and scored from the record as it
+    was written and the run it carries out again, if its digest is the
+    record's. Refused, saying why, when it is another, and as
+    `check_record` refuses a record."""
+    again = _again(simulator, record)
+    if again.record.digest != record.digest:
+        raise ValueError(
+            f"it replays to another digest: the record's {record.digest},"
+            f" again {again.record.digest}"
+        )
+    return score_episode(simulator, record, again.run)
+
+
+def score_experiment(
+    simulator: Simulator, out: Path, *, said: Callable[[str], None] = print
+) -> tuple[int, ...]:
+    """Scores again each record of an experiment's directory `out`, in the
+    order of their numbers (`score_record`), and writes the scores of each
+    that replays to its digest into `scores/N.json`, in place of those
+    there; `said` is told of each. Gives the numbers of the records not
+    scored: one that cannot be read as a record, that replays to another
+    digest, or that `check_record` refuses, each said with why. The scores
+    already beside a record not scored are left as they are. Refused for a
+    directory that holds no record."""
+    numbered = sorted(
+        (int(path.stem), path) for path in (out / EPISODES).glob("*.json") if path.stem.isdecimal()
+    )
+    if not numbered:
+        raise ValueError(f"{out} holds no episode's record to score")
+    (out / SCORES).mkdir(exist_ok=True)
+    not_scored = []
+    for number, path in numbered:
+        try:
+            record = records.EpisodeRecord.model_validate_json(path.read_bytes())
+            scores = score_record(simulator, record)
+        except (OSError, ValueError, ServiceError) as error:
+            said(f"episode {number}: not scored: {refusal(error)}")
+            not_scored.append(number)
+            continue
+        _write_scores(out, number, scores)
+        said(f"episode {number}: scored, the same digest {record.digest[:16]}")
+    return tuple(not_scored)
+
+
+def refusal(error: Exception) -> str:
+    """Why a command, or a record, was refused: each field a record's
+    validation refused, by its place in the record, or the error's
+    message."""
+    if isinstance(error, ValidationError):
+        return "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in error.errors())
+    if isinstance(error, ServiceError):
+        return error.message
+    return str(error)
+
+
+def _again(simulator: Simulator, record: records.EpisodeRecord) -> EpisodeCarriedOut:
+    """A record's episode run again from what it names, with the run it
+    carries out. Refused as `check_record` refuses a record."""
     made = record.policy.made
     if made is None:
         raise ValueError("its policy was given made already: there is no entry to make it again")
@@ -221,5 +312,4 @@ def check_record(simulator: Simulator, record: records.EpisodeRecord) -> Checked
         compute_budget_s=record.policy.compute_budget_s,
         budget=record.policy.budget,
     )
-    again = record_episode(simulator, episode, place=record.place)
-    return Checked(recorded=record.digest, again=again.digest)
+    return carry_out_episode(simulator, episode, place=record.place)
