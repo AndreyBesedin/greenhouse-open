@@ -52,6 +52,7 @@ import { HouseIdentity } from "./HouseIdentity";
 import { begun, edited, type History, redone, undone } from "./history";
 import { Inspector } from "./Inspector";
 import { Items } from "./Items";
+import { ParameterSets } from "./ParameterSets";
 import { drawnAs } from "./palette";
 import { RowCrops } from "./RowCrops";
 import { FIRST_RUN, type RunFields, RunStep, settingsOf } from "./RunStep";
@@ -759,6 +760,9 @@ export function Builder({
   }
 
   const changed = unsaved(editing);
+  // The crop model the rows grow, whose parameter sets are edited beside
+  // them: the first row's, as a run grows one crop.
+  const rowsModel = editing?.history.present.row_crops[0]?.crop_model ?? null;
   const runWhy =
     editing?.saved == null || madeOn(editing) === null
       ? "Save it first: a run is of a revision saved."
@@ -911,6 +915,7 @@ export function Builder({
             />
             <Findings assessment={assessment} />
             <RowCrops installation={editing.history.present} onGive={give} />
+            <ParameterSets key={rowsModel ?? ""} model={rowsModel} />
             <Items
               installation={editing.history.present}
               snapshot={snapshot}

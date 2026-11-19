@@ -69,7 +69,8 @@
 }
 
 .builder-rows table,
-.builder-items table {
+.builder-items table,
+.builder-comparison {
   border-collapse: collapse;
   width: 100%;
 }
@@ -77,10 +78,51 @@
 .builder-rows th,
 .builder-rows td,
 .builder-items th,
-.builder-items td {
+.builder-items td,
+.builder-comparison th,
+.builder-comparison td {
   padding: var(--space-1) var(--space-3);
   border-bottom: 1px solid var(--border);
   text-align: left;
+}
+
+/* A crop model's parameter sets (P20.5): one chosen, compared with its base and
+ * downloaded, and a new version edited from it, each parameter with its unit,
+ * range and source. A set's digest is written whole (decision 0077), and wraps. */
+.builder-parameter-sets {
+  overflow-wrap: break-word;
+}
+
+.builder-parameter-sets .builder-actions,
+.builder-comparison,
+.builder-parameter-edit {
+  margin-top: var(--space-4);
+}
+
+.builder-comparison caption {
+  margin-bottom: var(--space-2);
+  text-align: left;
+}
+
+.builder-parameters {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.builder-parameter {
+  display: grid;
+  gap: var(--space-2);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.builder-parameter-source {
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+}
+
+.builder-parameter-source p {
+  margin: var(--space-1) 0;
 }
 
 /* The items chosen, and the palette: what is done with the one, and what
