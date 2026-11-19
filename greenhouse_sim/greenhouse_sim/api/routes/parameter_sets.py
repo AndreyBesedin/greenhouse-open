@@ -3,6 +3,10 @@ compared, downloaded, saved and uploaded.
 
     GET /api/parameter-sets/{model}                    the model's sets, its
                                                        published one first
+    GET /api/parameter-sets/{model}/schema             the schema of its
+                                                       parameters, which a
+                                                       set's form is drawn
+                                                       from (P20.5)
     GET /api/parameter-sets/{model}/{name}/{version}   one, with every value
                                                        it resolves to
     GET /api/parameter-sets/{model}/{name}/{version}/compare/{name}/{version}
@@ -31,6 +35,8 @@ def get(simulator: Simulator, segments: list[str], _query: Query) -> Response | 
     match segments:
         case ["api", "parameter-sets", model]:
             return answer(lambda: library.model_sets(simulator, model))
+        case ["api", "parameter-sets", model, "schema"]:
+            return answer(lambda: library.parameters_schema(model))
         case ["api", "parameter-sets", model, name, version]:
             return answer(lambda: library.parameter_set(simulator, model, name, _version(version)))
         case ["api", "parameter-sets", model, name, version, "file"]:
