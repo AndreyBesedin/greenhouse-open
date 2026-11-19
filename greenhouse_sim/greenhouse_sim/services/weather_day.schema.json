@@ -66,7 +66,7 @@
     },
     "WeatherState": {
       "additionalProperties": false,
-      "description": "The weather at a moment: the outside air's temperature, relative\nhumidity and CO2, the wind's speed and the direction it blows from, the\nbarometric pressure, the global radiation and the cloud cover.",
+      "description": "The weather at a moment: the outside air's temperature, relative\nhumidity and CO2, the wind's speed and the direction it blows from, the\nbarometric pressure, the global radiation and the cloud cover; and,\nwhere a recording gives them, the sky's downward longwave and effective\ntemperature and the diffuse radiation (P24.2, decision 0078), which no\nmodel of the house's air reads yet. Each of those is None where the\nweather does not give it, and left out of the state's JSON, so that a\nweather without them is written, and digested, as before.",
       "properties": {
         "air_temperature_c": {
           "default": 10.0,
@@ -114,6 +114,44 @@
           "exclusiveMinimum": 0,
           "title": "Barometric Pressure Hpa",
           "type": "number"
+        },
+        "downward_longwave_w_m2": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Downward Longwave W M2"
+        },
+        "sky_temperature_c": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sky Temperature C"
+        },
+        "diffuse_radiation_w_m2": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Diffuse Radiation W M2"
         }
       },
       "required": [

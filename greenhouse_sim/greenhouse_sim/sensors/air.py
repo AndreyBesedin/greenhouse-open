@@ -11,7 +11,9 @@ no PAR, is no reading at all: a gap is an absent record.
 A weather station's instruments (P07.2) stand outside the house, and read
 the weather instead, as it is at each sample: its air's temperature and
 humidity, the wind's speed and the direction it blows from, and the
-barometric pressure. Policies see their readings, never the weather itself.
+barometric pressure; and the sky's downward longwave and temperature and
+the diffuse radiation (P24.2), where the weather gives them, and otherwise
+nothing. Policies see their readings, never the weather itself.
 
 A sensor errs as its configuration says (`Imperfections`, P06.3). Its
 sample may drop out, and is then no reading; otherwise the truth there is
@@ -48,6 +50,11 @@ from greenhouse_sim.domain.sensors import SensorKind
 from greenhouse_sim.fields.field import EnvironmentField
 from greenhouse_sim.records import observation_id
 from greenhouse_sim.units import FULL_TURN_DEG, HOUR_S
+from greenhouse_sim.weather.recorded import (
+    DOWNWARD_LONGWAVE_RANGE_W_M2,
+    GLOBAL_RADIATION_RANGE_W_M2,
+    SKY_TEMPERATURE_RANGE_C,
+)
 from greenhouse_sim.weather.state import WeatherState
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.sensors import Camera, Imperfections, PointSensor
@@ -68,6 +75,9 @@ WEATHER_QUANTITIES: Final = {
     SensorKind.WIND_SPEED: "wind_speed_m_s",
     SensorKind.WIND_DIRECTION: "wind_direction_deg",
     SensorKind.BAROMETRIC_PRESSURE: "barometric_pressure_hpa",
+    SensorKind.DOWNWARD_LONGWAVE: "downward_longwave_w_m2",
+    SensorKind.SKY_TEMPERATURE: "sky_temperature_c",
+    SensorKind.DIFFUSE_RADIATION: "diffuse_radiation_w_m2",
 }
 # What each kind of point sensor reports itself as.
 OBSERVATION_TYPES: Final = {
@@ -81,10 +91,14 @@ OBSERVATION_TYPES: Final = {
     SensorKind.WIND_SPEED: ObservationType.OUTSIDE_WIND_SPEED_M_S,
     SensorKind.WIND_DIRECTION: ObservationType.OUTSIDE_WIND_DIRECTION_DEG,
     SensorKind.BAROMETRIC_PRESSURE: ObservationType.OUTSIDE_BAROMETRIC_PRESSURE_HPA,
+    SensorKind.DOWNWARD_LONGWAVE: ObservationType.OUTSIDE_DOWNWARD_LONGWAVE_W_M2,
+    SensorKind.SKY_TEMPERATURE: ObservationType.OUTSIDE_SKY_TEMPERATURE_C,
+    SensorKind.DIFFUSE_RADIATION: ObservationType.OUTSIDE_DIFFUSE_RADIATION_W_M2,
 }
 
 # The range each kind of instrument measures over: a reading beyond it is
-# held at its end.
+# held at its end. The sky's and the diffuse light's instruments measure
+# over what a recorded weather's values may be (`weather.recorded`).
 MEASURING_RANGES: Final = {
     SensorKind.TEMPERATURE: (-40.0, 80.0),
     SensorKind.HUMIDITY: (0.0, 100.0),
@@ -96,6 +110,9 @@ MEASURING_RANGES: Final = {
     SensorKind.WIND_SPEED: (0.0, 60.0),
     SensorKind.WIND_DIRECTION: (0.0, FULL_TURN_DEG),
     SensorKind.BAROMETRIC_PRESSURE: (500.0, 1_100.0),
+    SensorKind.DOWNWARD_LONGWAVE: DOWNWARD_LONGWAVE_RANGE_W_M2,
+    SensorKind.SKY_TEMPERATURE: SKY_TEMPERATURE_RANGE_C,
+    SensorKind.DIFFUSE_RADIATION: GLOBAL_RADIATION_RANGE_W_M2,
 }
 # The kinds whose readings go round, rather than end.
 GOING_ROUND: Final = frozenset({SensorKind.WIND_DIRECTION})

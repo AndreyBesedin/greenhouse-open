@@ -66,7 +66,10 @@ export type PointKind =
   | "outside_humidity"
   | "wind_speed"
   | "wind_direction"
-  | "barometric_pressure";
+  | "barometric_pressure"
+  | "downward_longwave"
+  | "sky_temperature"
+  | "diffuse_radiation";
 /**
  * How a scenario's run grows its crop: plant by plant, by the simple
  * daily model (`greenhouse_sim.core.simple_crop`) or organ by organ

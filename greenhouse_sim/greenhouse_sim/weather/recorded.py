@@ -11,6 +11,14 @@ atmosphere's pressure at the site, no radiation and a clear sky. A file
 without a wind vane's column has wind without a direction, which drives no
 flow through the house, and a station reads none.
 
+**The sky and the diffuse light** (P24.2): a file may give the sky's
+downward longwave (`outside_downward_longwave_w_m2`), its effective
+temperature (`outside_sky_temperature_c`) and the measured diffuse
+radiation (`outside_diffuse_radiation_w_m2`). Each is read as recorded,
+neither of the sky's worked out from the other, and none has a default: a
+weather without one does not give it (`WeatherState`), and a station's
+instrument reads nothing of it.
+
 **Checked:** a column that is no outside quantity, a timestamp without a
 time zone or not after the one before it, a value that is not a number or
 lies outside its quantity's physical range, are refused, naming the row.
@@ -18,7 +26,10 @@ lies outside its quantity's physical range, are refused, naming the row.
 **Missing values:** an empty cell is a missing value. A gap of up to an
 hour between a quantity's known values is interpolated across; within a
 longer one the quantity is not known, and a run that reaches into it is
-refused rather than invented.
+refused rather than invented. The sky's quantities and the diffuse
+radiation are not known there either, nor before their first value or after
+their last; but since no model reads them yet, the weather gives none of
+them there, and the run goes on.
 
 **Replayed:** a recorded day is played from its first day's midnight at
 the site at the run's start, so that any scenario can be run under it.
@@ -43,7 +54,7 @@ from pydantic.json_schema import SkipJsonSchema
 
 from greenhouse_sim.units import HALF_TURN_DEG
 from greenhouse_sim.weather.sources import WeatherSource
-from greenhouse_sim.weather.state import OUTSIDE_CO2_PPM, WeatherState
+from greenhouse_sim.weather.state import OUTSIDE_CO2_PPM, RECORDED_ONLY, WeatherState
 from greenhouse_sim.world.site import Site, bearing
 
 # Where the recorded weather files a scenario can be run under are kept.
@@ -58,14 +69,27 @@ TIMESTAMP: Final = "timestamp"
 PREFIX: Final = "outside_"
 # The quantities a file must give.
 REQUIRED: Final = ("air_temperature_c", "relative_humidity_pct")
-# What a file may leave out, and what the weather then is.
+# What a file may leave out, and what the weather then is: of the sky's
+# quantities and the diffuse radiation, nothing (`RECORDED_ONLY`).
 DEFAULTS: Final[dict[str, float | None]] = {
     "co2_ppm": OUTSIDE_CO2_PPM,
     "wind_speed_m_s": 0.0,
     "wind_direction_deg": None,
     "global_radiation_w_m2": 0.0,
     "cloud_cover_pct": 0.0,
-}
+} | dict.fromkeys(RECORDED_ONLY)
+# The sky's downward longwave, in W/m²: the Baseline Surface Radiation
+# Network's physically possible limits for it, at any latitude (Long and
+# Dutton 2010, BSRN Global Network recommended QC tests, V2.0).
+DOWNWARD_LONGWAVE_RANGE_W_M2: Final = (40.0, 700.0)
+# The sky's effective temperature, in °C: a black body's that radiates
+# those limits, (40/sigma)^¼ and (700/sigma)^¼ less 273.15, with Stefan and
+# Boltzmann's sigma = 5.670374419e-8 W/m²K⁴: -110.18 and 60.18 °C, rounded
+# inward. Its top is the air's.
+SKY_TEMPERATURE_RANGE_C: Final = (-110.0, 60.0)
+# The global radiation's range, in W/m², with no source of its own; the
+# diffuse radiation's too, as it is a part of the global.
+GLOBAL_RADIATION_RANGE_W_M2: Final = (0.0, 1_500.0)
 # The range each quantity's values may lie in.
 RANGES: Final = {
     "air_temperature_c": (-60.0, 60.0),
@@ -74,8 +98,11 @@ RANGES: Final = {
     "wind_speed_m_s": (0.0, 75.0),
     "wind_direction_deg": (0.0, 360.0),
     "barometric_pressure_hpa": (850.0, 1_100.0),
-    "global_radiation_w_m2": (0.0, 1_500.0),
+    "global_radiation_w_m2": GLOBAL_RADIATION_RANGE_W_M2,
     "cloud_cover_pct": (0.0, 100.0),
+    "downward_longwave_w_m2": DOWNWARD_LONGWAVE_RANGE_W_M2,
+    "sky_temperature_c": SKY_TEMPERATURE_RANGE_C,
+    "diffuse_radiation_w_m2": GLOBAL_RADIATION_RANGE_W_M2,
 }
 # The longest gap between known values interpolated across.
 LONGEST_GAP: Final = timedelta(hours=1)
@@ -148,23 +175,39 @@ def read_records(text: str) -> dict[str, _Known]:
     return known
 
 
-def _between(known: _Known, moment: datetime, name: str) -> tuple[float, float, float] | None:
-    """A known value's neighbours either side of `moment` and its share of
-    the way between, or None if the quantity is not known then."""
+class NotKnown(ValueError):
+    """A moment a recorded quantity is not known at: before its first known
+    value, after its last, or within a gap too long to interpolate across."""
+
+
+def _value(known: _Known, moment: datetime, name: str) -> float:
+    """A quantity's value at `moment`: a known value's, or between the known
+    values either side of it, a wind's direction the shorter way round.
+    Refused (`NotKnown`) at a moment the quantity is not known."""
     moments = known.moments
     after = bisect_right(moments, moment)
     if after > 0 and moments[after - 1] == moment:
-        value = known.values[after - 1]
-        return value, value, 0.0
-    if after == 0 or after == len(moments):
-        return None
-    start, end = moments[after - 1], moments[after]
-    if end - start > LONGEST_GAP:
-        raise ValueError(
-            f"the recorded weather does not know {PREFIX}{name} from "
-            f"{start.isoformat()} to {end.isoformat()}"
+        earlier = later = known.values[after - 1]
+        share = 0.0
+    elif after == 0 or after == len(moments):
+        raise NotKnown(
+            f"the recorded weather is known from {moments[0].isoformat()} to "
+            f"{moments[-1].isoformat()}, not at {moment.isoformat()}"
         )
-    return known.values[after - 1], known.values[after], (moment - start) / (end - start)
+    else:
+        start, end = moments[after - 1], moments[after]
+        if end - start > LONGEST_GAP:
+            raise NotKnown(
+                f"the recorded weather does not know {PREFIX}{name} from "
+                f"{start.isoformat()} to {end.isoformat()}"
+            )
+        earlier, later = known.values[after - 1], known.values[after]
+        share = (moment - start) / (end - start)
+    if name == "wind_direction_deg":
+        # The shorter way round.
+        turn = bearing(later - earlier + HALF_TURN_DEG) - HALF_TURN_DEG
+        return bearing(earlier + share * turn)
+    return (1.0 - share) * earlier + share * later
 
 
 @dataclass(frozen=True)
@@ -188,19 +231,12 @@ class _Recorded:
                     else DEFAULTS[name]
                 )
                 continue
-            between = _between(known, recorded, name)
-            if between is None:
-                raise ValueError(
-                    f"the recorded weather is known from {known.moments[0].isoformat()} to "
-                    f"{known.moments[-1].isoformat()}, not at {recorded.isoformat()}"
-                )
-            earlier, later, share = between
-            if name == "wind_direction_deg":
-                # The shorter way round.
-                turn = bearing(later - earlier + HALF_TURN_DEG) - HALF_TURN_DEG
-                values[name] = bearing(earlier + share * turn)
-            else:
-                values[name] = (1.0 - share) * earlier + share * later
+            try:
+                values[name] = _value(known, recorded, name)
+            except NotKnown:
+                if name not in RECORDED_ONLY:
+                    raise
+                values[name] = None
         return WeatherState.model_validate(values)
 
 

@@ -24,7 +24,10 @@ export type PointKind =
   | "outside_humidity"
   | "wind_speed"
   | "wind_direction"
-  | "barometric_pressure";
+  | "barometric_pressure"
+  | "downward_longwave"
+  | "sky_temperature"
+  | "diffuse_radiation";
 /**
  * What an area of the floor is kept for.
  */

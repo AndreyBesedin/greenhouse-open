@@ -1139,7 +1139,10 @@ export const ASSESSED_SCHEMA = {
         "outside_humidity",
         "wind_speed",
         "wind_direction",
-        "barometric_pressure"
+        "barometric_pressure",
+        "downward_longwave",
+        "sky_temperature",
+        "diffuse_radiation"
       ],
       "type": "string"
     },

@@ -53,6 +53,9 @@ UNITS: Final = {
     SensorKind.WIND_SPEED: "m/s",
     SensorKind.WIND_DIRECTION: "°",
     SensorKind.BAROMETRIC_PRESSURE: "hPa",
+    SensorKind.DOWNWARD_LONGWAVE: "W/m²",
+    SensorKind.SKY_TEMPERATURE: "°C",
+    SensorKind.DIFFUSE_RADIATION: "W/m²",
 }
 # The kinds that read the weather, and stand outside the house.
 WEATHER_KINDS: Final = frozenset(
@@ -62,6 +65,9 @@ WEATHER_KINDS: Final = frozenset(
         SensorKind.WIND_SPEED,
         SensorKind.WIND_DIRECTION,
         SensorKind.BAROMETRIC_PRESSURE,
+        SensorKind.DOWNWARD_LONGWAVE,
+        SensorKind.SKY_TEMPERATURE,
+        SensorKind.DIFFUSE_RADIATION,
     }
 )
 
@@ -76,6 +82,9 @@ type PointKind = Literal[
     SensorKind.WIND_SPEED,
     SensorKind.WIND_DIRECTION,
     SensorKind.BAROMETRIC_PRESSURE,
+    SensorKind.DOWNWARD_LONGWAVE,
+    SensorKind.SKY_TEMPERATURE,
+    SensorKind.DIFFUSE_RADIATION,
 ]
 
 
