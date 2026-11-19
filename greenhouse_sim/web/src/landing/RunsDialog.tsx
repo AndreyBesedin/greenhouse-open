@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 
+import { loadSets, type SetKey, type SetListed, setName } from "../builder/parameterSetLibrary";
 import { Button } from "../design/Button";
 import { Field } from "../design/Field";
 import { LinkButton } from "../design/LinkButton";
@@ -31,6 +32,26 @@ function landed(className: string): string {
   return `${className} landing-input`;
 }
 
+/** What the choice of a run's parameter set says of it. */
+const SETS_HINT =
+  "Its own, or another of its crop model's: another runs as a new scenario of this house, listed beside it.";
+
+/** The sets a run of a scenario may grow its crop with: its own first, then
+ * the others of its crop model, as the simulator lists them. */
+function setChoices(own: SetKey, listed: readonly SetListed[]): SetKey[] {
+  return [own, ...listed.filter((each) => setName(each) !== setName(own))];
+}
+
+/** A set as the choice of a run's names it: "gnvman v1, published, its own". */
+function setChoiceText(each: SetKey, own: SetKey, listed: readonly SetListed[]): string {
+  const published = listed.find((one) => setName(one) === setName(each))?.published === true;
+  return [
+    setName(each),
+    ...(published ? ["published"] : []),
+    ...(setName(each) === setName(own) ? ["its own"] : []),
+  ].join(", ");
+}
+
 /** Why a run's days are refused, as entered: none if they are whole, from one to
  * the scenario's own (decision 0075). */
 export function daysProblem(days: string, most: number): string | undefined {
@@ -44,7 +65,10 @@ export function daysProblem(days: string, most: number): string | undefined {
  * to stop, resume and remove one (P17.5, decision 0065). A run is started for
  * its days and under its weather, its scenario's own unless others are chosen,
  * and its crop is the scenario's, which a new scenario made from it changes
- * (P22.4, decision 0075). It leads with the form for a new run, and lists the
+ * (P22.4, decision 0075). Its crop's parameter set is its own unless another
+ * of its crop model's is chosen, which runs as a scenario of its own that the
+ * simulator registers; a scenario whose runs take no other, a packaged one,
+ * says why (P20.5). It leads with the form for a new run, and lists the
  * runs under it. A run started is a worker's, beside any others, and the page
  * goes to its replay. A modal dialog: the browser keeps the keyboard in it and
  * closes it on Escape. */
@@ -75,6 +99,13 @@ export function RunsDialog({
   const [pace, setPace] = useState(DEFAULT_PACE_S);
   const weathers = scenario.weathers ?? [DEFAULT_WEATHER];
   const refusedDays = daysProblem(days, scenario.duration_days);
+  // Its crop's set, and the others of its model, if its runs may take one.
+  const own = scenario.parameter_set ?? null;
+  const setsOf = own !== null && own.fixed === null ? (scenario.crop_model ?? null) : null;
+  const [listedSets, setListedSets] = useState<readonly SetListed[]>([]);
+  const [setsProblem, setSetsProblem] = useState<string | null>(null);
+  const [chosenSet, setChosenSet] = useState(own === null ? "" : setName(own));
+  const sets = own === null ? [] : setChoices(own, listedSets);
   const deletion = useRunDeletion(runs, nameOf, onChanged);
   // A second press of Start while the first is answered would be a second run.
   const [starting, setStarting] = useState(false);
@@ -91,6 +122,26 @@ export function RunsDialog({
     window.addEventListener("pageshow", shownAgain);
     return () => window.removeEventListener("pageshow", shownAgain);
   }, []);
+
+  useEffect(() => {
+    if (setsOf === null) {
+      return;
+    }
+    let current = true;
+    void loadSets(setsOf).then((loaded) => {
+      if (!current) {
+        return;
+      }
+      if (loaded.status === "loaded") {
+        setListedSets(loaded.value);
+      } else {
+        setSetsProblem(loaded.reason);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [setsOf]);
 
   useEffect(() => {
     const shown = dialog.current;
@@ -127,11 +178,19 @@ export function RunsDialog({
     // API reads an integer's digits.
     const count = Number(days);
     const fewer = count === scenario.duration_days ? "" : String(count);
+    // Its own set is asked for as none, as its own weather is.
+    const other =
+      own === null || chosenSet === setName(own)
+        ? undefined
+        : sets.find((each) => setName(each) === chosenSet);
     const answer = await startRun(scenario.id, {
       seed,
       secondsPerDay: pace,
       weather,
       days: fewer,
+      ...(other === undefined
+        ? {}
+        : { parameterSet: { name: other.name, version: other.version } }),
     });
     if (!answer.ok) {
       setStarting(false);
@@ -174,6 +233,37 @@ export function RunsDialog({
             Make a new scenario from this one
           </LinkButton>
         </p>
+        {own !== null && own.fixed !== null && (
+          <p className="landing-note" data-testid="run-parameter-set">
+            Its crop's parameter set: {setName(own)}. {own.fixed}
+          </p>
+        )}
+        {setsOf !== null && own !== null && (
+          <Field
+            label="Parameter set"
+            hint={
+              setsProblem === null
+                ? SETS_HINT
+                : `Its crop model's other sets cannot be listed: ${setsProblem}`
+            }
+            className="landing-set"
+          >
+            {(control) => (
+              <select
+                {...control}
+                className={landed(control.className)}
+                value={chosenSet}
+                onChange={(event) => setChosenSet(event.target.value)}
+              >
+                {sets.map((each) => (
+                  <option key={setName(each)} value={setName(each)}>
+                    {setChoiceText(each, own, listedSets)}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+        )}
         <Field
           label="Days"
           hint={`Up to its own ${scenario.duration_days}; a longer run is a scenario of its own.`}
