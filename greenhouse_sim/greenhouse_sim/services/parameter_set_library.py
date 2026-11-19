@@ -1,6 +1,7 @@
 """A simulator's crop parameter sets, kept and served (P20.4, decision
 0077): a model's sets listed, one read, saved, compared with another,
-downloaded as its file and uploaded from one.
+downloaded as its file and uploaded from one; and the schema of its
+parameters, which a set's form is drawn from (P20.5).
 
 - **Listed and read:** its model's published set first, then those kept in
   the run store (`parameter_sets.kept_sets`), by name and version, each with
@@ -26,6 +27,7 @@ from typing import TYPE_CHECKING, Final
 
 from pydantic import BaseModel, ConfigDict, JsonValue
 
+from greenhouse_sim.biology.parameter_fields import parameters_json_schema
 from greenhouse_sim.biology.parameter_sets import (
     FIRST_VERSION,
     PARAMETER_MODELS,
@@ -117,6 +119,15 @@ def model_sets(simulator: Simulator, model: str) -> list[SetListed]:
     known = kept_sets(simulator.runs)
     sets = [PUBLISHED_SETS[model], *(known[key] for key in sorted(known) if key[0] == model)]
     return [_listed(_resolved(each, known)) for each in sets]
+
+
+def parameters_schema(model: str) -> dict[str, JsonValue]:
+    """The schema of a model's parameters, as its `parameters.schema.json`
+    publishes it: each field's published value, what it is, its unit, its
+    source, its range with where each end comes from, and why no set changes
+    it, if none does. Not found for a model that has no sets."""
+    _checked_model(model)
+    return parameters_json_schema(PARAMETER_MODELS[model])
 
 
 def parameter_set(simulator: Simulator, model: str, name: str, version: int) -> SetRead:

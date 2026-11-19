@@ -1,7 +1,9 @@
 """A crop model's parameter sets, kept and served (P20.4, decision 0077):
 listed, read, saved, compared, downloaded and uploaded through the API. The
 same numbers saved twice are one version; a value outside its range is
-refused by field; a name and version kept with another digest is refused."""
+refused by field; a name and version kept with another digest is refused.
+And the schema of a model's parameters, which a set's form is drawn from,
+served as it is published (P20.5)."""
 
 import json
 from collections.abc import Iterator
@@ -21,6 +23,8 @@ from greenhouse_sim.services.simulator import Simulator
 TOMGRO: Final = "reduced_tomgro"
 SETS: Final = f"/api/parameter-sets/{TOMGRO}"
 PUBLISHED_DIGEST: Final = resolved(PUBLISHED_SETS[TOMGRO]).digest
+# Where each model's parameters' schema is published (P20.1).
+TOMATO: Final = Path(__file__).resolve().parents[1] / "greenhouse_sim" / "biology" / "tomato"
 
 
 def _set(name: str = "brighter", **values: float) -> dict[str, JsonValue]:
@@ -157,3 +161,15 @@ def test_a_simulator_without_a_store_serves_its_published_sets_and_keeps_none() 
         (listed,) = _ok(simulator, "GET", SETS)
         assert listed["name"] == "gnvman"
         assert _refused(simulator, "POST", SETS, _set()).status == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.parametrize(("model", "folder"), [(TOMGRO, "tomgro"), ("vanthoor_katzin", "vanthoor")])
+def test_a_models_parameters_schema_is_served_as_it_is_published(
+    simulator: Simulator, model: str, folder: str
+) -> None:
+    served = _ok(simulator, "GET", f"/api/parameter-sets/{model}/schema")
+
+    assert served == json.loads((TOMATO / folder / "parameters.schema.json").read_text())
+    assert _refused(simulator, "GET", "/api/parameter-sets/simple/schema").status == (
+        HTTPStatus.NOT_FOUND
+    )
