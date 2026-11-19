@@ -30,8 +30,8 @@
 
 ## Decision
 
-**The installation describes what a house is made of and what it has.**
-Its envelope and layout gain:
+**The installation describes what a house is made of and what it has,**
+in a section of its own, `components`, beside its envelope and layout:
 
 - **the cover's materials:** each surface's, the roof's and each wall's;
 - **each wall's boundary:** the outside, the default; a neighbouring
