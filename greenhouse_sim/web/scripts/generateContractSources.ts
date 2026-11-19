@@ -257,6 +257,13 @@ export const CONTRACTS: readonly Contract[] = [
     ["src/builder", "parameterSetDownload"],
     "PARAMETER_SET_DOWNLOAD_SCHEMA",
   ),
+  // A set's file, which the form sends to save a version (P20.5).
+  contract(
+    "greenhouse_sim/biology/parameter_set.schema.json",
+    "ParameterSet",
+    ["src/builder", "parameterSet"],
+    "PARAMETER_SET_SCHEMA",
+  ),
   contract(
     "greenhouse_sim/biology/tomato/organ/plant.schema.json",
     "Plant",
