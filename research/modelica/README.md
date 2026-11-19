@@ -357,3 +357,91 @@ it, and the difference as the interaction, nothing rescaled. What the
 `all` variant leaves is the gap no variant could close. The reports, in
 `results/blockers/<variant>_<window>.json`, hold the comparison's numbers
 alone.
+
+### What it found
+
+Each variant ran once on each window, from the commit that states them,
+on the same machine as the comparison: its reports, in
+[`results/blockers/`](results/blockers/), are committed as written, one
+commit each. Six of them, July's `crop`, `storage`, `ground`, `sky` and
+`walls` and January's `walls`, were written by the simulator's half
+alone: their TiGwerLib simulation had finished when the run was stopped
+before its report, and the report was written over that finished output,
+the build and simulation seconds taken from the run's own logs. The
+simulator's half is the comparison's, unchanged: `crop`'s reports give
+the comparison's own numbers to the last digit.
+
+A move is the comparison's RMSE of the difference less the variant's,
+positive where taking the blocker out closes the gap; the share is the
+part of the comparison's mean difference the variant takes away. The
+difference is the simulator's temperature less TiGwerLib's.
+
+January (`fig8`), from an RMSE of 5.20 K and a mean of −4.24 K (sun up
+3.17 K, sun down 6.08 K), no day within 1.6 K:
+
+| Variant | RMSE | Move | Mean | Share of the mean | Move, sun up | Move, sun down | Days within 1.6 K |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `screens` | 3.30 K | +1.90 K | −2.33 K | 45 % | +0.78 K | +2.35 K | 1 of 11 |
+| `storage` | 4.00 K | +1.20 K | −3.57 K | 16 % | −0.50 K | +1.90 K | 0 of 11 |
+| `walls` | 4.17 K | +1.03 K | −3.12 K | 26 % | +0.48 K | +1.25 K | 0 of 11 |
+| `ground` | 4.49 K | +0.71 K | −3.79 K | 11 % | −0.35 K | +1.11 K | 0 of 11 |
+| `crop` | 5.20 K | 0.00 K | −4.24 K | 0 % | 0.00 K | 0.00 K | 0 of 11 |
+| `sky` | 6.52 K | −1.32 K | −5.68 K | −34 % | −0.98 K | −1.49 K | 0 of 11 |
+| `all` | 3.15 K | +2.05 K | −2.47 K | 42 % | −1.28 K | +4.03 K | 2 of 11 |
+
+July (`fig9`), from an RMSE of 3.57 K and a mean of +2.29 K (sun up
+4.44 K, sun down 0.66 K), no day within 1.6 K:
+
+| Variant | RMSE | Move | Mean | Share of the mean | Move, sun up | Move, sun down | Days within 1.6 K |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `storage` | 3.20 K | +0.37 K | +2.63 K | −15 % | +0.62 K | −0.94 K | 0 of 11 |
+| `sky` | 3.26 K | +0.31 K | +1.72 K | 25 % | +0.46 K | −0.54 K | 0 of 11 |
+| `ground` | 3.35 K | +0.22 K | +2.54 K | −11 % | +0.33 K | −0.48 K | 0 of 11 |
+| `screens` | 3.50 K | +0.07 K | +2.22 K | 3 % | +0.09 K | 0.00 K | 0 of 11 |
+| `crop` | 3.57 K | 0.00 K | +2.29 K | 0 % | 0.00 K | 0.00 K | 0 of 11 |
+| `walls` | 3.62 K | −0.05 K | +2.37 K | −4 % | −0.07 K | +0.04 K | 0 of 11 |
+| `all` | 2.63 K | +0.94 K | +2.04 K | 11 % | +1.26 K | −0.48 K | 0 of 11 |
+
+- **The `crop` variant took nothing out.** TiGwerLib's global model runs
+  its canopy's transpiration in Stanghellini's mode, where the minimum
+  stomatal resistance is a constant of the equations, 82 s/m; `param1`,
+  which the variant sets, is read in the `Custom` mode alone
+  (`Flows.WaterVapourTransfer.CanopyTranspiration`). The crop's part is
+  therefore not measured, and `all` takes out five blockers, not six. A
+  variant that takes the transpiration out by modifiers alone sets the
+  mode to `Custom` as well, whose other parameters' defaults are
+  Stanghellini's constants; it is not run here, since `blockers.json`
+  states the variant as it ran.
+- **In January the screens account for the most:** held open, they take
+  the RMSE from 5.20 to 3.30 K and 45 % of the mean difference, mostly at
+  night, where the RMSE falls from 6.08 to 3.73 K. The heat stored
+  (1.20 K), the corridors (1.03 K) and the deep soil (0.71 K) follow,
+  each at night; the heat stored and the deep soil widen the gap by day.
+- **The cold sky hides part of January's gap rather than making it:**
+  without it, TiGwerLib's air radiates less and is warmer, and the
+  simulator, which has no sky to radiate to either, falls further below
+  it, by 1.32 K in the RMSE.
+- **January's parts overlap:** the six single moves add up to 3.52 K
+  where all of them at once close 2.05 K, an interaction of −1.47 K, so
+  the parts are not additive there. All at once, two days of 11 come
+  within the bar; the night's RMSE falls from 6.08 to 2.05 K and the
+  day's rises from 3.17 to 4.45 K.
+- **In July no blocker taken out accounts for much:** the largest single
+  move is 0.37 K, the heat stored, and all five together take the RMSE
+  from 3.57 to 2.63 K, the single moves adding up (0.92 K against
+  0.94 K). The day's warmth, +3.67 K on average, is still +2.58 K with all
+  five out. The shading screen held open moves July's days by 0.09 K, so
+  of the two blockers the comparison named for them, the transpiring
+  crop, which this run could not take out, is the one left.
+- **What no variant closes:** with all five out, the RMSE is still 3.15 K
+  in January and 2.63 K in July, beyond the bar on 9 and 11 days of 11.
+  That holds the crop's part and what the variants could not make
+  without an edit, listed above.
+- **July's reports** compare 3,168 or 3,169 moments: the moment
+  OpenModelica writes off its grid is in some variants' output and not in
+  others'.
+- **What it took:** TiGwerLib built each variant in 13 to 22 s and
+  simulated it in 9 to 12 minutes in January and in 46 to 62 minutes in
+  July; the simulator's half took 6 to 8 minutes. A report's simulator
+  half peaks above 10 GB of memory, so on a machine of 32 GB the reports
+  are written one at a time.
