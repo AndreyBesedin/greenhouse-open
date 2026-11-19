@@ -874,6 +874,14 @@ class Playback:
                 return False
             self._stopped.wait(WAIT_STEP_S)
 
+    def run_carried_out(self) -> RunRequest:
+        """The run it has carried out, as a run is asked for: its scenario's
+        own on its layout, weather and seed, with the plan its gateway gave
+        it. For an evaluator, once whoever steered it has stopped (decision
+        0082); a policy's port does not read it (`policy_port.PlayedRun`)."""
+        with self._lock:
+            return self._run()
+
     def _run(self) -> RunRequest:
         """The run it plays: its scenario's own, with its layout and its
         epoch's target changes."""

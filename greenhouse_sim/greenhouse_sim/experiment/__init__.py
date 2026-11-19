@@ -29,7 +29,11 @@ when none. Its runner owns everything but the policy's memory:
   it gave and what became of it, what it skipped, and a digest; or its
   record (`record_episode`, P23.2), which names besides the run's
   condition, models and weather, the policy's entry, the software, and
-  each decision with what each log delivered, counted and digested.
+  each decision with what each log delivered, counted and digested; and
+  with its record, for the evaluator alone, the run it carried out
+  (`carry_out_episode`, P25.2, decision 0082): its scenario's run on its
+  condition with the plan the policy's revisions left, handed on once the
+  policy has stopped, whose truth `greenhouse_sim.evaluation` reads.
 
 The digest covers what the policy was given and what it gave: every
 delivery, every receipt and every outcome. The same scenario, condition and
@@ -283,10 +287,39 @@ def record_episode(
     has one, each decision's delivery given to `kept` if asked. The files
     its policy's entry names are digested before it starts, so that the
     record names those it was made with."""
+    return carry_out_episode(
+        simulator, episode, place=place, timer=timer, forecasters=forecasters, kept=kept
+    ).record
+
+
+@dataclass(frozen=True)
+class EpisodeCarriedOut:
+    """An episode's record, and the run it carried out (decision 0082): its
+    scenario's run on its condition, with the plan its policy's revisions
+    left, as a run is asked for, the same from the run's start to the
+    episode's end as the run its policy steered. For the evaluator alone,
+    once the policy has stopped: it is what the evaluator's instruments
+    read (`greenhouse_sim.evaluation.instruments`), and never the policy's."""
+
+    record: records.EpisodeRecord
+    run: RunRequest
+
+
+def carry_out_episode(
+    simulator: Simulator,
+    episode: Episode,
+    *,
+    place: records.EpisodePlace | None = None,
+    timer: Callable[[], float] = time.perf_counter,
+    forecasters: Sequence[Forecaster] = (PERSISTENCE,),
+    kept: Callable[[Delivery], None] | None = None,
+) -> EpisodeCarriedOut:
+    """Runs `episode` and gives its record, as `record_episode` does, and
+    the run it carried out, read once its policy has stopped."""
     made = made_from(episode.policy) if isinstance(episode.policy, PolicyEntry) else None
     ran = _play(simulator, episode, timer, forecasters, kept)
     summary = ran.summary
-    return records.EpisodeRecord(
+    record = records.EpisodeRecord(
         place=place,
         run=_run_recorded(simulator, episode, ran.played, summary),
         policy=records.EpisodePolicy(
@@ -303,6 +336,8 @@ def record_episode(
         outcomes=summary.outcomes,
         digest=summary.digest,
     )
+    # Its policy stopped as it was played.
+    return EpisodeCarriedOut(record=record, run=ran.played.run_carried_out())
 
 
 def made_from(entry: PolicyEntry) -> records.PolicyMade:
