@@ -164,6 +164,9 @@ WEATHER_CHANNELS: dict[str, ObservationType] = {
     "weather/wind_speed": ObservationType.OUTSIDE_WIND_SPEED_M_S,
     "weather/rain_state": ObservationType.OUTSIDE_RAIN,
     "weather/par.outside": ObservationType.OUTSIDE_PAR_UMOL_M2_S,
+    # A pyrgeometer's net longwave, -126 to 0 W/m² over the season, not the
+    # sky's downward longwave: the dataset gives no downward longwave, sky
+    # temperature or diffuse radiation.
     "weather/heat_emission": ObservationType.OUTSIDE_HEAT_EMISSION_W_M2,
 }
 

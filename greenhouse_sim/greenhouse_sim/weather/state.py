@@ -43,12 +43,38 @@ class OutsideConditions(BaseModel):
     cloud_cover_pct: Percent = 0.0
 
 
+# What a weather gives only where it records it (P24.2): the sky's longwave
+# and temperature and the measured diffuse radiation, which no source works
+# out.
+RECORDED_ONLY: Final = ("downward_longwave_w_m2", "sky_temperature_c", "diffuse_radiation_w_m2")
+
+
+def _not_given(value: float | None) -> bool:
+    return value is None
+
+
 class WeatherState(OutsideConditions):
     """The weather at a moment: the outside air's temperature, relative
     humidity and CO2, the wind's speed and the direction it blows from, the
-    barometric pressure, the global radiation and the cloud cover."""
+    barometric pressure, the global radiation and the cloud cover; and,
+    where a recording gives them, the sky's downward longwave and effective
+    temperature and the diffuse radiation (P24.2, decision 0078), which no
+    model of the house's air reads yet. Each of those is None where the
+    weather does not give it, and left out of the state's JSON, so that a
+    weather without them is written, and digested, as before."""
 
     barometric_pressure_hpa: PositiveFloat
+    # The sky's longwave onto a level surface, downward only, in W/m², as a
+    # pyrgeometer facing up gives it.
+    downward_longwave_w_m2: PositiveFloat | None = Field(default=None, exclude_if=_not_given)
+    # The sky's effective temperature, in °C: a black body's that radiates
+    # as the sky does. Neither it nor the longwave is worked out from the
+    # other here.
+    sky_temperature_c: float | None = Field(default=None, exclude_if=_not_given)
+    # The diffuse part of the global radiation, on a level surface, in W/m²,
+    # as measured: carried, while the sunlight splits the global by Erbs's
+    # correlation (`greenhouse_sim.solar.sky`).
+    diffuse_radiation_w_m2: NonNegativeFloat | None = Field(default=None, exclude_if=_not_given)
 
     def wind_m_s(self, site: Site) -> Vector3:
         """The wind's velocity at `site`, in the world's axes: along the way

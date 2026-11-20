@@ -791,7 +791,10 @@
         "outside_humidity",
         "wind_speed",
         "wind_direction",
-        "barometric_pressure"
+        "barometric_pressure",
+        "downward_longwave",
+        "sky_temperature",
+        "diffuse_radiation"
       ],
       "type": "string"
     },
@@ -1080,10 +1083,13 @@
           "barometric_pressure": "#/$defs/PointSensor",
           "camera": "#/$defs/Camera",
           "co2": "#/$defs/PointSensor",
+          "diffuse_radiation": "#/$defs/PointSensor",
+          "downward_longwave": "#/$defs/PointSensor",
           "humidity": "#/$defs/PointSensor",
           "outside_humidity": "#/$defs/PointSensor",
           "outside_temperature": "#/$defs/PointSensor",
           "par": "#/$defs/PointSensor",
+          "sky_temperature": "#/$defs/PointSensor",
           "temperature": "#/$defs/PointSensor",
           "wind_direction": "#/$defs/PointSensor",
           "wind_speed": "#/$defs/PointSensor"

@@ -35,7 +35,12 @@ export interface Site {
 /**
  * The weather at a moment: the outside air's temperature, relative
  * humidity and CO2, the wind's speed and the direction it blows from, the
- * barometric pressure, the global radiation and the cloud cover.
+ * barometric pressure, the global radiation and the cloud cover; and,
+ * where a recording gives them, the sky's downward longwave and effective
+ * temperature and the diffuse radiation (P24.2, decision 0078), which no
+ * model of the house's air reads yet. Each of those is None where the
+ * weather does not give it, and left out of the state's JSON, so that a
+ * weather without them is written, and digested, as before.
  */
 export interface WeatherState {
   air_temperature_c: number;
@@ -46,6 +51,9 @@ export interface WeatherState {
   global_radiation_w_m2: number;
   cloud_cover_pct: number;
   barometric_pressure_hpa: number;
+  downward_longwave_w_m2?: number | null;
+  sky_temperature_c?: number | null;
+  diffuse_radiation_w_m2?: number | null;
 }
 export interface Vector3 {
   x: number;

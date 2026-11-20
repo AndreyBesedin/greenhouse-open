@@ -22,5 +22,11 @@ class SensorKind(StrEnum):
     # A wind vane: the direction the wind blows from.
     WIND_DIRECTION = "wind_direction"
     BAROMETRIC_PRESSURE = "barometric_pressure"
+    # A pyrgeometer facing up: the sky's downward longwave.
+    DOWNWARD_LONGWAVE = "downward_longwave"
+    # The sky's effective temperature.
+    SKY_TEMPERATURE = "sky_temperature"
+    # A shaded pyranometer: the diffuse radiation.
+    DIFFUSE_RADIATION = "diffuse_radiation"
     # A camera, seeing the scene from where it stands.
     CAMERA = "camera"

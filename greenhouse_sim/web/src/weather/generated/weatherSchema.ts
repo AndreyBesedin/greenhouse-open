@@ -187,6 +187,44 @@ export const WEATHER_SCHEMA = {
           "exclusiveMinimum": 0,
           "title": "Barometric Pressure Hpa",
           "type": "number"
+        },
+        "downward_longwave_w_m2": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Downward Longwave W M2"
+        },
+        "sky_temperature_c": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sky Temperature C"
+        },
+        "diffuse_radiation_w_m2": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Diffuse Radiation W M2"
         }
       },
       "required": [

@@ -43,6 +43,8 @@ WEATHER_CHANNELS: dict[str, ObservationType] = {
     "windsp": ObservationType.OUTSIDE_WIND_SPEED_M_S,
     "rain": ObservationType.OUTSIDE_RAIN,
     "parout": ObservationType.OUTSIDE_PAR_UMOL_M2_S,
+    # A pyrgeometer's net longwave, -134 to 0 W/m², not the sky's downward
+    # longwave.
     "pyrgeo": ObservationType.OUTSIDE_HEAT_EMISSION_W_M2,
     "co2out": ObservationType.OUTSIDE_CO2_PPM,
 }

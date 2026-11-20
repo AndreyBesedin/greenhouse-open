@@ -30,7 +30,7 @@ from pydantic import PositiveFloat
 
 from greenhouse_sim.solar.position import sun_position
 from greenhouse_sim.solar.sky import cloud_factor
-from greenhouse_sim.weather.state import OutsideConditions, WeatherState
+from greenhouse_sim.weather.state import RECORDED_ONLY, OutsideConditions, WeatherState
 from greenhouse_sim.world.site import Site, bearing
 
 # What the wind's speed and direction are interpolated as, not as themselves.
@@ -92,12 +92,17 @@ def interpolated(earlier: WeatherState, later: WeatherState, share: float) -> We
     """The weather `share` of the way from `earlier` to `later`, each
     quantity linearly, the wind as a vector. A calm on the way keeps the
     earlier wind's direction; a wind whose direction either end does not
-    know is interpolated by its speed alone, its direction unknown."""
-    values = {
-        name: (1.0 - share) * getattr(earlier, name) + share * getattr(later, name)
-        for name in WeatherState.model_fields
-        if name not in _WIND
-    }
+    know is interpolated by its speed alone, its direction unknown. A
+    quantity either end does not give (`RECORDED_ONLY`) is not given
+    between them."""
+    values: dict[str, float | None] = {}
+    for name in WeatherState.model_fields:
+        if name in _WIND:
+            continue
+        before, after = getattr(earlier, name), getattr(later, name)
+        values[name] = (
+            None if before is None or after is None else (1.0 - share) * before + share * after
+        )
     if earlier.wind_direction_deg is None or later.wind_direction_deg is None:
         speed = (1.0 - share) * earlier.wind_speed_m_s + share * later.wind_speed_m_s
         return WeatherState(**values, wind_speed_m_s=speed, wind_direction_deg=None)
@@ -162,7 +167,9 @@ class Clouded:
     """Another source's weather under a sky `cloud_cover_pct` clouded: its
     radiation dimmed or brightened from what its own clouds pass to what
     these would (`greenhouse_sim.solar.sky.cloud_factor`). A QA override, so
-    that a sky can be dimmed without another weather."""
+    that a sky can be dimmed without another weather. The sky's longwave and
+    temperature and the diffuse radiation a recording gives were of its own
+    sky, not these clouds': under them, the weather gives none."""
 
     source: WeatherSource
     cloud_cover_pct: float
@@ -177,6 +184,7 @@ class Clouded:
                 * cloud_factor(self.cloud_cover_pct)
                 / own,
             }
+            | dict.fromkeys(RECORDED_ONLY)
         )
 
 

@@ -1,7 +1,6 @@
 # P24: A house's components, and a climate that carries them
 
-**Status:** proposed, in progress (P24.2's first pull request, the components
-described): the steps below, with decisions
+**Status:** proposed, in progress (P24.2 is done): the steps below, with decisions
 [0078](../decisions/0078-a-multi-node-climate-is-a-model-of-the-houses-air-chosen-by-the-manifest.md),
 [0079](../decisions/0079-a-crop-and-the-houses-air-exchange-heat-water-and-co2-by-what-each-declares.md)
 and
@@ -188,6 +187,17 @@ description.
   humidity and the cloud cover by a named formula. The weather gains those
   quantities, and a measured diffuse radiation, as optional fields; the protocol
   gains them as outside observation types.
+- **As P24.2 builds the weather's** (`weather/recorded.py`, `weather/state.py`): a
+  recording may give `outside_downward_longwave_w_m2` (W m⁻², 40 to 700, the BSRN's
+  physically possible limits, Long and Dutton 2010), `outside_sky_temperature_c`
+  (°C, −110 to 60, a black body radiating those limits) and
+  `outside_diffuse_radiation_w_m2` (W m⁻², 0 to 1,500, the global radiation's range).
+  Each is read as recorded: neither of the sky's is worked out from the other, which
+  is the sky's own to do (P24.3), by Stefan and Boltzmann's law; and the diffuse is
+  carried, not read, until P24.9. Where a recording does not know one, the weather
+  gives none rather than refusing the run, since no model reads them yet. No other
+  weather gives them, nor a recording whose clouds the QA override changes. A weather
+  station reads each, by an instrument of its own, only where the weather gives it.
 - **Its solver:** over each stretch, at most the weather's minute, the equations
   are linearised about the stretch's start (radiation's fourth powers,
   transpiration and the ventilation's terms by their tangents) and solved exactly,
@@ -306,7 +316,7 @@ walls for January's nights, the canopy and the shading for July's days.
 | Step | Work | Accepted when | Status |
 | --- | --- | --- | --- |
 | P24.1 | **Ordered by the apportioning:** once the research's apportioning of the first comparison's gap lands, P24.4 to P24.9 are put in the order of the share each blocker carries, in this document | Each step's place cites the share its blocker carries, and the document says what moved | Proposed |
-| P24.2 | **Components described** (decision 0080), in two pull requests: the installation's schema gains the cover's materials, each wall's boundary, the floor and its layers, screens and pipe networks, with the catalogue of named materials; then the weather's sky temperature, longwave and diffuse radiation, as optional fields and outside observation types. `grid` and `whole_house` refuse what they cannot model, naming it | An installation with every component reads back the same; a value outside its range is refused by field; a house with a screen run under `whole_house` is refused, naming the screen; no packaged run id, checkpoint or replay digest moves | In progress: the components described; the weather's quantities next. An installation's `components` hold its cover's materials, each wall's boundary, its floor and layers, its screens and pipe networks, each material named from the catalogue or given by its properties, each property with its unit and range in the schema; `grid` and `whole_house` refuse a house that describes any, naming it, and a house that describes none writes nothing new. `tests/test_house_components.py` reads every component back from a file and the builder's answer, refuses a value outside its range by its field, and holds the catalogue to its sources |
+| P24.2 | **Components described** (decision 0080), in two pull requests: the installation's schema gains the cover's materials, each wall's boundary, the floor and its layers, screens and pipe networks, with the catalogue of named materials; then the weather's sky temperature, longwave and diffuse radiation, as optional fields and outside observation types. `grid` and `whole_house` refuse what they cannot model, naming it | An installation with every component reads back the same; a value outside its range is refused by field; a house with a screen run under `whole_house` is refused, naming the screen; no packaged run id, checkpoint or replay digest moves | Done: the components described, then the weather's quantities. An installation's `components` hold its cover's materials, each wall's boundary, its floor and layers, its screens and pipe networks, each material named from the catalogue or given by its properties, each property with its unit and range in the schema; `grid` and `whole_house` refuse a house that describes any, naming it, and a house that describes none writes nothing new. `tests/test_house_components.py` reads every component back from a file and the builder's answer, refuses a value outside its range by its field, and holds the catalogue to its sources. A recording may give the sky's downward longwave, its effective temperature and the measured diffuse radiation, each an outside observation type in its unit, refused outside its range by its column; a weather without them reads, and is digested, as before, and no other weather gives them; a weather station's instrument reads each only where the weather gives it; `grid` and `whole_house` read none. `tests/test_weather_sky.py` holds the packaged weathers' digests and both models' air to what they were |
 | P24.3 | **The multi-node model's frame** (decision 0078), in two pull requests: `vanthoor` registered with the inside air, the cover and the sky, the cover's own area and the envelope's volume, its solver, its edges, its checkpoint and its replay, and today's 7 minutes measured; then the floor and its soil layers | Its fluxes agree with GreenLight's at the same states; its course agrees with scipy's BDF at tight tolerances within a stated bound; at its limit it gives the whole house's numbers; a run is the same when repeated and resumed; its cost is within budget; the comparison is run again and recorded | Proposed |
 | P24.4 | **The thermal screen,** with the air above it, its material, its drive and a screen loop | Its fluxes agree with GreenLight's; a screen closed at night keeps the air warmer than none, as GreenLight's does; the comparison is run again, the screen closed as TiGwerLib's records close it, and recorded | Proposed |
 | P24.5 | **Walls' boundaries:** a wall on a neighbouring space or on nothing | A wall on nothing passes no heat; one on a space at the air's temperature passes none either; agreement with TiGwerLib's corridors on the same temperatures; the comparison is run again, the corridors at their measured temperatures, and recorded | Proposed |
