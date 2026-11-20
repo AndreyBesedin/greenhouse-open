@@ -1,6 +1,6 @@
 # 0082: The evaluator reads an episode's truth after its policy stops
 
-**Status:** Proposed, with [P25](../roadmap/p25-measures-and-baselines.md)'s plan
+**Status:** Accepted, with [P25](../roadmap/p25-measures-and-baselines.md)'s third step
 **Date:** 2026-11-16
 
 ## Context

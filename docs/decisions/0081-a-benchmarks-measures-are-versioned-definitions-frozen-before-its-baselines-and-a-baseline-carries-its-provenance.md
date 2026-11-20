@@ -1,6 +1,6 @@
 # 0081: A benchmark's measures are versioned definitions, frozen before its baselines, and a baseline carries its provenance
 
-**Status:** Proposed, with [P25](../roadmap/p25-measures-and-baselines.md)'s plan
+**Status:** Accepted, with [P25](../roadmap/p25-measures-and-baselines.md)'s third step
 **Date:** 2026-11-16
 
 ## Context
