@@ -1,11 +1,12 @@
 """An installation: the house part of a scenario (decision 0050).
 
-Its envelope, its layout and the crop each row grows, as a scenario's
-manifest holds them (format 4, `manifest_files`) and the setup builder
-edits them (`greenhouse_sim.builder`). A value no greenhouse can have is
-refused as the models refuse it. What only the parts together get wrong,
-such as a row reaching through a wall, is the builder's assessment instead,
-so that a draft can be kept and edited until it can run.
+Its envelope, its layout, the crop each row grows and, if it describes
+them, its components (P24.2, decision 0080: `world.components`), as a
+scenario's manifest holds them (format 4, `manifest_files`) and the setup
+builder edits them (`greenhouse_sim.builder`). A value no greenhouse can
+have is refused as the models refuse it. What only the parts together get
+wrong, such as a row reaching through a wall, is the builder's assessment
+instead, so that a draft can be kept and edited until it can run.
 
 A run grows one crop model and one variety, over its layout's rows times
 their planting positions (`ScenarioConfig`): `scenario_house` gives a
@@ -14,11 +15,12 @@ run cannot grow yet; `scenario_installation` gives the installation back
 from a scenario whose crop fills its layout's rows.
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt, ValidationInfo, field_validator
 
 from greenhouse_sim.domain.crop import CropModel
+from greenhouse_sim.world.components import HouseComponents, undescribed
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.identifiers import ItemId
 from greenhouse_sim.world.layout import Layout
@@ -51,6 +53,10 @@ class Installation(BaseModel):
     envelope: Envelope
     layout: Layout
     row_crops: list[RowCrop] = []
+    # What it is made of and has beyond its envelope and layout, left out
+    # while it describes none, so that its file, its scenario's manifest and
+    # their runs' identities stay as they were.
+    components: Annotated[HouseComponents | None, Field(exclude_if=undescribed)] = None
 
     # The layout's items and the envelope's doors and vents are named apart,
     # as each of them names its own: an edit or a command names one item.
@@ -60,19 +66,35 @@ class Installation(BaseModel):
         envelope = info.data.get("envelope")
         if not isinstance(envelope, Envelope) or not envelope.openings:
             return layout
-        named = (
-            {fixture.fixture_id for fixture in layout.fixtures()}
-            | {zone.zone_id for zone in layout.zones}
-            | {piece.actuator_id for piece in layout.equipment}
-            | {sensor.sensor_id for sensor in layout.sensors}
-        )
-        shared = sorted(named & {opening.opening_id for opening in envelope.openings})
+        shared = sorted(_items(layout) & {opening.opening_id for opening in envelope.openings})
         if shared:
             raise ValueError(
                 f"the layout and the envelope's doors and vents share an identifier: "
                 f"{', '.join(shared)}"
             )
         return layout
+
+    # And so are its screens and pipe networks, from both.
+    @field_validator("components")
+    @classmethod
+    def _named_apart_from_the_items(
+        cls, components: HouseComponents | None, info: ValidationInfo
+    ) -> HouseComponents | None:
+        envelope, layout = info.data.get("envelope"), info.data.get("layout")
+        if (
+            components is None
+            or not isinstance(envelope, Envelope)
+            or not isinstance(layout, Layout)
+        ):
+            return components
+        named = _items(layout) | {opening.opening_id for opening in envelope.openings}
+        shared = sorted(named & set(components.names()))
+        if shared:
+            raise ValueError(
+                f"its components and its layout, doors or vents share an identifier: "
+                f"{', '.join(shared)}"
+            )
+        return components
 
     # Checked as the field, so that a refusal points at it; the layout,
     # before it, is read already, unless it was refused itself.
@@ -97,6 +119,16 @@ class Installation(BaseModel):
         return crops
 
 
+def _items(layout: Layout) -> set[str]:
+    """What a layout's items are called."""
+    return (
+        {fixture.fixture_id for fixture in layout.fixtures()}
+        | {zone.zone_id for zone in layout.zones}
+        | {piece.actuator_id for piece in layout.equipment}
+        | {sensor.sensor_id for sensor in layout.sensors}
+    )
+
+
 class CannotRun(ValueError):
     """An installation a run cannot grow yet, and why."""
 
@@ -118,6 +150,7 @@ class ScenarioHouse(BaseModel):
     columns: PositiveInt
     crop_model: CropModel
     variety: str
+    components: HouseComponents | None = None
 
 
 def scenario_house(installation: Installation) -> ScenarioHouse:
@@ -144,6 +177,7 @@ def scenario_house(installation: Installation) -> ScenarioHouse:
         columns=rows.positions_per_row,
         crop_model=crop_model,
         variety=variety,
+        components=installation.components,
     )
 
 
@@ -173,4 +207,5 @@ def scenario_installation(config: ScenarioConfig) -> Installation:
             RowCrop(row=row, crop_model=config.crop_model, variety=config.variety)
             for row in range(1, rows + 1)
         ],
+        components=config.components,
     )

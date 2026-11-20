@@ -30,6 +30,7 @@ from greenhouse_sim.weather.sources import Clouded, ConstantWeather, RunWeather,
 from greenhouse_sim.weather.state import Percent
 from greenhouse_sim.weather.synthetic import SyntheticWeather
 from greenhouse_sim.world.capabilities import Capability, Dries, Heats, MovesAir
+from greenhouse_sim.world.components import HouseComponents, undescribed
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.equipment import can
 from greenhouse_sim.world.layout import Layout, inside_the_greenhouse, outside_the_greenhouse
@@ -100,6 +101,10 @@ class ScenarioConfig(BaseModel):
     envelope: Envelope
     # What stands inside it, in its frame, including where the plants stand.
     layout: Layout = Layout()
+    # What it is made of and has beyond those, its installation's (P24.2,
+    # decision 0080); left out while it describes none, so that its digest
+    # and its runs' identities stay as they were.
+    components: Annotated[HouseComponents | None, Field(exclude_if=undescribed)] = None
     # How its air moves: a prescribed pattern, until a solver says otherwise.
     airflow: PrescribedAirflow = UniformAirflow()
     # How a CFD solver drives its air: by default, in through its first open
@@ -221,11 +226,29 @@ class ScenarioConfig(BaseModel):
     @model_validator(mode="after")
     def _the_layout_fits_in_the_greenhouse(self) -> Self:
         outside = outside_the_greenhouse(self.layout, self.envelope)
+        if self.components is not None:
+            outside += self.components.outside(self.envelope)
         if outside:
             named = ", ".join(outside[:NAMED_IN_A_REFUSAL])
             more = len(outside) - NAMED_IN_A_REFUSAL
             raise ValueError(
                 f"outside the greenhouse: {named}" + (f" and {more} more" if more > 0 else "")
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _its_house_air_models_its_house(self) -> Self:
+        """Its house air's model refuses a house that describes a component
+        it cannot model, naming each, rather than run as if it were not
+        there (decision 0080)."""
+        described = [] if self.components is None else self.components.described()
+        unmodelled = [name for kind, name in described if kind not in self.climate.MODELLED]
+        if unmodelled:
+            named = ", ".join(unmodelled[:NAMED_IN_A_REFUSAL])
+            more = len(unmodelled) - NAMED_IN_A_REFUSAL
+            raise ValueError(
+                f"its house air's model, {self.climate.kind}, cannot model {named}"
+                + (f" and {more} more" if more > 0 else "")
             )
         return self
 

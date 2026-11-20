@@ -111,10 +111,8 @@ _FORMAT_4_NOTES: Final = {
 # What format 3 moved from a thermostat to the control: its day and night.
 _CONTROL_TIMES: Final = frozenset({"day_from_s", "night_from_s"})
 # What format 3 wrote of a scenario's house as fields of its own, which
-# format 4 holds as its installation.
-_FORMAT_3_HOUSE: Final = frozenset(ScenarioHouse.model_fields)
-# What a format 3 note on one of those fields is about in format 4: the part
-# of the installation the field became.
+# format 4 holds as its installation, and what a format 3 note on one of
+# them is about in format 4: the part of the installation it became.
 _FORMAT_3_NOTES: Final = {
     "envelope": "installation.envelope",
     "layout": "installation.layout",
@@ -123,6 +121,10 @@ _FORMAT_3_NOTES: Final = {
     "crop_model": "installation.row_crops",
     "variety": "installation.row_crops",
 }
+_FORMAT_3_HOUSE: Final = frozenset(_FORMAT_3_NOTES)
+# The configuration's fields its installation gives it: format 3's, and its
+# components (P24.2).
+_HOUSE: Final = frozenset(ScenarioHouse.model_fields)
 # A manifest's fields that this module reads itself rather than handing them
 # to `ScenarioConfig`, which could not read them as written: the schema, the
 # format's version and the notes are about the file, not the greenhouse; the
@@ -138,7 +140,7 @@ _MANIFEST_ONLY_FIELDS: Final = frozenset(
 # part's model (`models.weather`).
 _NOTED: Final = frozenset(
     {WHOLE_SCENARIO, _OPENING_KEY, _INSTALLATION_KEY, _MODELS_KEY}
-    | (set(ScenarioConfig.model_fields) - _FORMAT_3_HOUSE - CONFIGURED)
+    | (set(ScenarioConfig.model_fields) - _HOUSE - CONFIGURED)
     | {f"{_INSTALLATION_KEY}.{name}" for name in Installation.model_fields}
     | {f"{_MODELS_KEY}.{part}" for part in Part}
 )
@@ -234,7 +236,7 @@ def scenario_from_manifest(
         raise InvalidManifest(
             f"{scenario_id}: its manifest describes {fields.get('greenhouse_id')!r}"
         )
-    outside = sorted(set(fields) & _FORMAT_3_HOUSE)
+    outside = sorted(set(fields) & _HOUSE)
     if outside:
         raise InvalidManifest(
             f"{scenario_id}: its house is its installation's, not written beside it: {outside}"
@@ -612,11 +614,9 @@ def manifest_json_schema() -> dict[str, JsonValue]:
     properties = schema["properties"]
     # A manifest holds its house as an installation, and its models'
     # parameters in its models, rather than as fields of their own.
-    for name in _FORMAT_3_HOUSE | CONFIGURED:
+    for name in _HOUSE | CONFIGURED:
         del properties[name]
-    schema["required"] = [
-        name for name in schema["required"] if name not in _FORMAT_3_HOUSE | CONFIGURED
-    ]
+    schema["required"] = [name for name in schema["required"] if name not in _HOUSE | CONFIGURED]
     # A model's parameters leave out the kind its section's model says:
     # they replace the definitions the configuration's fields had of them,
     # which nothing else uses.

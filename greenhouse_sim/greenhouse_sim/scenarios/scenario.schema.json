@@ -6,6 +6,16 @@
       "minimum": 0.0,
       "type": "number"
     },
+    "Boundaries": {
+      "additionalProperties": {
+        "$ref": "#/$defs/WallBoundary"
+      },
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "#/$defs/WallId"
+      },
+      "type": "object"
+    },
     "BuoyancyAirflow": {
       "additionalProperties": false,
       "description": "Convection: air rising up the middle and sinking along the side walls,\nover air warming with height and towards the middle.",
@@ -257,6 +267,161 @@
       "title": "Control",
       "type": "object"
     },
+    "Cover": {
+      "additionalProperties": false,
+      "description": "What the cover is made of: the roof's slopes, all of one material,\nand each wall it names, of its own; the walls it does not name are of\nthe roof's.",
+      "properties": {
+        "roof": {
+          "$ref": "#/$defs/CoverChoice"
+        },
+        "walls": {
+          "additionalProperties": {
+            "$ref": "#/$defs/CoverChoice"
+          },
+          "default": {},
+          "propertyNames": {
+            "$ref": "#/$defs/WallId"
+          },
+          "title": "Walls",
+          "type": "object"
+        }
+      },
+      "required": [
+        "roof"
+      ],
+      "title": "Cover",
+      "type": "object"
+    },
+    "CoverChoice": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CoverMaterialName"
+        },
+        {
+          "$ref": "#/$defs/CoverMaterial"
+        }
+      ]
+    },
+    "CoverMaterial": {
+      "additionalProperties": false,
+      "description": "A sheet a cover is made of, given by its properties: what of the\nsun's beam, falling square to it, and of the sky's diffuse light it\npasses, what of the shortwave it reflects, what of the longwave it\nemits and passes, and the heat it conducts and holds.",
+      "properties": {
+        "shortwave_beam_transmittance": {
+          "description": "the share of the sun's beam, falling square to it, that it passes",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "range_from": {
+            "least": "a share: nothing at least",
+            "most": "a share: all of what falls on it at most"
+          },
+          "title": "Shortwave Beam Transmittance",
+          "type": "number",
+          "unit": "-"
+        },
+        "shortwave_diffuse_transmittance": {
+          "description": "the share of the sky's diffuse light falling on it that it passes",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "range_from": {
+            "least": "a share: nothing at least",
+            "most": "a share: all of what falls on it at most"
+          },
+          "title": "Shortwave Diffuse Transmittance",
+          "type": "number",
+          "unit": "-"
+        },
+        "shortwave_reflectance": {
+          "description": "the share of the shortwave falling on it that it reflects",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "range_from": {
+            "least": "a share: nothing at least",
+            "most": "a share: all of what falls on it at most"
+          },
+          "title": "Shortwave Reflectance",
+          "type": "number",
+          "unit": "-"
+        },
+        "longwave_emissivity": {
+          "description": "its longwave emissivity: the share of the longwave falling on it that it absorbs",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "range_from": {
+            "least": "a share: nothing at least",
+            "most": "a share: all of what falls on it at most"
+          },
+          "title": "Longwave Emissivity",
+          "type": "number",
+          "unit": "-"
+        },
+        "longwave_transmittance": {
+          "description": "the share of the longwave falling on it that it passes",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "range_from": {
+            "least": "a share: nothing at least",
+            "most": "a share: all of what falls on it at most"
+          },
+          "title": "Longwave Transmittance",
+          "type": "number",
+          "unit": "-"
+        },
+        "thickness_m": {
+          "description": "its thickness",
+          "exclusiveMinimum": 0.0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "title": "Thickness M",
+          "type": "number",
+          "unit": "m"
+        },
+        "conductivity_w_m_k": {
+          "description": "its thermal conductivity",
+          "exclusiveMinimum": 0.0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "title": "Conductivity W M K",
+          "type": "number",
+          "unit": "W m⁻¹ K⁻¹"
+        },
+        "volumetric_heat_capacity_j_m3_k": {
+          "description": "its heat capacity per volume: its density times its specific heat",
+          "exclusiveMinimum": 0.0,
+          "maximum": 4180000.0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "water's, 1000 kg m⁻³ times 4180 J kg⁻¹ K⁻¹ (Vanthoor 2011, Table 8.1)"
+          },
+          "title": "Volumetric Heat Capacity J M3 K",
+          "type": "number",
+          "unit": "J m⁻³ K⁻¹"
+        }
+      },
+      "required": [
+        "shortwave_beam_transmittance",
+        "shortwave_diffuse_transmittance",
+        "shortwave_reflectance",
+        "longwave_emissivity",
+        "longwave_transmittance",
+        "thickness_m",
+        "conductivity_w_m_k",
+        "volumetric_heat_capacity_j_m3_k"
+      ],
+      "title": "CoverMaterial",
+      "type": "object"
+    },
+    "CoverMaterialName": {
+      "description": "A cover's sheet the catalogue names.",
+      "enum": [
+        "single_glass"
+      ],
+      "title": "CoverMaterialName",
+      "type": "string"
+    },
     "CropModel": {
       "description": "How a scenario's run grows its crop: plant by plant, by the simple\ndaily model (`greenhouse_sim.core.simple_crop`) or organ by organ\n(`greenhouse_sim.core.crop`); or by area, by Reduced-State TOMGRO\n(`greenhouse_sim.core.tomgro_crop`) or Vanthoor's model as Katzin\nsimplified it (`greenhouse_sim.core.vanthoor_crop`, decision 0060).",
       "enum": [
@@ -489,6 +654,89 @@
       "title": "Envelope",
       "type": "object"
     },
+    "Floor": {
+      "additionalProperties": false,
+      "description": "The floor, from its surface down: the surface's optics, its layers,\nthe first the floor's own and those under it the soil's, and the deep\nsoil's temperature under the last, in °C.",
+      "properties": {
+        "surface": {
+          "$ref": "#/$defs/FloorSurface"
+        },
+        "layers": {
+          "items": {
+            "$ref": "#/$defs/FloorLayer"
+          },
+          "minItems": 1,
+          "title": "Layers",
+          "type": "array"
+        },
+        "deep_soil_temperature_c": {
+          "$ref": "#/$defs/Temperature"
+        }
+      },
+      "required": [
+        "surface",
+        "layers",
+        "deep_soil_temperature_c"
+      ],
+      "title": "Floor",
+      "type": "object"
+    },
+    "FloorLayer": {
+      "additionalProperties": false,
+      "description": "A layer of the floor, or of the soil under it: its thickness, in\nmetres, and what it is made of.",
+      "properties": {
+        "thickness_m": {
+          "exclusiveMinimum": 0,
+          "title": "Thickness M",
+          "type": "number"
+        },
+        "material": {
+          "$ref": "#/$defs/LayerChoice"
+        }
+      },
+      "required": [
+        "thickness_m",
+        "material"
+      ],
+      "title": "FloorLayer",
+      "type": "object"
+    },
+    "FloorSurface": {
+      "additionalProperties": false,
+      "description": "The floor's surface, given by its properties: what of the shortwave\nit reflects, and its longwave emissivity.",
+      "properties": {
+        "shortwave_reflectance": {
+          "description": "the share of the shortwave falling on it that it reflects",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "range_from": {
+            "least": "a share: nothing at least",
+            "most": "a share: all of what falls on it at most"
+          },
+          "title": "Shortwave Reflectance",
+          "type": "number",
+          "unit": "-"
+        },
+        "longwave_emissivity": {
+          "description": "its longwave emissivity: the share of the longwave falling on it that it absorbs",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "range_from": {
+            "least": "a share: nothing at least",
+            "most": "a share: all of what falls on it at most"
+          },
+          "title": "Longwave Emissivity",
+          "type": "number",
+          "unit": "-"
+        }
+      },
+      "required": [
+        "shortwave_reflectance",
+        "longwave_emissivity"
+      ],
+      "title": "FloorSurface",
+      "type": "object"
+    },
     "GradientAirflow": {
       "additionalProperties": false,
       "description": "Still air whose temperature rises linearly along the house: a known\nfield to check sensors against.",
@@ -591,6 +839,69 @@
       "minimum": 0.0,
       "type": "number"
     },
+    "HouseComponents": {
+      "additionalProperties": false,
+      "description": "What a house is made of and has beyond its envelope and layout, each\nleft out while undescribed: its cover's materials; what each wall it\nnames faces, the others facing the outside; its floor; the screens\ndrawn across it; and its networks of heating pipes. It describes one at\nleast: a house that describes none has no section of them. Its screens\nand pipe networks are each named apart, as a command names one.",
+      "properties": {
+        "cover": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Cover"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "boundaries": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Boundaries"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "floor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Floor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "screens": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Screens"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pipe_networks": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PipeNetworks"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "HouseComponents",
+      "type": "object"
+    },
     "HumidityPct": {
       "exclusiveMaximum": 100.0,
       "exclusiveMinimum": 0.0,
@@ -627,6 +938,17 @@
           "title": "Row Crops",
           "type": "array",
           "minItems": 1
+        },
+        "components": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HouseComponents"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -638,6 +960,60 @@
       "title": "Installation",
       "type": "object"
     },
+    "LayerChoice": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/LayerMaterialName"
+        },
+        {
+          "$ref": "#/$defs/LayerMaterial"
+        }
+      ]
+    },
+    "LayerMaterial": {
+      "additionalProperties": false,
+      "description": "What a layer of the floor, or of the soil under it, is made of, given\nby its properties: the heat it conducts and holds.",
+      "properties": {
+        "conductivity_w_m_k": {
+          "description": "its thermal conductivity",
+          "exclusiveMinimum": 0.0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "title": "Conductivity W M K",
+          "type": "number",
+          "unit": "W m⁻¹ K⁻¹"
+        },
+        "volumetric_heat_capacity_j_m3_k": {
+          "description": "its heat capacity per volume: its density times its specific heat",
+          "exclusiveMinimum": 0.0,
+          "maximum": 4180000.0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "water's, 1000 kg m⁻³ times 4180 J kg⁻¹ K⁻¹ (Vanthoor 2011, Table 8.1)"
+          },
+          "title": "Volumetric Heat Capacity J M3 K",
+          "type": "number",
+          "unit": "J m⁻³ K⁻¹"
+        }
+      },
+      "required": [
+        "conductivity_w_m_k",
+        "volumetric_heat_capacity_j_m3_k"
+      ],
+      "title": "LayerMaterial",
+      "type": "object"
+    },
+    "LayerMaterialName": {
+      "description": "A floor's or the soil's layer the catalogue names.",
+      "enum": [
+        "concrete",
+        "soil"
+      ],
+      "title": "LayerMaterialName",
+      "type": "string"
+    },
     "Level": {
       "maximum": 1.0,
       "minimum": 0.0,
@@ -648,6 +1024,84 @@
       "description": "The parameters of a model that takes none.",
       "properties": {},
       "title": "NoParameters",
+      "type": "object"
+    },
+    "OnASpace": {
+      "additionalProperties": false,
+      "description": "A wall on a neighbouring space, a corridor, a headhouse or another\nhouse, at its temperature: constant, in °C, or recorded in a file of\nits own, which names it; one of the two.",
+      "properties": {
+        "faces": {
+          "const": "space",
+          "default": "space",
+          "title": "Faces",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "corridor",
+            "headhouse",
+            "house"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "temperature_c": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Temperature"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "recording": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9][a-z0-9_.-]{0,95}\\.csv$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recording"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "OnASpace",
+      "type": "object"
+    },
+    "OnNothing": {
+      "additionalProperties": false,
+      "description": "A wall no heat crosses.",
+      "properties": {
+        "faces": {
+          "const": "nothing",
+          "default": "nothing",
+          "title": "Faces",
+          "type": "string"
+        }
+      },
+      "title": "OnNothing",
+      "type": "object"
+    },
+    "OnTheOutside": {
+      "additionalProperties": false,
+      "description": "A wall on the outside air, as a wall is unless it says otherwise.",
+      "properties": {
+        "faces": {
+          "const": "outside",
+          "default": "outside",
+          "title": "Faces",
+          "type": "string"
+        }
+      },
+      "title": "OnTheOutside",
       "type": "object"
     },
     "Opening": {
@@ -730,6 +1184,75 @@
       "exclusiveMaximum": 0.8,
       "minimum": 0.0,
       "type": "number"
+    },
+    "PipeKind": {
+      "description": "Where a network of heating pipes runs.",
+      "enum": [
+        "rail",
+        "grow",
+        "perimeter"
+      ],
+      "title": "PipeKind",
+      "type": "string"
+    },
+    "PipeNetwork": {
+      "additionalProperties": false,
+      "description": "A network of heating pipes: where it runs, all its pipes' length end\nto end, their outer and inner diameters, their height above the floor,\nthe eaves at most, and their longwave emissivity. Its heat leaves them\nby convection to the air and by radiation to what they see, as the\nmodel that heats them works out (P24.8).",
+      "properties": {
+        "network_id": {
+          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
+          "pattern": "^[A-Za-z0-9_.-]+$",
+          "title": "Network Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/PipeKind"
+        },
+        "length_m": {
+          "exclusiveMinimum": 0,
+          "title": "Length M",
+          "type": "number"
+        },
+        "outer_diameter_m": {
+          "exclusiveMinimum": 0,
+          "title": "Outer Diameter M",
+          "type": "number"
+        },
+        "inner_diameter_m": {
+          "exclusiveMinimum": 0,
+          "title": "Inner Diameter M",
+          "type": "number"
+        },
+        "height_m": {
+          "minimum": 0,
+          "title": "Height M",
+          "type": "number"
+        },
+        "longwave_emissivity": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Longwave Emissivity",
+          "type": "number"
+        }
+      },
+      "required": [
+        "network_id",
+        "kind",
+        "length_m",
+        "outer_diameter_m",
+        "inner_diameter_m",
+        "height_m",
+        "longwave_emissivity"
+      ],
+      "title": "PipeNetwork",
+      "type": "object"
+    },
+    "PipeNetworks": {
+      "items": {
+        "$ref": "#/$defs/PipeNetwork"
+      },
+      "minItems": 1,
+      "type": "array"
     },
     "Point2": {
       "description": "A point in a shape's own x-y plane.",
@@ -855,6 +1378,189 @@
       ],
       "title": "RowCrop",
       "type": "object"
+    },
+    "Screen": {
+      "additionalProperties": false,
+      "description": "A screen drawn across the house: what it is for, its cloth, the\nheight it is drawn at above the floor, the eaves at most, the floor it\ncovers, the whole house's if it names none, and how far it is drawn as\nthe run starts, from 0 (open) to 1 (closed). Commands and a screen\nloop are to drive it, as they drive a vent (P24.4).",
+      "properties": {
+        "screen_id": {
+          "description": "Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.",
+          "pattern": "^[A-Za-z0-9_.-]+$",
+          "title": "Screen Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ScreenKind"
+        },
+        "material": {
+          "$ref": "#/$defs/ScreenChoice"
+        },
+        "height_m": {
+          "exclusiveMinimum": 0,
+          "title": "Height M",
+          "type": "number"
+        },
+        "extent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Strip"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "closure": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Closure",
+          "type": "number"
+        }
+      },
+      "required": [
+        "screen_id",
+        "kind",
+        "material",
+        "height_m"
+      ],
+      "title": "Screen",
+      "type": "object"
+    },
+    "ScreenChoice": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ScreenClothName"
+        },
+        {
+          "$ref": "#/$defs/ScreenCloth"
+        }
+      ]
+    },
+    "ScreenCloth": {
+      "additionalProperties": false,
+      "description": "A cloth a screen is made of, given by its properties: what of the\nshortwave it passes and reflects, what of the longwave it emits and\npasses, the air it lets through when it is drawn, and the heat it holds.\nThe air it lets through is Vanthoor's (2011) screen flux coefficient, K\nin f = K |ΔT|^(2/3): the air through each square metre of it, in m³ a\nsecond, for the difference of temperature across it.",
+      "properties": {
+        "shortwave_transmittance": {
+          "description": "the share of the shortwave falling on it that it passes",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "range_from": {
+            "least": "a share: nothing at least",
+            "most": "a share: all of what falls on it at most"
+          },
+          "title": "Shortwave Transmittance",
+          "type": "number",
+          "unit": "-"
+        },
+        "shortwave_reflectance": {
+          "description": "the share of the shortwave falling on it that it reflects",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "range_from": {
+            "least": "a share: nothing at least",
+            "most": "a share: all of what falls on it at most"
+          },
+          "title": "Shortwave Reflectance",
+          "type": "number",
+          "unit": "-"
+        },
+        "longwave_emissivity": {
+          "description": "its longwave emissivity: the share of the longwave falling on it that it absorbs",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "range_from": {
+            "least": "a share: nothing at least",
+            "most": "a share: all of what falls on it at most"
+          },
+          "title": "Longwave Emissivity",
+          "type": "number",
+          "unit": "-"
+        },
+        "longwave_transmittance": {
+          "description": "the share of the longwave falling on it that it passes",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "range_from": {
+            "least": "a share: nothing at least",
+            "most": "a share: all of what falls on it at most"
+          },
+          "title": "Longwave Transmittance",
+          "type": "number",
+          "unit": "-"
+        },
+        "air_permeability_m3_m2_s_k": {
+          "description": "its screen flux coefficient K, of f = K |ΔT|^(2/3) through it drawn",
+          "minimum": 0.0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "title": "Air Permeability M3 M2 S K",
+          "type": "number",
+          "unit": "m³ m⁻² s⁻¹ K^-2/3"
+        },
+        "thickness_m": {
+          "description": "its thickness",
+          "exclusiveMinimum": 0.0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "none in its source: the field's type's"
+          },
+          "title": "Thickness M",
+          "type": "number",
+          "unit": "m"
+        },
+        "volumetric_heat_capacity_j_m3_k": {
+          "description": "its heat capacity per volume: its density times its specific heat",
+          "exclusiveMinimum": 0.0,
+          "maximum": 4180000.0,
+          "range_from": {
+            "least": "none in its source: the field's type's",
+            "most": "water's, 1000 kg m⁻³ times 4180 J kg⁻¹ K⁻¹ (Vanthoor 2011, Table 8.1)"
+          },
+          "title": "Volumetric Heat Capacity J M3 K",
+          "type": "number",
+          "unit": "J m⁻³ K⁻¹"
+        }
+      },
+      "required": [
+        "shortwave_transmittance",
+        "shortwave_reflectance",
+        "longwave_emissivity",
+        "longwave_transmittance",
+        "air_permeability_m3_m2_s_k",
+        "thickness_m",
+        "volumetric_heat_capacity_j_m3_k"
+      ],
+      "title": "ScreenCloth",
+      "type": "object"
+    },
+    "ScreenClothName": {
+      "description": "A screen's cloth the catalogue names.",
+      "enum": [
+        "thermal_screen_cloth"
+      ],
+      "title": "ScreenClothName",
+      "type": "string"
+    },
+    "ScreenKind": {
+      "description": "What a screen drawn across the house is for.",
+      "enum": [
+        "thermal",
+        "shading",
+        "blackout"
+      ],
+      "title": "ScreenKind",
+      "type": "string"
+    },
+    "Screens": {
+      "items": {
+        "$ref": "#/$defs/Screen"
+      },
+      "minItems": 1,
+      "type": "array"
     },
     "SeasonalWeather": {
       "additionalProperties": false,
@@ -1134,6 +1840,30 @@
       "maximum": 1.0,
       "type": "number"
     },
+    "Strip": {
+      "additionalProperties": false,
+      "description": "A rectangle of the floor: a centre line from `start` to `end`, `width`\nwide.",
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/Point2"
+        },
+        "end": {
+          "$ref": "#/$defs/Point2"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "number"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "width"
+      ],
+      "title": "Strip",
+      "type": "object"
+    },
     "SyntheticWeather": {
       "additionalProperties": false,
       "description": "A day of weather, each day alike: its coldest and warmest temperatures\nand their hours, its humidity at the coldest, its CO2, its calmest and\nwindiest winds, the direction the wind blows from at midnight and how\nfar it veers clockwise by the next (backing if negative), its gusts' size\nas a share of the wind's speed, its cloud cover and its pressure.",
@@ -1215,6 +1945,11 @@
       ],
       "title": "SyntheticWeather",
       "type": "object"
+    },
+    "Temperature": {
+      "maximum": 60.0,
+      "minimum": -60.0,
+      "type": "number"
     },
     "TimeOfDay": {
       "exclusiveMaximum": 86400.0,
@@ -1407,6 +2142,36 @@
       },
       "title": "VortexAirflow",
       "type": "object"
+    },
+    "WallBoundary": {
+      "discriminator": {
+        "mapping": {
+          "nothing": "#/$defs/OnNothing",
+          "outside": "#/$defs/OnTheOutside",
+          "space": "#/$defs/OnASpace"
+        },
+        "propertyName": "faces"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/OnTheOutside"
+        },
+        {
+          "$ref": "#/$defs/OnASpace"
+        },
+        {
+          "$ref": "#/$defs/OnNothing"
+        }
+      ]
+    },
+    "WallId": {
+      "enum": [
+        "side_wall_right",
+        "side_wall_left",
+        "end_wall_front",
+        "end_wall_back"
+      ],
+      "type": "string"
     },
     "WholeHouseAir": {
       "additionalProperties": false,

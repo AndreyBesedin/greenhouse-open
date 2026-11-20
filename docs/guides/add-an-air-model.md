@@ -73,7 +73,9 @@ The whole house alone was added this way, beside the grid (P14.6).
    the glazing, the infiltration) or `ClimateSettings` (which adds the
    grid's mixing), and a `run_settings()` that gives the climate run the
    `ClimateSettings` it works its air out from, as `GridAir` and
-   `WholeHouseAir` do.
+   `WholeHouseAir` do; and the components of a house it models, its
+   `MODELLED` (`greenhouse_sim/greenhouse_sim/domain/components.py`): a
+   house that describes another is refused, naming it (P24.2).
 2. **Its days,** a subclass of `ClimateDay`, overriding what it draws, as
    `WholeHouseDay` does: the field at a moment (`drawn`, `field`), what the
    sensors sample (`sampled`), and the glazing and the openings against its
