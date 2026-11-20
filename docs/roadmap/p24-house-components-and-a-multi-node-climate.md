@@ -1,6 +1,6 @@
 # P24: A house's components, and a climate that carries them
 
-**Status:** proposed, in progress (P24.2 is done): the steps below, with decisions
+**Status:** proposed, in progress (P24.1 and P24.2 are done): the steps below, with decisions
 [0078](../decisions/0078-a-multi-node-climate-is-a-model-of-the-houses-air-chosen-by-the-manifest.md),
 [0079](../decisions/0079-a-crop-and-the-houses-air-exchange-heat-water-and-co2-by-what-each-declares.md)
 and
@@ -40,10 +40,10 @@ with TiGwerLib found, or the comparison says which remain and why.
     ventilation function against the simulator's orifice flows; the leakage laws;
     how direct and diffuse light are split and transmitted; where the heaters'
     heat goes; the air's volume; and the roof's glazed area taken as its projection.
-- **Apportioning the gap among the blockers** is research of its own under item 6:
-  TiGwerLib run with each blocker taken out in turn. Its ranking orders this
-  project's components (P24.1). P24 does not wait for it: its order below is
-  provisional, by the impact each component is expected to have.
+- **Apportioning the gap among the blockers** is research of its own under item 6
+  ([`research/modelica`](../../research/modelica/README.md#apportioning-the-gap-among-the-blockers)):
+  TiGwerLib run with each blocker taken out in turn, and with all at once. Its
+  moves order this project's components (P24.1, under *Steps*).
 - **The simulator's climate today** (`greenhouse_sim/climate/`):
   - the house's air as one well-mixed volume (`house.py`, the house air part's
     `whole_house` model), solved exactly between moments, each loop of the
@@ -161,7 +161,7 @@ do not (decision 0077): a correction is a new name.
   receives, and is left out. Shortwave is one band, and a heat capacity is per volume.
 - **Today's models refuse a described cover,** as they refuse the rest, until a step
   gives them its U and transmittance. A neighbouring space's recording is named; its
-  file's format and its digest come with the walls' step (P24.5).
+  file's format and its digest come with the walls' step (P24.6).
 
 ### A multi-node climate (decision 0078)
 
@@ -309,18 +309,49 @@ stay fetched, never committed (decision
 
 Each step is a pull request, or two where it says so. From P24.3 on, a component's
 step is followed by a pull request of the research's that runs the first comparison
-again, and the step is done when that run is recorded. The order of P24.4 to P24.9
-is provisional, by the impact expected: stored heat, the thermal screen and the
-walls for January's nights, the canopy and the shading for July's days.
+again, and the step is done when that run is recorded.
+
+**Ordered by the apportioning** (P24.1). P24.4 to P24.9 follow the largest move
+each one's blocker makes in either window of the first comparison, whatever its
+sign: the comparison's own RMSE of the difference (5.20 K in January, 3.57 K in
+July) less its RMSE with the blocker taken out of TiGwerLib. A blocker that hides
+part of the gap, taken out, widens it, and moves the comparison as much as one
+that closes it by as much. The moves are the
+[apportioning's](../../research/modelica/README.md#apportioning-the-gap-among-the-blockers)
+and [the transpiration's](../../research/modelica/README.md#the-crops-transpiration-taken-out),
+over all of a window's moments; a positive move closes the gap.
+
+| Step | Blocker taken out | January | July | Its place |
+| --- | --- | --- | --- | --- |
+| P24.4, the thermal screen | `screens`: both screens held open | +1.90 K | +0.07 K | The largest move, January's nights |
+| P24.5, the canopy | `transpiration`: the crop's water | −1.36 K | +0.60 K | It hides part of January's gap and makes July's day; the largest move in July |
+| P24.6, walls' boundaries | `walls`: the corridors | +1.03 K | −0.05 K | January's nights |
+| P24.7, the shading and blackout screens | `screens`, in July | | +0.07 K | July's days, 0.09 K by day |
+| P24.8, pipe networks | none: the heat given is matched | | | No share measured |
+| P24.9, known differences as options | none: inputs matched, models different | | | No share measured |
+
+- **What moved:** the canopy, P24.6 before, is P24.5, and the walls, P24.5
+  before, are P24.6. The thermal screen, the shading, the pipes and the options
+  keep their places.
+- **The screens are one variant.** `screens` holds both open at once, so the
+  thermal screen's place cites both; in January it is the thermal screen that is
+  drawn, at night, where most of the move is.
+- **P24.3 comes first whatever the apportioning finds,** and carries the rest: the
+  heat stored (+1.20 K in January, +0.37 K in July), the deep soil (+0.71 K,
+  +0.22 K) and the cold sky (−1.32 K, +0.31 K).
+- **The parts do not add up in January:** with all six out, the move is −0.19 K
+  where the single moves sum to 2.17 K, and in July 1.68 K against 1.52 K. Each
+  step's comparison, run again after it, says what its component did in the
+  simulator.
 
 | Step | Work | Accepted when | Status |
 | --- | --- | --- | --- |
-| P24.1 | **Ordered by the apportioning:** once the research's apportioning of the first comparison's gap lands, P24.4 to P24.9 are put in the order of the share each blocker carries, in this document | Each step's place cites the share its blocker carries, and the document says what moved | Proposed |
+| P24.1 | **Ordered by the apportioning:** once the research's apportioning of the first comparison's gap lands, P24.4 to P24.9 are put in the order of the share each blocker carries, in this document | Each step's place cites the share its blocker carries, and the document says what moved | Done: ordered by the largest move each blocker makes in either window, whatever its sign; the canopy moved ahead of the walls, the rest kept their places. The table under *Steps* cites each place's moves |
 | P24.2 | **Components described** (decision 0080), in two pull requests: the installation's schema gains the cover's materials, each wall's boundary, the floor and its layers, screens and pipe networks, with the catalogue of named materials; then the weather's sky temperature, longwave and diffuse radiation, as optional fields and outside observation types. `grid` and `whole_house` refuse what they cannot model, naming it | An installation with every component reads back the same; a value outside its range is refused by field; a house with a screen run under `whole_house` is refused, naming the screen; no packaged run id, checkpoint or replay digest moves | Done: the components described, then the weather's quantities. An installation's `components` hold its cover's materials, each wall's boundary, its floor and layers, its screens and pipe networks, each material named from the catalogue or given by its properties, each property with its unit and range in the schema; `grid` and `whole_house` refuse a house that describes any, naming it, and a house that describes none writes nothing new. `tests/test_house_components.py` reads every component back from a file and the builder's answer, refuses a value outside its range by its field, and holds the catalogue to its sources. A recording may give the sky's downward longwave, its effective temperature and the measured diffuse radiation, each an outside observation type in its unit, refused outside its range by its column; a weather without them reads, and is digested, as before, and no other weather gives them; a weather station's instrument reads each only where the weather gives it; `grid` and `whole_house` read none. `tests/test_weather_sky.py` holds the packaged weathers' digests and both models' air to what they were |
 | P24.3 | **The multi-node model's frame** (decision 0078), in two pull requests: `vanthoor` registered with the inside air, the cover and the sky, the cover's own area and the envelope's volume, its solver, its edges, its checkpoint and its replay, and today's 7 minutes measured; then the floor and its soil layers | Its fluxes agree with GreenLight's at the same states; its course agrees with scipy's BDF at tight tolerances within a stated bound; at its limit it gives the whole house's numbers; a run is the same when repeated and resumed; its cost is within budget; the comparison is run again and recorded | Proposed |
 | P24.4 | **The thermal screen,** with the air above it, its material, its drive and a screen loop | Its fluxes agree with GreenLight's; a screen closed at night keeps the air warmer than none, as GreenLight's does; the comparison is run again, the screen closed as TiGwerLib's records close it, and recorded | Proposed |
-| P24.5 | **Walls' boundaries:** a wall on a neighbouring space or on nothing | A wall on nothing passes no heat; one on a space at the air's temperature passes none either; agreement with TiGwerLib's corridors on the same temperatures; the comparison is run again, the corridors at their measured temperatures, and recorded | Proposed |
-| P24.6 | **The canopy, both ways** (decision 0079), in two pull requests: the canopy as a node, prescribed, with its transpiration and condensation on the cover and screens; then the crop's ports, Vanthoor's model, Reduced-State TOMGRO and the organ crop giving their leaf area and Vanthoor's its uptake, read back through `house_canopy` | Its fluxes agree with GreenLight's; water and CO₂ are conserved; a crop that does not couple runs as before; the comparison is run again with TiGwerLib's leaf area prescribed, its relative humidity reported beside its temperature, and recorded | Proposed |
+| P24.5 | **The canopy, both ways** (decision 0079), in two pull requests: the canopy as a node, prescribed, with its transpiration and condensation on the cover and screens; then the crop's ports, Vanthoor's model, Reduced-State TOMGRO and the organ crop giving their leaf area and Vanthoor's its uptake, read back through `house_canopy` | Its fluxes agree with GreenLight's; water and CO₂ are conserved; a crop that does not couple runs as before; the comparison is run again with TiGwerLib's leaf area prescribed, its relative humidity reported beside its temperature, and recorded | Proposed |
+| P24.6 | **Walls' boundaries:** a wall on a neighbouring space or on nothing | A wall on nothing passes no heat; one on a space at the air's temperature passes none either; agreement with TiGwerLib's corridors on the same temperatures; the comparison is run again, the corridors at their measured temperatures, and recorded | Proposed |
 | P24.7 | **The shading and blackout screens,** each with its material and its drive | Their light and heat agree with GreenLight's (blackout) and TiGwerLib's (shading); the comparison is run again, the shading drawn as TiGwerLib's records draw it, and recorded | Proposed |
 | P24.8 | **Pipe networks:** pipes as nodes, their heat by convection and radiation, given the heat a record gives or the water's temperature | Their split agrees with GreenLight's pipe rail's and grow pipe's; the heat given over a window matches the record's as the first comparison's does; the comparison is run again and recorded | Proposed |
 | P24.9 | **Known differences as options:** the ventilation laws (`boulard_baille`, `de_jong`), power-law leakage, and measured diffuse light read | Each law agrees with its reference on the same openings and weather; the defaults change no run; the comparison is run again with TiGwerLib's choices, and recorded | Proposed |
