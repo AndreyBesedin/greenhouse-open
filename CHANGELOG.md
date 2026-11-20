@@ -13,6 +13,152 @@ Unreleased section holds the entries written here before that.
 
 ## Unreleased
 
+## 0.8.0 - 2026-11-20
+
+A run is watched, steered and started from its replay (P22): one *Play*, a
+change made while its worker computes it steering that run from the moment
+reached, and a new run's form. The simulator no longer plays a run back in
+its own process (decision 0074): the local API's playback routes, the
+consumer interface's and the gateway's routes, the server's `--play` options
+and the simulator's book of playbacks are gone, each entry below saying what
+to use instead; a stored run's answer loses `paused`, and `Playback` its
+restart. An experiment pairs policies on a run's conditions, each episode
+with its record and digest, run and checked from `python -m
+greenhouse_sim.experiment` (P23, decision 0075), and scored as each policy
+stops on the protocol's first benchmark measures (P25.1 to P25.3, decisions
+0081 and 0082). A crop parameter set is a file, named, versioned and told
+apart by its digest, kept and served by the simulator, edited in the builder
+and chosen for a run (P20, decision 0077). A house may describe its
+components, and a recorded weather the sky's longwave and the measured
+diffuse light, which no model reads yet (P24.2). Run ids, checkpoints and
+replay digests do not change; 0.7.0 cannot carry on or fork an epoch whose
+log holds an authorisation entry.
+
+- viewer: the builder's placeholder text, in the inspector's field to set, now reads clearly in the dark theme (5.2:1, where it was 2.4:1). (#623)
+- greenhouse-sim: an epoch keeps its authorisation. The rights it begins under, unless they are the local operator's, and each change made while it runs are entries of its log (`"kind": "authorisation"`), applied again at their moments. A run computed by a worker is now decided under the server's `--authorisation` and its changes (`Simulator.authorise`) instead of the local operator's rights. An epoch whose rights were withdrawn while it ran can be carried on to its end, and a fork goes on under the rights in force at its instant, or the forking server's if they differ. An epoch kept before this is carried on under the local operator's rights, as its worker had them. Run ids, the manifest, commit and checkpoint formats, and the digests of epochs under the local operator's rights do not change. 0.7.0 cannot read a log with the new kind, so it can neither carry on nor fork an epoch that has one. (#624)
+- greenhouse-sim: `GET /api/room` answers the room a simulator has for runs: the workers busy, the runs waiting and the disk free, each beside its limit, and the refusal a run asked for now would be given (`room.schema.json`). A stored run's answer also carries `wall_s`, its workers' time from each start, and `past_limit`, whether a limit ended it. (#626)
+- viewer: the runs dialog and the start page's recent runs say what each run used (bytes kept, days computed, CPU, peak memory, wall time, "not measured" where no worker measured it) and why a failed one failed. A run a limit ended can be resumed from its row. The start page shows the workers busy, the runs waiting and the disk free against the limits. A start or resume refused for a limit says so in the simulator's words where it was asked. Sizes are written in decimal units, as the simulator's own messages give them. (#626)
+- greenhouse-sim: a worker whose own time or memory limit ends its epoch as it starts is no longer told that another process has the epoch; the epoch is ended past its limit, with its usage kept, as it should be. (#629)
+- viewer: A heating target or a level set in a replay's panels while its run is being computed now steers that run from the moment its worker has reached, instead of forking it. The replay says when the run took the change, or why it was refused. Once a run has ended, a change in its replay forks it, as before. (#631)
+- viewer: a run is watched in one way, its replay. *Follow* is gone from the start page's list of runs and from a scenario's dialog, and *Replay* of a run still being computed now opens at its newest day and follows it. (#637)
+- viewer: the setup builder's buttons are drawn like the rest of the viewer's,
+  and each is at least 24 px each way. (#638)
+- viewer: the setup builder's fields are drawn like the rest of the viewer's,
+  each control at least 24 px tall, and a refused identifier says why in the
+  warning colour. (#639)
+- viewer: the setup builder's item, palette and inspector fields are drawn
+  like the rest of the viewer's, each control at least 24 px tall. (#640)
+- viewer: the setup builder names the house's origin and its first row's
+  apart, lays its run step out so a date shows whole, and names its weathers
+  in words. (#641)
+- viewer: a replay played at speed keeps its panels on the timeline's day. It asks the simulator for the climate field of the moment the timeline will reach and draws it when the timeline gets there, with each day's first minute ready as the day begins. At 10 s a day the panels read the timeline's day 96 to 97% of the time, against 54 to 59% before. (#643)
+- greenhouse-sim: a run can be started under another weather and for fewer days than
+  its scenario's: `POST /api/scenarios/{id}/runs?weather=cold_spring_day&duration_days=10`.
+  The weather is one the scenario lists, and makes another run, as a seed does. Fewer
+  days are the same run ended sooner, its first days those of the whole run. A longer
+  run is a scenario of its own, made in the builder. A run listed and a replay's
+  position say their `weather`, and the replay draws its scene under it. Nothing
+  breaks: no run under its own weather changes its id, and what 0.7.0 wrote is read as
+  before. One id moves: a run that the viewer's views ask for under another weather, of
+  a scenario whose layout places no equipment, is now another run, as one at another
+  seed is, since its crop grows under that weather. Its records name it by the new id
+  (decision 0075, proposed). (#644)
+- viewer: a replay's timeline draws its run's plan lane: each action its plans had due by the moment shown, and what became of it (carried out, late, missed, cancelled or refused, and why), read from the stored run. Actions still to come are not listed in a replay. (#647)
+- **Added**, `greenhouse-sim`: a scenario's rows may grow Vanthoor's tomato yield model as Katzin simplified it (`crop_model: "vanthoor_katzin"`, version 1; its section `VanthoorKatzinCrop`: the `greenlight_2_0_7` parameter set, the `house_hours` driver profile version 1, and the canopy's height). It grows by area on each row at an hour's step, its quantities carbohydrate equivalents per m² of floor. Its state is kept in a checkpoint, and a run carries on from it. A canopy sample of it reads its leaf area index. It takes no crop actions or crop work. Its outputs are predictions, not validated on measured data. The published schemas gain the model. (#648)
+- viewer: in a run's replay, a selected organ's plant can have a leaf removed, a fruit or a truss harvested, or its stem lowered. While the run is being computed, its worker carries the work out as soon as it can. Once the run has ended, the work makes a fork from the moment shown. (#649)
+- **Added**, `greenhouse-sim`: a packaged scenario, the Vanthoor house (`vanthoor_house`): the TOMGRO house's house and season, its four rows growing Vanthoor's model as Katzin simplified it by area for 120 days. Its crop's numbers are predictions, not validated on measured data. (#651)
+- viewer: a scenario's new-run form asks for the run's days (up to the scenario's own)
+  and its weather, in words, each the scenario's own until changed. It says what the
+  scenario's crop is, and *Make a new scenario from this one* opens the builder with that
+  scenario chosen to copy. *Open in the viewer* is gone from the runs dialog. A run under
+  another weather says so in the list. (#646)
+- viewer: moving equipment or a sensor while following a run played back no longer starts that playback over in the moved layout, and the followed view no longer offers a plant's work. In a run's replay, moves make a fork and a plant's work is offered, as before. (#654)
+- viewer: **Breaking:** the scenario list no longer offers *Follow*, and the addresses that followed a scenario's run played back are read no more. `/?live=<id>` opens the start page, and `&follow=1` on a scenario's address is ignored. A run is watched as it computes in its replay, whose own `&follow=1` stays. (#655)
+- viewer: a scenario's runs dialog opens on the form for a new run, with the scenario's runs listed under it; the *New run* button that opened the form is gone. (#653)
+- viewer: the replay's pace reads "Shows a day in" and a new run's "Seconds to compute a day", so that each says whether it is how fast the run is shown or how fast it is computed. (#664)
+- `greenhouse-sim`, **breaking**: the local API no longer plays a run back in its own process. These are gone:
+  - `/api/scenarios/{id}/playback` and its commands, the deprecated `targets` alias among them;
+  - the consumer interface's routes, `/consumer/v1`;
+  - the gateway's routes, `/actuation/v1`;
+  - the server's `--play`, `--hold` and `--play-seconds-per-day`;
+  - the published `playback.schema.json`.
+
+  What to use instead:
+  - **Start a run:** ask a worker for it (`POST /api/scenarios/{id}/runs`).
+  - **Read its records:** by a cursor through its epoch (`GET /api/runs/{run}/epochs/{n}/observations`, `…/events`, `…/outcomes`).
+  - **Steer it:** through its changes (`POST /api/runs/{run}/epochs/{n}/changes`).
+  - **Reach it from a policy:** through the policy's port, in the process or over its own server.
+
+  The protocol's `consumer` and `gateway` contracts are unchanged. (#666)
+- `greenhouse-sim`, **breaking**: the simulator keeps no book of the runs it plays back (decision 0074). These are gone:
+  - `Simulator.playbacks` and `Simulator.cursors`;
+  - `greenhouse_sim.services.playback`'s `Playbacks`, `start`, `playback`, `state`, `command`, `set_pace`, `set_targets`, `stop_playbacks` and `stop_epoch`;
+  - `greenhouse_sim.services.policy_port.policy_port`;
+  - `greenhouse_sim.services.consumer`'s reads by a run's identifier: `runs`, `run`, `greenhouse`, `observations`, `events`, `outcomes`;
+  - `Playback`'s `rearranged`, `plays`, `failed`, `working`, `finish` and `tell_to_stop`, its `fork` and `first_epoch` arguments, and `stop`'s `wait`.
+
+  What to use instead: make a `Playback` and keep it yourself, as examples 01 and 02 do: `begin` it, `command` it, read its records with `records_after`, `events_after` and `outcomes_after`, and `stop` it when done; open a policy's port on it with `RunPolicyPort`. Stop a stored epoch with `scheduler.cancel` (`POST /api/runs/{run}/epochs/{n}/stop`). A change of the simulator's authorisation reaches the epochs in its store through the store; a `Playback` of your own takes one through `Playback.authorise`. (#667)
+- `greenhouse-sim` and viewer, **breaking**: a stored run's answer (`GET /api/runs`, a scenario's runs, an epoch's) and a position's (`GET /api/positions/{id}`) no longer carry `paused`, which no playback could set once the simulator kept none (decision 0074); their published schemas, `stored_run.schema.json` and `position.schema.json`, lose it. A running epoch reads `running`; whether its replay moves is the position's `playing`. The viewer no longer says a run is *Paused* by a playback. (#668)
+- `greenhouse-sim`: **breaking.** `Playback` no longer takes `restart`: `PlaybackCommand.RESTART` is gone, and `PlaybackCommand` has `PLAY` and `PAUSE` only. A new epoch of a run is a worker's resume or a fork. `RunExecutor.forget` is gone. `greenhouse-protocol`'s `STARTED_OVER` reason and the gateway's `restart` are unchanged. (#669)
+- viewer: the start page's and the runs dialog's buttons, status chips and
+  messages are drawn like the rest of the viewer's: slimmer buttons at least
+  44 px wide, and problems in the warning colour wherever they are said. (#674)
+- viewer: the start page says what it is for, and offers its two ways in,
+  opening a scenario or building one, as equal cards one under the other,
+  each with an icon; it has fewer words, and each of its buttons says what it
+  does when the pointer is on it. (#675)
+- viewer: the replay's header shows its run's status in the same chip as the start page's lists of runs, and tells a screen reader when it changes; its *Make the fork* is drawn as the main answer again. (#677)
+- viewer: the replay's controls under the view fold to a stripe along their edge, and stay folded for the next visit; the side panels' stripes are as tall as the panel beside them. Each of the replay's buttons says what it does on hover. *Delete*, asked twice as on the start page, replaces *Other runs* in the replay's header, and goes to the start page once the run is deleted. (#678)
+- viewer: *Delete* of a run being computed stops it first, then deletes it, on the start page, in the runs dialog and in the replay, and says so before it is confirmed. A run whose worker the simulator cannot signal reads *stopping* until that worker stops, and can be deleted once it reads Interrupted. (#680)
+- `greenhouse-adapters`: the AGC4 2024 final harvest's `HARVEST` event takes its red fruit means over every plant weighed or counted for red fruit, those weighed for red fruit alone included, as the paper's Table 1 does: 219 to 283 g per plant, where it gave 208 to 271 g over the plants weighed whole. Two new parameters, `plants_weighed_for_red_fruit` and `plants_counted_for_red_fruit`, give how many plants each mean is over. Its sums and means of all fruit are unchanged. (#682)
+- viewer: a first visit opens in the system's light or dark theme, rather than always dark. A theme chosen with *Light panels* is kept and wins, as before. (#689)
+- viewer: the info panel's buttons are drawn as the rest of the viewer's are, compact, at least 24 px each way; *Make the fork* in a panel's fork question is drawn as the main answer again; the timeline, checkpoints, schedule and weather fold as the panel's other sections do. (#696)
+- viewer: the HUD's, the inspector's, a move's, a camera's and the plant lab's buttons, and *Controls* and *What am I seeing?*, are drawn as the rest of the viewer's are, compact, at least 24 px each way. (#697)
+- viewer: the info panel's heading names what it shows, *Simulation of* a scenario, *Plant lab* or *Test scene*, and a replay's header *Run of* its scenario, in place of "greenhouse-sim viewer"; the line at the panel's foot says the simulator's version, and the branch and commit only when built on a branch of its own, the commit on hover. (#699)
+- viewer: the display options are a *Display* card beside *House*, its colours and its overlays each folded to a line that says how they stand, and QA mode a switch of its own. (#700)
+- viewer: the equipment and the openings are listed by kind, *Fans*, *Roof vents*, each row by what tells it from the others of its kind, and their lines say a kind at once when its pieces stand alike: `Equipment: fans 100%; heater off`. (#701)
+- The viewer at `/view` no longer plays a scenario's climate run on its own: choose a moment on its sliders, or start a run and watch it in the replay. (#702)
+- viewer: the replay's pace and the start page's and runs dialog's fields are edged in a colour that stands at least 3:1 against the page in both themes (WCAG 2.2's 1.4.11), where the replay's pace stood at under 2:1. (#704)
+- viewer: every *Delete* is drawn in red, and the replay's *Play* and *Pause* in green, each in a colour of its own that stands at least 4.5:1 against the page in both themes; *Delete*'s question was orange, a problem's colour. (#707)
+- `greenhouse-sim`: `biology.tomato.vanthoor.growth.leaf_pruning` gives Vanthoor's model's leaf pruning rate, the one its rates already used. The model's behaviour is unchanged. (#703)
+- viewer: every alert is drawn in its problem colour (`--warn`), as the design system's `Notice` where it is a paragraph, in the panels, the replay, the builder and the QA pages (P19.12). (#705)
+- viewer: keyboard focus shows in one ring on every control, fields, links, folds and the panels' stripes included, where only its buttons had it (P19.12). (#706)
+- Fixed: on the start page, Tab from the scenario search now goes to the next control instead of leaving focus on nothing for one press. (#709)
+- A run started again after its last epoch was deleted gets a new epoch number. It no longer reuses the deleted one's number, so the deleted run's address no longer opens it. (#710)
+- A replay of a run shorter than its scenario no longer lists a schedule command after the run's end as the next to come. (#712)
+- `greenhouse-sim`: the Reduced-State TOMGRO and Vanthoor crop models' parameters now publish a JSON Schema (`parameters.schema.json` beside each model). Each parameter has its description, its unit, its source and its range, with where each end of the range comes from. A parameter model refuses a value outside a range. TOMGRO's αF, DFmax and TRGH are at most 1 and its m below 1; Vanthoor's θ, ηCO2,AirStom and PAR reflections are at most 1. Physical constants, D, T25K and TRGH are marked read only. No run's identity or result changes. (#720)
+- `greenhouse-sim`: a crop parameter set is a file (`biology/parameter_set.schema.json`). It names its model, name, version, base, the values it changes with why, the model version and cultivar it was made for, and is told apart by the SHA-256 of its model and every value it resolves to. `greenhouse_sim.biology.parameter_sets` reads, checks, resolves and compares sets. The published TOMGRO and Vanthoor sets are sets with pinned digests. Vanthoor's parameters refuse a buffer or temperature-inhibition least that is not below its most. No run changes. (#721)
+- `greenhouse-sim`: `greenhouse_sim.containers` runs an outside tool in its container, from an image pinned by its digest. It builds the `docker run`: as the host's user on Linux, as the image's user under Docker Desktop. It measures a run's exit status, time and peak memory, and checks that Docker Hub still serves a pinned digest. OpenFOAM's runner uses it, and on macOS and Windows its container now also gets `HOME=/tmp`, as it did on Linux. (#722)
+- `greenhouse-sim`: an experiment's episode can run on a condition, `Episode(condition=Condition(seed=…, weather=…, duration_days=…))`, its run's seed, weather and days as a run started from the API takes them (decision 0075). With no condition it runs on the scenario's own run, as before. `PolicyEntry(factory="module:callable", settings={…}, seed=…).make()` makes a fresh policy from its factory, given its settings and seed. No run id, digest or existing interface changes. (#726)
+- `greenhouse-sim`: a Reduced-State TOMGRO or Vanthoor crop section names its parameter set by `parameter_set` and `parameter_set_version` (1 when left out). A set other than the model's published one is looked up among those the simulator keeps in its run store when a scenario is uploaded, and the upload is refused if the set is not kept. A run under such a set is told apart by the set's digest. A run's manifest answer gives `parameter_set`: its name, version, digest and the model version it was made for. Runs under the published sets keep their ids, checkpoints and replay digests. The scenario schema's `parameter_set` is a name rather than a constant. (#727)
+- `greenhouse-sim`: a scenario's file carries the parameter set its crop runs, when that is not its model's published set, under `parameter_sets`: the set's file and each of its unpublished bases. An epoch's scenario file does too, so a worker, a resume and a fork run such a run from the store alone, even after the set is deleted. An upload carrying a set that the simulator keeps under the same name and version with other numbers is refused. (#728)
+- `greenhouse-protocol`: `greenhouse_protocol.experiment` adds an episode's record (`EpisodeRecord`) and its published JSON Schema (`episode-record.schema.json`). The record holds an episode's place in its experiment, its run (condition, models with their versions, the weather's digest), its policy (the entry it was made from, with its settings' and files' digests), the software, its trace by decision and its outcomes. It also adds `Condition` and `PolicyEntry` as data, and `settings_sha256` and `delivered`, which make the record's digests. The change is additive: no existing record or schema changes. (#729)
+- `greenhouse-sim`: `greenhouse_sim.experiment.record_episode` runs an episode and returns its record (`greenhouse_protocol.experiment.EpisodeRecord`). The record names its run's condition, models with their versions and weather's digest, the policy's entry with its settings' and files' digests, the software, and each decision with what it was given, what it gave, its receipt and its time. An `Episode`'s policy may be a `PolicyEntry`, made fresh when the episode starts, and an entry may name the settings that are its files (`files`). `Condition` and `PolicyEntry` are now the protocol's, the second extended with `make()`. No run id or episode digest changes. (#730)
+- `greenhouse-protocol`, `greenhouse-sim`: an episode's record (`EpisodeRecord`) names, on its crop's model, the parameter set the run grew it with (`ModelRan.parameter_set`: name, version, digest and the model version it was made for), as the run's manifest answer gives it. The field is optional: records written before it still read, and no episode digest changes. (#733)
+- `greenhouse-sim`: a crop model's parameter sets are kept and served at `/api/parameter-sets/{model}`.
+
+  - **List** a model's sets, its published one first.
+  - **Read** one at `/{name}/{version}`, with every value it resolves to.
+  - **Compare** two at `/{name}/{version}/compare/{name}/{version}`.
+  - **Download** one at `/{name}/{version}/file`.
+  - **Save** one by POSTing its file without a version. It takes its name's next version, and the same numbers saved again are the version that has them.
+  - **Upload** a file at `POST /api/parameter-sets/upload`. It is refused when the simulator keeps its name and version with other numbers.
+  - **Refusals:** a value outside its range is refused by field. A published set's name is reserved for it. (#734)
+- `greenhouse-sim`: an experiment of paired episodes. An experiment's file (`greenhouse_sim.experiment.paired.Experiment`, with its published `experiment.schema.json`) names a scenario, conditions, and policies with the seeds of their trials. `python -m greenhouse_sim.experiment run experiment.json --out results/` runs every policy at each of its seeds on every condition, each on a run of its own. It writes the file as given with its digest, a record per episode with its place, and the deliveries of the episodes asked. `python -m greenhouse_sim.experiment check results/episodes/N.json` runs a record's episode again from what it names and compares the digests. `greenhouse_sim.experiment` is now a package; its imports are unchanged. (#736)
+- `greenhouse-protocol`: `benchmark`, a benchmark's measures as versioned definitions (`MeasureDefinition`, digested as their JSON with keys sorted) and an episode's scores (`EpisodeScores`, each value a number or `NotComparable` with its reason), with the class rule `refused_by_class` and their JSON Schemas (`measure-definition.schema.json`, `episode-scores.schema.json`). The first fifteen measures (heat given, temperature and humidity outside their bounds, device switches and hours run, actions by status, decision time and skips, a priced score, and the harvest as a prediction) are packaged under `measures/`. `measuring` holds the arithmetic they imply. No existing record, schema or digest changes. (#746)
+- `greenhouse-sim` viewer: the setup builder edits crop parameter sets beside its rows. For the model the rows grow, choose one of its sets, compare it with the set it is based on, or download its file. Or edit a new version from it. Each parameter shows what it is, its unit, its range and its source, and a fixed one is read only with why. The simulator refuses a value outside its range by its field, and saves the set under its name's next version.
+
+  `greenhouse-sim`: `GET /api/parameter-sets/{model}/schema` serves the schema of a crop model's parameters, as its `parameters.schema.json` publishes it. (#749)
+- `greenhouse-sim`: `evaluation.instruments` adds the evaluator's instruments on the run an episode carried out (decision 0082): the house's air every minute, the heat given over any stretch to the second, each device's states with every switch at its moment and whether its loop or a command set it, and the harvest. `Instruments` gives each packaged measure's source as the series `greenhouse_protocol.measuring` takes. `experiment.carry_out_episode` gives an episode's record with the run it carried out, read once its policy has stopped (`Playback.run_carried_out`). `WholeHouse.controlled_through` gives the controller's levels through a stretch of a run. No record, digest, run id or schema changes. (#750)
+- `greenhouse-sim`: an experiment's episodes are scored as each policy stops. `run` writes `scores/N.json` beside each record, on every packaged measure. `python -m greenhouse_sim.experiment score results/` runs each record's episode again and scores it only if its digest is the record's, saying why for any record it does not score. Until a benchmark exists, scores name none: the window is the whole episode, and the measures against a goal's bounds and the priced score are not comparable. No record, digest or run id changes. (#751)
+- `greenhouse-protocol`: `EpisodeScores.benchmark` may be null, for an episode scored on no benchmark. Its schema says so. (#751)
+- `greenhouse-sim` viewer: a run's crop parameter set is chosen in the new-run form of a scenario registered from a draft or a file: its own, or another of its crop model's that the simulator publishes or keeps. Another set runs as a scenario of its own, the same house under that set, listed beside the scenario as `<scenario>_<set>_v<version>`. Its run is told apart by the set's digest, and its manifest answer names the set. A packaged scenario's form names its published set and says why it runs that one alone. Its house runs under another once the builder has made a scenario of it.
+
+  `greenhouse-sim`: `POST /api/scenarios/{id}/under/{name}/{version}` registers a scenario's house under another of its crop model's parameter sets as a scenario of its own; it refuses a packaged scenario (400). A scenario's summary (`GET /api/scenarios`) gives `parameter_set`: the set its crop grows with, and why its runs take no other, if they take none. (#752)
+- `greenhouse-sim`: an installation, and a scenario's house, may describe its components in an optional `components` section: its cover's materials, what each wall faces (the outside, a corridor, headhouse or house at a constant or recorded temperature, or nothing), its floor and soil layers, its thermal, shading and blackout screens, and its heating pipe networks. A material is named from a catalogue whose values each have a source (`single_glass`, `concrete`, `soil`, `thermal_screen_cloth`), or given by its properties, each with its unit and range in the installation's schema. The `grid` and `whole_house` house air models refuse a house that describes any component, naming it. A house that describes none is written as before, and no run id changes. A service's answer schema no longer carries the `unit`, `source`, `range_from` and `fixed` keywords; the files' schemas keep them. (#753)
+- `greenhouse-protocol`: three outside observation types, `outside_downward_longwave_w_m2` (the sky's downward longwave, W/m²), `outside_sky_temperature_c` (the sky's effective temperature, °C) and `outside_diffuse_radiation_w_m2` (the measured diffuse radiation, W/m²). `outside_heat_emission_w_m2` is documented as a pyrgeometer's net longwave. (#754)
+- `greenhouse-sim`: a recorded weather may give the three in columns of those names, each refused outside its range (40 to 700 W/m², −110 to 60 °C, 0 to 1,500 W/m²); a weather that does not record one gives none, and a weather without them is read, written and digested as before, so no run id changes. A weather station may carry a pyrgeometer (`downward_longwave`), a sky temperature sensor (`sky_temperature`) and a shaded pyranometer (`diffuse_radiation`), which read only where the weather gives their quantity. No house air model reads them yet. (#754)
+
 ## 0.7.0 - 2026-11-06
 
 A simulator's runs are now limited (P18, decision 0067): how many workers run at once, how
