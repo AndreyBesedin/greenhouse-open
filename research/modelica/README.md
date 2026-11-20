@@ -336,12 +336,18 @@ not be made without an edit, and how the gap is attributed:
 | Variant | Takes out |
 | --- | --- |
 | `screens` | the thermal and shading screens, held open |
-| `crop` | the crop's transpiration: its minimum stomatal resistance a million times TiGwerLib's |
+| `crop` | the crop's transpiration: its minimum stomatal resistance a million times TiGwerLib's (as stated; it took nothing out, [below](#what-it-found)) |
 | `storage` | the heat stored in the floor, the soil, the roof, the walls, the structure, the gutters and the growing medium: each capacity a hundredth of TiGwerLib's |
 | `ground` | the floor's tie to the deep soil at 18.1 °C: the soil's conductivities a hundredth |
 | `sky` | the cold sky: the roof and the south wall radiate to a sky at the outside air's temperature |
 | `walls` | the corridors: the east and north walls face air at the outside air's temperature |
-| `all` | the six together |
+| `all` | the six together (five, since `crop` took nothing out) |
+| `transpiration` | the crop's transpiration, as `crop` meant to: the canopy in TiGwerLib's `Custom` mode, its minimum stomatal resistance a million times TiGwerLib's |
+| `all_six` | the six together, `transpiration` in `crop`'s place |
+
+`transpiration` and `all_six` were stated in a commit of their own after
+the first fourteen reports, which found `crop` a no-op, and before either
+ran.
 
 Not made, since each needs an edit: a west wall, which TiGwerLib does not
 have; walls with the outside's wind and sky beyond them; a crop that
@@ -410,8 +416,10 @@ July (`fig9`), from an RMSE of 3.57 K and a mean of +2.29 K (sun up
   therefore not measured, and `all` takes out five blockers, not six. A
   variant that takes the transpiration out by modifiers alone sets the
   mode to `Custom` as well, whose other parameters' defaults are
-  Stanghellini's constants; it is not run here, since `blockers.json`
-  states the variant as it ran.
+  Stanghellini's constants; it ran afterwards as `transpiration`, stated
+  in a commit of its own
+  ([below](#the-crops-transpiration-taken-out)), and `blockers.json`
+  keeps `crop` as it ran.
 - **In January the screens account for the most:** held open, they take
   the RMSE from 5.20 to 3.30 K and 45 % of the mean difference, mostly at
   night, where the RMSE falls from 6.08 to 3.73 K. The heat stored
@@ -426,17 +434,21 @@ July (`fig9`), from an RMSE of 3.57 K and a mean of +2.29 K (sun up
   the parts are not additive there. All at once, two days of 11 come
   within the bar; the night's RMSE falls from 6.08 to 2.05 K and the
   day's rises from 3.17 to 4.45 K.
-- **In July no blocker taken out accounts for much:** the largest single
+- **In July none of the first five taken out accounts for much:** the largest single
   move is 0.37 K, the heat stored, and all five together take the RMSE
   from 3.57 to 2.63 K, the single moves adding up (0.92 K against
   0.94 K). The day's warmth, +3.67 K on average, is still +2.58 K with all
   five out. The shading screen held open moves July's days by 0.09 K, so
   of the two blockers the comparison named for them, the transpiring
-  crop, which this run could not take out, is the one left.
+  crop, which this run could not take out, is the one left. Taken out
+  afterwards, it accounts for them
+  ([below](#the-crops-transpiration-taken-out)).
 - **What no variant closes:** with all five out, the RMSE is still 3.15 K
   in January and 2.63 K in July, beyond the bar on 9 and 11 days of 11.
   That holds the crop's part and what the variants could not make
-  without an edit, listed above.
+  without an edit, listed above. With the crop's transpiration out as
+  well, July's RMSE comes to 1.89 K and January's to 5.39 K
+  ([below](#the-crops-transpiration-taken-out)).
 - **July's reports** compare 3,168 or 3,169 moments: the moment
   OpenModelica writes off its grid is in some variants' output and not in
   others'.
@@ -445,3 +457,64 @@ July (`fig9`), from an RMSE of 3.57 K and a mean of +2.29 K (sun up
   July; the simulator's half took 6 to 8 minutes. A report's simulator
   half peaks above 10 GB of memory, so on a machine of 32 GB the reports
   are written one at a time.
+
+### The crop's transpiration, taken out
+
+`crop` set `param1` alone. `transpiration` puts the canopy in TiGwerLib's
+`Custom` mode as well, whose other parameters' defaults are Stanghellini's
+constants (`param10` and `param11` read in thousandths), with `param1` a
+million times its 82 s/m; `all_six` takes the six blockers out at once,
+`transpiration` in `crop`'s place. Both were stated in
+[`blockers.json`](blockers.json) after the first fourteen reports and
+before either ran. Flattened by OpenModelica 1.25.0, `transpiration`
+differs from `crop` in the mode and the five equations of Stanghellini's
+resistances alone: its minimum stomatal resistance is bound to `param1`,
+8.2e7 s/m, where `crop`'s is 82. Each ran once on each window, on the same
+machine, and its reports are committed as written, one commit each.
+
+January (`fig8`), from an RMSE of 5.20 K and a mean of −4.24 K:
+
+| Variant | RMSE | Move | Mean | Share of the mean | Move, sun up | Move, sun down | Days within 1.6 K |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `transpiration` | 6.56 K | −1.36 K | −5.99 K | −41 % | −1.62 K | −1.32 K | 0 of 11 |
+| `all_six` | 5.39 K | −0.19 K | −4.18 K | 1 % | −5.04 K | +3.47 K | 0 of 11 |
+
+July (`fig9`), from an RMSE of 3.57 K and a mean of +2.29 K:
+
+| Variant | RMSE | Move | Mean | Share of the mean | Move, sun up | Move, sun down | Days within 1.6 K |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `transpiration` | 2.97 K | +0.60 K | −1.29 K | 156 % | +1.76 K | −2.78 K | 0 of 11 |
+| `all_six` | 1.89 K | +1.68 K | −1.29 K | 156 % | +2.10 K | +0.20 K | 2 of 11 |
+
+- **In July the crop's transpiration accounts for the day's warmth.**
+  Taken out alone, it takes the day's mean difference from +3.67 K to
+  −0.15 K and the day's RMSE from 4.44 to 2.67 K: the largest single move
+  in July, 0.60 K over the window, ahead of the heat stored (0.37 K). At
+  night it widens the gap, from an RMSE of 0.66 to 3.43 K: without the
+  crop's water, TiGwerLib's nights are 3.31 K warmer than the
+  simulator's.
+- **With all six out, July comes closest:** an RMSE of 1.89 K, two days
+  of 11 within the bar, and the nights within 0.45 K. The single moves add
+  up (1.52 K against 1.68 K). By day the simulator is then 1.81 K colder
+  than TiGwerLib.
+- **In January the transpiration hides part of the gap, as the cold sky
+  does:** without it TiGwerLib's air is warmer, by day and by night, and
+  the simulator, which has no crop giving the air water either, falls
+  further below it: the RMSE goes from 5.20 to 6.56 K.
+- **With all six out, January's nights close and its days open:** the
+  night's RMSE falls from 6.08 to 2.61 K, the day's rises from 3.17 to
+  8.21 K, the simulator 7.34 K colder by day, and over the window the
+  RMSE is 5.39 K. The parts are far from additive there: the single moves
+  add up to 2.17 K where all six at once move −0.19 K, an interaction of
+  −2.36 K. What is left is the day: TiGwerLib's air, with no water taken
+  by a crop and little heat stored, warms under January's sun much more
+  than the simulator's.
+- **Ranked again,** `transpiration` in `crop`'s place: in January the
+  screens (1.90 K), the heat stored (1.20 K), the corridors (1.03 K), the
+  deep soil (0.71 K), then the sky (−1.32 K) and the transpiration
+  (−1.36 K), which hide part of the gap; in July the transpiration
+  (0.60 K), the heat stored (0.37 K), the sky (0.31 K), the deep soil
+  (0.22 K), the screens (0.07 K) and the corridors (−0.05 K).
+- **What it took:** TiGwerLib built each in 12 or 13 s and simulated it in
+  8 and 10 minutes in January and in 43 and 55 minutes in July; the
+  simulator's half took 6 to 7 minutes.

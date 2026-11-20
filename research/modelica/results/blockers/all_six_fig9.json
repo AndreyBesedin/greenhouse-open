@@ -1,0 +1,222 @@
+{
+ "variant": {
+  "name": "all_six",
+  "modifiers": {
+   "SC_UScr": {
+    "y": "0"
+   },
+   "SC_LScr": {
+    "y": "0"
+   },
+   "CanTranspi": {
+    "mode": "TiGwerLib.Types.Enumerations.TranspirationMode.Custom",
+    "param1": "82e6"
+   },
+   "Floor": {
+    "rho": "17"
+   },
+   "Soil": {
+    "rho_t1": "17",
+    "rho_t2": "24",
+    "lambda_t1": "0.01",
+    "lambda_t2": "0.022"
+   },
+   "Roof": {
+    "rho": "25"
+   },
+   "EWall": {
+    "rho": "25"
+   },
+   "NWall": {
+    "rho": "25"
+   },
+   "SouthWall": {
+    "rho_wall": "25",
+    "rho_scr": "1.55",
+    "SkyBlkBodyTempVarInput": "T_outAir_meas"
+   },
+   "ThermalLoads": {
+    "m_struct": "124",
+    "m_gmedium": "79.6",
+    "m_gutters": "60.8"
+   },
+   "TBlkSky": {
+    "y": "T_outAir_meas"
+   },
+   "TEastCorr": {
+    "y": "T_outAir_meas"
+   },
+   "TNorthCorr": {
+    "y": "T_outAir_meas"
+   },
+   "TEqWallEast": {
+    "y": "T_outAir_meas"
+   },
+   "TEqWallNorth": {
+    "y": "T_outAir_meas"
+   },
+   "NECorridorsAir": {
+    "Tair": "T_outAir_meas",
+    "RH": "RH_outAir_meas"
+   }
+  }
+ },
+ "stated_in": "4d741102e8674c00e762278db35449379509ec95",
+ "comparison_stated_in": "ef660dba2e81687d24985cc6f847adce650e3b02",
+ "window": {
+  "name": "fig9",
+  "figure": "Fig 9",
+  "from": "2015-07-15 00:00",
+  "to": "2015-07-26 00:00",
+  "start_s": 48384000,
+  "end_s": 49334400
+ },
+ "run": {
+  "image": "openmodelica/openmodelica:v1.25.0-minimal@sha256:c85938d4dd4cdc15ea2d2af899920907e707ef94243e13603bd347679e5e6a14",
+  "solver": "dassl",
+  "tolerance": 1e-05,
+  "build_s": 12,
+  "simulate_s": 2585,
+  "simulator": "v0.7.0-453-g2ba95903c205cd46953dc6f4c2b1380663893514",
+  "simulator_s": 406,
+  "commands": 47075
+ },
+ "house": {
+  "air_volume_m3": 7225.01272906404,
+  "tigwerlib_volume_m3": 7646.4000000000015,
+  "glazed_m2": 1973.568
+ },
+ "heat": {
+  "tigwerlib_j": 31116163007.89191,
+  "simulator_j": 31116163007.891853,
+  "against_tigwerlibs_run": {
+   "steps": 3168,
+   "compared": 3168,
+   "largest_difference_w": 99.50593838614986
+  }
+ },
+ "compared": {
+  "MainAir.T": {
+   "moments": 3169,
+   "compared": 3169,
+   "missing": 0,
+   "mean_difference": -1.2888716002158194,
+   "rmse_difference": 1.8878033741415887,
+   "largest_difference": -12.63945807717073,
+   "largest_at_s": 49294200,
+   "sun_up": {
+    "compared": 2026,
+    "mean_difference": -1.8135896136079837,
+    "rmse_difference": 2.3363591740344916
+   },
+   "sun_down": {
+    "compared": 1143,
+    "mean_difference": -0.35879400167467784,
+    "rmse_difference": 0.45305987588586444
+   },
+   "bar": 1.6,
+   "days_within_bar": 2,
+   "days": [
+    {
+     "start_s": 48384000,
+     "compared": 288,
+     "mean_difference": -1.746878983480471,
+     "rmse_difference": 2.5137738570134855,
+     "within_bar": false,
+     "simulator_vs_measured": 6.029895120750449,
+     "tigwerlib_vs_measured": 8.06362287346224
+    },
+    {
+     "start_s": 48470400,
+     "compared": 288,
+     "mean_difference": -1.5340660616363038,
+     "rmse_difference": 2.2348945989211004,
+     "within_bar": false,
+     "simulator_vs_measured": 4.831641792274664,
+     "tigwerlib_vs_measured": 6.457756217719132
+    },
+    {
+     "start_s": 48556800,
+     "compared": 288,
+     "mean_difference": -1.1527137993897092,
+     "rmse_difference": 1.6788623131995837,
+     "within_bar": false,
+     "simulator_vs_measured": 3.0105112565771215,
+     "tigwerlib_vs_measured": 4.085303837914866
+    },
+    {
+     "start_s": 48643200,
+     "compared": 288,
+     "mean_difference": -1.4484464718212857,
+     "rmse_difference": 2.025456239474302,
+     "within_bar": false,
+     "simulator_vs_measured": 4.6250116545259115,
+     "tigwerlib_vs_measured": 6.266280349641764
+    },
+    {
+     "start_s": 48729600,
+     "compared": 288,
+     "mean_difference": -1.104090162563937,
+     "rmse_difference": 1.6643669006190485,
+     "within_bar": false,
+     "simulator_vs_measured": 2.317982800716291,
+     "tigwerlib_vs_measured": 3.5557063070532515
+    },
+    {
+     "start_s": 48816000,
+     "compared": 288,
+     "mean_difference": -1.1660713135262684,
+     "rmse_difference": 1.6854204990069703,
+     "within_bar": false,
+     "simulator_vs_measured": 2.278965602037858,
+     "tigwerlib_vs_measured": 3.4993635054782337
+    },
+    {
+     "start_s": 48902400,
+     "compared": 288,
+     "mean_difference": -1.1770170297003855,
+     "rmse_difference": 1.6991247551914679,
+     "within_bar": false,
+     "simulator_vs_measured": 2.9107031670097454,
+     "tigwerlib_vs_measured": 4.18324824608548
+    },
+    {
+     "start_s": 48988800,
+     "compared": 288,
+     "mean_difference": -1.4530069702781372,
+     "rmse_difference": 1.980115922721408,
+     "within_bar": false,
+     "simulator_vs_measured": 5.05006570782882,
+     "tigwerlib_vs_measured": 6.4639787126892
+    },
+    {
+     "start_s": 49075200,
+     "compared": 288,
+     "mean_difference": -1.4268080071474207,
+     "rmse_difference": 1.9571418081491925,
+     "within_bar": false,
+     "simulator_vs_measured": 6.306500698074772,
+     "tigwerlib_vs_measured": 7.760657654356642
+    },
+    {
+     "start_s": 49161600,
+     "compared": 288,
+     "mean_difference": -0.9769349567680927,
+     "rmse_difference": 1.512555643907025,
+     "within_bar": true,
+     "simulator_vs_measured": 4.492649654480929,
+     "tigwerlib_vs_measured": 5.44671939167992
+    },
+    {
+     "start_s": 49248000,
+     "compared": 288,
+     "mean_difference": -0.9930897422208957,
+     "rmse_difference": 1.562039319139444,
+     "within_bar": true,
+     "simulator_vs_measured": 5.540984927416658,
+     "tigwerlib_vs_measured": 6.320428041655931
+    }
+   ]
+  }
+ }
+}
