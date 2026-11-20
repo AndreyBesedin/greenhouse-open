@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DAY_S } from "../clock";
 import type { ScenarioSummary } from "../scenarios";
-import { button, click, enter, type Rendered, render } from "../testing/render";
+import { button, choose, click, enter, type Rendered, render, said } from "../testing/render";
 import { copyAddress, replayAddress } from "./paths";
 import { RunsDialog } from "./RunsDialog";
 import type { StoredRun } from "./storedRuns";
@@ -78,13 +78,13 @@ describe("the runs of a scenario, in a dialog", () => {
     vi.unstubAllGlobals();
   });
 
-  function shown(runs: StoredRun[]) {
+  function shown(runs: StoredRun[], scenario: ScenarioSummary = SCENARIO) {
     const onClose = vi.fn();
     const onChanged = vi.fn();
     const navigate = vi.fn();
     const rendered = render(
       <RunsDialog
-        scenario={SCENARIO}
+        scenario={scenario}
         runs={runs}
         navigate={navigate}
         onClose={onClose}
@@ -441,6 +441,154 @@ describe("the runs of a scenario, in a dialog", () => {
         expect(container.querySelector('[role="alert"]')?.textContent).toContain("not a run"),
       );
       expect(navigate).not.toHaveBeenCalled();
+    });
+  });
+
+  // P20.5: its crop's parameter set is its scenario's own unless another of its
+  // crop model's is chosen, which only a scenario the simulator does not package
+  // may take, and which runs as a scenario of its own.
+  describe("under a parameter set", () => {
+    const FIXED = "A packaged scenario runs its crop model's published set alone.";
+    const PACKAGED: ScenarioSummary = {
+      ...SCENARIO,
+      id: "tomgro_house",
+      name: "TOMGRO house",
+      crop_model: "reduced_tomgro",
+      parameter_set: { name: "gnvman", version: 1, fixed: FIXED },
+    };
+    const BUILT: ScenarioSummary = {
+      ...PACKAGED,
+      id: "my_house_r1",
+      name: "My house",
+      parameter_set: { name: "gnvman", version: 1, fixed: null },
+    };
+    const SETS_URL = "/api/parameter-sets/reduced_tomgro";
+    const listed = (name: string, version: number, published = false) => ({
+      model: "reduced_tomgro",
+      name,
+      version,
+      digest: `sha256:${name}${version}`,
+      based_on: null,
+      made_for: 1,
+      cultivar: null,
+      description: "",
+      published,
+    });
+    const SETS = [listed("gnvman", 1, true), listed("brighter", 1), listed("brighter", 2)];
+    // The scenario the simulator registers for the house under brighter v1, as
+    // its list would show it.
+    const UNDER = {
+      ...BUILT,
+      id: "my_house_r1_brighter_v1",
+      name: "My house under brighter v1",
+      daily: [],
+      openings: [],
+      opening_day: null,
+      thermostat: null,
+      parameter_set: { name: "brighter", version: 1, fixed: null },
+    };
+    const UNDER_URL = "/api/scenarios/my_house_r1/under/brighter/1";
+    const STARTED = run({ epoch: 0, status: "queued", scenario_id: UNDER.id });
+
+    it("names a packaged scenario's set and says why its runs take no other, offering none", () => {
+      const asked = simulator();
+      const { container, choice } = shown([], PACKAGED);
+
+      expect(said(container, "run-parameter-set")).toBe(
+        `Its crop's parameter set: gnvman v1. ${FIXED}`,
+      );
+      expect(() => choice("Parameter set")).toThrow("no field Parameter set");
+      expect(asked).toEqual([]);
+    });
+
+    it("offers a built scenario its own set first, then its crop model's others", async () => {
+      simulator({ [`GET ${SETS_URL}`]: { status: 200, body: SETS } });
+      const { choice, container } = shown([], BUILT);
+
+      await vi.waitFor(() => expect(choice("Parameter set").options).toHaveLength(3));
+      expect([...choice("Parameter set").options].map((each) => [each.value, each.text])).toEqual([
+        ["gnvman v1", "gnvman v1, published, its own"],
+        ["brighter v1", "brighter v1"],
+        ["brighter v2", "brighter v2"],
+      ]);
+      expect(choice("Parameter set").value).toBe("gnvman v1");
+      expect(said(container, "run-parameter-set")).toBeNull();
+    });
+
+    it("asks for its own set as none: a run of the scenario itself", async () => {
+      const asked = simulator(
+        { [`GET ${SETS_URL}`]: { status: 200, body: SETS } },
+        { status: 200, body: run({ epoch: 0, status: "queued" }) },
+      );
+      const { container, choice, navigate } = shown([], BUILT);
+      await vi.waitFor(() => expect(choice("Parameter set").options).toHaveLength(3));
+
+      click(button(container, "Start run"));
+
+      await vi.waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
+      expect(asked.filter((each) => each.method === "POST").map((each) => each.url)).toEqual([
+        "/api/scenarios/my_house_r1/runs?seconds_per_day=10",
+      ]);
+    });
+
+    it("runs another as the scenario the simulator registers for the house under it", async () => {
+      const asked = simulator({
+        [`GET ${SETS_URL}`]: { status: 200, body: SETS },
+        [`POST ${UNDER_URL}`]: { status: 200, body: UNDER },
+        [`POST /api/scenarios/${UNDER.id}/runs?seconds_per_day=10`]: {
+          status: 200,
+          body: STARTED,
+        },
+      });
+      const { container, choice, navigate } = shown([], BUILT);
+      await vi.waitFor(() => expect(choice("Parameter set").options).toHaveLength(3));
+
+      choose(choice("Parameter set"), "brighter v1");
+      click(button(container, "Start run"));
+
+      await vi.waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
+      expect(navigate).toHaveBeenCalledWith(replayAddress(RUN_ID, 0, true));
+      expect(asked.filter((each) => each.method === "POST").map((each) => each.url)).toEqual([
+        UNDER_URL,
+        `/api/scenarios/${UNDER.id}/runs?seconds_per_day=10`,
+      ]);
+    });
+
+    it("starts nothing when the set is refused, and says why", async () => {
+      const refused = "no set brighter v1 of reduced_tomgro is kept";
+      const asked = simulator({
+        [`GET ${SETS_URL}`]: { status: 200, body: SETS },
+        [`POST ${UNDER_URL}`]: { status: 400, body: { error: refused } },
+      });
+      const { container, choice, navigate } = shown([], BUILT);
+      await vi.waitFor(() => expect(choice("Parameter set").options).toHaveLength(3));
+
+      choose(choice("Parameter set"), "brighter v1");
+      click(button(container, "Start run"));
+
+      await vi.waitFor(() =>
+        expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+          `Not started: ${refused}.`,
+        ),
+      );
+      expect(navigate).not.toHaveBeenCalled();
+      expect(asked.filter((each) => each.method === "POST").map((each) => each.url)).toEqual([
+        UNDER_URL,
+      ]);
+      expect(button(container, "Start run").disabled).toBe(false);
+    });
+
+    it("keeps its own set when its model's others cannot be listed, and says why", async () => {
+      simulator({ [`GET ${SETS_URL}`]: { status: 404, body: { error: "no sets here" } } });
+      const { choice, container } = shown([], BUILT);
+      const sets = choice("Parameter set");
+
+      await vi.waitFor(() =>
+        expect(
+          container.querySelector(`[id="${sets.getAttribute("aria-describedby")}"]`)?.textContent,
+        ).toBe("Its crop model's other sets cannot be listed: no sets here"),
+      );
+      expect([...sets.options].map((each) => each.text)).toEqual(["gnvman v1, its own"]);
     });
   });
 

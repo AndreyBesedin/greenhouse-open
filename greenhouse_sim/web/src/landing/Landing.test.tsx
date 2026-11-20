@@ -13,7 +13,8 @@ import type { Room } from "./room";
 import { RUNS_ASKED_EVERY_MS, type StoredRun } from "./storedRuns";
 
 // What the simulator sends of a scenario besides its name: how it grows its
-// crop, its daily commands, openings and weathers, its opening day and heater.
+// crop, its daily commands, openings and weathers, its opening day and heater,
+// and its crop's parameter set, which the simple crop has none of.
 const SENT = {
   crop_model: "simple",
   daily: [],
@@ -21,6 +22,7 @@ const SENT = {
   weathers: ["default"],
   opening_day: null,
   thermostat: null,
+  parameter_set: null,
 };
 const SCENARIOS: ScenarioSummary[] = [
   {

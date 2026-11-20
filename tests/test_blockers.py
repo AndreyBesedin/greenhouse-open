@@ -1,9 +1,9 @@
 """The blockers are taken out of TiGwerLib as their statement has it
 (research/modelica/blockers.json), without Docker: each variant extends
-TiGwerLib's global model with modifiers alone, all of them together make
-`all` without one setting another's twice, the build loads the variant
-beside TiGwerLib, and the gap a variant closes is measured from the
-baseline's, its interaction with the others left as it is."""
+TiGwerLib's global model with modifiers alone, a combined variant merges
+its parts' without one setting another's value twice, the build loads the
+variant beside TiGwerLib, and the gap a variant closes is measured from
+the baseline's, its interaction with its parts left as it is."""
 
 from typing import Any
 
@@ -15,7 +15,17 @@ from research.modelica import openmodelica as om
 
 def test_each_variant_extends_tigwerlibs_model_with_modifiers_alone() -> None:
     variants = blockers.variants()
-    assert set(variants) == {"screens", "crop", "storage", "ground", "sky", "walls", "all"}
+    assert set(variants) == {
+        "screens",
+        "crop",
+        "storage",
+        "ground",
+        "sky",
+        "walls",
+        "all",
+        "transpiration",
+        "all_six",
+    }
     screens = variants["screens"]
     assert screens.model == "CTIFLWithout_screens"
     source = screens.source()
@@ -24,14 +34,34 @@ def test_each_variant_extends_tigwerlibs_model_with_modifiers_alone() -> None:
     assert source.rstrip().endswith("end CTIFLWithout_screens;")
     # A modifier, never an equation.
     assert "equation" not in "".join(v.source() for v in variants.values())
+    # `transpiration` takes the canopy to the mode that reads its param1;
+    # `crop` set param1 alone.
+    assert (
+        "    CanTranspi(mode=TiGwerLib.Types.Enumerations.TranspirationMode.Custom, param1=82e6));"
+        in variants["transpiration"].source()
+    )
+    assert variants["crop"].modifiers == {"CanTranspi": {"param1": "82e6"}}
 
 
-def test_all_is_every_single_variants_modifiers_merged() -> None:
+def test_a_combined_variant_is_its_parts_modifiers_merged() -> None:
     variants = blockers.variants()
+    combined = blockers.together_of()
+    assert combined == {
+        "all": ["screens", "crop", "storage", "ground", "sky", "walls"],
+        "all_six": ["screens", "transpiration", "storage", "ground", "sky", "walls"],
+    }
+    for name, parts in combined.items():
+        together = variants[name].modifiers
+        for part in parts:
+            for component, values in variants[part].modifiers.items():
+                assert {key: together[component][key] for key in values} == values
+        assert set(together) == {c for part in parts for c in variants[part].modifiers}
+    assert variants["all"].modifiers["CanTranspi"] == {"param1": "82e6"}
+    assert variants["all_six"].modifiers["CanTranspi"] == {
+        "mode": "TiGwerLib.Types.Enumerations.TranspirationMode.Custom",
+        "param1": "82e6",
+    }
     together = variants["all"].modifiers
-    for name in blockers.manifest()["variants"]["all"]["of"]:
-        for component, values in variants[name].modifiers.items():
-            assert {key: together[component][key] for key in values} == values
     # The two that both modify the soil and the south wall are merged into one modifier each.
     assert together["Soil"] == {
         "rho_t1": "17",
@@ -95,18 +125,21 @@ def test_a_blockers_part_is_its_move_from_the_baseline() -> None:
         "storage": _report(-2.0, 2.5, (-1.0, 2.0), (-3.0, 3.0)),
         "all": _report(-0.5, 1.5, (0.5, 1.0), (-1.0, 2.0)),
     }
-    found = blockers.apportion(baseline, reports)
+    # `partial` has a part with no report: it is not attributed.
+    combined = {"all": ["screens", "sky", "storage"], "partial": ["screens", "ground"]}
+    found = blockers.apportion(baseline, reports, combined)
     screens = found["moves"]["screens"]["all moments"]
     assert screens["rmse_closed"] == pytest.approx(1.0)
     assert screens["mean_moved"] == pytest.approx(1.0)
     assert screens["share_of_mean"] == pytest.approx(0.25)
     assert found["moves"]["sky"]["all moments"]["rmse_closed"] == pytest.approx(-0.5)
     assert found["moves"]["screens"]["sun_down"]["rmse_closed"] == pytest.approx(1.5)
-    # Ranked by how far each takes the RMSE down; `all` is not ranked.
+    # Ranked by how far each takes the RMSE down; a combined variant is not ranked.
     assert found["ranking"] == ["storage", "screens", "sky"]
     # The singles' sum beside the all-at-once move, their difference left
     # as the interaction, nothing rescaled.
-    together = found["together"]["all moments: rmse_closed"]
+    assert set(found["together"]) == {"all"}
+    together = found["together"]["all"]["all moments: rmse_closed"]
     assert together["sum_of_singles"] == pytest.approx(1.0 - 0.5 + 2.5)
     assert together["all_at_once"] == pytest.approx(3.5)
     assert together["interaction"] == pytest.approx(0.5)

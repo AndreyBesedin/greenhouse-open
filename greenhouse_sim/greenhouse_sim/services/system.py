@@ -1,11 +1,14 @@
-"""The simulator's own state, for a client checking what it is talking to."""
+"""The simulator's own state, for a client checking what it is talking to,
+and the software an episode's record and its scores name."""
 
+import platform
 import subprocess
 from functools import cache
 from importlib.metadata import version as installed_version
 from pathlib import Path
 from typing import Final
 
+from greenhouse_protocol.experiment import Software
 from pydantic import BaseModel
 
 from greenhouse_sim.scene.snapshot import SCHEMA_VERSION
@@ -15,6 +18,10 @@ from greenhouse_sim.scene.snapshot import SCHEMA_VERSION
 UNKNOWN_COMMIT: Final = "unknown"
 # How long git may take to name it, in seconds.
 GIT_TIMEOUT_S: Final = 5.0
+# The packages that run an episode and score it, as its record and its
+# scores name them.
+PRODUCER: Final = "greenhouse-sim"
+PROTOCOL: Final = "greenhouse-protocol"
 
 
 class Health(BaseModel):
@@ -64,3 +71,18 @@ def source_commit() -> str:
     except OSError, subprocess.SubprocessError:
         return UNKNOWN_COMMIT
     return answer.stdout.strip() or UNKNOWN_COMMIT
+
+
+def software() -> Software:
+    """The software running here, as an episode's record names what ran it
+    (P23.2) and its scores what scored it (P25.3): the simulator's and the
+    protocol's versions, Python's, and the commit, none outside a git
+    checkout."""
+    commit = source_commit()
+    return Software(
+        producer=PRODUCER,
+        producer_version=installed_version(PRODUCER),
+        protocol_version=installed_version(PROTOCOL),
+        python=platform.python_version(),
+        commit=None if commit == UNKNOWN_COMMIT else commit,
+    )

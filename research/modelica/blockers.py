@@ -12,7 +12,8 @@ variant extends TiGwerLib's global model, unchanged, with modifiers on its
 components; none edits an equation. `run` writes its report to
 `results/blockers/<variant>_<window>.json`, with the comparison's numbers
 alone; `apportion` reads the reports committed, and the comparison's own
-as the baseline, and prints the attribution.
+as the baseline, and prints the attribution. A variant stated with `of`
+takes out the variants it names, all at once: `all` and `all_six`.
 """
 
 import argparse
@@ -32,8 +33,6 @@ HERE: Final = Path(__file__).parent
 MANIFEST: Final = HERE / "blockers.json"
 RESULTS: Final = HERE / "results" / "blockers"
 BASELINE: Final = HERE / "results"
-# The variant all the others make together.
-ALL: Final = "all"
 # The parts of a window a gap is measured over, as a report names them.
 PARTS: Final = ("all moments", "sun_up", "sun_down")
 
@@ -71,22 +70,35 @@ def manifest() -> dict[str, Any]:
 
 def variants() -> dict[str, Variant]:
     """Each variant the statement names: the single ones by their own
-    modifiers, and `all` by every one of theirs."""
+    modifiers, and each one stated with `of` by every one of its parts'."""
     given = manifest()["variants"]
     single = {
         name: Variant(name, _parsed(stated["modifiers"]))
         for name, stated in given.items()
         if "modifiers" in stated
     }
-    together: dict[str, dict[str, str]] = {}
-    for name in given[ALL]["of"]:
-        for component, values in single[name].modifiers.items():
-            merged = together.setdefault(component, {})
-            repeated = set(merged) & set(values)
-            if repeated:
-                raise ValueError(f"{name} modifies {component}'s {sorted(repeated)} again")
-            merged.update(values)
-    return {**single, ALL: Variant(ALL, together)}
+    combined = {}
+    for name, parts in together_of().items():
+        together: dict[str, dict[str, str]] = {}
+        for part in parts:
+            for component, values in single[part].modifiers.items():
+                merged = together.setdefault(component, {})
+                repeated = set(merged) & set(values)
+                if repeated:
+                    raise ValueError(f"{part} modifies {component}'s {sorted(repeated)} again")
+                merged.update(values)
+        combined[name] = Variant(name, together)
+    return {**single, **combined}
+
+
+def together_of() -> dict[str, list[str]]:
+    """The variants stated with `of`, each with the single variants it takes
+    out at once."""
+    return {
+        name: list(stated["of"])
+        for name, stated in manifest()["variants"].items()
+        if "of" in stated
+    }
 
 
 def _parsed(stated: Mapping[str, str]) -> dict[str, dict[str, str]]:
@@ -129,11 +141,14 @@ def gap(report: Mapping[str, Any]) -> dict[str, dict[str, float]]:
 
 
 def apportion(
-    baseline: Mapping[str, Any], reports: Mapping[str, Mapping[str, Any]]
+    baseline: Mapping[str, Any],
+    reports: Mapping[str, Mapping[str, Any]],
+    combined: Mapping[str, Sequence[str]],
 ) -> dict[str, Any]:
     """For one window: how far each variant moves the gap from the
     baseline's, the blockers ranked by how far they take its RMSE down over
-    all moments, and the single moves' sum beside the all-at-once move."""
+    all moments, and, for each variant in `combined` whose parts all have a
+    report, its parts' single moves summed beside its all-at-once move."""
     before = gap(baseline)
     moves: dict[str, dict[str, dict[str, float]]] = {}
     for name, report in reports.items():
@@ -149,16 +164,19 @@ def apportion(
             }
             for part in PARTS
         }
-    singles = [name for name in moves if name != ALL]
-    together = {}
-    if ALL in moves:
+    singles = [name for name in moves if name not in combined]
+    together: dict[str, dict[str, dict[str, float]]] = {}
+    for name, parts in combined.items():
+        if name not in moves or not set(parts) <= set(moves):
+            continue
+        found = together[name] = {}
         for part in PARTS:
             for measure in ("rmse_closed", "mean_moved"):
-                summed = sum(moves[name][part][measure] for name in singles)
-                together[f"{part}: {measure}"] = {
+                summed = sum(moves[single][part][measure] for single in parts)
+                found[f"{part}: {measure}"] = {
                     "sum_of_singles": summed,
-                    "all_at_once": moves[ALL][part][measure],
-                    "interaction": moves[ALL][part][measure] - summed,
+                    "all_at_once": moves[name][part][measure],
+                    "interaction": moves[name][part][measure] - summed,
                 }
     return {
         "baseline": before,
@@ -195,6 +213,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             window: apportion(
                 json.loads((BASELINE / f"simulator_{window}.json").read_text(encoding="utf-8")),
                 reports_for(window),
+                together_of(),
             )
             for window in sorted(repro.manifest()["windows"])
         }

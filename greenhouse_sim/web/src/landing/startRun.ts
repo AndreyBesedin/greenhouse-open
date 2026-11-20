@@ -1,4 +1,8 @@
 import { type Answered, refusal } from "../builder/api";
+import type { SetKey } from "../builder/parameterSetLibrary";
+import { SCENARIO_SUMMARY_SCHEMA } from "../generated/scenarioSummarySchema";
+import type { ScenarioSummary } from "../generated/scenarioSummaryTypes";
+import { contractReader } from "../loadJson";
 import { DEFAULT_WEATHER } from "../scenarios";
 import { parseStoredRun, type StoredRun } from "./storedRuns";
 
@@ -9,19 +13,44 @@ export const DEFAULT_PACE_S = "10";
 /** What a run is asked for at, as a person enters it: its seed, or none for the
  * scenario's own; how many real seconds a simulated day takes, or none for as
  * fast as it can be computed; and, if given, its weather by name and its days,
- * or the scenario's own (decision 0075). */
+ * or the scenario's own (decision 0075); and the parameter set its crop grows,
+ * if another than its scenario's (P20.5). */
 export interface RunAsked {
   seed: string;
   secondsPerDay: string;
   weather?: string;
   days?: string;
+  parameterSet?: SetKey;
+}
+
+const readScenario = contractReader<ScenarioSummary>(
+  SCENARIO_SUMMARY_SCHEMA,
+  "the simulator's answer is not a scenario",
+);
+
+/** The scenario of a house under another of its crop model's parameter sets,
+ * which the simulator registers as a scenario of its own: its identifier, or
+ * why it was refused, such as for a packaged scenario. */
+async function underSet(
+  scenarioId: string,
+  { name, version }: SetKey,
+  fetchFn: typeof fetch,
+): Promise<Answered<string>> {
+  const url = `/api/scenarios/${encodeURIComponent(scenarioId)}/under/${encodeURIComponent(name)}/${version}`;
+  const response = await fetchFn(url, { method: "POST" });
+  if (!response.ok) {
+    return { ok: false, problem: await refusal(response) };
+  }
+  return { ok: true, value: readScenario(await response.json()).id };
 }
 
 /** A run of a scenario given to a worker, beside any others of it (decision
- * 0065): the epoch it is, queued, or why it was refused. */
+ * 0065): the epoch it is, queued, or why it was refused. Under another
+ * parameter set, it is a run of the scenario the simulator registers for the
+ * house under that set, which the epoch's `scenario_id` names. */
 export async function startRun(
   scenarioId: string,
-  { seed, secondsPerDay, weather = DEFAULT_WEATHER, days = "" }: RunAsked,
+  { seed, secondsPerDay, weather = DEFAULT_WEATHER, days = "", parameterSet }: RunAsked,
   fetchFn: typeof fetch = fetch,
 ): Promise<Answered<StoredRun>> {
   const query = new URLSearchParams();
@@ -37,8 +66,16 @@ export async function startRun(
   if (days !== "") {
     query.set("duration_days", days);
   }
-  const url = `/api/scenarios/${encodeURIComponent(scenarioId)}/runs?${query}`;
   try {
+    let runOf = scenarioId;
+    if (parameterSet !== undefined) {
+      const under = await underSet(scenarioId, parameterSet, fetchFn);
+      if (!under.ok) {
+        return under;
+      }
+      runOf = under.value;
+    }
+    const url = `/api/scenarios/${encodeURIComponent(runOf)}/runs?${query}`;
     const response = await fetchFn(url, { method: "POST" });
     if (!response.ok) {
       return { ok: false, problem: await refusal(response) };

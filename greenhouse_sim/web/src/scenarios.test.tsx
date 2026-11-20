@@ -6,7 +6,8 @@ import { loadScenarios, openingMoment, parseScenarios, type ScenarioSummary } fr
 
 // What the simulator sends of a scenario besides: how it grows its crop,
 // its own daily commands, its openings and weathers, and the day it opens
-// on and the heater a thermostat runs, if any.
+// on, the heater a thermostat runs, if any, and its crop's parameter set,
+// which the simple crop has none of.
 const SENT = {
   crop_model: "simple",
   daily: [],
@@ -14,6 +15,7 @@ const SENT = {
   weathers: ["default"],
   opening_day: null,
   thermostat: null,
+  parameter_set: null,
 };
 const DEMO: ScenarioSummary = {
   ...SENT,

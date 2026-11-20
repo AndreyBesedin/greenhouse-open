@@ -1,6 +1,9 @@
 import { DAY_S } from "./clock";
 import { SCENARIO_SUMMARY_SCHEMA } from "./generated/scenarioSummarySchema";
-import type { ScenarioSummary as ServedSummary } from "./generated/scenarioSummaryTypes";
+import type {
+  ScenarioSet,
+  ScenarioSummary as ServedSummary,
+} from "./generated/scenarioSummaryTypes";
 import { contractCheck, loadJson } from "./loadJson";
 import type { ScheduledCommand } from "./scene/source";
 
@@ -32,6 +35,10 @@ export interface ScenarioSummary {
   weathers?: string[];
   /** The heater a thermostat runs by the house's air, if it has one. */
   thermostat?: string | null;
+  /** The parameter set its crop grows with, by name and version, and why its
+   * runs take no other, if they take none (P20.5); none for a crop that has
+   * no sets. */
+  parameter_set?: ScenarioSet | null;
 }
 
 /** The layout a scenario is defined with. */

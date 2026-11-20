@@ -89,9 +89,10 @@ def test_ground_truth_is_read_only_by_the_simulators_evaluation() -> None:
 # 0061), with its capability context, the consumer interface's batches it
 # reads by, and the port served over the network; and what of the simulated
 # world it imports nothing of: the ground truth and the evaluation that
-# reads it, the evaluator's instruments among it (decision 0082), the air's
-# fields and flows, the crop's state, the weather's series, the scene, the
-# timeline, and the local API.
+# reads it, the evaluator's instruments and scoring among it (decision
+# 0082), the experiment's runner that hands the evaluator each episode's
+# run, the air's fields and flows, the crop's state, the weather's series,
+# the scene, the timeline, and the local API.
 POLICY_PORT_MODULES: Final = (
     "greenhouse_sim/greenhouse_sim/services/policy_port.py",
     "greenhouse_sim/greenhouse_sim/services/forecasts.py",
@@ -102,6 +103,7 @@ POLICY_PORT_MODULES: Final = (
 NOT_A_POLICYS: Final = (
     "greenhouse_sim.ground_truth",
     "greenhouse_sim.evaluation",
+    "greenhouse_sim.experiment.paired",
     "greenhouse_sim.fields",
     "greenhouse_sim.airflow",
     "greenhouse_sim.cfd",
@@ -147,6 +149,8 @@ def test_a_policys_port_reads_nothing_of_what_its_evaluator_reads() -> None:
     )
     assert _not_a_policys("greenhouse_sim.evaluation.instruments")
     assert _not_a_policys("greenhouse_sim.evaluation.instruments.Instruments")
+    assert _not_a_policys("greenhouse_sim.evaluation.scoring.score_episode")
+    assert _not_a_policys("greenhouse_sim.experiment.paired.score_record")
     assert not _not_a_policys("greenhouse_sim.evaluations")
     assert not asked, asked
 

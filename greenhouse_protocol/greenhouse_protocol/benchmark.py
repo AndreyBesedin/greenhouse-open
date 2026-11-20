@@ -24,9 +24,10 @@ through `MeasureDefinition`, which names
 
 An episode's scores (`EpisodeScores`) are a record of their own, beside the
 episode's and never inside its digest: the record's digest, the benchmark's
-name, version and digest, each measure's name, version, digest and value,
-and the evaluator's software. A value is a number, or *not comparable* with
-its reason (`NotComparable`).
+name, version and digest, or none for an episode scored on no benchmark,
+each measure's name, version, digest and value, and the evaluator's
+software. A value is a number, or *not comparable* with its reason
+(`NotComparable`).
 
 What a benchmark of a class compares, and what it may only report, is
 `refused_by_class`'s rule. The arithmetic each definition implies is in
@@ -336,7 +337,9 @@ class EpisodeScores(BaseModel):
 
     scores_version: Literal[1] = EPISODE_SCORES_VERSION
     record_digest: Sha256
-    benchmark: BenchmarkNamed
+    # None for an episode scored on no benchmark: on the packaged measures,
+    # with no goal, warm-up or price of a benchmark's (P25.3).
+    benchmark: BenchmarkNamed | None
     measures: tuple[MeasureScored, ...]
     software: Software
 
