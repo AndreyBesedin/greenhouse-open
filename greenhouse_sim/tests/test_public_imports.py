@@ -41,7 +41,13 @@ PUBLIC_IMPORTS: dict[str, tuple[str, ...]] = {
         "record_episode",
         "run_episode",
     ),
-    "greenhouse_sim.experiment.paired": ("Experiment", "check_record", "run_experiment"),
+    "greenhouse_sim.experiment.paired": (
+        "Experiment",
+        "check_record",
+        "run_experiment",
+        "score_experiment",
+        "score_record",
+    ),
     # Looking at a simulation.
     "greenhouse_sim.world.envelope": ("Envelope",),
     "greenhouse_sim.world.geometry": (

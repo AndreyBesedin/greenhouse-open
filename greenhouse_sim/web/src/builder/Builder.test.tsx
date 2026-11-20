@@ -143,6 +143,7 @@ const SCENARIO = {
   layouts: ["default"],
   weathers: ["default"],
   thermostat: null,
+  parameter_set: null,
 };
 
 // The run a worker is asked for: an epoch queued.

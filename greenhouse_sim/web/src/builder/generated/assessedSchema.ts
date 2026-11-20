@@ -4,6 +4,16 @@
 export const ASSESSED_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
+    "Boundaries": {
+      "additionalProperties": {
+        "$ref": "#/$defs/WallBoundary"
+      },
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "#/$defs/WallId"
+      },
+      "type": "object"
+    },
     "BoxPrimitive": {
       "additionalProperties": false,
       "properties": {
@@ -177,6 +187,111 @@ export const ASSESSED_SCHEMA = {
       ],
       "title": "CameraIntrinsics",
       "type": "object"
+    },
+    "Cover": {
+      "additionalProperties": false,
+      "properties": {
+        "roof": {
+          "$ref": "#/$defs/CoverChoice"
+        },
+        "walls": {
+          "additionalProperties": {
+            "$ref": "#/$defs/CoverChoice"
+          },
+          "default": {},
+          "propertyNames": {
+            "$ref": "#/$defs/WallId"
+          },
+          "title": "Walls",
+          "type": "object"
+        }
+      },
+      "required": [
+        "roof",
+        "walls"
+      ],
+      "title": "Cover",
+      "type": "object"
+    },
+    "CoverChoice": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CoverMaterialName"
+        },
+        {
+          "$ref": "#/$defs/CoverMaterial"
+        }
+      ]
+    },
+    "CoverMaterial": {
+      "additionalProperties": false,
+      "properties": {
+        "shortwave_beam_transmittance": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Shortwave Beam Transmittance",
+          "type": "number"
+        },
+        "shortwave_diffuse_transmittance": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Shortwave Diffuse Transmittance",
+          "type": "number"
+        },
+        "shortwave_reflectance": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Shortwave Reflectance",
+          "type": "number"
+        },
+        "longwave_emissivity": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Longwave Emissivity",
+          "type": "number"
+        },
+        "longwave_transmittance": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Longwave Transmittance",
+          "type": "number"
+        },
+        "thickness_m": {
+          "exclusiveMinimum": 0,
+          "title": "Thickness M",
+          "type": "number"
+        },
+        "conductivity_w_m_k": {
+          "exclusiveMinimum": 0,
+          "title": "Conductivity W M K",
+          "type": "number"
+        },
+        "volumetric_heat_capacity_j_m3_k": {
+          "exclusiveMinimum": 0,
+          "maximum": 4180000,
+          "title": "Volumetric Heat Capacity J M3 K",
+          "type": "number"
+        }
+      },
+      "required": [
+        "shortwave_beam_transmittance",
+        "shortwave_diffuse_transmittance",
+        "shortwave_reflectance",
+        "longwave_emissivity",
+        "longwave_transmittance",
+        "thickness_m",
+        "conductivity_w_m_k",
+        "volumetric_heat_capacity_j_m3_k"
+      ],
+      "title": "CoverMaterial",
+      "type": "object"
+    },
+    "CoverMaterialName": {
+      "enum": [
+        "single_glass"
+      ],
+      "title": "CoverMaterialName",
+      "type": "string"
     },
     "CropModel": {
       "enum": [
@@ -678,6 +793,74 @@ export const ASSESSED_SCHEMA = {
       "title": "FixtureKind",
       "type": "string"
     },
+    "Floor": {
+      "additionalProperties": false,
+      "properties": {
+        "surface": {
+          "$ref": "#/$defs/FloorSurface"
+        },
+        "layers": {
+          "items": {
+            "$ref": "#/$defs/FloorLayer"
+          },
+          "minItems": 1,
+          "title": "Layers",
+          "type": "array"
+        },
+        "deep_soil_temperature_c": {
+          "$ref": "#/$defs/Temperature"
+        }
+      },
+      "required": [
+        "surface",
+        "layers",
+        "deep_soil_temperature_c"
+      ],
+      "title": "Floor",
+      "type": "object"
+    },
+    "FloorLayer": {
+      "additionalProperties": false,
+      "properties": {
+        "thickness_m": {
+          "exclusiveMinimum": 0,
+          "title": "Thickness M",
+          "type": "number"
+        },
+        "material": {
+          "$ref": "#/$defs/LayerChoice"
+        }
+      },
+      "required": [
+        "thickness_m",
+        "material"
+      ],
+      "title": "FloorLayer",
+      "type": "object"
+    },
+    "FloorSurface": {
+      "additionalProperties": false,
+      "properties": {
+        "shortwave_reflectance": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Shortwave Reflectance",
+          "type": "number"
+        },
+        "longwave_emissivity": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Longwave Emissivity",
+          "type": "number"
+        }
+      },
+      "required": [
+        "shortwave_reflectance",
+        "longwave_emissivity"
+      ],
+      "title": "FloorSurface",
+      "type": "object"
+    },
     "Heater": {
       "additionalProperties": false,
       "properties": {
@@ -732,6 +915,68 @@ export const ASSESSED_SCHEMA = {
         "power_w"
       ],
       "title": "Heater",
+      "type": "object"
+    },
+    "HouseComponents": {
+      "additionalProperties": false,
+      "properties": {
+        "cover": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Cover"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "boundaries": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Boundaries"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "floor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Floor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "screens": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Screens"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pipe_networks": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PipeNetworks"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "HouseComponents",
       "type": "object"
     },
     "Imperfections": {
@@ -810,6 +1055,17 @@ export const ASSESSED_SCHEMA = {
           },
           "title": "Row Crops",
           "type": "array"
+        },
+        "components": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HouseComponents"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -821,6 +1077,46 @@ export const ASSESSED_SCHEMA = {
       ],
       "title": "Installation",
       "type": "object"
+    },
+    "LayerChoice": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/LayerMaterialName"
+        },
+        {
+          "$ref": "#/$defs/LayerMaterial"
+        }
+      ]
+    },
+    "LayerMaterial": {
+      "additionalProperties": false,
+      "properties": {
+        "conductivity_w_m_k": {
+          "exclusiveMinimum": 0,
+          "title": "Conductivity W M K",
+          "type": "number"
+        },
+        "volumetric_heat_capacity_j_m3_k": {
+          "exclusiveMinimum": 0,
+          "maximum": 4180000,
+          "title": "Volumetric Heat Capacity J M3 K",
+          "type": "number"
+        }
+      },
+      "required": [
+        "conductivity_w_m_k",
+        "volumetric_heat_capacity_j_m3_k"
+      ],
+      "title": "LayerMaterial",
+      "type": "object"
+    },
+    "LayerMaterialName": {
+      "enum": [
+        "concrete",
+        "soil"
+      ],
+      "title": "LayerMaterialName",
+      "type": "string"
     },
     "Layout": {
       "additionalProperties": false,
@@ -899,6 +1195,88 @@ export const ASSESSED_SCHEMA = {
       "title": "Obstruction",
       "type": "string"
     },
+    "OnASpace": {
+      "additionalProperties": false,
+      "properties": {
+        "faces": {
+          "const": "space",
+          "default": "space",
+          "title": "Faces",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "corridor",
+            "headhouse",
+            "house"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "temperature_c": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Temperature"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "recording": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9][a-z0-9_.-]{0,95}\\.csv$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recording"
+        }
+      },
+      "required": [
+        "faces",
+        "kind"
+      ],
+      "title": "OnASpace",
+      "type": "object"
+    },
+    "OnNothing": {
+      "additionalProperties": false,
+      "properties": {
+        "faces": {
+          "const": "nothing",
+          "default": "nothing",
+          "title": "Faces",
+          "type": "string"
+        }
+      },
+      "required": [
+        "faces"
+      ],
+      "title": "OnNothing",
+      "type": "object"
+    },
+    "OnTheOutside": {
+      "additionalProperties": false,
+      "properties": {
+        "faces": {
+          "const": "outside",
+          "default": "outside",
+          "title": "Faces",
+          "type": "string"
+        }
+      },
+      "required": [
+        "faces"
+      ],
+      "title": "OnTheOutside",
+      "type": "object"
+    },
     "Opening": {
       "properties": {
         "opening_id": {
@@ -962,6 +1340,72 @@ export const ASSESSED_SCHEMA = {
       ],
       "title": "OpeningKind",
       "type": "string"
+    },
+    "PipeKind": {
+      "enum": [
+        "rail",
+        "grow",
+        "perimeter"
+      ],
+      "title": "PipeKind",
+      "type": "string"
+    },
+    "PipeNetwork": {
+      "additionalProperties": false,
+      "properties": {
+        "network_id": {
+          "pattern": "^[A-Za-z0-9_.-]+$",
+          "title": "Network Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/PipeKind"
+        },
+        "length_m": {
+          "exclusiveMinimum": 0,
+          "title": "Length M",
+          "type": "number"
+        },
+        "outer_diameter_m": {
+          "exclusiveMinimum": 0,
+          "title": "Outer Diameter M",
+          "type": "number"
+        },
+        "inner_diameter_m": {
+          "exclusiveMinimum": 0,
+          "title": "Inner Diameter M",
+          "type": "number"
+        },
+        "height_m": {
+          "minimum": 0,
+          "title": "Height M",
+          "type": "number"
+        },
+        "longwave_emissivity": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Longwave Emissivity",
+          "type": "number"
+        }
+      },
+      "required": [
+        "network_id",
+        "kind",
+        "length_m",
+        "outer_diameter_m",
+        "inner_diameter_m",
+        "height_m",
+        "longwave_emissivity"
+      ],
+      "title": "PipeNetwork",
+      "type": "object"
+    },
+    "PipeNetworks": {
+      "items": {
+        "$ref": "#/$defs/PipeNetwork"
+      },
+      "minItems": 1,
+      "type": "array"
     },
     "PipePrimitive": {
       "additionalProperties": false,
@@ -1478,6 +1922,143 @@ export const ASSESSED_SCHEMA = {
       "title": "RowSupport",
       "type": "object"
     },
+    "Screen": {
+      "additionalProperties": false,
+      "properties": {
+        "screen_id": {
+          "pattern": "^[A-Za-z0-9_.-]+$",
+          "title": "Screen Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ScreenKind"
+        },
+        "material": {
+          "$ref": "#/$defs/ScreenChoice"
+        },
+        "height_m": {
+          "exclusiveMinimum": 0,
+          "title": "Height M",
+          "type": "number"
+        },
+        "extent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Strip"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "closure": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Closure",
+          "type": "number"
+        }
+      },
+      "required": [
+        "screen_id",
+        "kind",
+        "material",
+        "height_m",
+        "closure"
+      ],
+      "title": "Screen",
+      "type": "object"
+    },
+    "ScreenChoice": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ScreenClothName"
+        },
+        {
+          "$ref": "#/$defs/ScreenCloth"
+        }
+      ]
+    },
+    "ScreenCloth": {
+      "additionalProperties": false,
+      "properties": {
+        "shortwave_transmittance": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Shortwave Transmittance",
+          "type": "number"
+        },
+        "shortwave_reflectance": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Shortwave Reflectance",
+          "type": "number"
+        },
+        "longwave_emissivity": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Longwave Emissivity",
+          "type": "number"
+        },
+        "longwave_transmittance": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Longwave Transmittance",
+          "type": "number"
+        },
+        "air_permeability_m3_m2_s_k": {
+          "minimum": 0,
+          "title": "Air Permeability M3 M2 S K",
+          "type": "number"
+        },
+        "thickness_m": {
+          "exclusiveMinimum": 0,
+          "title": "Thickness M",
+          "type": "number"
+        },
+        "volumetric_heat_capacity_j_m3_k": {
+          "exclusiveMinimum": 0,
+          "maximum": 4180000,
+          "title": "Volumetric Heat Capacity J M3 K",
+          "type": "number"
+        }
+      },
+      "required": [
+        "shortwave_transmittance",
+        "shortwave_reflectance",
+        "longwave_emissivity",
+        "longwave_transmittance",
+        "air_permeability_m3_m2_s_k",
+        "thickness_m",
+        "volumetric_heat_capacity_j_m3_k"
+      ],
+      "title": "ScreenCloth",
+      "type": "object"
+    },
+    "ScreenClothName": {
+      "enum": [
+        "thermal_screen_cloth"
+      ],
+      "title": "ScreenClothName",
+      "type": "string"
+    },
+    "ScreenKind": {
+      "enum": [
+        "thermal",
+        "shading",
+        "blackout"
+      ],
+      "title": "ScreenKind",
+      "type": "string"
+    },
+    "Screens": {
+      "items": {
+        "$ref": "#/$defs/Screen"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
     "Sensor": {
       "oneOf": [
         {
@@ -1536,6 +2117,11 @@ export const ASSESSED_SCHEMA = {
       ],
       "title": "Strip",
       "type": "object"
+    },
+    "Temperature": {
+      "maximum": 60,
+      "minimum": -60,
+      "type": "number"
     },
     "Transform": {
       "properties": {
@@ -1723,6 +2309,28 @@ export const ASSESSED_SCHEMA = {
       ],
       "title": "WalkwayPrimitive",
       "type": "object"
+    },
+    "WallBoundary": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/OnTheOutside"
+        },
+        {
+          "$ref": "#/$defs/OnASpace"
+        },
+        {
+          "$ref": "#/$defs/OnNothing"
+        }
+      ]
+    },
+    "WallId": {
+      "enum": [
+        "side_wall_right",
+        "side_wall_left",
+        "end_wall_front",
+        "end_wall_back"
+      ],
+      "type": "string"
     },
     "Zone": {
       "additionalProperties": false,

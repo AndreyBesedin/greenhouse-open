@@ -42,24 +42,41 @@ class _AsAnswered(GenerateJsonSchema):
 def answer_json_schema(answered: type[object]) -> dict[str, JsonValue]:
     """The JSON Schema a viewer validates a service's answer against: of the
     type the service returns, a model or a list or mapping of models, as it
-    is sent (`_AsAnswered`)."""
-    schema = _without_discriminators(
+    is sent (`_AsAnswered`), in JSON Schema's own keywords."""
+    schema = _only_json_schema(
         TypeAdapter(answered).json_schema(mode="serialization", schema_generator=_AsAnswered)
     )
     assert isinstance(schema, dict)
     return {"$schema": JSON_SCHEMA_DIALECT, **schema}
 
 
-def _without_discriminators(value: JsonValue) -> JsonValue:
-    """A schema without OpenAPI's `discriminator` keyword, with which Pydantic
-    marks a tagged union: it is not JSON Schema, and the `oneOf` and each
-    case's constant tag already say the same."""
-    if isinstance(value, dict):
-        return {
-            key: _without_discriminators(item)
-            for key, item in value.items()
-            if not (key == "discriminator" and isinstance(item, dict) and "propertyName" in item)
-        }
+# What a field's schema says for people beside JSON Schema's own keywords,
+# as a crop model's parameters and a material's properties do (P20.1,
+# P24.2): its unit, its value's source, where its range's ends come from,
+# and why no set may change it. A validator that holds to JSON Schema, as
+# the viewer's does, refuses a keyword it does not know, so an answer's
+# schema leaves them out; a file's schema keeps them.
+FOR_PEOPLE: Final = frozenset({"unit", "source", "range_from", "fixed"})
+# The keywords whose value maps names to schemas: a property or a
+# definition may be called as a keyword is.
+_NAMING: Final = frozenset({"properties", "patternProperties", "$defs"})
+
+
+def _only_json_schema(value: JsonValue, *, names: bool = False) -> JsonValue:
+    """A schema without what JSON Schema has no keyword for: OpenAPI's
+    `discriminator`, with which Pydantic marks a tagged union, when the
+    `oneOf` and each case's constant tag already say the same; and what a
+    field's schema says for people (`FOR_PEOPLE`). A property or definition
+    called as one of them is kept: `names` marks a mapping of them."""
     if isinstance(value, list):
-        return [_without_discriminators(item) for item in value]
-    return value
+        return [_only_json_schema(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    if names:
+        return {name: _only_json_schema(item) for name, item in value.items()}
+    return {
+        key: _only_json_schema(item, names=key in _NAMING)
+        for key, item in value.items()
+        if key not in FOR_PEOPLE
+        and not (key == "discriminator" and isinstance(item, dict) and "propertyName" in item)
+    }

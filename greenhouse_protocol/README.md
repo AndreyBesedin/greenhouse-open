@@ -56,7 +56,8 @@ implement. Part of [greenhouse-open](../README.md). Apache-2.0.
   with keys sorted; the first measures, packaged under `measures/`, one
   file a version (`packaged_measures`); `EpisodeScores`, each measure's
   value for an episode, a number or *not comparable* with its reason,
-  named with its definition's digest, the record's and the benchmark's;
+  named with its definition's digest, the record's and the benchmark's,
+  if one scored it;
   and `refused_by_class`, what a benchmark of a class may compare and may
   only report. `measuring` holds the arithmetic each definition implies, on
   plain series and on an episode's record. Their JSON Schemas are published

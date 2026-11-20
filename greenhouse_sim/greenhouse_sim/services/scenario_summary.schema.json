@@ -31,6 +31,37 @@
       "maximum": 1.0,
       "minimum": 0.0,
       "type": "number"
+    },
+    "ScenarioSet": {
+      "description": "The parameter set a scenario's crop grows with, by name and version,\nas its summary gives it (P20.5), and why its runs take no other, if they\ntake none; a scenario registered from a draft or a file runs under\nanother as a scenario of its own (`services.scenario_sets`).",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        },
+        "fixed": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Fixed"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "fixed"
+      ],
+      "title": "ScenarioSet",
+      "type": "object"
     }
   },
   "properties": {
@@ -109,6 +140,17 @@
       ],
       "default": null,
       "title": "Thermostat"
+    },
+    "parameter_set": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ScenarioSet"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [
@@ -123,7 +165,8 @@
     "opening_day",
     "layouts",
     "weathers",
-    "thermostat"
+    "thermostat",
+    "parameter_set"
   ],
   "title": "ScenarioSummary",
   "type": "object"

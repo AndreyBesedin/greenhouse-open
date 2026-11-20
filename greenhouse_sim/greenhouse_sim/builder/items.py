@@ -73,7 +73,7 @@ _PRIMITIVE: Final = TypeAdapter[Primitive](Primitive)
 def names_taken(draft: Installation) -> set[str]:
     """Every identifier the installation gives an item: its fixtures, and
     those placed one by one, which a pipe run or a rail names its own after,
-    zones, equipment, sensors, doors and vents."""
+    zones, equipment, sensors, doors, vents, screens and pipe networks."""
     layout = draft.layout
     return (
         {fixture.fixture_id for fixture in layout.fixtures()}
@@ -82,6 +82,7 @@ def names_taken(draft: Installation) -> set[str]:
         | {piece.actuator_id for piece in layout.equipment}
         | {sensor.sensor_id for sensor in layout.sensors}
         | {opening.opening_id for opening in draft.envelope.openings}
+        | set([] if draft.components is None else draft.components.names())
     )
 
 

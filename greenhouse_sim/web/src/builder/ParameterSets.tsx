@@ -357,7 +357,8 @@ export function ParameterSets({ model }: { model: string | null }) {
     <Section heading={heading}>
       <p className="builder-note">
         The parameter sets of {model}, the crop model the rows grow: its published set, and those
-        this simulator keeps.
+        this simulator keeps. A run takes one in its scenario's new-run form, once this house runs
+        as a scenario.
       </p>
       <Field label="Parameter set" size="compact" className="builder-give-field">
         {(control) => (

@@ -260,13 +260,17 @@ def _imports(path: Path) -> set[str]:
 
 
 def test_nothing_on_the_observation_path_imports_the_truth() -> None:
-    """Only evaluation, and the services that serve it to evaluation and QA
-    tooling, read what was truly the case."""
+    """Only evaluation, the services that serve it to evaluation and QA
+    tooling, and an experiment's runner, which hands each episode's run to
+    the evaluator once its policy has stopped (decision 0082), read what
+    was truly the case."""
     allowed = {PACKAGE / "evaluation", PACKAGE / "services"}
+    runner = PACKAGE / "experiment" / "paired.py"
     readers = [
         path.relative_to(PACKAGE)
         for path in PACKAGE.rglob("*.py")
-        if not any(folder in path.parents for folder in allowed)
+        if path != runner
+        and not any(folder in path.parents for folder in allowed)
         and any(
             name == "greenhouse_sim.ground_truth" or name.startswith("greenhouse_sim.evaluation")
             for name in _imports(path)

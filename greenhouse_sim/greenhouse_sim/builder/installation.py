@@ -58,6 +58,8 @@ def assess_installation(draft: Installation) -> list[Finding]:
     door, vents, a heater or fans."""
     findings: list[Finding] = []
     outside = outside_the_greenhouse(draft.layout, draft.envelope)
+    if draft.components is not None:
+        outside += draft.components.outside(draft.envelope)
     if outside:
         findings.append(
             Finding(

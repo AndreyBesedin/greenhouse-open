@@ -266,6 +266,13 @@ class Instruments:
     def harvest(self) -> tuple[Picked, ...]:
         return harvest(self._simulator, self.run, self.until_s)
 
+    @cached_property
+    def harvest_counted(self) -> bool:
+        """Whether its crop's harvest is counted: a crop grown plant by
+        plant's, from its events; not a crop grown by area's, whose
+        harvest is none of them."""
+        return of_plants(scenario_crop(self._simulator, self.run))
+
     def heat_given_j(self, from_s: float, until_s: float) -> float:
         """The heat given from `from_s` to `until_s` within the episode, in
         J, to the second."""

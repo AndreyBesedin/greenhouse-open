@@ -24,6 +24,7 @@ from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.scenarios.installation import Installation
 from greenhouse_sim.services.drafts import MOST_DAYS
 from greenhouse_sim.services.simulator import Simulator
+from greenhouse_sim.world.components import HouseComponents
 
 DRAFT = "my_greenhouse"
 A_WEEK = {"start_date": "2026-04-01", "duration_days": 7}
@@ -352,6 +353,28 @@ def test_a_run_the_scenario_refuses_says_why_in_words(simulator: Simulator) -> N
     assert status == HTTPStatus.BAD_REQUEST
     assert "12 plants, but only 11 planting positions" in answer["error"]
     assert "pydantic" not in answer["error"] and "\n" not in answer["error"]
+
+
+def test_a_draft_that_describes_a_screen_is_refused_a_run_naming_it(simulator: Simulator) -> None:
+    """Today's house air models model no screen (P24.2): the draft is kept,
+    and its run refused in words."""
+    screen = {
+        "screen_id": "energy_screen",
+        "kind": "thermal",
+        "material": "thermal_screen_cloth",
+        "height_m": 3.5,
+    }
+    components = HouseComponents.model_validate({"screens": [screen]})
+    assert _save(simulator, _house().model_copy(update={"components": components}))[0] == (
+        HTTPStatus.OK
+    )
+
+    status, answer = _ask(
+        simulator, "POST", f"/api/drafts/{DRAFT}/run", json.dumps(A_WEEK).encode()
+    )
+
+    assert status == HTTPStatus.BAD_REQUEST
+    assert "grid, cannot model the thermal screen energy_screen" in answer["error"]
 
 
 def test_a_revision_this_simulator_cannot_read_is_a_conflict(

@@ -348,8 +348,9 @@
   font-size: var(--font-xl);
 }
 
-/* The scenario's crop, and the way to another, on the form's first line; the seed,
- * small, on a line of its own over what leaving it empty means. */
+/* The scenario's crop, and the way to another, on the form's first line, and its
+ * crop's parameter set on a line of its own under it; the seed, small, on a line
+ * of its own over what leaving it empty means. */
 .landing-crop {
   display: flex;
   flex-basis: 100%;
@@ -361,12 +362,19 @@
   color: var(--text-soft);
 }
 
+.landing-set,
 .landing-seed {
   flex-basis: 100%;
 }
 
 .landing-seed .landing-input {
   width: 22ch;
+}
+
+/* As wide as its longest set's name, not the form's line. */
+.landing-set .landing-input {
+  justify-self: start;
+  max-width: 100%;
 }
 
 .landing-note {

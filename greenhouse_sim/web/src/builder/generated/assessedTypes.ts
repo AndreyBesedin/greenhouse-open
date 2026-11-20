@@ -78,6 +78,39 @@ export type PointKind =
  * simplified it (`greenhouse_sim.core.vanthoor_crop`, decision 0060).
  */
 export type CropModel = "simple" | "organ" | "reduced_tomgro" | "vanthoor_katzin";
+export type CoverChoice = CoverMaterialName | CoverMaterial;
+/**
+ * A cover's sheet the catalogue names.
+ */
+export type CoverMaterialName = "single_glass";
+export type WallBoundary = OnTheOutside | OnASpace | OnNothing;
+export type Temperature = number;
+export type LayerChoice = LayerMaterialName | LayerMaterial;
+/**
+ * A floor's or the soil's layer the catalogue names.
+ */
+export type LayerMaterialName = "concrete" | "soil";
+/**
+ * @minItems 1
+ */
+export type Screens = [Screen, ...Screen[]];
+/**
+ * What a screen drawn across the house is for.
+ */
+export type ScreenKind = "thermal" | "shading" | "blackout";
+export type ScreenChoice = ScreenClothName | ScreenCloth;
+/**
+ * A screen's cloth the catalogue names.
+ */
+export type ScreenClothName = "thermal_screen_cloth";
+/**
+ * @minItems 1
+ */
+export type PipeNetworks = [PipeNetwork, ...PipeNetwork[]];
+/**
+ * Where a network of heating pipes runs.
+ */
+export type PipeKind = "rail" | "grow" | "perimeter";
 
 /**
  * An installation, the format a file of it is written in, and what
@@ -104,6 +137,7 @@ export interface Installation {
   envelope: Envelope;
   layout: Layout;
   row_crops: RowCrop[];
+  components?: HouseComponents | null;
 }
 /**
  * A greenhouse's envelope, in metres, no larger than any greenhouse.
@@ -480,6 +514,222 @@ export interface RowCrop {
   row: number;
   crop_model: CropModel;
   variety: string;
+}
+/**
+ * What a house is made of and has beyond its envelope and layout, each
+ * left out while undescribed: its cover's materials; what each wall it
+ * names faces, the others facing the outside; its floor; the screens
+ * drawn across it; and its networks of heating pipes. It describes one at
+ * least: a house that describes none has no section of them. Its screens
+ * and pipe networks are each named apart, as a command names one.
+ */
+export interface HouseComponents {
+  cover?: Cover | null;
+  boundaries?: Boundaries | null;
+  floor?: Floor | null;
+  screens?: Screens | null;
+  pipe_networks?: PipeNetworks | null;
+}
+/**
+ * What the cover is made of: the roof's slopes, all of one material,
+ * and each wall it names, of its own; the walls it does not name are of
+ * the roof's.
+ */
+export interface Cover {
+  roof: CoverChoice;
+  walls: {
+    [k: string]: CoverChoice;
+  };
+}
+/**
+ * A sheet a cover is made of, given by its properties: what of the
+ * sun's beam, falling square to it, and of the sky's diffuse light it
+ * passes, what of the shortwave it reflects, what of the longwave it
+ * emits and passes, and the heat it conducts and holds.
+ */
+export interface CoverMaterial {
+  /**
+   * the share of the sun's beam, falling square to it, that it passes
+   */
+  shortwave_beam_transmittance: number;
+  /**
+   * the share of the sky's diffuse light falling on it that it passes
+   */
+  shortwave_diffuse_transmittance: number;
+  /**
+   * the share of the shortwave falling on it that it reflects
+   */
+  shortwave_reflectance: number;
+  /**
+   * its longwave emissivity: the share of the longwave falling on it that it absorbs
+   */
+  longwave_emissivity: number;
+  /**
+   * the share of the longwave falling on it that it passes
+   */
+  longwave_transmittance: number;
+  /**
+   * its thickness
+   */
+  thickness_m: number;
+  /**
+   * its thermal conductivity
+   */
+  conductivity_w_m_k: number;
+  /**
+   * its heat capacity per volume: its density times its specific heat
+   */
+  volumetric_heat_capacity_j_m3_k: number;
+}
+export interface Boundaries {
+  [k: string]: WallBoundary;
+}
+/**
+ * A wall on the outside air, as a wall is unless it says otherwise.
+ */
+export interface OnTheOutside {
+  faces: "outside";
+}
+/**
+ * A wall on a neighbouring space, a corridor, a headhouse or another
+ * house, at its temperature: constant, in °C, or recorded in a file of
+ * its own, which names it; one of the two.
+ */
+export interface OnASpace {
+  faces: "space";
+  kind: "corridor" | "headhouse" | "house";
+  temperature_c?: Temperature | null;
+  recording?: string | null;
+}
+/**
+ * A wall no heat crosses.
+ */
+export interface OnNothing {
+  faces: "nothing";
+}
+/**
+ * The floor, from its surface down: the surface's optics, its layers,
+ * the first the floor's own and those under it the soil's, and the deep
+ * soil's temperature under the last, in °C.
+ */
+export interface Floor {
+  surface: FloorSurface;
+  /**
+   * @minItems 1
+   */
+  layers: [FloorLayer, ...FloorLayer[]];
+  deep_soil_temperature_c: Temperature;
+}
+/**
+ * The floor's surface, given by its properties: what of the shortwave
+ * it reflects, and its longwave emissivity.
+ */
+export interface FloorSurface {
+  /**
+   * the share of the shortwave falling on it that it reflects
+   */
+  shortwave_reflectance: number;
+  /**
+   * its longwave emissivity: the share of the longwave falling on it that it absorbs
+   */
+  longwave_emissivity: number;
+}
+/**
+ * A layer of the floor, or of the soil under it: its thickness, in
+ * metres, and what it is made of.
+ */
+export interface FloorLayer {
+  thickness_m: number;
+  material: LayerChoice;
+}
+/**
+ * What a layer of the floor, or of the soil under it, is made of, given
+ * by its properties: the heat it conducts and holds.
+ */
+export interface LayerMaterial {
+  /**
+   * its thermal conductivity
+   */
+  conductivity_w_m_k: number;
+  /**
+   * its heat capacity per volume: its density times its specific heat
+   */
+  volumetric_heat_capacity_j_m3_k: number;
+}
+/**
+ * A screen drawn across the house: what it is for, its cloth, the
+ * height it is drawn at above the floor, the eaves at most, the floor it
+ * covers, the whole house's if it names none, and how far it is drawn as
+ * the run starts, from 0 (open) to 1 (closed). Commands and a screen
+ * loop are to drive it, as they drive a vent (P24.4).
+ */
+export interface Screen {
+  /**
+   * Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.
+   */
+  screen_id: string;
+  kind: ScreenKind;
+  material: ScreenChoice;
+  height_m: number;
+  extent?: Strip | null;
+  closure: number;
+}
+/**
+ * A cloth a screen is made of, given by its properties: what of the
+ * shortwave it passes and reflects, what of the longwave it emits and
+ * passes, the air it lets through when it is drawn, and the heat it holds.
+ * The air it lets through is Vanthoor's (2011) screen flux coefficient, K
+ * in f = K |ΔT|^(2/3): the air through each square metre of it, in m³ a
+ * second, for the difference of temperature across it.
+ */
+export interface ScreenCloth {
+  /**
+   * the share of the shortwave falling on it that it passes
+   */
+  shortwave_transmittance: number;
+  /**
+   * the share of the shortwave falling on it that it reflects
+   */
+  shortwave_reflectance: number;
+  /**
+   * its longwave emissivity: the share of the longwave falling on it that it absorbs
+   */
+  longwave_emissivity: number;
+  /**
+   * the share of the longwave falling on it that it passes
+   */
+  longwave_transmittance: number;
+  /**
+   * its screen flux coefficient K, of f = K |ΔT|^(2/3) through it drawn
+   */
+  air_permeability_m3_m2_s_k: number;
+  /**
+   * its thickness
+   */
+  thickness_m: number;
+  /**
+   * its heat capacity per volume: its density times its specific heat
+   */
+  volumetric_heat_capacity_j_m3_k: number;
+}
+/**
+ * A network of heating pipes: where it runs, all its pipes' length end
+ * to end, their outer and inner diameters, their height above the floor,
+ * the eaves at most, and their longwave emissivity. Its heat leaves them
+ * by convection to the air and by radiation to what they see, as the
+ * model that heats them works out (P24.8).
+ */
+export interface PipeNetwork {
+  /**
+   * Letters, digits, '_', '.' and '-' only: the API's parameters write it between ':' and ','.
+   */
+  network_id: string;
+  kind: PipeKind;
+  length_m: number;
+  outer_diameter_m: number;
+  inner_diameter_m: number;
+  height_m: number;
+  longwave_emissivity: number;
 }
 /**
  * Something a draft gets wrong, or lacks: a stable code an editor

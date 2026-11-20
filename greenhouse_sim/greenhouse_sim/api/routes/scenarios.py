@@ -39,11 +39,27 @@ its layout, its weather and its CFD geometry.
                                           assessed; `kind` says which. Refused:
                                           400 with `problems`; a taken
                                           identifier: 409
+    POST /api/scenarios/{id}/under/{name}/{version}
+                                          the scenario's house under another of
+                                          its crop model's parameter sets, as a
+                                          scenario of its own, registered and
+                                          answered as the list shows it (P20.5);
+                                          itself under its own set. Refused
+                                          (400) for a packaged scenario, which
+                                          runs its model's published set alone
 """
 
 from greenhouse_sim.api.responses import Response
-from greenhouse_sim.api.routes.shared import Query, answer, last, pairs, seconds, text_body
-from greenhouse_sim.services import cfd, scenario_files, scenarios, weather
+from greenhouse_sim.api.routes.shared import (
+    Query,
+    answer,
+    last,
+    pairs,
+    seconds,
+    set_version,
+    text_body,
+)
+from greenhouse_sim.services import cfd, scenario_files, scenario_sets, scenarios, weather
 from greenhouse_sim.services.simulator import Simulator
 
 
@@ -95,6 +111,10 @@ def post(simulator: Simulator, segments: list[str], _query: Query, body: bytes) 
     match segments:
         case ["api", "scenarios", "upload"]:
             return answer(lambda: scenario_files.upload(simulator, text_body(body)))
+        case ["api", "scenarios", scenario_id, "under", name, version]:
+            return answer(
+                lambda: scenario_sets.under_set(simulator, scenario_id, name, set_version(version))
+            )
         case _:
             return None
 
