@@ -31,7 +31,7 @@ from greenhouse_protocol.plan import Principal, PrincipalKind
 
 from greenhouse_sim.evaluation.instruments import Instruments, SetBy
 from greenhouse_sim.evaluation.scoring import HARVEST_NOT_COUNTED, score_episode
-from greenhouse_sim.experiment import Episode, carry_out_episode
+from greenhouse_sim.experiment import Episode, carry_out_episode, record_episode
 from greenhouse_sim.experiment.__main__ import main
 from greenhouse_sim.experiment.paired import Experiment, run_experiment, score_experiment
 from greenhouse_sim.services.simulator import Simulator
@@ -70,9 +70,6 @@ EXPERIMENT: Final = {
         {"factory": "naive_heating:NaiveHeating", "settings": SECOND_BAND},
     ],
 }
-# The digests example 06 and its guide give these two episodes, written
-# before episodes were scored (`docs/guides/run-an-experiment.md`).
-GUIDES_DIGESTS: Final = ("3c9248fbd0d61848", "57f9e1f03cd61ebe")
 # The climate box's heater, and its floor, 12 m by 6.4 m.
 HEATER: Final = "heater"
 HEATER_W: Final = 10_000.0
@@ -86,6 +83,20 @@ type Values = dict[tuple[str, str | None], MeasureValue]
 def simulator() -> Iterator[Simulator]:
     with Simulator(authorisation=AUTHORISATION) as made:
         yield made
+
+
+@pytest.fixture(scope="module")
+def unscored(simulator: Simulator) -> tuple[str, ...]:
+    """Each episode's digest as the runner gives it with no scoring, in this
+    process: the digests scoring may not move. Not the guide's, which are a
+    run's on its machine: a digest takes every bit of a run's numbers, and
+    another processor's floating point may give another."""
+    with pytest.MonkeyPatch.context() as patch:
+        patch.syspath_prepend(str(EXAMPLES))
+        return tuple(
+            record_episode(simulator, episode, place=place).digest
+            for place, episode in Experiment.model_validate(EXPERIMENT).episodes()
+        )
 
 
 @pytest.fixture(scope="module")
@@ -115,15 +126,17 @@ def _copied(results: Path, tmp_path: Path) -> Path:
     return Path(shutil.copytree(results, tmp_path / "results"))
 
 
-def test_each_episode_is_scored_beside_its_record_and_no_digest_moves(results: Path) -> None:
+def test_each_episode_is_scored_beside_its_record_and_no_digest_moves(
+    results: Path, unscored: tuple[str, ...]
+) -> None:
     """Each record keeps the digest it had before episodes were scored, and
     holds no score; its scores, beside it, name it by that digest, every
     packaged measure by its digest, and no benchmark."""
     assert sorted(path.name for path in (results / "scores").iterdir()) == ["0.json", "1.json"]
-    for number, digest in enumerate(GUIDES_DIGESTS):
+    for number, digest in enumerate(unscored):
         record = _record(results, number)
         scores = _scores(results, number)
-        assert record.digest.startswith(digest)
+        assert record.digest == digest
         assert set(json.loads((results / "episodes" / f"{number}.json").read_text())) == set(
             EpisodeRecord.model_fields
         )
@@ -207,7 +220,7 @@ def test_an_action_at_the_episodes_end_is_counted_and_switches_nothing(results: 
 
 
 def test_scoring_twice_gives_the_same_scores(
-    simulator: Simulator, results: Path, tmp_path: Path
+    simulator: Simulator, results: Path, unscored: tuple[str, ...], tmp_path: Path
 ) -> None:
     """Scored again from their records, each replaying to its digest, the
     episodes' scores are those the runner wrote, byte for byte, and again."""
@@ -223,13 +236,13 @@ def test_scoring_twice_gives_the_same_scores(
             written = (results / "scores" / f"{number}.json").read_bytes()
             assert (scored / "scores" / f"{number}.json").read_bytes() == written
     assert said[:2] == [
-        f"episode {number}: scored, the same digest {digest}"
-        for number, digest in enumerate(GUIDES_DIGESTS)
+        f"episode {number}: scored, the same digest {digest[:16]}"
+        for number, digest in enumerate(unscored)
     ]
 
 
 def test_a_record_with_its_settings_changed_is_not_scored_and_says_why(
-    simulator: Simulator, results: Path, tmp_path: Path
+    simulator: Simulator, results: Path, unscored: tuple[str, ...], tmp_path: Path
 ) -> None:
     """With the second band's settings and their digest, the first record's
     episode replays to the second's digest: it is not scored, it says so,
@@ -248,10 +261,10 @@ def test_a_record_with_its_settings_changed_is_not_scored_and_says_why(
         assert score_experiment(simulator, scored, said=said.append) == (0,)
     first, second = said
     assert first.startswith(
-        f"episode 0: not scored: it replays to another digest: the record's {GUIDES_DIGESTS[0]}"
+        f"episode 0: not scored: it replays to another digest: the record's {unscored[0]}"
     )
-    assert f", again {GUIDES_DIGESTS[1]}" in first
-    assert second == f"episode 1: scored, the same digest {GUIDES_DIGESTS[1]}"
+    assert f", again {unscored[1]}" in first
+    assert second == f"episode 1: scored, the same digest {unscored[1][:16]}"
     assert (scored / "scores" / "0.json").read_bytes() == (
         results / "scores" / "0.json"
     ).read_bytes()
