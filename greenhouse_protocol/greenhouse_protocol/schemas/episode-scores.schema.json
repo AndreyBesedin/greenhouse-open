@@ -151,7 +151,14 @@
       "$ref": "#/$defs/Sha256"
     },
     "benchmark": {
-      "$ref": "#/$defs/BenchmarkNamed"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BenchmarkNamed"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "measures": {
       "items": {

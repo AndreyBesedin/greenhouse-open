@@ -176,6 +176,24 @@ def test_an_episodes_scores_name_each_values_definition_and_read_back() -> None:
     }
 
 
+def test_an_episodes_scores_on_no_benchmark_say_so_and_must_say_it() -> None:
+    """Before a benchmark names its measures, an episode is scored on no
+    benchmark: its scores write that as null, never leave it out."""
+    scores = EpisodeScores(
+        record_digest="a" * 64,
+        benchmark=None,
+        measures=(scored(packaged_measure("heat-given", 1), 0.25),),
+        software=SOFTWARE,
+    )
+
+    written = json.loads(scores.model_dump_json())
+    assert written["benchmark"] is None
+    assert EpisodeScores.model_validate_json(scores.model_dump_json()) == scores
+    del written["benchmark"]
+    with pytest.raises(ValidationError, match="benchmark"):
+        EpisodeScores.model_validate(written)
+
+
 def test_an_episodes_scores_give_one_value_a_measure_and_part_by_one_digest() -> None:
     heat = packaged_measure("heat-given", 1)
 
