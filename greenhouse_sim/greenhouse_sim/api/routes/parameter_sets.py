@@ -25,9 +25,8 @@ compared, downloaded, saved and uploaded.
 """
 
 from greenhouse_sim.api.responses import Response
-from greenhouse_sim.api.routes.shared import Query, answer, json_body, text_body
+from greenhouse_sim.api.routes.shared import Query, answer, json_body, set_version, text_body
 from greenhouse_sim.services import parameter_set_library as library
-from greenhouse_sim.services.errors import InvalidRequest
 from greenhouse_sim.services.simulator import Simulator
 
 
@@ -38,15 +37,17 @@ def get(simulator: Simulator, segments: list[str], _query: Query) -> Response | 
         case ["api", "parameter-sets", model, "schema"]:
             return answer(lambda: library.parameters_schema(model))
         case ["api", "parameter-sets", model, name, version]:
-            return answer(lambda: library.parameter_set(simulator, model, name, _version(version)))
+            return answer(
+                lambda: library.parameter_set(simulator, model, name, set_version(version))
+            )
         case ["api", "parameter-sets", model, name, version, "file"]:
-            return answer(lambda: library.download(simulator, model, name, _version(version)))
+            return answer(lambda: library.download(simulator, model, name, set_version(version)))
         case ["api", "parameter-sets", model, name, version, "compare", other, other_version]:
             return answer(
                 lambda: library.compare(
                     simulator,
-                    (model, name, _version(version)),
-                    (model, other, _version(other_version)),
+                    (model, name, set_version(version)),
+                    (model, other, set_version(other_version)),
                 )
             )
         case _:
@@ -61,10 +62,3 @@ def post(simulator: Simulator, segments: list[str], _query: Query, body: bytes) 
             return answer(lambda: library.save(simulator, model, json_body(body)))
         case _:
             return None
-
-
-def _version(written: str) -> int:
-    """A set's version as a path writes it: a whole number from 1."""
-    if not written.isascii() or not written.isdigit() or int(written) < 1:
-        raise InvalidRequest(f"a set's version is a whole number from 1, not {written!r}")
-    return int(written)

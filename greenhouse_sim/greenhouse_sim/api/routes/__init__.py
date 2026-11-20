@@ -17,7 +17,8 @@ of its routes at its top:
 
 - `system`: whether the API is up, and its version;
 - `scenarios`: the scenarios, and each one's manifest, scene, weather,
-  CFD geometry, layout and file, and the upload of a scenario file;
+  CFD geometry, layout and file, the upload of a scenario file, and a
+  scenario's house under another parameter set;
 - `runs`: what a scenario's run holds at a moment, its fields, climate,
   crop and timeline;
 - `checkpoints`: a run's checkpoints, made, listed, downloaded and uploaded;

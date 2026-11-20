@@ -29,10 +29,12 @@ from greenhouse_sim.api.responses import Response
 from greenhouse_sim.api.routes import respond
 from greenhouse_sim.api.server import UNEXPECTED_FAILURE, create_server
 from greenhouse_sim.scenarios import SCENARIO_REGISTRY
+from greenhouse_sim.scenarios.crop_parameters import ReducedTomgroCrop, VanthoorKatzinCrop
 from greenhouse_sim.scenarios.manifest_files import manifest_digest, opening_day
 from greenhouse_sim.scene.snapshot import SCHEMA_VERSION, SceneEntityKind, SceneSnapshot
 from greenhouse_sim.services import system
 from greenhouse_sim.services.crop_models import registration
+from greenhouse_sim.services.parameter_sets import PACKAGED_RUNS_PUBLISHED
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.world.scopes import row_scopes
 
@@ -145,6 +147,13 @@ def test_the_scenario_list_is_the_registry(simulator: Simulator) -> None:
                 "example_day",
             ],
             "thermostat": None if config.thermostat is None else config.thermostat.actuator_id,
+            # A packaged scenario's crop runs its model's published set alone
+            # (P20.5); the organ and simple crops have no sets.
+            "parameter_set": (
+                {"name": config.crop.PUBLISHED_SET, "version": 1, "fixed": PACKAGED_RUNS_PUBLISHED}
+                if isinstance(config.crop, ReducedTomgroCrop | VanthoorKatzinCrop)
+                else None
+            ),
         }
 
 
