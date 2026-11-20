@@ -4,7 +4,7 @@
 [0081](../decisions/0081-a-benchmarks-measures-are-versioned-definitions-frozen-before-its-baselines-and-a-baseline-carries-its-provenance.md)
 and
 [0082](../decisions/0082-the-evaluator-reads-an-episodes-truth-after-its-policy-stops.md),
-proposed. Stages 3 and 4 of item 7 of the
+accepted with P25.3. Stages 3 and 4 of item 7 of the
 [research priorities](research-validation-priorities.md), and the start of
 its stage 5 with one published controller, after
 [P23](archive/p23-experiments.md); stages B and C of decision
