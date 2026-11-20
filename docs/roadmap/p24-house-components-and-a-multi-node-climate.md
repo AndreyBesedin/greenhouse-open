@@ -313,8 +313,8 @@ again, and the step is done when that run is recorded.
 
 **Ordered by the apportioning** (P24.1). P24.4 to P24.9 follow the largest move
 each one's blocker makes in either window of the first comparison, whatever its
-sign: the RMSE of the difference with the blocker taken out of TiGwerLib, less
-the comparison's own (5.20 K in January, 3.57 K in July). A blocker that hides
+sign: the comparison's own RMSE of the difference (5.20 K in January, 3.57 K in
+July) less its RMSE with the blocker taken out of TiGwerLib. A blocker that hides
 part of the gap, taken out, widens it, and moves the comparison as much as one
 that closes it by as much. The moves are the
 [apportioning's](../../research/modelica/README.md#apportioning-the-gap-among-the-blockers)
