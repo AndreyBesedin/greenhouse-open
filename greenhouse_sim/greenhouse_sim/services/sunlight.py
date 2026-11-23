@@ -96,6 +96,7 @@ def _house_light(simulator: Simulator, scenario_id: str, layout: str, weather: s
             air_grid(config),
             config.envelope,
             Shadows.of(config.envelope, config.layout, [crown.solid() for crown in plant_crowns]),
+            cover=config.cover,
         )
         area = registration(config).area
         scopes = (

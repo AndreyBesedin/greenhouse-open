@@ -357,7 +357,6 @@ def test_a_pipe_is_hollow() -> None:
     ("components", "named"),
     [
         ({"screens": [THERMAL_SCREEN]}, "the thermal screen energy_screen"),
-        ({"cover": COMPONENTS["cover"]}, "its cover's materials"),
         ({"floor": COMPONENTS["floor"]}, "its floor"),
         ({"boundaries": {"end_wall_back": {"faces": "nothing"}}}, "end_wall_back on nothing"),
         (
@@ -402,7 +401,9 @@ def test_a_refusal_names_three_of_what_it_cannot_model_and_counts_the_rest() -> 
     components = _house().components
     assert components is not None
 
-    with pytest.raises(ValidationError, match=r"cannot model its cover's materials, .* and 5 more"):
+    with pytest.raises(
+        ValidationError, match=r"cannot model end_wall_front on a corridor, .* and 4 more"
+    ):
         _run(components)
     assert [kind for kind, _ in components.described()] == [
         Component.COVER,

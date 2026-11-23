@@ -12,8 +12,9 @@ are its manifest and every run's identity.
 A house air model that cannot model a described component refuses the
 house, naming it (`HouseComponents.described`, read by `ScenarioConfig`),
 as a run refuses rows of crops it cannot grow. Today's two, `grid` and
-`whole_house`, model none of them: what models them comes with the
-multi-node climate (P24.3 on).
+`whole_house`, model its cover alone: its sheets give their glass its U
+(`climate.glazing`) and the sunlight its transmittance (`solar.glass`).
+What models the rest comes with the multi-node climate (P24.3 on).
 """
 
 from collections import Counter
@@ -24,10 +25,13 @@ from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, PositiveFlo
 from greenhouse_sim.domain.components import Component, PipeKind, ScreenKind
 from greenhouse_sim.world.identifiers import ItemId
 from greenhouse_sim.world.materials import (
+    COVER_MATERIALS,
     CoverChoice,
+    CoverMaterial,
     FloorSurface,
     LayerChoice,
     ScreenChoice,
+    material,
 )
 from greenhouse_sim.world.zones import EDGE_TOLERANCE_M, Strip
 
@@ -63,6 +67,15 @@ class Cover(_Component):
 
     roof: CoverChoice
     walls: dict[WallId, CoverChoice] = {}
+
+    def sheet(self, surface_id: str) -> CoverMaterial:
+        """What a surface of the envelope is made of, by its identifier: a
+        wall's own sheet, if it names one, and the roof's for the others
+        and for each of the roof's slopes."""
+        chosen = next(
+            (sheet for wall, sheet in self.walls.items() if wall == surface_id), self.roof
+        )
+        return material(chosen, COVER_MATERIALS)
 
 
 class OnTheOutside(_Component):

@@ -40,7 +40,7 @@ import numpy as np
 from pydantic import BaseModel, ConfigDict
 
 from greenhouse_sim.climate.control import DehumidifyingLoop, VentingLoop
-from greenhouse_sim.climate.glazing import glazing_u_w_m2k
+from greenhouse_sim.climate.glazing import Glass
 from greenhouse_sim.climate.openings import opening_flows
 from greenhouse_sim.climate.psychrometrics import (
     humidity_ratio_g_kg,
@@ -103,10 +103,11 @@ class HouseAir:
 @dataclass(frozen=True)
 class _Steady:
     """What the house exchanges and is given at steady levels: its exchange
-    with the outside through the glass, for each W/m²K of U (m³/s), the heat
-    added (W), of it the heaters' (W), and the water taken (kg/s)."""
+    with the outside through each glass its walls and roof are of, for each
+    W/m²K of that glass's U (m³/s), the heat added (W), of it the heaters'
+    (W), and the water taken (kg/s)."""
 
-    glass_m3_s_per_u: float
+    glass_m3_s_per_u: tuple[tuple[Glass, float], ...]
     heat_w: float
     heater_w: float
     water_removed_kg_s: float
@@ -605,10 +606,14 @@ class WholeHouse:
             terms = self.run.terms_for(levels)
             transport = self.run.transport_for(levels, openings={})
             air = self._air
-            configured_u = self.run.settings.glazing_u_w_m2k
-            glass = float(transport.glass_m3_s()[air].sum())
             self._steady[key] = _Steady(
-                glass_m3_s_per_u=glass / configured_u if configured_u > 0 else 0.0,
+                glass_m3_s_per_u=tuple(
+                    (
+                        glass,
+                        float(exchanged[air].sum()) / glass.u_w_m2k if glass.u_w_m2k > 0 else 0.0,
+                    )
+                    for glass, exchanged in transport.glass_exchanges_m3_s()
+                ),
                 heat_w=float(terms.heat_w[air].sum()),
                 heater_w=sum(
                     capability.power_w * levels.get(piece.actuator_id, 0.0)
@@ -635,7 +640,9 @@ class WholeHouse:
         heat_per_k = AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K
         heat_w = steady.heat_w + sun_w
         settings = self.run.settings
-        u = glazing_u_w_m2k(settings.glazing_u_w_m2k, outside.wind_speed_m_s)
+        glazed_m3_s = sum(
+            glass.u_in(outside.wind_speed_m_s) * per_u for glass, per_u in steady.glass_m3_s_per_u
+        )
         leaks_m3_s = settings.infiltration_per_s(outside.wind_speed_m_s) * volume
         levels = self._openings(time_s, air)
         sites = [vent.site_at(levels[vent.opening_id]) for vent in self.run.vents]
@@ -644,7 +651,7 @@ class WholeHouse:
         )
         entering = sum(max(flow.net_m3_s, 0.0) + flow.exchange_m3_s for flow in through)
         venting_m3_s = entering + leaks_m3_s
-        exchange = u * steady.glass_m3_s_per_u + venting_m3_s
+        exchange = glazed_m3_s + venting_m3_s
         air_kg = AIR_DENSITY_KG_M3 * volume
         return _Course(
             settled_c=outside.air_temperature_c

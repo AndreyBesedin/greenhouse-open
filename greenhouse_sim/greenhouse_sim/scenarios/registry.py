@@ -108,9 +108,12 @@ class Model:
         return parameters.model_dump(mode="json", exclude={KIND})
 
     def configured(self, parameters: BaseModel) -> dict[str, JsonValue]:
-        """The configuration's field its parameters are; none for a model
-        that takes no parameters."""
-        return {} if self.field is None else {self.field: parameters.model_dump(mode="json")}
+        """The configuration's field its parameters are, as given, so that
+        the configuration knows what was given and what it took by default;
+        none for a model that takes no parameters."""
+        if self.field is None:
+            return {}
+        return {self.field: parameters.model_dump(mode="json", exclude_unset=True)}
 
 
 def _models(*models: Model) -> dict[str, Model]:

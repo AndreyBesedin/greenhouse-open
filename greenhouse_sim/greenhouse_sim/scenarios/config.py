@@ -1,5 +1,5 @@
 from datetime import UTC, date, datetime
-from typing import Annotated, Any, Self
+from typing import Annotated, Any, Final, Self
 
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt, PositiveInt, model_validator
 
@@ -30,7 +30,7 @@ from greenhouse_sim.weather.sources import Clouded, ConstantWeather, RunWeather,
 from greenhouse_sim.weather.state import Percent
 from greenhouse_sim.weather.synthetic import SyntheticWeather
 from greenhouse_sim.world.capabilities import Capability, Dries, Heats, MovesAir
-from greenhouse_sim.world.components import HouseComponents, undescribed
+from greenhouse_sim.world.components import Cover, HouseComponents, undescribed
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.equipment import can
 from greenhouse_sim.world.layout import Layout, inside_the_greenhouse, outside_the_greenhouse
@@ -38,6 +38,8 @@ from greenhouse_sim.world.site import DEFAULT_SITE, Bearing, Site
 
 # A refusal names this many of the things it refuses, and counts the rest.
 NAMED_IN_A_REFUSAL = 3
+# The house air's parameter a described cover gives in its place.
+GLAZING_U: Final = "glazing_u_w_m2k"
 
 
 def _with_its_airs_kind(given: dict[str, Any]) -> dict[str, Any]:
@@ -251,6 +253,23 @@ class ScenarioConfig(BaseModel):
                 + (f" and {more} more" if more > 0 else "")
             )
         return self
+
+    @model_validator(mode="after")
+    def _its_glass_is_given_once(self) -> Self:
+        """A house whose cover is described takes its glass's U from it, and
+        is refused one its house air's parameters give too, naming both
+        (decision 0080)."""
+        if self.cover is not None and GLAZING_U in self.climate.model_fields_set:
+            raise ValueError(
+                f"its components' cover and its house air's {GLAZING_U} each give its "
+                f"glass's U: one of them does"
+            )
+        return self
+
+    @property
+    def cover(self) -> Cover | None:
+        """What its house's cover is made of, if it describes it."""
+        return None if self.components is None else self.components.cover
 
     @model_validator(mode="after")
     def _the_weather_station_stands_outside(self) -> Self:

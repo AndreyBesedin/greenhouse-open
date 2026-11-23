@@ -26,7 +26,8 @@ the outside.
   T) with the outside through the face it lies against, both ways. The floor
   is not glass, and passes nothing. Glass passes no water. The outside is
   the weather over the stretch advanced (`greenhouse_sim.weather`), and U
-  is the glass's in its wind (`climate.glazing`, P07.4).
+  is the glass's in its wind (`climate.glazing`, P07.4): each wall's and
+  the roof's own, where a described cover makes them of other sheets.
 - **Open doors and vents** (`climate.vents`, `climate.openings`): the air
   that enters through them brings the outside's heat, water and CO2 to the
   cells against them, as does what each exchanges both ways; the air that
@@ -57,7 +58,7 @@ from typing import Final
 
 import numpy as np
 
-from greenhouse_sim.climate.glazing import REFERENCE_WIND_M_S, glazing_u_w_m2k
+from greenhouse_sim.climate.glazing import REFERENCE_WIND_M_S, Glass, HouseGlass
 from greenhouse_sim.climate.openings import OpeningFlow
 from greenhouse_sim.climate.projection import FaceFlows
 from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg, saturation_ratio_g_kg
@@ -82,6 +83,17 @@ GRAMS_PER_KG: Final = 1000.0
 # enough that little supersaturated air is carried, and far less often than
 # a fan's steps, a twentieth of a second.
 CONDENSING_S: Final = 10.0
+# The envelope's faces on the grid, each the surface it lies against, where
+# its cells lie, and the axis it faces along: the end walls the grid's ends
+# in x, the side walls its sides in y, and the roof over its top layer.
+_EVERY: Final = slice(None)
+_FACES: Final[tuple[tuple[str, tuple[slice | int, ...], int], ...]] = (
+    ("end_wall_front", (_EVERY, _EVERY, 0), 2),
+    ("end_wall_back", (_EVERY, _EVERY, -1), 2),
+    ("side_wall_right", (_EVERY, 0, _EVERY), 1),
+    ("side_wall_left", (_EVERY, -1, _EVERY), 1),
+    ("roof", (-1, _EVERY, _EVERY), 0),
+)
 
 
 @dataclass(frozen=True, eq=False)
@@ -111,6 +123,9 @@ class Transport:
     vents: tuple[Vent, ...] = ()
     # What each open door and vent passes over the stretch advanced.
     openings: Mapping[str, OpeningFlow] = field(default_factory=dict)
+    # Each wall's and the roof's glass: the settings' U throughout, unless
+    # a described cover gives it.
+    glass: HouseGlass | None = None
 
     def __post_init__(self) -> None:
         nx, ny, nz = self.grid.shape
@@ -151,28 +166,51 @@ class Transport:
             )
         return takes
 
-    def envelope_m2(self) -> np.ndarray:
-        """Each air cell's faces against the walls and roof, in m²: the floor
-        is not envelope."""
+    def _faces_m2(self, surfaces: frozenset[str]) -> np.ndarray:
+        """Each air cell's faces against the `surfaces` named, in m²."""
         nx, ny, nz = self.grid.shape
         area = np.zeros((nz, ny, nx))
-        area[:, :, 0] += self._face_area(2)
-        area[:, :, -1] += self._face_area(2)
-        area[:, 0, :] += self._face_area(1)
-        area[:, -1, :] += self._face_area(1)
-        # The roof, over the top layer.
-        area[-1, :, :] += self._face_area(0)
+        for surface, cells, axis in _FACES:
+            if surface in surfaces:
+                area[cells] += self._face_area(axis)
         area[self.solid] = 0.0
         return area
 
+    def envelope_m2(self) -> np.ndarray:
+        """Each air cell's faces against the walls and roof, in m²: the floor
+        is not envelope."""
+        return self._faces_m2(frozenset(surface for surface, _, _ in _FACES))
+
+    def glass_exchanges_m3_s(
+        self, wind_m_s: float = REFERENCE_WIND_M_S
+    ) -> list[tuple[Glass, np.ndarray]]:
+        """Each glass the walls and roof are of, with each cell's exchange
+        with the outside through it, U A / (ρ c_p), in m³/s of air brought
+        to the outside's temperature each second, U the glass's in a wind;
+        nothing for a solid cell. One glass, of the settings' U, unless a
+        described cover makes them of others."""
+        glass = self.glass or HouseGlass.configured(self.settings.glazing_u_w_m2k)
+        surfaces: dict[Glass, set[str]] = {}
+        for surface, _, _ in _FACES:
+            surfaces.setdefault(glass.of(surface), set()).add(surface)
+        return [
+            (
+                its,
+                its.u_in(wind_m_s)
+                / (AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K)
+                * self._faces_m2(frozenset(named)),
+            )
+            for its, named in surfaces.items()
+        ]
+
     def glass_m3_s(self, wind_m_s: float = REFERENCE_WIND_M_S) -> np.ndarray:
         """Each cell's exchange with the outside through the walls and roof it
-        lies against, U A / (ρ c_p), in m³/s of air brought to the outside's
-        temperature each second, U the glass's in a wind; nothing for a
-        solid cell."""
-        u = glazing_u_w_m2k(self.settings.glazing_u_w_m2k, wind_m_s)
-        glass: np.ndarray = u / (AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K) * self.envelope_m2()
-        return glass
+        lies against, through each one's glass (`glass_exchanges_m3_s`)."""
+        exchanges = [exchanged for _, exchanged in self.glass_exchanges_m3_s(wind_m_s)]
+        total: np.ndarray = exchanges[0]
+        for more in exchanges[1:]:
+            total = total + more
+        return total
 
     def leaks_m3_s(self, wind_m_s: float = REFERENCE_WIND_M_S) -> np.ndarray:
         """The outside air each cell takes in through the house's gaps in a

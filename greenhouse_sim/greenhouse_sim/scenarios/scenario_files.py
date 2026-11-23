@@ -33,7 +33,7 @@ from pydantic import JsonValue, ValidationError
 from greenhouse_sim.digests import short_digest
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios.catalogue import SCENARIO_ID
-from greenhouse_sim.scenarios.config import ScenarioConfig
+from greenhouse_sim.scenarios.config import GLAZING_U, ScenarioConfig
 from greenhouse_sim.scenarios.crop_parameters import (
     ReducedTomgroCrop,
     VanthoorKatzinCrop,
@@ -250,6 +250,10 @@ def _models(config: ScenarioConfig) -> dict[str, JsonValue]:
             if chosen_model.field is None
             else chosen_model.written(getattr(config, chosen_model.field))
         )
+        if part is Part.HOUSE_AIR and config.cover is not None:
+            # Its described cover gives the glass's U, which its house air
+            # cannot give beside it.
+            parameters.pop(GLAZING_U, None)
         sections[str(Part(part))] = {"model": name, "parameters": parameters}
     return sections
 

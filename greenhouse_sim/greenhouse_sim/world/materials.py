@@ -21,8 +21,11 @@ Venlo house, as GreenLight 2.0.7 gives them. Other glasses, plastics and
 cloths are given by their properties until a source gives each of their
 values.
 
-No model reads a material yet: the house air's models that do are to come
-(P24.3 on).
+A cover's sheet is read by today's house air models and the sunlight: its
+conduction and thickness give the glass its U (`climate.glazing`), and its
+shortwave transmittances what it passes of the sun and the sky
+(`solar.glass`). The rest of a sheet, and the floor's and the screens'
+materials, are read by the models still to come (P24.3 on).
 """
 
 from collections.abc import Mapping

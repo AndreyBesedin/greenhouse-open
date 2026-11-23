@@ -28,9 +28,10 @@ class HouseSettings(BaseModel):
 
     # The components a house describes that its model models (P24.2,
     # decision 0080): a house describing another is refused, naming it.
-    # Neither of today's two models any: their glass is their glazing's U,
-    # every wall faces the outside, and the air alone holds heat.
-    MODELLED: ClassVar[frozenset[Component]] = frozenset()
+    # Today's two model its cover alone, which gives their glass its U in
+    # place of `glazing_u_w_m2k` (`climate.glazing`): every wall faces the
+    # outside, and the air alone holds heat.
+    MODELLED: ClassVar[frozenset[Component]] = frozenset({Component.COVER})
 
     # The air's temperature and relative humidity everywhere inside when the
     # run starts.
@@ -40,7 +41,9 @@ class HouseSettings(BaseModel):
     # How much heat the walls' and roof's glazing passes, per square metre and
     # per kelvin between inside and out, in a 4 m/s wind: about 6 W/m²K for
     # single glass. The wind sets it at every other moment
-    # (`climate.glazing`). Zero shuts the house off from the outside.
+    # (`climate.glazing`). Zero shuts the house off from the outside. A house
+    # whose cover is described takes its glass's from it, and is refused
+    # this beside it (`ScenarioConfig`).
     glazing_u_w_m2k: Annotated[float, Field(ge=0.0, lt=most_u_w_m2k())] = 6.0
     # How much of the house's air leaks out through a shut house's gaps each
     # hour, and is replaced by the outside's: a share in still air, and as

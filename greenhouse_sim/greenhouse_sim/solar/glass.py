@@ -20,6 +20,13 @@
   are passed a little too much.
 - **Openings:** an open vent's or door's aperture passes the beam as glass
   does, for now.
+- **A described cover** (decision 0080, `world.components.Cover`): each
+  surface passes its own sheet's share of a beam square to it, in place of
+  single glass's 0.85, under the same modifier, ASHRAE's for glass, whatever
+  the sheet. The diffuse sky's share is the roof's sheet's own diffuse
+  transmittance: a level surface takes the sky's light through the roof,
+  the walls passing it only from the low sky, at a grazing angle. The walls'
+  sheets are not weighed into it.
 """
 
 from dataclasses import dataclass
@@ -28,6 +35,7 @@ from typing import Final
 import numpy as np
 
 from greenhouse_sim.domain.envelope import SurfaceCategory
+from greenhouse_sim.world.components import Cover
 from greenhouse_sim.world.envelope import Envelope, Surface, outline
 from greenhouse_sim.world.geometry import Vector3
 
@@ -51,13 +59,16 @@ GLAZED: Final = frozenset({SurfaceCategory.WALL, SurfaceCategory.ROOF})
 PAIRS_AT_ONCE: Final = 1 << 20
 
 
-def transmittance(cos_incidence: np.ndarray) -> np.ndarray:
+def transmittance(
+    cos_incidence: np.ndarray, normal: float | np.ndarray = NORMAL_TRANSMITTANCE
+) -> np.ndarray:
     """The share of a beam the glass passes, at each cosine of its incidence
-    on the glass."""
+    on the glass, for glass that passes `normal` of a beam square to it:
+    single glass's, unless it is told another, for each cosine or all."""
     cosine = np.clip(cos_incidence, 0.0, 1.0)
     with np.errstate(divide="ignore"):
         modifier = 1.0 - INCIDENCE_COEFFICIENT * (1.0 / cosine - 1.0)
-    return np.where(cosine > 0, NORMAL_TRANSMITTANCE * np.clip(modifier, 0.0, 1.0), 0.0)
+    return np.where(cosine > 0, normal * np.clip(modifier, 0.0, 1.0), 0.0)
 
 
 def _outline(surface: Surface) -> np.ndarray:
@@ -138,6 +149,8 @@ class _Pane:
     # Facing into the house.
     normal: np.ndarray
     outline: _Outline
+    # The share of a beam square to it that it passes.
+    normal_transmittance: float
 
 
 def _vector(vector: Vector3) -> np.ndarray:
@@ -146,9 +159,16 @@ def _vector(vector: Vector3) -> np.ndarray:
 
 class Glazing:
     """An envelope's walls and roof, as the sun's beam crosses them on its way
-    to points inside, in the world's axes."""
+    to points inside, in the world's axes: single glass, unless its `cover`
+    is described."""
 
-    def __init__(self, envelope: Envelope) -> None:
+    def __init__(self, envelope: Envelope, cover: Cover | None = None) -> None:
+        # What the diffuse sky passes through: the roof's.
+        self.diffuse_transmittance = (
+            DIFFUSE_TRANSMITTANCE
+            if cover is None
+            else cover.sheet("roof").shortwave_diffuse_transmittance
+        )
         self.panes = [
             _Pane(
                 origin=_vector(surface.transform.position),
@@ -156,6 +176,11 @@ class Glazing:
                 up=_vector(surface.transform.rotation.rotate(Vector3(x=0.0, y=1.0, z=0.0))),
                 normal=_vector(surface.transform.rotation.rotate(Vector3(x=0.0, y=0.0, z=1.0))),
                 outline=_Outline.of(_outline(surface)),
+                normal_transmittance=(
+                    NORMAL_TRANSMITTANCE
+                    if cover is None
+                    else cover.sheet(surface.surface_id).shortwave_beam_transmittance
+                ),
             )
             for surface in envelope.surfaces_in_world()
             if surface.category in GLAZED
@@ -167,10 +192,17 @@ class Glazing:
         unit direction `towards` it: at the surface the ray from the point
         towards the sun leaves through; nothing for a ray that leaves
         through none."""
+        return self._crossed(points, towards)[0]
+
+    def _crossed(self, points: np.ndarray, towards: Vector3) -> tuple[np.ndarray, np.ndarray]:
+        """For each of `points`, the cosine the beam on its way to it meets
+        the glass at (`cos_incidence`), and what that glass passes of a beam
+        square to it."""
         direction = _vector(towards)
         count = len(points)
         nearest = np.full(count, np.inf)
         cosine = np.zeros(count)
+        passes = np.full(count, NORMAL_TRANSMITTANCE)
         for pane in self.panes:
             facing = float(direction @ pane.normal)
             if facing >= 0:
@@ -183,9 +215,10 @@ class Glazing:
             nearer = leaves & (distance < nearest)
             nearest = np.where(nearer, distance, nearest)
             cosine = np.where(nearer, -facing, cosine)
-        return cosine
+            passes = np.where(nearer, pane.normal_transmittance, passes)
+        return cosine, passes
 
     def beam_transmittance(self, points: np.ndarray, towards: Vector3) -> np.ndarray:
         """The share of the sun's beam, from the unit direction `towards` it,
         the glass passes on its way to each of `points` inside."""
-        return transmittance(self.cos_incidence(points, towards))
+        return transmittance(*self._crossed(points, towards))

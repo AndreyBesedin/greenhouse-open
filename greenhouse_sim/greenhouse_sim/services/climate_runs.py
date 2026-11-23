@@ -29,7 +29,7 @@ from greenhouse_sim.climate.commands import (
     TargetChange,
 )
 from greenhouse_sim.climate.day import DAYS, ClimateDay
-from greenhouse_sim.climate.glazing import glazed_cells
+from greenhouse_sim.climate.glazing import glazed_cells, house_glass
 from greenhouse_sim.climate.openings import opening_sites
 from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.vents import Vent
@@ -419,4 +419,5 @@ def _new_climate_run(simulator: Simulator, key: RunKey) -> ClimateRun:
         glazed=glazed_cells(config.envelope, grid, geometry.solid()),
         sunlight=plant_light(simulator, scenario_id, layout, weather).sunlight,
         control=config.control,
+        glass=house_glass(config.climate.glazing_u_w_m2k, config.cover),
     )
