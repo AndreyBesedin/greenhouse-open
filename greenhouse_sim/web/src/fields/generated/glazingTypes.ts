@@ -3,7 +3,8 @@
 
 /**
  * The glazing at a moment of a run: the outside's temperature, the
- * glass's U in the wind, and each glazed surface.
+ * roof's glass's U in the wind, and each glazed surface, which passes its
+ * own glass's (`HouseGlass`).
  */
 export interface GlazingAt {
   time_s: number;
