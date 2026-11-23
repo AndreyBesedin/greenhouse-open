@@ -27,11 +27,12 @@ from typing import Final
 import numpy as np
 
 from greenhouse_sim.fields.field import FieldGrid
-from greenhouse_sim.solar.glass import DIFFUSE_TRANSMITTANCE, Glazing
+from greenhouse_sim.solar.glass import Glazing
 from greenhouse_sim.solar.position import SunPosition, sun_position
 from greenhouse_sim.solar.shadows import Shadows, roof_shading
 from greenhouse_sim.solar.sky import PAR_UMOL_M2_S_PER_W_M2, OutsideLight, outside_light
 from greenhouse_sim.weather.sources import RunWeather
+from greenhouse_sim.world.components import Cover
 from greenhouse_sim.world.envelope import Envelope
 from greenhouse_sim.world.geometry import Vector3
 from greenhouse_sim.world.site import Site
@@ -60,7 +61,7 @@ def sky_view(normal: Vector3) -> float:
 class Sunlight:
     """The light inside a house, its envelope `envelope`, through a run, at
     `site`, under `weather`, over `grid`, its beam shaded by `shadows`, or
-    by nothing."""
+    by nothing, through its described `cover`, or single glass."""
 
     def __init__(
         self,
@@ -69,15 +70,17 @@ class Sunlight:
         grid: FieldGrid,
         envelope: Envelope,
         shadows: Shadows | None = None,
+        *,
+        cover: Cover | None = None,
     ) -> None:
         self.site = site
         self.weather = weather
         self.grid = grid
-        self.glazing = Glazing(envelope)
+        self.glazing = Glazing(envelope, cover)
         self.shadows = shadows
         # The share of the diffuse sky that reaches inside, past the glass
         # and the roof's structure.
-        self.diffuse_passed = DIFFUSE_TRANSMITTANCE * (1.0 - roof_shading(envelope))
+        self.diffuse_passed = self.glazing.diffuse_transmittance * (1.0 - roof_shading(envelope))
         xs, ys, zs = grid.centres()
         z, y, x = np.meshgrid(zs, ys, xs, indexing="ij")
         self._centres = np.stack([x.ravel(), y.ravel(), z.ravel()], axis=1)

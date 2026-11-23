@@ -201,7 +201,7 @@ class WholeHouseDay(ClimateDay):
             self.run.glazed,
             self._air(time_s).temperature,
             self.run.weather.at(time_s),
-            self.run.settings.glazing_u_w_m2k,
+            self.run.glass,
             time_s,
         )
 

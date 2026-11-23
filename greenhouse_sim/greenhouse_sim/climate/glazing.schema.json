@@ -33,7 +33,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "The glazing at a moment of a run: the outside's temperature, the\nglass's U in the wind, and each glazed surface.",
+  "description": "The glazing at a moment of a run: the outside's temperature, the\nroof's glass's U in the wind, and each glazed surface, which passes its\nown glass's (`HouseGlass`).",
   "properties": {
     "time_s": {
       "title": "Time S",

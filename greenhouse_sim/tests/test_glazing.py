@@ -15,6 +15,7 @@ from greenhouse_sim.api.routes import respond
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.glazing import (
     REFERENCE_WIND_M_S,
+    HouseGlass,
     glazed_cells,
     glazing_at,
     glazing_u_w_m2k,
@@ -100,10 +101,11 @@ def _uniform(temperature: float) -> np.ndarray:
 
 def test_no_difference_passes_no_heat_and_reversing_it_reverses_the_heat() -> None:
     glazed = glazed_cells(BOX.envelope, GRID, SOLID)
-    level = glazing_at(glazed, _uniform(NIGHT.air_temperature_c), NIGHT, SINGLE_GLASS, 0.0)
-    warm = glazing_at(glazed, _uniform(16.0), NIGHT, SINGLE_GLASS, 0.0)
+    glass = HouseGlass.configured(SINGLE_GLASS)
+    level = glazing_at(glazed, _uniform(NIGHT.air_temperature_c), NIGHT, glass, 0.0)
+    warm = glazing_at(glazed, _uniform(16.0), NIGHT, glass, 0.0)
     reversed_outside = NIGHT.model_copy(update={"air_temperature_c": 16.0})
-    cold = glazing_at(glazed, _uniform(8.0), reversed_outside, SINGLE_GLASS, 0.0)
+    cold = glazing_at(glazed, _uniform(8.0), reversed_outside, glass, 0.0)
 
     assert all(surface.loss_w == 0.0 for surface in level.surfaces)
     for out, into in zip(warm.surfaces, cold.surfaces, strict=True):

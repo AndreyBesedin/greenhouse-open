@@ -95,7 +95,9 @@ def test_a_models_parameters_name_no_kind_but_its_section_does() -> None:
     read = weather.read({"air_temperature_c": 4.0})
 
     assert weather.written(read) == read.model_dump(mode="json", exclude={"kind"})
-    assert weather.configured(read)["weather"] == read.model_dump(mode="json")
+    # The configuration is given what the section gives, and its model's
+    # name: it takes the rest by default.
+    assert weather.configured(read)["weather"] == {"kind": "constant", "air_temperature_c": 4.0}
     with pytest.raises(ValueError, match="its kind is its model's name"):
         weather.read({"kind": "constant"})
 
@@ -122,7 +124,7 @@ def test_the_controllers_loops_give_a_scenario_its_control_and_none_gives_it_non
 
     read = loops.read({"heating": heating})
 
-    assert loops.configured(read) == {"control": read.model_dump(mode="json")}
+    assert loops.configured(read) == {"control": {"kind": LOOPS, "heating": heating}}
     assert loops.written(read)["heating"] == heating | {"band_c": 1.0}
     assert (
         model(Part.CONTROLLER, NO_CONTROLLER).configured(

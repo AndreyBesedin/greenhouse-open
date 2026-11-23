@@ -43,7 +43,7 @@ import numpy as np
 from greenhouse_sim.airflow.contract import AirflowModel
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.control import Control
-from greenhouse_sim.climate.glazing import GlazedCells, GlazingAt, glazing_at
+from greenhouse_sim.climate.glazing import GlazedCells, GlazingAt, HouseGlass, glazing_at
 from greenhouse_sim.climate.openings import OpeningFlow, opening_flows
 from greenhouse_sim.climate.projection import FaceFlows, conserving, face_flows
 from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg, relative_humidity_pct
@@ -139,6 +139,7 @@ class ClimateRun:
         sunlight: Sunlight | None = None,
         thermostat: Thermostat | None = None,
         control: Control | None = None,
+        glass: HouseGlass | None = None,
     ) -> None:
         nx, ny, nz = grid.shape
         if solid.shape != (nz, ny, nx):
@@ -152,6 +153,9 @@ class ClimateRun:
         self.solid = solid
         self.vents = tuple(vents)
         self.glazed = dict(glazed or {})
+        # Each wall's and the roof's glass: its described cover's, or the
+        # settings' U throughout.
+        self.glass = glass or HouseGlass.configured(settings.glazing_u_w_m2k)
         self.sunlight = sunlight
         # Its climate controller (P11): its loops, the heating loop its
         # thermostat; or a thermostat alone (P10.3).
@@ -228,6 +232,7 @@ class ClimateRun:
             sunlight=self.sunlight,
             thermostat=self.thermostat,
             control=self.control,
+            glass=self.glass,
         )
         later._steady = self._steady
         later._steadying = self._steadying
@@ -374,6 +379,7 @@ class ClimateRun:
             self.settings,
             self.vents,
             openings,
+            self.glass,
         )
         return terms, transport
 
@@ -560,7 +566,7 @@ class ClimateRun:
             self.glazed,
             self.air_at(time_s).temperature,
             self.weather.at(time_s),
-            self.settings.glazing_u_w_m2k,
+            self.glass,
             time_s,
         )
 
