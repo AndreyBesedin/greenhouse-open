@@ -1,11 +1,12 @@
 # P24: A house's components, and a climate that carries them
 
 **Status:** proposed, in progress (P24.1 and P24.2 are done): the steps below, with decisions
-[0078](../decisions/0078-a-multi-node-climate-is-a-model-of-the-houses-air-chosen-by-the-manifest.md),
-[0079](../decisions/0079-a-crop-and-the-houses-air-exchange-heat-water-and-co2-by-what-each-declares.md)
+[0078](../decisions/0078-a-multi-node-climate-is-a-model-of-the-houses-air-chosen-by-the-manifest.md)
 and
+[0079](../decisions/0079-a-crop-and-the-houses-air-exchange-heat-water-and-co2-by-what-each-declares.md),
+proposed, and
 [0080](../decisions/0080-a-houses-components-and-materials-are-described-in-its-installation.md),
-proposed. It follows item 6 of the [research priorities](research-validation-priorities.md),
+accepted with P24.2. It follows item 6 of the [research priorities](research-validation-priorities.md),
 the Modelica comparison. Part of the [simulator roadmap](README.md).
 
 ## Goal
