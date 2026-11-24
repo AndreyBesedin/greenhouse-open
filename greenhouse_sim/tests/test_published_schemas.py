@@ -45,6 +45,7 @@ from greenhouse_sim.json_schemas import JSON_SCHEMA_DIALECT, answer_json_schema,
 from greenhouse_sim.scenarios.layout_files import LAYOUT_SCHEMA_FILE, layout_json_schema
 from greenhouse_sim.scenarios.manifest_files import MANIFEST_SCHEMA_FILE, manifest_json_schema
 from greenhouse_sim.scene.snapshot import snapshot_json_schema
+from greenhouse_sim.services.area_crop import AreaCropCourse
 from greenhouse_sim.services.builder import Assessed
 from greenhouse_sim.services.checkpoints import CheckpointSummary
 from greenhouse_sim.services.climate_readings import EquipmentAt
@@ -106,6 +107,8 @@ ANSWERS: Final[dict[Path, type[object]]] = {
     SERVICES / "scenario_download.schema.json": ScenarioDownload,
     SERVICES / "plants_light.schema.json": PlantsLight,
     SERVICES / "crop_plant.schema.json": CropPlant,
+    # A crop grown by area day by day, as a viewer charts it (decision 0083).
+    SERVICES / "area_crop.schema.json": AreaCropCourse,
     SERVICES / "lab_checks.schema.json": LabChecks,
     SERVICES / "lab_environments.schema.json": dict[str, LocalEnvironment],
     # The setup builder's (P12.2): what it is answered of an installation,

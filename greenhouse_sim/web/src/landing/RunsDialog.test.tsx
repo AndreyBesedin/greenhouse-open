@@ -454,6 +454,7 @@ describe("the runs of a scenario, in a dialog", () => {
       id: "tomgro_house",
       name: "TOMGRO house",
       crop_model: "reduced_tomgro",
+      crop_grown_by: "area",
       parameter_set: { name: "gnvman", version: 1, fixed: FIXED },
     };
     const BUILT: ScenarioSummary = {

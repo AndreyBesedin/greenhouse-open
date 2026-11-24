@@ -29,7 +29,6 @@ export function SeeThrough({
   highlighted,
   outlineOnly = false,
   dense = false,
-  opacity,
 }: {
   shape: Box | Plane | Polygon;
   color: Color;
@@ -37,9 +36,6 @@ export function SeeThrough({
   /** Takes no clicks at all, such as bounds lying on a greenhouse's walls. */
   outlineOnly?: boolean;
   dense?: boolean;
-  /** Its faces' own opacity, such as a canopy's from its density, in place
-   * of glazing's. */
-  opacity?: number | undefined;
 }) {
   // Rebuilt with each new scene, as a followed run moves on.
   const faces = useDisposable(() => flatGeometry(shape), [shape]);
@@ -55,7 +51,7 @@ export function SeeThrough({
         <meshStandardMaterial
           color={fill}
           transparent
-          opacity={dense ? DENSE_FACE_OPACITY : (opacity ?? FACE_OPACITY)}
+          opacity={dense ? DENSE_FACE_OPACITY : FACE_OPACITY}
           depthWrite={false}
           side={DoubleSide}
         />

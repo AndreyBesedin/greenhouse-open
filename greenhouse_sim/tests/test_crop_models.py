@@ -24,7 +24,6 @@ from greenhouse_sim.scenarios import SCENARIO_REGISTRY
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.crop_parameters import ReducedTomgroCrop, VanthoorKatzinCrop
 from greenhouse_sim.scenarios.registry import MODELS
-from greenhouse_sim.scene.snapshot import SceneEntityKind
 from greenhouse_sim.services.crop_models import (
     CROP_MODELS,
     ORGAN,
@@ -129,8 +128,8 @@ TOMGRO_BOX: Final = ScenarioConfig.model_validate(
 
 def test_reduced_tomgros_registration_answers_what_the_services_ask_of_it() -> None:
     """A model grown by area (decision 0062): its rung, its driver profile,
-    its state as a checkpoint keeps it, plausible, and drawn as each row's
-    canopy, a proxy, rather than plants."""
+    its state as a checkpoint keeps it, plausible, and its five states
+    charted, as they are, rather than drawn (decision 0083)."""
     registered = registration(TOMGRO_BOX)
     assert registered.area is not None
     rung = registered.area.rung(TOMGRO_BOX)
@@ -165,10 +164,20 @@ def test_reduced_tomgros_registration_answers_what_the_services_ask_of_it() -> N
         TOMGRO_BOX,
     )
     assert problem == "row_1's leaf area index is 5, past 4"
-    drawn = registered.area.drawn(instances, scopes, TOMGRO_BOX)
-    assert [(entity.kind, entity.properties["scope"]) for entity in drawn] == [
-        (SceneEntityKind.CANOPY, instance.scope_id) for instance in instances
+    assert [quantity.key for quantity in registered.area.charted] == [
+        "nodes",
+        "lai",
+        "dry_weight_g_m2",
+        "fruit_g_m2",
+        "mature_fruit_g_m2",
     ]
+    assert registered.area.read(grown, TOMGRO_BOX) == {
+        "nodes": grown.n,
+        "lai": grown.lai,
+        "dry_weight_g_m2": grown.w,
+        "fruit_g_m2": grown.wf,
+        "mature_fruit_g_m2": grown.wm,
+    }
 
 
 # The climate box, its rows growing Vanthoor's model as Katzin simplified it.
@@ -181,8 +190,9 @@ def test_vanthoors_registration_answers_what_the_services_ask_of_it() -> None:
     """A model grown by area at an hour's step (decision 0062): its rung with
     the parameters it was reproduced with, its driver profile, which gives
     the air's temperature for the canopy's and says so, its state as a
-    checkpoint keeps it, plausible as its hours add up, drawn as each row's
-    canopy, and sampled in its leaf area index alone."""
+    checkpoint keeps it, plausible as its hours add up, its states charted
+    in its own units, its pools in carbohydrate equivalents (decision 0083),
+    and sampled in its leaf area index alone."""
     registered = registration(VANTHOOR_BOX)
     assert registered.area is not None
     rung = registered.area.rung(VANTHOOR_BOX)
@@ -222,12 +232,20 @@ def test_vanthoors_registration_answers_what_the_services_ask_of_it() -> None:
     assert registered.implausible(leafless_state, DAYS, VANTHOOR_BOX) == [
         "row_1's fruit, leaves, stems or fruit harvested are negative"
     ]
-    drawn = registered.area.drawn(instances, scopes, VANTHOOR_BOX)
-    assert [(entity.kind, entity.properties["scope"]) for entity in drawn] == [
-        (SceneEntityKind.CANOPY, instance.scope_id) for instance in instances
-    ]
-    assert drawn[0].properties["lai"] == grown.leaf_area_index(rung.parameters)
-    assert drawn[0].properties["fruit_ch2o_mg_m2"] == grown.c_fruit
+    assert registered.area.read(grown, VANTHOOR_BOX) == {
+        "lai": grown.leaf_area_index(rung.parameters),
+        "buffer_ch2o_mg_m2": grown.c_buf,
+        "leaf_ch2o_mg_m2": grown.c_leaf,
+        "stem_ch2o_mg_m2": grown.c_stem,
+        "fruit_ch2o_mg_m2": grown.c_fruit,
+        "harvested_fruit_ch2o_mg_m2": grown.harvested_fruit,
+        "temperature_sum_c_d": grown.t_can_sum,
+        "canopy_temperature_24h_c": grown.t_can_24,
+    }
+    assert [quantity.key for quantity in registered.area.charted] == list(
+        registered.area.read(grown, VANTHOOR_BOX)
+    )
+    assert {quantity.unit for quantity in registered.area.charted[1:6]} == {"mg CH₂O m⁻²"}
     assert registered.area.sampled(grown, VANTHOOR_BOX) == {
         ObservationType.LEAF_AREA_INDEX: grown.leaf_area_index(rung.parameters)
     }

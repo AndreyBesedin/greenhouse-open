@@ -362,7 +362,6 @@ export const SNAPSHOT_SCHEMA = {
         "SENSOR",
         "CAMERA",
         "PLANT",
-        "CANOPY",
         "INTERNODE",
         "LEAF",
         "TRUSS",
@@ -466,7 +465,7 @@ export const SNAPSHOT_SCHEMA = {
   },
   "properties": {
     "schema_version": {
-      "default": 17,
+      "default": 18,
       "title": "Schema Version",
       "type": "integer"
     },

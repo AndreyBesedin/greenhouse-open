@@ -194,6 +194,12 @@ export const CONTRACTS: readonly Contract[] = [
     "CROP_PLANT_SCHEMA",
   ),
   contract(
+    `${SERVICES}/area_crop.schema.json`,
+    "AreaCropCourse",
+    ["src/plants", "areaCrop"],
+    "AREA_CROP_SCHEMA",
+  ),
+  contract(
     `${SERVICES}/lab_checks.schema.json`,
     "LabChecks",
     ["src/plants", "labChecks"],

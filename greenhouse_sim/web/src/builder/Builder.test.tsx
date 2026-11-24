@@ -137,6 +137,7 @@ const SCENARIO = {
   plants: 3,
   duration_days: 30,
   crop_model: "simple",
+  crop_grown_by: "plants",
   daily: [],
   openings: [],
   opening_day: null,

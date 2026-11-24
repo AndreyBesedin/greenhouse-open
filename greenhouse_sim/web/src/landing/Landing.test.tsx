@@ -17,6 +17,7 @@ import { RUNS_ASKED_EVERY_MS, type StoredRun } from "./storedRuns";
 // and its crop's parameter set, which the simple crop has none of.
 const SENT = {
   crop_model: "simple",
+  crop_grown_by: "plants" as const,
   daily: [],
   openings: [],
   weathers: ["default"],

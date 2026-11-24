@@ -4,7 +4,6 @@ house's air and the light above each row, hour by hour; keep it in a
 checkpoint and carry on from it; and ask nothing of it they ask of plants.
 """
 
-import math
 import re
 import sys
 from collections.abc import Iterator
@@ -15,14 +14,14 @@ import pytest
 from greenhouse_protocol.actions import ActionKind
 from pydantic import ValidationError
 
-from greenhouse_sim.biology.tomato.tomgro.parameters import INITIAL_STATE, TomgroParameters
+from greenhouse_sim.biology.tomato.tomgro.parameters import INITIAL_STATE
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.domain.scopes import AreaBasis
 from greenhouse_sim.ground_truth import ground_truth
 from greenhouse_sim.scenarios.catalogue import Catalogue
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.scene.snapshot import SceneEntityKind
 from greenhouse_sim.services import checkpoints
+from greenhouse_sim.services.area_crop import area_crop_course
 from greenhouse_sim.services.crop import crop_scene, of_plants, plants_light, scenario_crop
 from greenhouse_sim.services.crop_log import crop_records
 from greenhouse_sim.services.crop_models import AreaCropState, TomgroCropState, registration
@@ -33,7 +32,7 @@ from greenhouse_sim.services.scenarios import initial_scene, plant_ids
 from greenhouse_sim.services.sensors import run_start
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.solar.scopes import ScopeLight
-from greenhouse_sim.world.scopes import converted, row_scopes
+from greenhouse_sim.world.scopes import row_scopes
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -123,31 +122,28 @@ def test_the_light_above_its_rows_is_worked_out_once_for_every_run_of_its_house(
     assert at_one_level != at_another
 
 
-def test_its_scene_draws_each_rows_canopy_and_no_plant_it_does_not_have(
+def test_its_scene_draws_no_crop_and_its_course_charts_each_rows_states(
     grown: Simulator,
 ) -> None:
-    drawn = crop_scene(grown, RUN, time_s=3 * DAY_S).entities
+    """It has no plants, and is charted, not drawn (decision 0083): its scene
+    has no crop, and its course is each row's five states, per m² of floor,
+    as the run grows them."""
+    assert crop_scene(grown, RUN, time_s=3 * DAY_S).entities == []
     crop = scenario_crop(grown, RUN)
     assert not of_plants(crop)
     instances = crop.instances_on(3)
 
-    assert [entity.kind for entity in drawn] == [SceneEntityKind.CANOPY] * len(ROWS)
-    for entity, instance in zip(drawn, instances, strict=True):
-        assert entity.properties["scope"] == instance.scope_id
-        assert entity.properties["lai"] == instance.state.lai
-        assert entity.properties["model"] == "reduced_tomgro"
-        assert entity.properties["proxy"] is True and entity.properties["prediction"] is True
-        # As dense as the share of the light its leaves take over the ground
-        # it is drawn on: its leaf area per m² of floor, over its cultivated
-        # ground.
-        scope = {scope.scope_id: scope for scope in crop.scopes}[instance.scope_id]
-        on_its_ground = converted(instance.state.lai, scope, AreaBasis.FLOOR, AreaBasis.CULTIVATED)
-        assert on_its_ground > instance.state.lai
-        assert entity.properties["canopy_lai"] == pytest.approx(on_its_ground, rel=1e-12)
-        k = TomgroParameters().k
-        assert entity.properties["density"] == pytest.approx(
-            1 - math.exp(-k * on_its_ground), rel=1e-12
-        )
+    course = area_crop_course(grown, RUN, time_s=3 * DAY_S)
+    assert (course.model, course.basis, course.days) == (
+        "reduced_tomgro",
+        AreaBasis.FLOOR,
+        [0, 1, 2, 3],
+    )
+    for scope, instance in zip(course.scopes, instances, strict=True):
+        assert scope.scope_id == instance.scope_id
+        assert scope.values["nodes"][-1] == instance.state.n
+        assert scope.values["lai"][-1] == instance.state.lai
+        assert scope.values["dry_weight_g_m2"][-1] == instance.state.w
     scene = initial_scene(grown.catalogue, "tomgro_box")
     assert not [entity for entity in scene.entities if "plant_id" in entity.properties]
     light = plants_light(grown, RUN, time_s=DAY_S / 2)

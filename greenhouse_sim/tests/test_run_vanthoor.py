@@ -20,8 +20,8 @@ from greenhouse_sim.biology.tomato.vanthoor.parameters import INITIAL_STATE
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.scenarios.catalogue import Catalogue
 from greenhouse_sim.scenarios.config import ScenarioConfig
-from greenhouse_sim.scene.snapshot import SceneEntityKind
 from greenhouse_sim.services import checkpoints
+from greenhouse_sim.services.area_crop import area_crop_course
 from greenhouse_sim.services.crop import crop_scene, of_plants, scenario_crop
 from greenhouse_sim.services.crop_models import VanthoorCropState, registration
 from greenhouse_sim.services.errors import InvalidRequest
@@ -89,17 +89,23 @@ def test_its_run_grows_its_crop_by_area_an_hour_at_a_time(grown: Simulator) -> N
         assert instance.state.c_buf < INITIAL_STATE.c_buf
 
 
-def test_its_scene_draws_each_rows_canopy_and_no_plant(grown: Simulator) -> None:
-    drawn = crop_scene(grown, RUN, time_s=2 * DAY_S).entities
+def test_its_scene_draws_no_crop_and_its_course_charts_each_rows_states(
+    grown: Simulator,
+) -> None:
+    """It has no plants, and is charted, not drawn (decision 0083): its
+    course is each row's states in its own units, its pools carbohydrate
+    equivalents per m² of floor."""
+    assert crop_scene(grown, RUN, time_s=2 * DAY_S).entities == []
     crop = scenario_crop(grown, RUN)
     assert not of_plants(crop)
     instances = crop.instances_on(2)
 
-    assert [entity.kind for entity in drawn] == [SceneEntityKind.CANOPY] * len(ROWS)
-    for entity, instance in zip(drawn, instances, strict=True):
-        assert entity.properties["model"] == "vanthoor_katzin"
-        assert entity.properties["buffer_ch2o_mg_m2"] == instance.state.c_buf
-        assert entity.properties["proxy"] is True and entity.properties["prediction"] is True
+    course = area_crop_course(grown, RUN, time_s=2 * DAY_S)
+    assert (course.model, course.days) == ("vanthoor_katzin", [0, 1, 2])
+    assert [scope.scope_id for scope in course.scopes] == ROWS
+    for scope, instance in zip(course.scopes, instances, strict=True):
+        assert scope.values["buffer_ch2o_mg_m2"][-1] == instance.state.c_buf
+        assert scope.values["temperature_sum_c_d"][-1] == instance.state.t_can_sum
 
 
 def test_it_takes_no_crop_actions_and_no_crop_work() -> None:

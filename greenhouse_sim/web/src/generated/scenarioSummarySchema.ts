@@ -4,6 +4,13 @@
 export const SCENARIO_SUMMARY_SCHEMA = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
+    "CropGrownBy": {
+      "enum": [
+        "plants",
+        "area"
+      ],
+      "type": "string"
+    },
     "DailyCommand": {
       "additionalProperties": false,
       "properties": {
@@ -90,6 +97,9 @@ export const SCENARIO_SUMMARY_SCHEMA = {
       "title": "Crop Model",
       "type": "string"
     },
+    "crop_grown_by": {
+      "$ref": "#/$defs/CropGrownBy"
+    },
     "daily": {
       "items": {
         "$ref": "#/$defs/DailyCommand"
@@ -161,6 +171,7 @@ export const SCENARIO_SUMMARY_SCHEMA = {
     "plants",
     "duration_days",
     "crop_model",
+    "crop_grown_by",
     "daily",
     "openings",
     "opening_day",
