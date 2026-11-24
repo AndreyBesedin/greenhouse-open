@@ -37,7 +37,14 @@ from greenhouse_sim.services.climate_runs import climate_day
 from greenhouse_sim.services.grid import air_grid
 from greenhouse_sim.services.simulator import Simulator
 from greenhouse_sim.services.sunlight import plant_light
-from greenhouse_sim.solar.glass import DIFFUSE_TRANSMITTANCE, NORMAL_TRANSMITTANCE, Glazing
+from greenhouse_sim.solar.glass import (
+    DIFFUSE_TRANSMITTANCE,
+    GLAZED,
+    NORMAL_TRANSMITTANCE,
+    Glazing,
+    floor_points,
+    sky_directions,
+)
 from greenhouse_sim.solar.shadows import roof_shading
 from greenhouse_sim.world.components import Cover
 from greenhouse_sim.world.geometry import Vector3
@@ -195,13 +202,89 @@ def test_the_beam_passes_the_sheet_of_the_surface_it_crosses(
     assert described[0] / single[0] == pytest.approx(passed)
 
 
-def test_the_diffuse_sky_passes_the_roofs_sheet() -> None:
-    assert Glazing(BOX.envelope).diffuse_transmittance == DIFFUSE_TRANSMITTANCE
-    assert (
-        Glazing(BOX.envelope, MIXED).diffuse_transmittance == SINGLE.shortwave_diffuse_transmittance
+def _floor_to_wall(length: float, across: float, height: float) -> float:
+    """The view factor from a floor, `length` by `across`, to a wall
+    `length` by `height` on its edge of length `length`, square to it: two
+    rectangles sharing an edge (Howell, A Catalog of Radiation Heat Transfer
+    Configuration Factors, C-14)."""
+    h, w = height / length, across / length
+    diagonal = math.hypot(h, w)
+    logarithm = (
+        math.log((1 + w**2) * (1 + h**2) / (1 + w**2 + h**2))
+        + w**2 * math.log(w**2 * (1 + w**2 + h**2) / ((1 + w**2) * (w**2 + h**2)))
+        + h**2 * math.log(h**2 * (1 + h**2 + w**2) / ((1 + h**2) * (h**2 + w**2)))
     )
-    assert Glazing(BOX.envelope, ALL_TWIN).diffuse_transmittance == 0.7
+    return (
+        w * math.atan(1 / w)
+        + h * math.atan(1 / h)
+        - diagonal * math.atan(1 / diagonal)
+        + logarithm / 4
+    ) / (math.pi * w)
+
+
+def test_the_floor_sees_the_sky_through_each_wall_as_its_view_factor_says() -> None:
+    """The climate box with its ridge a millimetre above its eaves, so that
+    each wall is a rectangle: its floor, 12 m by 6.4 m, sees each wall, 4 m
+    high, as the view factor between two rectangles square to each other
+    along an edge says, 0.189 each side wall and 0.096 each end wall. Every
+    ray leaves the house by one surface."""
+    envelope = type(BOX.envelope).model_validate(
+        BOX.envelope.model_dump() | {"ridge_height": BOX.envelope.eave_height + 0.001}
+    )
+    length, width, eave = envelope.length, envelope.width, envelope.eave_height
+    shares = dict(
+        zip(
+            (s.surface_id for s in envelope.surfaces_in_world() if s.category in GLAZED),
+            Glazing(envelope).sky_shares(floor_points(envelope)),
+            strict=True,
+        )
+    )
+    side, end = _floor_to_wall(length, width, eave), _floor_to_wall(width, length, eave)
+
+    assert (side, end) == pytest.approx((0.189, 0.096), abs=5e-4)
+    for wall in ("side_wall_right", "side_wall_left"):
+        assert shares[wall] == pytest.approx(side, rel=5e-3)
+    for wall in ("end_wall_front", "end_wall_back"):
+        assert shares[wall] == pytest.approx(end, rel=5e-3)
+    assert sum(shares.values()) == pytest.approx(1.0, abs=1e-12)
+
+
+def test_the_diffuse_sky_passes_each_surfaces_sheet_for_the_floors_view_through_it() -> None:
+    """The twin-wall north wall passes 0.7 of the sky's light, against the
+    single glass's 0.773, for the 0.189 of its sky the floor sees through
+    it."""
+    north = _floor_to_wall(BOX.envelope.length, BOX.envelope.width, BOX.envelope.eave_height)
+    single = SINGLE.shortwave_diffuse_transmittance
+
+    assert Glazing(BOX.envelope, MIXED).diffuse_transmittance == pytest.approx(
+        single + north * (0.7 - single), rel=1e-4
+    )
+    assert Glazing(BOX.envelope).diffuse_transmittance == DIFFUSE_TRANSMITTANCE
     assert NORMAL_TRANSMITTANCE == SINGLE.shortwave_beam_transmittance
+
+
+def test_a_cover_of_one_diffuse_transmittance_passes_it_as_it_is() -> None:
+    walls_as_the_roof = Cover.model_validate(
+        {"roof": TWIN_WALL, "walls": dict.fromkeys(WALLS, TWIN_WALL)}
+    )
+
+    assert Glazing(BOX.envelope, ALL_TWIN).diffuse_transmittance == 0.7
+    assert Glazing(BOX.envelope, walls_as_the_roof).diffuse_transmittance == 0.7
+
+
+def test_the_skys_directions_are_equal_shares_of_a_level_surfaces_view() -> None:
+    """Each is a unit vector into the sky, and a level surface's view of a
+    cone about the zenith, half-angle θ, is sin² θ: the share of the
+    directions inside it, exactly where the cone's edge falls between two
+    bands."""
+    directions = sky_directions()
+    zenith = directions[:, 2]
+
+    assert np.allclose(np.linalg.norm(directions, axis=1), 1.0)
+    assert (zenith > 0).all()
+    for half_angle in (30.0, 45.0, 60.0):
+        inside = float(np.mean(zenith > math.cos(math.radians(half_angle))))
+        assert inside == pytest.approx(math.sin(math.radians(half_angle)) ** 2, abs=1e-9)
 
 
 def _covered(climate: dict[str, Any], cover: dict[str, Any] | None = None) -> ScenarioConfig:
