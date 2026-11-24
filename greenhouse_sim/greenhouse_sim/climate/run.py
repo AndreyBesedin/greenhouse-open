@@ -43,7 +43,7 @@ import numpy as np
 from greenhouse_sim.airflow.contract import AirflowModel
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.control import Control
-from greenhouse_sim.climate.glazing import GlazedCells, GlazingAt, HouseGlass, glazing_at
+from greenhouse_sim.climate.glazing import Glass, GlazedCells, GlazingAt, HouseGlass, glazing_at
 from greenhouse_sim.climate.openings import OpeningFlow, opening_flows
 from greenhouse_sim.climate.projection import FaceFlows, conserving, face_flows
 from greenhouse_sim.climate.psychrometrics import humidity_ratio_g_kg, relative_humidity_pct
@@ -299,11 +299,7 @@ class ClimateRun:
         self, key: _Levels, levels: Mapping[str, float]
     ) -> tuple[SourceTerms, FaceFlows]:
         if key not in self._steady:
-            terms = SourceTerms.none(self.grid)
-            for piece in self.equipment:
-                terms = terms + source_terms(
-                    piece, levels.get(piece.actuator_id, 0.0), self.grid, self.solid
-                )
+            terms = self.terms_for(levels)
             flows = conserving(
                 face_flows(self.grid, self._base_velocity + terms.velocity, self.solid),
                 self.solid,
@@ -388,8 +384,27 @@ class ClimateRun:
         return self.terms_for(self.levels_at(time_s))
 
     def terms_for(self, levels: Mapping[str, float]) -> SourceTerms:
-        """What the equipment adds to the air at `levels`."""
-        return self._held(levels)[0]
+        """What the equipment adds to the air at `levels`, each piece at its
+        own: without the flow it makes, which only the grid's air is carried
+        by, and not kept, as a whole house keeps what it needs of it."""
+        terms = SourceTerms.none(self.grid)
+        for piece in self.equipment:
+            terms = terms + source_terms(
+                piece, levels.get(piece.actuator_id, 0.0), self.grid, self.solid
+            )
+        return terms
+
+    def glass_exchanges_m3_s(self) -> list[tuple[Glass, np.ndarray]]:
+        """Each glass its walls and roof are of, with each cell's exchange
+        with the outside through it, as its transport gives them
+        (`Transport.glass_exchanges_m3_s`), in its reference wind: the same
+        at every level and in every flow, which they do not depend on."""
+        nx, ny, nz = self.grid.shape
+        still = face_flows(self.grid, np.zeros((nz, ny, nx, VECTOR_COMPONENTS)), self.solid)
+        transport = Transport(
+            self.grid, still, self.solid, self.settings, self.vents, glass=self.glass
+        )
+        return transport.glass_exchanges_m3_s()
 
     def transport_for(
         self, levels: Mapping[str, float], openings: Mapping[str, OpeningFlow]

@@ -302,6 +302,7 @@ class WholeHouse:
         self.volume_m3 = float(air.sum()) * size.x * size.y * size.z
         self._air = air
         self._steady: dict[tuple[tuple[str, float], ...], _Steady] = {}
+        self._glass_per_u: tuple[tuple[Glass, float], ...] | None = None
         settings = run.settings
         start = HouseAir(
             temperature_c=settings.start_temperature_c,
@@ -631,20 +632,31 @@ class WholeHouse:
             air = self._through(self.air_at(start), start, end, time_s)
         return ON if air.heating else OFF
 
+    def _glass_m3_s_per_u(self) -> tuple[tuple[Glass, float], ...]:
+        """Its exchange with the outside through each glass its walls and
+        roof are of, for each W/m²K of that glass's U (m³/s): worked out
+        once, as it is the same at every level."""
+        if self._glass_per_u is None:
+            air = self._air
+            self._glass_per_u = tuple(
+                (
+                    glass,
+                    float(exchanged[air].sum()) / glass.u_w_m2k if glass.u_w_m2k > 0 else 0.0,
+                )
+                for glass, exchanged in self.run.glass_exchanges_m3_s()
+            )
+        return self._glass_per_u
+
     def _held(self, levels: Mapping[str, float]) -> _Steady:
         key = tuple(sorted(levels.items()))
         if key not in self._steady:
+            # The equipment's terms alone, summed over the air: the flow they
+            # make on the grid is the grid's air's, and working it out at
+            # every new level a heater runs at costs most of a long run.
             terms = self.run.terms_for(levels)
-            transport = self.run.transport_for(levels, openings={})
             air = self._air
             self._steady[key] = _Steady(
-                glass_m3_s_per_u=tuple(
-                    (
-                        glass,
-                        float(exchanged[air].sum()) / glass.u_w_m2k if glass.u_w_m2k > 0 else 0.0,
-                    )
-                    for glass, exchanged in transport.glass_exchanges_m3_s()
-                ),
+                glass_m3_s_per_u=self._glass_m3_s_per_u(),
                 heat_w=float(terms.heat_w[air].sum()),
                 heater_w=sum(
                     capability.power_w * levels.get(piece.actuator_id, 0.0)

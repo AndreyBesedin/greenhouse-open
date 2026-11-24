@@ -148,6 +148,23 @@ def _run(glass: HouseGlass | None = None, glazing_u_w_m2k: float = 6.0) -> Clima
     )
 
 
+def test_a_runs_glass_exchanges_are_its_transports_at_every_level() -> None:
+    """What the whole house exchanges through each glass, worked out once,
+    is what the grid's air exchanges through it, whatever the equipment's
+    levels and the flow they make."""
+    run = _run(HouseGlass.described(MIXED))
+    once = run.glass_exchanges_m3_s()
+
+    assert len(once) == len({Glass.of(SINGLE), Glass.of(TWIN)})
+    for levels in ({}, {"heater": 1.0}, {"fan": 1.0, "heater": 0.5}):
+        each = run.transport_for(levels, openings={}).glass_exchanges_m3_s()
+        assert [glass for glass, _ in each] == [glass for glass, _ in once]
+        assert all(
+            np.array_equal(exchanged, kept)
+            for (_, exchanged), (_, kept) in zip(each, once, strict=True)
+        )
+
+
 def test_a_cover_of_one_sheet_runs_as_the_u_it_gives_under_either_model() -> None:
     """Its sheet's U, configured, runs the very same air: the whole house's
     and the grid's."""
