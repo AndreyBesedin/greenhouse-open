@@ -62,11 +62,13 @@ or its cultivated ground, `greenhouse_sim/greenhouse_sim/world/scopes.py`),
 and each row's instance lives its steps in its course
 (`greenhouse_sim/greenhouse_sim/core/area_crop.py`). Its registration
 declares `area`, an `AreaAdapter`, in place of `plants`: its rung, its
-driver profile by name and version, what a sample of it reads, and how its
-instances are drawn, each
-a canopy over its row (`canopy_entity` in
-`greenhouse_sim/greenhouse_sim/scene/snapshot.py`), as dense as the light
-its leaves take and marked as a proxy, never as plants it does not have. Its
+driver profile by name and version, what a sample of it reads, and the
+quantities a viewer charts of it day by day (`charted`, each `AreaQuantity`
+with its name and its model's unit) with how a state reads them (`read`).
+It is charted, not drawn (decision 0083): the scene draws no plants it
+does not have, and the viewer's "Crop by area" panel draws each quantity
+through the run's days from `GET /api/scenarios/{id}/area_crop`
+(`greenhouse_sim/greenhouse_sim/services/area_crop.py`). Its
 checkpoint state is an `AreaCropState` of its own state. Reduced-State
 TOMGRO is the first (`greenhouse_sim/greenhouse_sim/core/tomgro_crop.py`),
 held to its reproduction's reference by
