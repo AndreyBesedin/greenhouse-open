@@ -96,6 +96,7 @@ decision that changes course is a new record that supersedes the old one.
 | [0080](0080-a-houses-components-and-materials-are-described-in-its-installation.md) | A house's components and materials are described in its installation | Accepted |
 | [0081](0081-a-benchmarks-measures-are-versioned-definitions-frozen-before-its-baselines-and-a-baseline-carries-its-provenance.md) | A benchmark's measures are versioned definitions, frozen before its baselines, and a baseline carries its provenance | Accepted |
 | [0082](0082-the-evaluator-reads-an-episodes-truth-after-its-policy-stops.md) | The evaluator reads an episode's truth after its policy stops | Accepted |
+| [0083](0083-a-crop-grown-by-area-is-charted-and-may-grow-on-each-plants-spot.md) | A crop grown by area is charted, and may grow on each plant's spot | Proposed |
 
 ## Template
 
