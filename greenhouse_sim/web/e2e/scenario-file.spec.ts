@@ -171,13 +171,17 @@ test("a house built, downloaded and uploaded from the start page opens in the bu
   await expect(page.locator(".builder-run").getByLabel("Days")).toBeEditable();
   await expect(page.getByTestId("builder-runnable")).toHaveText("It can run.", ARRIVES);
 
-  // Saved as it is, it is refused, and the draft stays at its revision.
-  await save.click();
-  await expect(status).toHaveText(
-    `It is not saved: a draft with the identifier '${id}' is kept already, at revision 1: ` +
-      "change this one's identifier to save it",
-    ARRIVES,
-  );
+  // It cannot be saved as it is, and says why beside the button, and at the
+  // identifier to change; the draft stays at its revision.
+  const taken =
+    `A draft with the identifier ${id} is kept already: give this one another identifier, ` +
+    "or open that draft to change it.";
+  await expect(save).toBeDisabled();
+  await expect(page.getByTestId("builder-save-why")).toHaveText(`It cannot be saved: ${taken}`);
+  await expect(save).toHaveAccessibleDescription(`It cannot be saved: ${taken}`);
+  await expect(
+    page.locator(".builder-identity").getByLabel("Identifier"),
+  ).toHaveAccessibleDescription(taken);
   const kept = (await (await page.request.get(`/api/drafts/${id}`)).json()) as {
     draft: { revision: number };
   };

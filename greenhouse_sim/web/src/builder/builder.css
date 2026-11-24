@@ -186,6 +186,24 @@
   color: var(--text-muted);
 }
 
+/* Why a button beside it cannot be used now, and why the simulator refused
+ * what was last asked there: in the colour a problem is said in, right under
+ * the button, so that a greyed button is never left unexplained. */
+.builder-why,
+.builder-refused {
+  margin: var(--space-3) 0 0;
+  color: var(--warn);
+}
+
+.builder-why p,
+.builder-why ul {
+  margin: 0;
+}
+
+.builder-why ul {
+  padding-left: var(--space-6);
+}
+
 /* What stands in for a value left empty, as a note is written. The browser's own
  * is #757575 in both themes: 2.43:1 on its dark field. `e2e/builder.spec.ts`
  * holds the builder's words to 4.5:1 on what they are drawn on. */

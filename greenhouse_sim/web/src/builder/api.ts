@@ -20,9 +20,17 @@ import type { Edit } from "./generated/editTypes";
 export const BUILDER_URL = "/api/builder";
 export const DRAFTS_URL = "/api/drafts";
 
+/** A field the simulator refused, by its path, and why. */
+export interface FieldProblem {
+  field: string;
+  message: string;
+}
+
 /** An answer to a request that makes something, or why it was refused, in
- * the simulator's words. */
-export type Answered<T> = { ok: true; value: T } | { ok: false; problem: string };
+ * the simulator's words, with each field it refused where it names them. */
+export type Answered<T> =
+  | { ok: true; value: T }
+  | { ok: false; problem: string; problems?: readonly FieldProblem[] };
 
 /** What a draft's run adds to its installation (`services.drafts.DraftRun`). */
 export interface RunSettings {
@@ -62,18 +70,42 @@ export function installationFile(schemaVersion: number, installation: Installati
 
 /** Why the simulator refused a request: its `error`, or its status. */
 export async function refusal(response: Response): Promise<string> {
+  return (await refused(response)).problem;
+}
+
+/** Each field a refusal's `problems` names, those it gives as a field and a
+ * message. */
+function fieldProblems(given: unknown): FieldProblem[] {
+  if (!Array.isArray(given)) {
+    return [];
+  }
+  return given.flatMap((each: unknown) =>
+    typeof each === "object" &&
+    each !== null &&
+    "field" in each &&
+    "message" in each &&
+    typeof each.field === "string" &&
+    typeof each.message === "string"
+      ? [{ field: each.field, message: each.message }]
+      : [],
+  );
+}
+
+/** Why the simulator refused a request: its `error`, or its status; and
+ * each field it refused, where it names them (a 400's `problems`). */
+async function refused(response: Response): Promise<{ problem: string; problems: FieldProblem[] }> {
   try {
     const body: unknown = await response.json();
     if (typeof body === "object" && body !== null && "error" in body) {
       const { error } = body;
       if (typeof error === "string") {
-        return error;
+        return { problem: error, problems: "problems" in body ? fieldProblems(body.problems) : [] };
       }
     }
   } catch {
     // Not JSON: its status says it.
   }
-  return `the simulator API answered ${response.status}`;
+  return { problem: `the simulator API answered ${response.status}`, problems: [] };
 }
 
 async function posted<T>(
@@ -89,7 +121,8 @@ async function posted<T>(
       body,
     });
     if (!response.ok) {
-      return { ok: false, problem: await refusal(response) };
+      const { problem, problems } = await refused(response);
+      return problems.length > 0 ? { ok: false, problem, problems } : { ok: false, problem };
     }
     return { ok: true, value: read(await response.json()) };
   } catch (error) {

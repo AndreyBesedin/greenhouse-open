@@ -1,6 +1,6 @@
 # 0080: A house's components and materials are described in its installation
 
-**Status:** Proposed, with [P24](../roadmap/p24-house-components-and-a-multi-node-climate.md)'s plan
+**Status:** Accepted, with [P24](../roadmap/p24-house-components-and-a-multi-node-climate.md)'s second step
 **Date:** 2026-11-16
 
 ## Context

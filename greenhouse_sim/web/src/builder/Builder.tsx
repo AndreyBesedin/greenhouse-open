@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { framing } from "../camera";
 import { entityBounds, type OverlayPrimitive } from "../debug/overlays";
 import { Button } from "../design/Button";
+import { Notice } from "../design/Notice";
 import { HomeButton } from "../landing/HomeButton";
 import {
   BUILDER_PATH,
@@ -29,6 +30,7 @@ import { Viewport } from "../Viewport";
 import {
   assess,
   edit as editItems,
+  type FieldProblem,
   firstDraft,
   installationFile,
   loadDrafts,
@@ -58,6 +60,7 @@ import { RowCrops } from "./RowCrops";
 import { FIRST_RUN, type RunFields, RunStep, settingsOf } from "./RunStep";
 import { ShareScenario } from "./ShareScenario";
 import { offerFile } from "./scenarioFile";
+import { describedBy, keptAlready, type Reasons, WhyNot, whatStopsARun } from "./WhyNot";
 
 /** What an installation's file is called when it is downloaded, as a scenario's
  * is `.scenario.json`. */
@@ -92,6 +95,19 @@ interface Ran {
   scenarioId: string;
   name: string;
 }
+
+/** Where in the builder something was asked for: its answer's refusal is said
+ * there, beside what was pressed. */
+type Asked = "draft" | "copy" | "open" | "import" | "save" | "run" | "finish";
+
+/** What the simulator, or the builder, refused, and where it was asked for. */
+interface Refused {
+  at: Asked;
+  problem: string;
+}
+
+/** Why a run step holds no run. */
+const NO_RUN = "The run step holds no run: give a date, whole days of one or more and a seed.";
 
 const same = (a: Installation, b: Installation) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -171,6 +187,11 @@ export function Builder({
   const [drafts, setDrafts] = useState<readonly DraftListed[] | null>(null);
   const [scenarios, setScenarios] = useState<ScenariosState>({ status: "loading" });
   const [status, setStatus] = useState("");
+  // The last refusal, said beside what was pressed as well as in the status;
+  // gone once another thing is asked for, or the draft is edited.
+  const [refused, setRefused] = useState<Refused | null>(null);
+  // What the simulator refused of the first form's values last sent, by field.
+  const [draftProblems, setDraftProblems] = useState<readonly FieldProblem[]>([]);
   const [busy, setBusy] = useState(false);
   const [ran, setRan] = useState<Ran | null>(null);
   // What the run step holds, kept while the draft is shown.
@@ -178,6 +199,8 @@ export function Builder({
   // The items chosen, in the list or the view, by their identifiers.
   const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set());
   const importer = useRef<HTMLInputElement>(null);
+  // The Save button's description, why it cannot be used now.
+  const saveWhy = useId();
   // Which draft is shown: each start makes it another, so that what was
   // asked for the one before is dropped when it arrives.
   const session = useRef(0);
@@ -304,6 +327,8 @@ export function Builder({
     setEditing(next);
     setChosen(new Set());
     setRan(null);
+    setRefused(null);
+    setDraftProblems([]);
     const id = next.history.present.installation_id;
     const kept = next.saved === null && known?.some((draft) => draft.draft_id === id);
     setStatus(
@@ -315,12 +340,15 @@ export function Builder({
 
   async function draftHouse(values: BasicSetup): Promise<void> {
     const asked = nextSession();
+    setRefused(null);
     setBusy(true);
     const answer = await firstDraft(values);
     setBusy(false);
     if (!answer.ok) {
       if (session.current === asked) {
         setStatus(`The house cannot be drafted: ${answer.problem}`);
+        setRefused({ at: "draft", problem: answer.problem });
+        setDraftProblems(answer.problems ?? []);
       }
       return;
     }
@@ -334,10 +362,13 @@ export function Builder({
 
   async function open(draftId: string): Promise<void> {
     const asked = nextSession();
+    setRefused(null);
     const answer = await openDraft(draftId);
     if (answer.status !== "loaded") {
       if (session.current === asked) {
-        setStatus(`The draft cannot be opened: ${answer.reason}`);
+        const problem = `The draft cannot be opened: ${answer.reason}`;
+        setStatus(problem);
+        setRefused({ at: "open", problem });
       }
       return;
     }
@@ -355,12 +386,15 @@ export function Builder({
 
   async function copyHouse(scenario: ScenarioSummary, draftId: string): Promise<void> {
     const asked = nextSession();
+    setRefused(null);
     setBusy(true);
     const answer = await scenarioHouse(scenario.id);
     setBusy(false);
     if (answer.status !== "loaded") {
       if (session.current === asked) {
-        setStatus(`${scenario.name}'s house cannot be copied: ${answer.reason}`);
+        const problem = `${scenario.name}'s house cannot be copied: ${answer.reason}`;
+        setStatus(problem);
+        setRefused({ at: "copy", problem });
       }
       return;
     }
@@ -439,7 +473,9 @@ export function Builder({
     setBusy(false);
     if (!answer.ok) {
       if (session.current === asked) {
-        setStatus(`${kept.fileName} cannot be opened: ${answer.problem}`);
+        const problem = `${kept.fileName} cannot be opened: ${answer.problem}`;
+        setStatus(problem);
+        setRefused({ at: "import", problem });
       }
       return;
     }
@@ -451,12 +487,14 @@ export function Builder({
    * which kind it is, and a scenario file's run settings come with it. */
   async function importFile(file: File): Promise<void> {
     const asked = nextSession();
+    setRefused(null);
     const answer = await uploadFile(file);
     if (session.current !== asked) {
       return;
     }
     if (!answer.ok) {
       setStatus(answer.problem);
+      setRefused({ at: "import", problem: answer.problem });
       return;
     }
     if (answer.value.kind === "installation") {
@@ -465,7 +503,9 @@ export function Builder({
     }
     const { scenario, settings, missingWeather } = answer.value;
     if (scenario === null) {
-      setStatus(missingWeatherProblem(file.name, missingWeather));
+      const problem = missingWeatherProblem(file.name, missingWeather);
+      setStatus(problem);
+      setRefused({ at: "import", problem });
       return;
     }
     keepSettings(scenario.id, settings);
@@ -482,6 +522,8 @@ export function Builder({
     setRan(null);
     setRunFields(FIRST_RUN);
     setStatus("");
+    setRefused(null);
+    setDraftProblems([]);
   }
 
   function edit(change: (installation: Installation) => Installation): void {
@@ -489,6 +531,7 @@ export function Builder({
       now === null ? now : { ...now, history: edited(now.history, change(now.history.present)) },
     );
     setRan(null);
+    setRefused(null);
   }
 
   function give(rows: number[], crop: Crop): void {
@@ -538,6 +581,7 @@ export function Builder({
         : { ...now, history: edited(now.history, answer.value.installation) },
     );
     setRan(null);
+    setRefused(null);
     setStatus(said);
   }
 
@@ -551,12 +595,14 @@ export function Builder({
   }
 
   /** The draft shown saved as its next revision: which revision, and the
-   * house it holds, or none if it was not saved. */
-  async function save(): Promise<Kept | null> {
+   * house it holds, or none if it was not saved, its refusal said where it
+   * was asked for, `at`. */
+  async function save(at: Asked = "save"): Promise<Kept | null> {
     if (editing === null) {
       return null;
     }
     const asked = session.current;
+    setRefused(null);
     const sent = editing.history.present;
     setBusy(true);
     const answer = await saveDraft(
@@ -570,6 +616,7 @@ export function Builder({
     }
     if (!answer.ok) {
       setStatus(`It is not saved: ${answer.problem}`);
+      setRefused({ at, problem: `It is not saved: ${answer.problem}` });
       return null;
     }
     const { installation, draft } = answer.value;
@@ -589,7 +636,7 @@ export function Builder({
 
   /** The revision to run: the one saved, or the draft saved now if it
    * holds what is not. */
-  async function saved(): Promise<Kept | null> {
+  async function saved(at: Asked): Promise<Kept | null> {
     if (editing === null) {
       return null;
     }
@@ -597,7 +644,7 @@ export function Builder({
       const { draftId, revision } = editing.saved;
       return { draftId, revision, house: editing.history.present };
     }
-    return save();
+    return save(at);
   }
 
   /** Whether the draft shown is the house that was saved: an edit made while
@@ -609,7 +656,7 @@ export function Builder({
 
   async function saveAndGoBack(): Promise<void> {
     const asked = session.current;
-    const kept = await saved();
+    const kept = await saved("finish");
     if (kept === null || session.current !== asked) {
       return;
     }
@@ -625,11 +672,11 @@ export function Builder({
   async function saveAndStartRun(): Promise<void> {
     const settings = settingsOf(runFields);
     if (settings === null) {
-      setStatus("The run step holds no run: give a date, whole days of one or more and a seed.");
+      setStatus(NO_RUN);
       return;
     }
     const asked = session.current;
-    const kept = await saved();
+    const kept = await saved("finish");
     if (kept === null || session.current !== asked) {
       return;
     }
@@ -647,6 +694,7 @@ export function Builder({
     if (!registered.ok) {
       setBusy(false);
       setStatus(`It does not run: ${registered.problem}`);
+      setRefused({ at: "finish", problem: `It does not run: ${registered.problem}` });
       return;
     }
     const started = await startRun(registered.value.id, {
@@ -659,9 +707,9 @@ export function Builder({
     }
     if (!started.ok) {
       setRan({ scenarioId: registered.value.id, name: registered.value.name });
-      setStatus(
-        `Its run is registered as ${registered.value.id}, but not started: ${started.problem}`,
-      );
+      const problem = `Its run is registered as ${registered.value.id}, but not started: ${started.problem}`;
+      setStatus(problem);
+      setRefused({ at: "finish", problem });
       return;
     }
     navigate(replayAddress(started.value.run_id, started.value.epoch, true));
@@ -687,6 +735,7 @@ export function Builder({
       return;
     }
     const asked = session.current;
+    setRefused(null);
     setBusy(true);
     const answer = await runDraft(editing.saved.draftId, editing.saved.revision, settings);
     setBusy(false);
@@ -695,6 +744,7 @@ export function Builder({
     }
     if (!answer.ok) {
       setStatus(`It does not run: ${answer.problem}`);
+      setRefused({ at: "run", problem: answer.problem });
       return;
     }
     setRan({ scenarioId: answer.value.id, name: answer.value.name });
@@ -763,26 +813,31 @@ export function Builder({
   // The crop model the rows grow, whose parameter sets are edited beside
   // them: the first row's, as a run grows one crop.
   const rowsModel = editing?.history.present.row_crops[0]?.crop_model ?? null;
-  const runWhy =
-    editing?.saved == null || madeOn(editing) === null
-      ? "Save it first: a run is of a revision saved."
-      : changed
-        ? "Save the changes first: a run is of a revision saved."
-        : assessment.status !== "assessed"
-          ? "It is not assessed yet."
-          : assessment.findings.some((found) => found.severity === "error")
-            ? "Its errors stop it running."
-            : "";
-
+  // Why each button cannot be used now, said beside it: a draft not saved
+  // under an identifier a kept draft has can never be saved under it, and
+  // each error the simulator finds stops a run.
+  const keptIds = drafts?.map((draft) => draft.draft_id) ?? [];
+  const shownId = editing?.history.present.installation_id ?? "";
+  const taken = editing !== null && madeOn(editing) === null && keptIds.includes(shownId);
+  const saveReasons: Reasons = taken ? [keptAlready(shownId)] : [];
+  const stops = whatStopsARun(assessment);
+  const runReasons: Reasons = [
+    ...(saveReasons.length > 0
+      ? saveReasons
+      : editing?.saved == null || madeOn(editing) === null
+        ? ["Save it first: a run is of a revision saved."]
+        : changed
+          ? ["Save the changes first: a run is of a revision saved."]
+          : []),
+    ...stops,
+  ];
   // Starting a run saves first, so only what stops a run for good stops it.
-  const startWhy =
-    assessment.status !== "assessed"
-      ? "It is not assessed yet."
-      : assessment.findings.some((found) => found.severity === "error")
-        ? "Its errors stop it running."
-        : settingsOf(runFields) === null
-          ? "The run step holds no run: give a date, whole days of one or more and a seed."
-          : "";
+  const startReasons: Reasons = [
+    ...saveReasons,
+    ...stops,
+    ...(settingsOf(runFields) === null ? [NO_RUN] : []),
+  ];
+  const refusedAt = (at: Asked) => (refused?.at === at ? refused.problem : undefined);
 
   return (
     <main className="builder">
@@ -818,13 +873,31 @@ export function Builder({
               >
                 Redo
               </Button>
-              <Button size="compact" disabled={!changed || busy} onClick={() => void save()}>
+              <Button
+                size="compact"
+                disabled={!changed || busy || saveReasons.length > 0}
+                aria-describedby={describedBy(saveWhy, saveReasons)}
+                onClick={() => void save()}
+              >
                 Save
               </Button>
               <Button size="compact" disabled={busy} onClick={exportFile}>
                 Download house file
               </Button>
             </div>
+          )}
+          {editing !== null && (
+            <WhyNot
+              id={saveWhy}
+              lead="It cannot be saved:"
+              reasons={saveReasons}
+              testId="builder-save-why"
+            />
+          )}
+          {refusedAt("save") !== undefined && (
+            <Notice kind="problem" className="builder-refused" data-testid="builder-save-refused">
+              {refusedAt("save")}
+            </Notice>
           )}
         </header>
         <p className="builder-status" role="status" data-testid="builder-status">
@@ -842,7 +915,13 @@ export function Builder({
         </p>
         {editing === null ? (
           <>
-            <HouseForm busy={busy} onDraft={(values) => void draftHouse(values)} />
+            <HouseForm
+              busy={busy}
+              kept={keptIds}
+              problems={draftProblems}
+              refused={refusedAt("draft")}
+              onDraft={(values) => void draftHouse(values)}
+            />
             {scenarios.status === "unavailable" ? (
               <section className="builder-copy" aria-label="Copy a scenario's house">
                 <h2>Or copy a scenario's house</h2>
@@ -858,6 +937,8 @@ export function Builder({
                 scenarios={listed}
                 first={copyAsked(hash) ?? ""}
                 busy={busy}
+                kept={keptIds}
+                refused={refusedAt("copy")}
                 onCopy={(scenario, draftId) => void copyHouse(scenario, draftId)}
               />
             )}
@@ -878,6 +959,15 @@ export function Builder({
                     </li>
                   ))}
                 </ul>
+              )}
+              {(refusedAt("open") ?? refusedAt("import")) !== undefined && (
+                <Notice
+                  kind="problem"
+                  className="builder-refused"
+                  data-testid="builder-start-refused"
+                >
+                  {refusedAt("open") ?? refusedAt("import")}
+                </Notice>
               )}
               <Button size="compact" onClick={() => importer.current?.click()}>
                 Import a file
@@ -905,6 +995,7 @@ export function Builder({
               key={`${editing.history.present.installation_id}/${editing.history.present.name}`}
               draftId={editing.history.present.installation_id}
               name={editing.history.present.name}
+              taken={saveReasons[0]}
               onRename={rename}
             />
             <Inspector
@@ -935,8 +1026,9 @@ export function Builder({
             </Items>
             <RunStep
               weathers={listed[0]?.weathers ?? []}
-              disabled={runWhy !== "" || busy}
-              why={runWhy}
+              busy={busy}
+              reasons={runReasons}
+              refused={refusedAt("run")}
               fields={runFields}
               onFields={setRunFields}
               onRun={(settings) => void run(settings)}
@@ -952,7 +1044,9 @@ export function Builder({
             )}
             <FinishStep
               busy={busy}
-              startWhy={startWhy}
+              goBackReasons={saveReasons}
+              startReasons={startReasons}
+              refused={refusedAt("finish")}
               onGoBack={() => void saveAndGoBack()}
               onStartRun={() => void saveAndStartRun()}
             />
