@@ -58,6 +58,26 @@ describe("the builder's side of the API (P12.2)", () => {
     );
   });
 
+  it("says each field the simulator refused, where it names them, leaving out what is not one", async () => {
+    const refused = {
+      error: "not the first form's values: spans: Input should be greater than 0 (and 1 more)",
+      problems: [
+        { field: "spans", message: "Input should be greater than 0" },
+        { field: "rows", message: "Field required" },
+        { field: 3, message: "not a field's name" },
+      ],
+    };
+
+    expect(await firstDraft({} as never, answering(400, refused))).toEqual({
+      ok: false,
+      problem: refused.error,
+      problems: [
+        { field: "spans", message: "Input should be greater than 0" },
+        { field: "rows", message: "Field required" },
+      ],
+    });
+  });
+
   it("sends an edit with the installation's file it is made on", async () => {
     const asked: Request[] = [];
     const change: Edit = { edit: "remove_items", items: ["heater_1"] };
