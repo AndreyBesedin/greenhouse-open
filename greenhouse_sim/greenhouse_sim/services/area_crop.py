@@ -79,7 +79,8 @@ def area_crop_course(simulator: Simulator, run: RunRequest, time_s: float = 0.0)
         raise _grown_by_plant(run.scenario_id, grown_by.name)
     basis = crop.rung.basis
     days = list(range(days_ended(time_s) + 1))
-    # Asked for from the first day on, each day lives on from the one before.
+    # The crop keeps the start of every day it has lived (`keeps_days`): a
+    # day not lived yet lives on from the one before, asked first.
     read = [
         {
             instance.scope_id: area.read(instance.state, config)

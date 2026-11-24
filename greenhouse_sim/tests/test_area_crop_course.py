@@ -9,7 +9,7 @@ import sys
 from collections.abc import Iterator
 from http import HTTPStatus
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 import pytest
 
@@ -38,7 +38,7 @@ from short_runs import cut
 # house's: long enough for one course to be the start of another.
 TOMGRO: Final = cut(
     "climate_box",
-    days=10,
+    days=20,
     sensors=("temperature_front",),
     greenhouse_id="tomgro_course_box",
     crop_model="reduced_tomgro",
@@ -47,7 +47,7 @@ TOMGRO: Final = cut(
 # And growing Vanthoor's model, at an hour's step.
 VANTHOOR: Final = cut(
     "climate_box",
-    days=3,
+    days=4,
     sensors=("temperature_front",),
     greenhouse_id="vanthoor_course_box",
     crop_model="vanthoor_katzin",
@@ -142,6 +142,61 @@ def test_a_shorter_course_is_the_start_of_a_longer_one_whatever_was_asked_before
     for short, long in zip(first.scopes, longer.scopes, strict=True):
         assert short.values == {key: values[:6] for key, values in long.values.items()}
     assert first.house == {key: values[:6] for key, values in longer.house.items()}
+
+
+@pytest.mark.parametrize(
+    ("config", "first", "then"),
+    [(TOMGRO, 10, 20), (VANTHOOR, 1, 3)],
+    ids=["reduced_tomgro", "vanthoor_katzin"],
+)
+def test_a_course_carried_on_from_a_shorter_one_is_a_course_asked_alone(
+    config: ScenarioConfig, first: int, then: int
+) -> None:
+    """Each day is worked out once, and a later course carries on from the
+    days kept: what it gives is the course worked out whole."""
+    with _simulator() as simulator:
+        area_crop_course(simulator, _run(config), time_s=first * DAY_S)
+        carried_on = area_crop_course(simulator, _run(config), time_s=then * DAY_S)
+    with _simulator() as simulator:
+        alone = area_crop_course(simulator, _run(config), time_s=then * DAY_S)
+
+    assert carried_on == alone
+
+
+@pytest.mark.parametrize("config", AREA_CROPS, ids=lambda config: config.crop_model)
+def test_a_day_asked_again_lives_nothing_and_a_new_day_a_days_steps(
+    config: ScenarioConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """However the crop was asked for between, at moments that would push a
+    day out of the few steps a crop keeps: a course to a day already worked
+    out lives no step of its crop again, and one a day later lives that
+    day's steps alone, never the season again from its start."""
+    last = config.duration_days - 1
+    with _simulator() as simulator:
+        run = _run(config)
+        crop = scenario_crop(simulator, run)
+        lived: list[int] = []
+        step = crop.growth.next_step
+
+        def counted(at: int, *rest: Any) -> Any:
+            lived.append(at)
+            return step(at, *rest)
+
+        monkeypatch.setattr(crop.growth, "next_step", counted)
+        area_crop_course(simulator, run, time_s=(last - 1) * DAY_S)
+        assert lived == list(range((last - 1) * crop.steps_a_day))
+        # Moments within the days worked out, which a crop keeping only a
+        # few steps would keep in place of its days' starts.
+        for share in (0.6, 0.3, 0.8, 0.45):
+            crop.at(share * (last - 1) * DAY_S)
+        lived.clear()
+
+        again = area_crop_course(simulator, run, time_s=(last - 1) * DAY_S)
+        assert lived == []
+        later = area_crop_course(simulator, run, time_s=last * DAY_S)
+
+    assert lived == list(range((last - 1) * crop.steps_a_day, last * crop.steps_a_day))
+    assert again.days == later.days[:-1]
 
 
 def test_the_house_is_its_rows_mean_weighted_by_their_areas() -> None:

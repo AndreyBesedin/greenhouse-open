@@ -16,7 +16,10 @@ grown per m² on each of its scopes, through the run's days.
 
 Its steps are kept as every run's crop keeps them
 (`greenhouse_sim.core.crop_steps.CropSteps`), its days a view of them:
-what is its own is how it grows by area (`AreaGrowth`).
+what is its own is how it grows by area (`AreaGrowth`). Its state is a few
+numbers a scope, so it keeps the start of every day it lives: its course
+through the days, which a viewer charts (decision 0083), is worked out a
+day at a time, each new day lived on from the one before.
 """
 
 from collections.abc import Callable, Mapping, Sequence
@@ -144,7 +147,9 @@ class AreaCrop[StateT: BaseModel](
         self.rung = rung
         self.scopes = list(scopes)
         growth = AreaGrowth(scopes, rung=rung, courses=courses)
-        super().__init__(growth, steps=days * steps_a_day(growth.step_s), planned={})
+        super().__init__(
+            growth, steps=days * steps_a_day(growth.step_s), planned={}, keeps_days=True
+        )
 
     def instances_on(self, day: int) -> tuple[AreaInstance[StateT], ...]:
         """The crop on the run's day `day`, from 0 to its days: each scope's
