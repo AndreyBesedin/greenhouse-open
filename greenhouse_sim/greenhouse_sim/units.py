@@ -28,3 +28,8 @@ PERCENT: Final = 100.0
 # The air's density at a greenhouse's temperatures, in kg/m³: what turns the
 # air's volume into its mass, and a solver's kinematic pressure into pascals.
 AIR_DENSITY_KG_M3: Final = 1.2
+
+# 0 °C in kelvin; and Stefan and Boltzmann's constant, in W m⁻² K⁻⁴, as
+# Vanthoor (2011, Table 8.1) gives it, which the cover and the sky radiate by.
+KELVIN: Final = 273.15
+STEFAN_BOLTZMANN_W_M2K4: Final = 5.67e-8

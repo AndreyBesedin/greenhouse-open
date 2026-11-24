@@ -54,6 +54,7 @@ from pydantic import (
     model_validator,
 )
 
+from greenhouse_sim.climate.covered import HouseNodesState, kept_nodes, plain, restored
 from greenhouse_sim.climate.day import window_start
 from greenhouse_sim.climate.house import HouseAir
 from greenhouse_sim.climate.psychrometrics import saturation_ratio_g_kg
@@ -170,13 +171,14 @@ MOST_CO2_PPM: Final = 20_000.0
 
 class ModelState(BaseModel):
     """A part's model as a checkpoint keeps it: its name and version, and
-    its state then, if it keeps one, as the crop's models do."""
+    its state then, if it keeps one, as the crop's models do, and the house
+    air's beside its cover (`climate.covered`, P24.3)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     model: str
     version: PositiveInt
-    state: CropModelState | None = None
+    state: CropModelState | HouseNodesState | None = None
 
 
 class Checkpoint(BaseModel):
@@ -219,6 +221,11 @@ class Checkpoint(BaseModel):
         models = given.get("models") if isinstance(given, dict) else None
         if not isinstance(models, dict):
             return given
+        air = models.get(Part.HOUSE_AIR.value)
+        if isinstance(air, dict) and isinstance(air.get("state"), dict):
+            nodes = HouseNodesState.model_validate(air["state"])
+            models = models | {Part.HOUSE_AIR.value: air | {"state": nodes}}
+            given = given | {"models": models}
         crop = models.get(Part.CROP.value)
         if not isinstance(crop, dict) or not isinstance(crop.get("state"), dict):
             return given
@@ -229,11 +236,29 @@ class Checkpoint(BaseModel):
         return given | {"models": models | {Part.CROP.value: crop | {"state": state}}}
 
     @property
+    def nodes(self) -> HouseNodesState | None:
+        """What its house air's model keeps beside its air, if it keeps
+        anything: its cover's layers."""
+        kept = self.models.get(Part.HOUSE_AIR)
+        return kept.state if kept is not None and isinstance(kept.state, HouseNodesState) else None
+
+    def airs(self) -> tuple[HouseAir, HouseAir | None]:
+        """Its house's air on its day and an hour before, if it keeps it,
+        each beside what its house air's model keeps with it."""
+        before = self.house_before
+        return (
+            restored(self.house, self.nodes),
+            None if before is None else restored(before, self.nodes, before=True),
+        )
+
+    @property
     def crop(self) -> CropModelState:
         """Its crop's state, its plants or its instances and the days they
         lived, or none."""
         kept = self.models.get(Part.CROP)
-        return CropState() if kept is None or kept.state is None else kept.state
+        if kept is None or kept.state is None or isinstance(kept.state, HouseNodesState):
+            return CropState()
+        return kept.state
 
     def identifier(self) -> str:
         """A digest of its content, which names it."""
@@ -309,6 +334,8 @@ def make_checkpoint(simulator: Simulator, run: RunRequest, time_s: float = 0.0) 
     crop = scenario_crop(simulator, run)
     state = _crop_state(registration(config).state, crop, day)
     before = window_start(moment)
+    on_its_day = climate.house.air_at(moment)
+    earlier = climate.house.air_at(before) if before < moment else None
     return Checkpoint(
         scenario_id=scenario_id,
         manifest=version(simulator.catalogue, scenario_id),
@@ -318,15 +345,28 @@ def make_checkpoint(simulator: Simulator, run: RunRequest, time_s: float = 0.0) 
         openings=dict(run.openings),
         plan=run.plan.before(moment).validated(),
         day=day,
-        house=climate.house.air_at(moment),
-        house_before=climate.house.air_at(before) if before < moment else None,
+        house=plain(on_its_day),
+        house_before=None if earlier is None else plain(earlier),
         models={
             part: ModelState(
-                model=ran.model, version=ran.version, state=state if part is Part.CROP else None
+                model=ran.model,
+                version=ran.version,
+                state=_part_state(part, state, kept_nodes(on_its_day, earlier)),
             )
             for part, ran in _models_run(simulator, run).items()
         },
     )
+
+
+def _part_state(
+    part: Part, crop: CropModelState, nodes: HouseNodesState | None
+) -> CropModelState | HouseNodesState | None:
+    """What a checkpoint keeps of a part's model: its crop's state, its
+    house air's nodes beside its air if its model keeps any, and nothing
+    of the others'."""
+    if part is Part.CROP:
+        return crop
+    return nodes if part is Part.HOUSE_AIR else None
 
 
 def _models_run(simulator: Simulator, run: RunRequest) -> dict[Part, ModelRun]:
@@ -443,7 +483,11 @@ def _checked_upload(simulator: Simulator, document: JsonValue) -> Checkpoint:
             "a checkpoint keeps its house's air an hour before its day, after its run's "
             "first day, and only then"
         )
-    climate_run(simulator, uploaded.run())
+    _, climate = climate_run(simulator, uploaded.run())
+    for when, air in zip(("on its day", "before it"), uploaded.airs(), strict=True):
+        refused = None if air is None else climate.house.refusal(air)
+        if refused is not None:
+            raise InvalidRequest(f"a checkpoint's house air {when}: {refused}")
     # Its run's scenario, with the checkpoint's own layout.
     its_run = changed(simulator.catalogue, config, SceneChanges(layout=uploaded.layout))
     checked_crop_plan(its_run, uploaded.plan)
@@ -604,6 +648,7 @@ def _kept(
     """Keep a checkpoint, and its state for the runs that agree with it; a
     scenario's opening day beside the others, never evicted."""
     checkpoint_id = checkpoint.identifier()
+    on_its_day, before = checkpoint.airs()
     state = KeptState(
         house=(
             checkpoint.scenario_id,
@@ -613,14 +658,10 @@ def _kept(
         ),
         schedule=run_schedule(simulator.catalogue, checkpoint.run()),
         day=checkpoint.day,
-        air=checkpoint.house,
+        air=on_its_day,
         crop=checkpoint.crop.kept,
         lived=tuple(checkpoint.crop.lived),
-        earlier=(
-            ()
-            if checkpoint.house_before is None
-            else ((window_start(checkpoint.day * DAY_S), checkpoint.house_before),)
-        ),
+        earlier=() if before is None else ((window_start(checkpoint.day * DAY_S), before),),
         crop_actions=checkpoint.plan.before(checkpoint.day * DAY_S).crop_plan(),
     )
     # Its state first, so that a checkpoint listed always has one.

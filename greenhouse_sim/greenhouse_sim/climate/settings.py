@@ -4,9 +4,10 @@ how much heat its glazing passes, how much air leaks through it, and how
 fast the air mixes. The outside itself is the scenario's weather
 (`greenhouse_sim.weather`, P07.1).
 
-They are the parameters of the house air's two models (P14.6): the whole
-house alone (`WholeHouseAir`), and the air cell by cell beside it
-(`GridAir`), which mixes too.
+They are the parameters of the house air's models (P14.6): the whole
+house alone (`WholeHouseAir`), the air cell by cell beside it (`GridAir`),
+which mixes too, and the air beside the house's cover and the sky
+(`VanthoorAir`, P24.3).
 """
 
 from typing import Annotated, ClassVar, Literal
@@ -90,6 +91,21 @@ class WholeHouseAir(HouseSettings):
     mixing."""
 
     kind: Literal["whole_house"] = "whole_house"
+
+    def run_settings(self) -> ClimateSettings:
+        """What its climate run works its air out from: its own, and the
+        grid's default mixing, which none of its air is worked out with."""
+        return ClimateSettings.model_validate(self.model_dump(exclude={"kind"}))
+
+
+class VanthoorAir(HouseSettings):
+    """The house's air beside its cover and the sky, after Vanthoor (2011),
+    one well-mixed volume, which the run draws the same in every cell, as it
+    draws the whole house's (`greenhouse_sim.climate.covered`, P24.3). Its
+    cover's sheets give its glass: a scenario that gives its glazing's U
+    beside it is refused (`ScenarioConfig`)."""
+
+    kind: Literal["vanthoor"] = "vanthoor"
 
     def run_settings(self) -> ClimateSettings:
         """What its climate run works its air out from: its own, and the

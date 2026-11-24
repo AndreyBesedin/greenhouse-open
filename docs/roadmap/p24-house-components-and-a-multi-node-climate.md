@@ -232,6 +232,38 @@ description.
 - **Beside the grid:** it draws its air the same in every cell, as the whole house
   does. A grid beside it, started from its air with its cover's, screens' and
   floor's temperatures as the cells' boundaries, is left for later.
+- **Its frame, as P24.3's first pull request builds it** (`climate/vanthoor.py`,
+  `climate/covered.py`, `climate/sky.py`, `climate/exponential.py`):
+  - **One air node:** with no screen drawn there is no top compartment, where
+    GreenLight keeps one and a screen's buoyant flow between them.
+  - **The cover is one pair of layers for each glass** the walls and roof are of,
+    each layer a tenth of its sheet's heat (eq 8.21). Without a described cover it
+    is single glass, and a configured U is refused beside the model.
+  - **Areas:** conduction and heat capacity are per m² of the cover's own area, not
+    of the floor as GreenLight writes them. The sky's longwave and the sun on the
+    cover are over the floor, as GreenLight's are, shared among the glasses by their
+    area.
+  - **The air exchanged through the doors, vents and gaps is held through a stretch**
+    at its start, as the whole house holds it, not by its tangent: so the limit
+    gives the whole house's air, which a test holds to 1e-5 K and 1e-6 g/kg through
+    a day.
+  - **The sky** is the weather's where it records it. Otherwise it is estimated:
+    Prata's (1996) clear sky under Unsworth and Monteith's (1975) clouds, as
+    Flerchinger et al. (2009) tabulate them.
+  - **The solver:** the matrix exponential is the package's own, a [6/6] Padé
+    approximant by scaling and squaring (Moler and Van Loan 2003), so the
+    simulator takes no new runtime dependency.
+  - **The checkpoint:** each glass's layers, on its day and an hour before, are
+    kept as the house air model's own state, so a whole house's checkpoints and
+    their identities do not move.
+  - **The glazing panel** is still drawn by the glass's U, not by the cover's
+    layers.
+  - **Its fluxes** are GreenLight 2.0.7's own at four states
+    ([`research/reproductions/vanthoor_climate`](../../research/reproductions/vanthoor_climate/README.md)).
+  - **Without a floor or a canopy,** the air reaches the cover by free convection
+    alone. Under the cold spring day the climate box's air runs about 6 K warmer
+    than the whole house's, whose U takes in the inner film's longwave. The floor
+    and its soil layers are the step's second pull request.
 
 ### The crop and the air, both ways (decision 0079)
 

@@ -45,7 +45,7 @@ a run's identity covers. The parts and their models:
 - **the weather:** `constant`, `synthetic`, `seasonal` or `recorded`, each
   giving a `WeatherSource` ([add a weather](add-a-weather.md));
 - **the air field:** a prescribed pattern, an `AirflowModel`, and **the
-  house's air:** `grid` or `whole_house` ([add an air model](add-an-air-model.md));
+  house's air:** `grid`, `whole_house` or `vanthoor` ([add an air model](add-an-air-model.md));
 - **the crop:** `simple` or `organ`, each a `CropRung` with its
   registration for the services, and **the crop walk's** measurements,
   `walk` ([add a plant model](add-a-plant-model.md));

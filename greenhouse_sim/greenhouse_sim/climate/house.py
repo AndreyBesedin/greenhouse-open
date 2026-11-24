@@ -34,7 +34,7 @@ import weakref
 from bisect import bisect_right, insort
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
-from typing import Final
+from typing import Final, Protocol
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
@@ -111,6 +111,37 @@ class _Steady:
     heat_w: float
     heater_w: float
     water_removed_kg_s: float
+
+
+class Course(Protocol):
+    """How the house's air goes through a stretch, as a stretch's switches
+    and its end are found: its temperature and its water after a while,
+    whether its temperature heads up or down, when it reaches an edge of
+    its temperature, its humidity or the water it holds, and the share of
+    its air it exchanges with the outside a second, and the outside's
+    water."""
+
+    @property
+    def venting_s(self) -> float: ...
+
+    @property
+    def outside_g_kg(self) -> float: ...
+
+    def temperature_c(self, start_c: float, duration_s: float) -> float: ...
+
+    def heads(self, start_c: float, *, up: bool) -> bool: ...
+
+    def reaching_s(self, start_c: float, edge_c: float) -> float | None: ...
+
+    def water_g_kg(self, start_g_kg: float, duration_s: float) -> float: ...
+
+    def held_water_reaching_s(
+        self, start_c: float, start_g_kg: float, edge_g_kg: float, within_s: float, *, up: bool
+    ) -> float | None: ...
+
+    def humidity_reaching_s(
+        self, start_c: float, start_g_kg: float, edge_pct: float, within_s: float, *, up: bool
+    ) -> float | None: ...
 
 
 @dataclass(frozen=True)
@@ -422,7 +453,7 @@ class WholeHouse:
         return air
 
     def _switching_s(
-        self, air: HouseAir, course: _Course, time_s: float, within_s: float
+        self, air: HouseAir, course: Course, time_s: float, within_s: float
     ) -> float | None:
         """How long, within `within_s` of `time_s`, until its thermostat
         switches its heater, as the air reaches its band's far edge: the top
@@ -440,7 +471,7 @@ class WholeHouse:
         return reached if reached is not None and reached < within_s else None
 
     def _switch(
-        self, air: HouseAir, course: _Course, time_s: float, within_s: float
+        self, air: HouseAir, course: Course, time_s: float, within_s: float
     ) -> tuple[float, Callable[[HouseAir], HouseAir]] | None:
         """The first of its loops to switch within `within_s` of `time_s`, as
         the air reaches one of their edges: how long until then, and the
@@ -632,25 +663,17 @@ class WholeHouse:
         outside: WeatherState,
         time_s: float,
         sun_w: float = 0.0,
-    ) -> _Course:
+    ) -> Course:
         """How the air's temperature goes from `air`, at steady levels and
         under the weather `outside`, its doors and vents open as they are at
         `time_s`."""
         volume = self.volume_m3
         heat_per_k = AIR_DENSITY_KG_M3 * AIR_HEAT_CAPACITY_J_KG_K
         heat_w = steady.heat_w + sun_w
-        settings = self.run.settings
         glazed_m3_s = sum(
             glass.u_in(outside.wind_speed_m_s) * per_u for glass, per_u in steady.glass_m3_s_per_u
         )
-        leaks_m3_s = settings.infiltration_per_s(outside.wind_speed_m_s) * volume
-        levels = self._openings(time_s, air)
-        sites = [vent.site_at(levels[vent.opening_id]) for vent in self.run.vents]
-        through = opening_flows(
-            [site for site in sites if site.aperture_m2 > 0], air.temperature_c, outside
-        )
-        entering = sum(max(flow.net_m3_s, 0.0) + flow.exchange_m3_s for flow in through)
-        venting_m3_s = entering + leaks_m3_s
+        venting_m3_s = self._venting_m3_s(air, outside, time_s)
         exchange = glazed_m3_s + venting_m3_s
         air_kg = AIR_DENSITY_KG_M3 * volume
         return _Course(
@@ -664,6 +687,21 @@ class WholeHouse:
             drying_g_kg_s=steady.water_removed_kg_s * GRAMS_PER_KG / air_kg,
         )
 
+    def _venting_m3_s(self, air: HouseAir, outside: WeatherState, time_s: float) -> float:
+        """What the house exchanges with the outside through its doors,
+        vents and gaps, m³/s, as `air` stands at `time_s` under the weather
+        `outside`: what enters through each door and vent open, and what
+        each exchanges both ways, and what leaks."""
+        settings = self.run.settings
+        leaks_m3_s = settings.infiltration_per_s(outside.wind_speed_m_s) * self.volume_m3
+        levels = self._openings(time_s, air)
+        sites = [vent.site_at(levels[vent.opening_id]) for vent in self.run.vents]
+        through = opening_flows(
+            [site for site in sites if site.aperture_m2 > 0], air.temperature_c, outside
+        )
+        entering = sum(max(flow.net_m3_s, 0.0) + flow.exchange_m3_s for flow in through)
+        return entering + leaks_m3_s
+
     def _advance(
         self,
         air: HouseAir,
@@ -673,13 +711,36 @@ class WholeHouse:
         time_s: float,
         *,
         sun_w: float = 0.0,
-        course: _Course | None = None,
+        course: Course | None = None,
     ) -> HouseAir:
-        volume = self.volume_m3
         course = course or self._course(air, steady, outside, time_s, sun_w)
-        temperature = course.temperature_c(air.temperature_c, duration_s)
-        air_kg = AIR_DENSITY_KG_M3 * volume
-        water = course.water_g_kg(air.humidity_g_kg, duration_s)
+        return self._after(
+            air,
+            steady,
+            outside,
+            duration_s=duration_s,
+            course=course,
+            temperature=course.temperature_c(air.temperature_c, duration_s),
+            water=course.water_g_kg(air.humidity_g_kg, duration_s),
+        )
+
+    def _after(
+        self,
+        air: HouseAir,
+        steady: _Steady,
+        outside: WeatherState,
+        *,
+        duration_s: float,
+        course: Course,
+        temperature: float,
+        water: float,
+    ) -> HouseAir:
+        """The air `duration_s` after `air`, at `temperature` and holding
+        `water` as its course takes them: its CO₂ exchanged with the
+        outside's, the water its equipment took, never more than it held,
+        what it holds beyond saturation condensed, and the heat its heaters
+        gave counted."""
+        air_kg = AIR_DENSITY_KG_M3 * self.volume_m3
         if course.venting_s > 0:
             co2 = _towards(air.co2_ppm, outside.co2_ppm, course.venting_s, duration_s)
         else:
@@ -755,6 +816,13 @@ class WholeHouse:
             return False
         start, end = self._stretch
         return start < up_to and since < min(end, up_to)
+
+    def refusal(self, air: HouseAir) -> str | None:
+        """Why `air` could not be this house's at a moment, or None if it
+        could: a whole house keeps nothing beside its air."""
+        if type(air) is not HouseAir:
+            return f"a whole house keeps its air alone, not {type(air).__name__}"
+        return None
 
     def seed(self, moment_s: float, air: HouseAir) -> None:
         """Take `air` as this house's at `moment_s`, from a checkpoint of the
