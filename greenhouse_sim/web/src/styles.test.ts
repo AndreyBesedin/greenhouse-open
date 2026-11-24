@@ -493,10 +493,12 @@ const FEATURES = new Set([
   "weather",
   "day",
   "wind",
-  // Sensors and cameras, the plants and the plant lab, moving items, QA.
+  // Sensors and cameras, the plants, a crop grown by area and the plant lab,
+  // moving items, QA.
   "sensor",
   "camera",
   "plant",
+  "crop",
   "organ",
   "lab",
   "move",

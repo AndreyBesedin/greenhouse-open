@@ -21,6 +21,7 @@ import { TargetsPanel } from "./fields/TargetsPanel";
 import { useFolds } from "./folds";
 import { OpeningControls, openingsIn } from "./OpeningControls";
 import { PanelCard } from "./PanelCard";
+import { AreaCropPanel } from "./plants/AreaCropPanel";
 import { dayLabel } from "./replay/timeline";
 import { useForkQuestion } from "./replay/useForkQuestion";
 import {
@@ -65,7 +66,8 @@ export interface ScenarioLoads {
 
 /**
  * A scenario's panels, in the info panel's order: its air field and CFD
- * boundaries, its climate run's moment, house air, schedule, timeline and
+ * boundaries, its climate run's moment, house air, its crop if it is grown
+ * by area (decision 0083), schedule, timeline and
  * checkpoints, its weather, the probes and their charts, and its doors,
  * vents and equipment, each a section folded to its line but the moment
  * (#206, #273). Each changes the scenario's source; what the view around
@@ -127,6 +129,7 @@ export function ScenarioPanels({
   weathers,
   days,
   loads,
+  cropByArea = false,
   momentFailed = false,
   fieldView,
   fieldSlice,
@@ -160,6 +163,9 @@ export function ScenarioPanels({
   /** How many days its runs last. */
   days: number;
   loads: ScenarioLoads;
+  /** Whether its model grows its crop by area, which is charted, not drawn
+   * (decision 0083). */
+  cropByArea?: boolean;
   /** Whether the moment asked for cannot be drawn, part of it having failed
    * to arrive. */
   momentFailed?: boolean;
@@ -226,9 +232,9 @@ export function ScenarioPanels({
   const shownTime = probed === null ? null : probed.timeS;
   // Every group folded to the line that says how it stands (#206, #273):
   // the climate run's moment open at first, the rest folded.
-  const fold = useFolds<"field" | "moment" | "house" | "equipment" | "openings" | "probes">([
-    "moment",
-  ]);
+  const fold = useFolds<
+    "field" | "moment" | "house" | "crop" | "equipment" | "openings" | "probes"
+  >(["moment"]);
   const fieldName = source.field;
   const probing = fieldName !== undefined && probed !== null;
 
@@ -387,6 +393,7 @@ export function ScenarioPanels({
             <HouseAir state={houseAir} />
           </Fold>
         )}
+        {climate && cropByArea && <AreaCropPanel run={scenarioRun(source)} fold={fold("crop")} />}
         {climate && setpoints !== undefined && onTargets !== undefined && (
           <TargetsPanel
             thermostat={setpoints}

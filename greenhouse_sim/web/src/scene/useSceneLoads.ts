@@ -22,7 +22,9 @@ const NO_OPENINGS: readonly string[] = [];
  * from loading. A run's crop, organ by organ or of the simple crop, is drawn
  * as it stands at the moment, in place of its transplants once a day has
  * ended; the last stays on show until the next day's arrives, and when the
- * next day's fails.
+ * next day's fails. A crop grown by area is charted, not drawn (decision
+ * 0083): its crop's scene has no entities, and says the day the scene is
+ * of.
  */
 export function useSceneLoads(
   source: SceneSource,

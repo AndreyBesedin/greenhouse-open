@@ -54,3 +54,26 @@
 .plant-structure .organ-detail {
   color: var(--text-muted);
 }
+
+/* A crop grown by area through the run's days (decision 0083): each
+ * quantity's house line over its rows' least to most, as the house's air is
+ * charted (`house-air-row`, `house-air-chart`). */
+.crop-area {
+  margin: 0 0 var(--space-4);
+}
+
+.crop-area-note {
+  margin: 0 0 var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
+.crop-area-band {
+  fill: var(--data-green);
+  fill-opacity: 0.2;
+  stroke: none;
+}
+
+.crop-area-house {
+  stroke: var(--data-green);
+}
