@@ -14,6 +14,7 @@ from typing import NoReturn
 import pytest
 
 from greenhouse_sim.api.routes import respond
+from greenhouse_sim.climate import run as climate_run
 from greenhouse_sim.climate.commands import Schedule
 from greenhouse_sim.climate.house import HouseAir, WholeHouse, grid_mean
 from greenhouse_sim.climate.run import ClimateRun
@@ -284,6 +285,19 @@ def test_it_runs_a_day_in_well_under_a_second(simulator: Simulator) -> None:
     started = time.perf_counter()
     house.air_at(DAY_S)
     assert time.perf_counter() - started < 1.0
+
+
+def test_it_works_its_air_out_without_the_grids_flow(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The flow the equipment makes on the grid is the grid's air's: worked
+    out at every new level a heater runs at, it took most of a long run's
+    time, and the house's air uses none of it."""
+    house = _shut({"heater": 0.5})
+
+    def unwanted(*_: object, **__: object) -> NoReturn:
+        raise AssertionError("the whole house worked out the grid's flow")
+
+    monkeypatch.setattr(climate_run, "conserving", unwanted)
+    assert house.air_at(DAY_S).temperature_c > house.air_at(0.0).temperature_c
 
 
 def test_the_api_serves_the_houses_air_beside_the_run_all_off(simulator: Simulator) -> None:
