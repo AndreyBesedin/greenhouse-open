@@ -75,7 +75,7 @@ export function predictionsLabel(course: AreaCropCourse): string {
   const last = course.days.at(-1) ?? 0;
   const lived = last === 0 ? "As planted, no day lived yet" : `After ${dayCount(last)}`;
   return (
-    `${lived}: the ${course.model} model's predictions, per m² of ${BASES[course.basis]} ` +
+    `${lived}, by ${course.modelName}: the model's predictions, per m² of ${BASES[course.basis]} ` +
     `unless a unit says otherwise. Each line is the house's, its ${course.rows} rows weighted ` +
     "by their areas; behind it, the rows' least to most."
   );

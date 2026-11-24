@@ -74,6 +74,10 @@ export const AREA_CROP_SCHEMA = {
       "title": "Model",
       "type": "string"
     },
+    "model_name": {
+      "title": "Model Name",
+      "type": "string"
+    },
     "basis": {
       "$ref": "#/$defs/AreaBasis"
     },
@@ -112,6 +116,7 @@ export const AREA_CROP_SCHEMA = {
   "required": [
     "time_s",
     "model",
+    "model_name",
     "basis",
     "quantities",
     "days",

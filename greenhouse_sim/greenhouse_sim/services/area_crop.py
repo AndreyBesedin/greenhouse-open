@@ -45,15 +45,17 @@ class ScopeCourse(BaseModel):
 
 class AreaCropCourse(BaseModel):
     """A run's crop grown by area `time_s` into it, through the days ended
-    by then: its model, the basis its quantities are per m² of, the
-    quantities charted, in order, the days, from 0, and, for each day, each
-    scope's values (`scopes`, in the rows' order) and the house's (`house`),
-    by quantity's key."""
+    by then: its model, by its registry's name and in words
+    (`model_name`), the basis its quantities are per m² of, the quantities
+    charted, in order, the days, from 0, and, for each day, each scope's
+    values (`scopes`, in the rows' order) and the house's (`house`), by
+    quantity's key."""
 
     model_config = ConfigDict(frozen=True)
 
     time_s: float
     model: str
+    model_name: str
     basis: AreaBasis
     quantities: list[AreaQuantity]
     days: list[int]
@@ -97,6 +99,7 @@ def area_crop_course(simulator: Simulator, run: RunRequest, time_s: float = 0.0)
     return AreaCropCourse(
         time_s=time_s,
         model=grown_by.name,
+        model_name=grown_by.title,
         basis=basis,
         quantities=list(area.charted),
         days=days,

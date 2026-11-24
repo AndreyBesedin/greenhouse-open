@@ -34,7 +34,7 @@ test("crop by area: the TOMGRO house's rows are charted day by day, labelled as 
       "The house's main stem nodes after each day, in nodes, its rows' least to most behind it",
     );
     await expect(course).toContainText(
-      "After 3 days: the reduced_tomgro model's predictions, per m² of floor",
+      "After 3 days, by Reduced-State TOMGRO: the model's predictions, per m² of floor",
     );
     await expect(page.getByTestId("area-crop-lai")).toHaveText(
       /^Leaf area index \d\.\d+ m² m⁻², rows /,

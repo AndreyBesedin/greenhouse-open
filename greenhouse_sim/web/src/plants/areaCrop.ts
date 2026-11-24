@@ -22,11 +22,12 @@ export interface AreaQuantityCourse {
 }
 
 /** A run's crop grown by area through the days ended by a moment (`GET
- * /api/scenarios/{id}/area_crop`): its model, the area its quantities are
- * per m² of, its days from 0, how many rows grow it, and each quantity it
- * charts, in the model's order. */
+ * /api/scenarios/{id}/area_crop`): its model, by its registry's name and in
+ * words, the area its quantities are per m² of, its days from 0, how many
+ * rows grow it, and each quantity it charts, in the model's order. */
 export interface AreaCropCourse {
   model: string;
+  modelName: string;
   basis: AreaBasis;
   days: number[];
   rows: number;
@@ -53,7 +54,7 @@ const readCourse = contractReader<ServedCourse>(AREA_CROP_SCHEMA, UNEXPECTED);
  * each quantity charted, a value on each of its days for the house and for
  * every row. */
 export function parseAreaCrop(body: unknown): AreaCropCourse {
-  const { model, basis, days, scopes, house, quantities } = readCourse(body);
+  const { model, model_name, basis, days, scopes, house, quantities } = readCourse(body);
   const daily = (values: readonly number[] | undefined): values is number[] =>
     values !== undefined && values.length === days.length;
   const charted = quantities.map(({ key, name, unit }) => {
@@ -72,7 +73,7 @@ export function parseAreaCrop(body: unknown): AreaCropCourse {
       most: onEachDay.map((values) => Math.max(...values)),
     };
   });
-  return { model, basis, days, rows: scopes.length, quantities: charted };
+  return { model, modelName: model_name, basis, days, rows: scopes.length, quantities: charted };
 }
 
 /** Fetches a crop's course through a run; every failure becomes

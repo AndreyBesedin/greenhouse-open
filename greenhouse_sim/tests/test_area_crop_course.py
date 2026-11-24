@@ -86,6 +86,7 @@ def test_its_first_day_is_each_row_as_its_model_plants_it(
 
     assert (course.time_s, course.days) == (0.0, [0])
     assert (course.model, course.basis) == (config.crop_model.value, AreaBasis.FLOOR)
+    assert course.model_name == registration(config).title
     assert course.quantities == list(area.charted)
     assert course.scopes
     for scope in course.scopes:

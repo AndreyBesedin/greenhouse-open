@@ -10,14 +10,16 @@ export type AreaBasis = "floor" | "cultivated";
 
 /**
  * A run's crop grown by area `time_s` into it, through the days ended
- * by then: its model, the basis its quantities are per m² of, the
- * quantities charted, in order, the days, from 0, and, for each day, each
- * scope's values (`scopes`, in the rows' order) and the house's (`house`),
- * by quantity's key.
+ * by then: its model, by its registry's name and in words
+ * (`model_name`), the basis its quantities are per m² of, the quantities
+ * charted, in order, the days, from 0, and, for each day, each scope's
+ * values (`scopes`, in the rows' order) and the house's (`house`), by
+ * quantity's key.
  */
 export interface AreaCropCourse {
   time_s: number;
   model: string;
+  model_name: string;
   basis: AreaBasis;
   quantities: AreaQuantity[];
   days: number[];

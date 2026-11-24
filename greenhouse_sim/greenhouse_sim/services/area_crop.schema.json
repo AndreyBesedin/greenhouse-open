@@ -65,7 +65,7 @@
       "type": "object"
     }
   },
-  "description": "A run's crop grown by area `time_s` into it, through the days ended\nby then: its model, the basis its quantities are per m² of, the\nquantities charted, in order, the days, from 0, and, for each day, each\nscope's values (`scopes`, in the rows' order) and the house's (`house`),\nby quantity's key.",
+  "description": "A run's crop grown by area `time_s` into it, through the days ended\nby then: its model, by its registry's name and in words\n(`model_name`), the basis its quantities are per m² of, the quantities\ncharted, in order, the days, from 0, and, for each day, each scope's\nvalues (`scopes`, in the rows' order) and the house's (`house`), by\nquantity's key.",
   "properties": {
     "time_s": {
       "title": "Time S",
@@ -73,6 +73,10 @@
     },
     "model": {
       "title": "Model",
+      "type": "string"
+    },
+    "model_name": {
+      "title": "Model Name",
       "type": "string"
     },
     "basis": {
@@ -113,6 +117,7 @@
   "required": [
     "time_s",
     "model",
+    "model_name",
     "basis",
     "quantities",
     "days",

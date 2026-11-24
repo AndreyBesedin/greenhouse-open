@@ -8,6 +8,7 @@ asks what the model declares. The registry
 parameters; its registration here, under the same name (`CROP_MODELS`),
 its declarations:
 
+- **its title**, its name in words, as a reader is told it (`title`);
 - **its state in a checkpoint**: its plants and what each lived
   (`state`), and what no run of it reaches (`implausible`);
 - **how it grows single plants** (`plants`, a `PlantAdapter`), if it does: its rung,
@@ -238,6 +239,7 @@ class CropRegistration[PlantT: CropPlant]:
     see the module."""
 
     name: str
+    title: str
     state: type[CropModelState]
     # What no run of the model reaches in a checkpoint's state on its day,
     # which fits its run's shape, as reasons; none if it is plausible.
@@ -539,6 +541,7 @@ ORGAN_CROP_ACTIONS: Final = CropActions(
 
 ORGAN: Final = CropRegistration[Plant](
     name=CropModel.ORGAN.value,
+    title="Organ-level tomato",
     state=CropState,
     implausible=_organ_implausible,
     plants=PlantAdapter(
@@ -553,6 +556,7 @@ ORGAN: Final = CropRegistration[Plant](
 )
 SIMPLE: Final = CropRegistration[SimplePlant](
     name=CropModel.SIMPLE.value,
+    title="Simple daily tomato",
     state=SimpleCropState,
     implausible=_simple_implausible,
     plants=PlantAdapter(
@@ -569,6 +573,7 @@ SIMPLE: Final = CropRegistration[SimplePlant](
 )
 REDUCED_TOMGRO: Final = CropRegistration[Any](
     name=CropModel.REDUCED_TOMGRO.value,
+    title="Reduced-State TOMGRO",
     state=TomgroCropState,
     implausible=_tomgro_implausible,
     plants=None,
@@ -586,6 +591,7 @@ REDUCED_TOMGRO: Final = CropRegistration[Any](
 )
 VANTHOOR_KATZIN: Final = CropRegistration[Any](
     name=CropModel.VANTHOOR_KATZIN.value,
+    title="Vanthoor (Katzin 2021)",
     state=VanthoorCropState,
     implausible=_vanthoor_implausible,
     plants=None,

@@ -14,6 +14,7 @@ const FRUIT = { key: "fruit_g_m2", name: "Fruit dry weight", unit: "g m⁻²" };
 const BODY = {
   time_s: 2.5 * DAY_S,
   model: "reduced_tomgro",
+  model_name: "Reduced-State TOMGRO",
   basis: "floor",
   quantities: [LAI, FRUIT],
   days: [0, 1, 2],
@@ -52,7 +53,12 @@ describe("a crop grown by area's course", () => {
   it("is read with the house's and the rows' least and most on each day", () => {
     const { course } = loaded();
 
-    expect(course).toMatchObject({ model: "reduced_tomgro", basis: "floor", days: [0, 1, 2] });
+    expect(course).toMatchObject({
+      model: "reduced_tomgro",
+      modelName: "Reduced-State TOMGRO",
+      basis: "floor",
+      days: [0, 1, 2],
+    });
     expect(course.rows).toBe(2);
     expect(course.quantities[0]).toEqual({
       ...LAI,
@@ -122,7 +128,7 @@ describe("the crop by area panel", () => {
     expect(html).toContain("Leaf area index 0.800 m² m⁻², rows 0.400 to 1.00");
     expect(html).toContain("Fruit dry weight 0.00 g m⁻², rows alike");
     expect(html).toContain(
-      "After 2 days: the reduced_tomgro model&#x27;s predictions, per m² of floor unless a unit " +
+      "After 2 days, by Reduced-State TOMGRO: the model&#x27;s predictions, per m² of floor unless a unit " +
         "says otherwise. Each line is the house&#x27;s, its 2 rows weighted by their areas; " +
         "behind it, the rows&#x27; least to most.",
     );

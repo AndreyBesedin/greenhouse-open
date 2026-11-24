@@ -49,6 +49,13 @@ def test_every_crop_model_of_the_registry_is_registered_for_the_services() -> No
     for name, registered in CROP_MODELS.items():
         assert registered.name == name
     assert registration(CONFIG) is CROP_MODELS[CONFIG.crop.kind]
+    # Each told apart in words too, as a reader is told it.
+    assert {name: each.title for name, each in CROP_MODELS.items()} == {
+        "organ": "Organ-level tomato",
+        "simple": "Simple daily tomato",
+        "reduced_tomgro": "Reduced-State TOMGRO",
+        "vanthoor_katzin": "Vanthoor (Katzin 2021)",
+    }
 
 
 def test_each_crop_model_grows_single_plants_or_an_area() -> None:
