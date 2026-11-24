@@ -2,8 +2,10 @@ import { type FormEvent, useId } from "react";
 
 import { Button } from "../design/Button";
 import { Field } from "../design/Field";
+import { Notice } from "../design/Notice";
 import { weatherName } from "../weather/WeatherPanel";
 import type { RunSettings } from "./api";
+import { describedBy, type Reasons, WhyNot } from "./WhyNot";
 
 /** A draft's first run's days, unless another number is entered. */
 const FIRST_DAYS = 7;
@@ -47,24 +49,31 @@ export function settingsOf(fields: RunFields): RunSettings | null {
 /**
  * The scenario step (P12.2): when and under what weather a saved draft
  * runs, as a scenario of its own. A weather is one of the simulator's, by
- * name: synthetic or recorded, never this site's observed one.
+ * name: synthetic or recorded, never this site's observed one. Below its
+ * button, why it cannot run now, each reason in full, and why the simulator
+ * refused the last run asked for.
  */
 export function RunStep({
   weathers,
-  disabled,
-  why,
+  busy,
+  reasons,
+  refused,
   fields,
   onFields,
   onRun,
 }: {
   weathers: readonly string[];
-  disabled: boolean;
-  why: string;
+  busy: boolean;
+  /** Why the revision cannot run now, or none. */
+  reasons: Reasons;
+  /** Why the simulator refused the last run asked for here, if it did. */
+  refused?: string | undefined;
   fields: RunFields;
   onFields: (fields: RunFields) => void;
   onRun: (settings: RunSettings) => void;
 }) {
   const heading = useId();
+  const why = useId();
   const set = (change: Partial<RunFields>) => onFields({ ...fields, ...change });
 
   function run(event: FormEvent<HTMLFormElement>): void {
@@ -134,10 +143,20 @@ export function RunStep({
           )}
         </Field>
       </div>
-      {disabled && <p className="builder-note">{why}</p>}
-      <Button type="submit" size="compact" disabled={disabled}>
+      <Button
+        type="submit"
+        size="compact"
+        disabled={busy || reasons.length > 0}
+        aria-describedby={describedBy(why, reasons)}
+      >
         Run this revision
       </Button>
+      <WhyNot id={why} lead="It cannot run:" reasons={reasons} testId="builder-run-why" />
+      {refused !== undefined && (
+        <Notice kind="problem" className="builder-refused" data-testid="builder-run-refused">
+          It does not run: {refused}
+        </Notice>
+      )}
     </form>
   );
 }

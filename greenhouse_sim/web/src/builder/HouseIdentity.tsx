@@ -7,15 +7,19 @@ import { Field } from "../design/Field";
  * A draft's identifier and name, changed as an edit is, undone in one step
  * (P12.2): a draft started from a file or a scenario under an identifier
  * kept already is saved under another; a draft saved is saved, under a new
- * identifier, as a new draft.
+ * identifier, as a new draft. An identifier a kept draft has, under which
+ * this one cannot be saved, is said at its field.
  */
 export function HouseIdentity({
   draftId,
   name,
+  taken,
   onRename,
 }: {
   draftId: string;
   name: string;
+  /** Why this draft cannot be saved under its identifier, if it cannot. */
+  taken?: string | undefined;
   onRename: (draftId: string, name: string) => void;
 }) {
   const heading = useId();
@@ -33,7 +37,12 @@ export function HouseIdentity({
   return (
     <form className="builder-identity" aria-labelledby={heading} onSubmit={rename}>
       <h2 id={heading}>The house</h2>
-      <Field label="Identifier" size="compact" className="builder-field">
+      <Field
+        label="Identifier"
+        problem={typed === null || typed.draftId === draftId ? taken : undefined}
+        size="compact"
+        className="builder-field"
+      >
         {(control) => (
           <input
             {...control}

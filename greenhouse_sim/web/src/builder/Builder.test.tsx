@@ -888,3 +888,94 @@ describe("the setup builder (P12.2)", () => {
     sessionStorage.clear();
   });
 });
+
+describe("the setup builder says, beside each button, why it cannot act", () => {
+  const MIXED = "Rows grow different crops; a run grows one model and one variety.";
+  let shown: Rendered | undefined;
+  afterEach(() => {
+    shown?.unmount();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  /** A simulator keeping `drafts`, whose assessments add `errors`, and which
+   * answers a save with `saving`. */
+  function simulator(drafts: unknown[], errors: string[] = [], saving?: Response): void {
+    const assessed = {
+      ...STARTING_HOUSE,
+      findings: [
+        ...errors.map((message) => ({
+          severity: "error",
+          code: "mixed_crops",
+          message,
+          items: [],
+          rows: [1, 2],
+        })),
+        ...STARTING_HOUSE.findings,
+      ],
+    };
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("/api/builder/basic") || url.startsWith("/api/builder/assess")) {
+        return answer(assessed);
+      }
+      if (url.includes("/save") && saving !== undefined) {
+        return saving;
+      }
+      if (url === "/api/drafts") {
+        return answer(drafts);
+      }
+      if (url === "/api/scenarios") {
+        return answer([]);
+      }
+      return answer({ error: "not here" }, 404);
+    });
+  }
+
+  it("names each error that stops a run under both run buttons, not only in the findings", async () => {
+    simulator([], [MIXED]);
+    shown = render(<Builder />);
+    const page = shown.container;
+    await settled();
+    click(button(page, "Draft this house"));
+    await settled();
+
+    expect(button(page, "Run this revision").disabled).toBe(true);
+    expect(
+      [...page.querySelectorAll('[data-testid="builder-run-why"] li')].map((li) => li.textContent),
+    ).toEqual(["Save it first: a run is of a revision saved.", MIXED]);
+    expect(button(page, "Save and start a run").disabled).toBe(true);
+    expect(said(page, "builder-finish-start-why")).toBe(`A run cannot be started: ${MIXED}`);
+  });
+
+  it("says a kept draft's identifier stops a first draft, before it is drafted", async () => {
+    simulator([{ draft_id: "my_greenhouse", name: "My greenhouse", revision: 1, saved_at: "x" }]);
+    shown = render(<Builder />);
+    const page = shown.container;
+    await settled();
+
+    expect(button(page, "Draft this house").disabled).toBe(true);
+    expect(said(page, "builder-draft-why")).toBe(
+      "It cannot be drafted: A draft with the identifier my_greenhouse is kept already: " +
+        "give this one another identifier, or open that draft to change it.",
+    );
+  });
+
+  it("says why a save was refused under the Save button, as the simulator said it", async () => {
+    const stale = "a draft with the identifier 'my_greenhouse' is kept already, at revision 1";
+    simulator([], [], answer({ error: stale }, 409));
+    shown = render(<Builder />);
+    const page = shown.container;
+    await settled();
+    click(button(page, "Draft this house"));
+    await settled();
+    click(button(page, "Save"));
+    await settled();
+
+    const refused = page.querySelector('[data-testid="builder-save-refused"]');
+    expect(refused?.getAttribute("role")).toBe("alert");
+    expect(refused?.textContent).toBe(`It is not saved: ${stale}`);
+    // The status says it too, as before.
+    expect(said(page, "builder-status")).toBe(`It is not saved: ${stale}`);
+  });
+});
