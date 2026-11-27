@@ -18,13 +18,15 @@ DAYS: Final = 10
 
 class _Counted:
     """A crop that is the sum of the steps it lived, each step's worth its
-    number, counting the steps it was asked to work out."""
+    number, counting the steps it was asked to work out, and those it
+    lived, again or not."""
 
     made_of = "counts"
 
     def __init__(self, step_s: float = DAY_S) -> None:
         self.step_s = step_s
         self.lived_asked: list[int] = []
+        self.stepped: list[int] = []
 
     def first(self) -> int:
         return 0
@@ -36,6 +38,7 @@ class _Counted:
     def next_step(
         self, step: int, state: int, lived: int, planned: Sequence[CropAction]
     ) -> tuple[int, StepWork | None]:
+        self.stepped.append(step)
         return state + lived, (StepWork((), {}) if planned else None)
 
     def read(self, state: object, lived: Sequence[object]) -> tuple[int, list[int]] | None:
@@ -101,6 +104,31 @@ def test_the_crop_at_a_moment_is_the_same_whoever_asks_when() -> None:
     assert seen == [sum(range(int(moment // HOUR_S))) for moment in moments]
     nobody, _ = _steps(HOUR_S, 2 * HOURS_A_DAY)
     assert asked.at(2 * DAY_S) == nobody.at(2 * DAY_S)
+
+
+@pytest.mark.parametrize("keeps_days", [True, False])
+def test_a_crop_that_keeps_its_days_lives_none_of_them_again(keeps_days: bool) -> None:
+    """A crop whose state is small keeps the start of every day it lives, so
+    that a day asked again, after moments that push it out of the few steps
+    kept, is never lived again from an earlier one; a crop of plants keeps
+    a few steps alone."""
+    growth = _Counted(HOUR_S)
+    crop = CropSteps(growth, steps=3 * HOURS_A_DAY, planned={}, keeps_days=keeps_days)
+    late = 2 * HOURS_A_DAY + 22
+    days = [day * HOURS_A_DAY for day in range(3)]
+    crop.on(late)
+    for step in [*days, 5, 30, 7, 31]:
+        crop.on(step)
+    growth.stepped.clear()
+
+    assert [crop.on(step) for step in days] == [sum(range(step)) for step in days]
+    assert crop.on(3 * HOURS_A_DAY) == sum(range(3 * HOURS_A_DAY))
+    if keeps_days:
+        # Nothing again; the next day only from the latest step worked out.
+        assert growth.stepped == list(range(late, 3 * HOURS_A_DAY))
+    else:
+        # Its first day's hours again, from whichever of the few it kept.
+        assert growth.stepped[0] < HOURS_A_DAY
 
 
 @pytest.mark.parametrize("step_s", [7 * HOUR_S, 0.0, -HOUR_S, 2 * DAY_S])

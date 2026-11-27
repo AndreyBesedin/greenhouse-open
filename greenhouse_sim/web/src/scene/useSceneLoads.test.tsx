@@ -70,4 +70,16 @@ describe("useSceneLoads", () => {
     expect(asked.filter((url) => url.includes("/crop"))).toHaveLength(1);
     expect(hook.current.organCrop).toBe(false);
   });
+
+  it("asks for the crop of a crop grown by area too, whose scene says the day it is of", () => {
+    const asked = recordingFetch();
+    renderHook(useLoads, {
+      ...scenarioAt(3 * DAY_S + DAY_S / 2),
+      summary: { ...SUMMARY, crop_model: "reduced_tomgro", crop_grown_by: "area" },
+    });
+
+    expect(asked.filter((url) => url.includes("/crop"))).toEqual([
+      "/api/scenarios/reference_greenhouse/crop?t=259200",
+    ]);
+  });
 });

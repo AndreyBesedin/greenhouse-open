@@ -66,6 +66,13 @@ crop and its timeline, each of the run a query asks for (`run_request`).
                                           structure, its history, and what
                                           it experienced each day it has
                                           lived; asked as its crop is
+    GET /api/scenarios/{id}/area_crop     its crop grown by area &t=600 seconds
+                                          into a run, day by day to then:
+                                          each row's states at each day's
+                                          start, as its model reads them per
+                                          m² of its basis, and the house's,
+                                          weighted by the rows' areas; asked
+                                          as its crop is
     GET /api/scenarios/{id}/climate/observations its run's observation log up to
                                           &t=600, from the start of that
                                           moment's day or &from=0: what its point sensors
@@ -104,6 +111,7 @@ from typing import Final
 from greenhouse_sim.api.responses import Response
 from greenhouse_sim.api.routes.shared import Query, answer, last, pairs, seconds, seed, since
 from greenhouse_sim.services import (
+    area_crop,
     climate_readings,
     crop,
     fields,
@@ -171,6 +179,12 @@ def get(simulator: Simulator, segments: list[str], query: Query) -> Response | N
         case ["api", "scenarios", scenario_id, "crop"]:
             return answer(
                 lambda: crop.crop_scene(simulator, run_request(scenario_id, query), seconds(query))
+            )
+        case ["api", "scenarios", scenario_id, "area_crop"]:
+            return answer(
+                lambda: area_crop.area_crop_course(
+                    simulator, run_request(scenario_id, query), seconds(query)
+                )
             )
         case ["api", "scenarios", scenario_id, "crop", plant_id]:
             return answer(

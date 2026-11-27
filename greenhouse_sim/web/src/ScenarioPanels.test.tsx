@@ -311,3 +311,36 @@ describe("a stored run's panels", () => {
     );
   });
 });
+
+describe("a crop grown by area's panel", () => {
+  let rendered: Rendered | undefined;
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("{}", { status: 404 })),
+    );
+  });
+  afterEach(() => {
+    rendered?.unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it("is among the house's panels, folded, for a crop grown by area alone", () => {
+    rendered = panels({ cropByArea: true });
+    expect(said(rendered.container, "area-crop-summary")).toBe("Crop by area");
+    expect(rendered.container.querySelector(".crop-area-fold")?.hasAttribute("open")).toBe(false);
+    // Folded, it asks for nothing.
+    expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).not.toContainEqual(
+      expect.stringContaining("/area_crop"),
+    );
+    rendered.unmount();
+
+    rendered = panels();
+    expect(rendered.container.querySelector('[data-testid="area-crop-summary"]')).toBeNull();
+    rendered.unmount();
+
+    // Nor without the climate run, whose moments it follows.
+    rendered = panels({ cropByArea: true, source: { kind: "scenario", scenarioId: "box" } });
+    expect(rendered.container.querySelector('[data-testid="area-crop-summary"]')).toBeNull();
+  });
+});

@@ -262,8 +262,10 @@ def crop_scene(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> Sc
     """A run's crop `time_s` into it, as a viewer draws it over the
     scenario's scene: each plant at its planting position, as it stands
     once it has lived the steps ended by then, drawn as its model draws it
-    (`CropRegistration.drawn`). Asked for as its climate field is, and
-    refused as it is."""
+    (`PlantAdapter.drawn`). A crop grown by area has no plants, and is
+    charted, not drawn (`greenhouse_sim.services.area_crop`, decision 0083):
+    its scene has none. Asked for as its climate field is, and refused as it
+    is."""
     checked_moment(scenario(simulator.catalogue, run.scenario_id), time_s)
     crop = scenario_crop(simulator, run)
     day = days_ended(time_s)
@@ -272,12 +274,10 @@ def crop_scene(simulator: Simulator, run: RunRequest, time_s: float = 0.0) -> Sc
         scenario(simulator.catalogue, run.scenario_id),
         SceneChanges(layout=run.layout or DEFAULT_LAYOUT),
     )
-    grown_by = registration(config)
+    by_plant = registration(config).plants
     entities: list[SceneEntity] = []
-    if of_plants(crop) and grown_by.plants is not None:
-        entities = grown_by.plants.drawn(crop.at(time_s), config)
-    elif not of_plants(crop) and grown_by.area is not None:
-        entities = grown_by.area.drawn(crop.at(time_s), crop.scopes, config)
+    if of_plants(crop) and by_plant is not None:
+        entities = by_plant.drawn(crop.at(time_s), config)
     return SceneSnapshot(greenhouse_id=config.greenhouse_id, simulated_day=day, entities=entities)
 
 

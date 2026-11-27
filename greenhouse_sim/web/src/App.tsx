@@ -32,6 +32,7 @@ import { PanelSide } from "./PanelSide";
 import { usePanelFolds } from "./panelFolds";
 import { cropAction } from "./plan/plan";
 import { NOT_STEERED, useSteering } from "./plan/useSteering";
+import { GROWN_BY_AREA } from "./plants/areaCrop";
 import { LabPanels } from "./plants/LabPanels";
 import { type LabRun, PLANT_LAB_POSE } from "./plants/lab";
 import { PlantDays } from "./plants/PlantDays";
@@ -509,6 +510,7 @@ export function App({
                 snapshot={snapshot}
                 weathers={summary?.weathers ?? []}
                 days={replay?.days ?? summary?.duration_days ?? 1}
+                cropByArea={summary?.crop_grown_by === GROWN_BY_AREA}
                 loads={{ field, compared, weather, weatherDay, houseAir, probeCharts, cfd }}
                 thermostat={runningThermostat(equipment)}
                 setpoints={

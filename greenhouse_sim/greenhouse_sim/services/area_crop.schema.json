@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "AreaBasis": {
+      "description": "The area a crop model's quantities are per m² of: a scope's floor,\nits share of the house's, or its cultivated area, the ground its\nplanting positions take.",
+      "enum": [
+        "floor",
+        "cultivated"
+      ],
+      "title": "AreaBasis",
+      "type": "string"
+    },
+    "AreaQuantity": {
+      "description": "A quantity of a crop grown by area that a viewer charts (decision\n0083): its `key` in what a state reads, its name, and its unit, the\nmodel's own: per m² of its basis, or a plant's nodes, a temperature or a\ntemperature sum. A model's quantities keep its units, never converted to\nanother model's (decision 0062).",
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "name",
+        "unit"
+      ],
+      "title": "AreaQuantity",
+      "type": "object"
+    },
+    "ScopeCourse": {
+      "description": "One scope of a crop grown by area through a run's days: its\nidentifier, its area on its model's basis, in m², and its values, by\nquantity's key, one for each day, at the day's start.",
+      "properties": {
+        "scope_id": {
+          "title": "Scope Id",
+          "type": "string"
+        },
+        "area_m2": {
+          "title": "Area M2",
+          "type": "number"
+        },
+        "values": {
+          "additionalProperties": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "title": "Values",
+          "type": "object"
+        }
+      },
+      "required": [
+        "scope_id",
+        "area_m2",
+        "values"
+      ],
+      "title": "ScopeCourse",
+      "type": "object"
+    }
+  },
+  "description": "A run's crop grown by area `time_s` into it, through the days ended\nby then: its model, by its registry's name and in words\n(`model_name`), the basis its quantities are per m² of, the quantities\ncharted, in order, the days, from 0, and, for each day, each scope's\nvalues (`scopes`, in the rows' order) and the house's (`house`), by\nquantity's key.",
+  "properties": {
+    "time_s": {
+      "title": "Time S",
+      "type": "number"
+    },
+    "model": {
+      "title": "Model",
+      "type": "string"
+    },
+    "model_name": {
+      "title": "Model Name",
+      "type": "string"
+    },
+    "basis": {
+      "$ref": "#/$defs/AreaBasis"
+    },
+    "quantities": {
+      "items": {
+        "$ref": "#/$defs/AreaQuantity"
+      },
+      "title": "Quantities",
+      "type": "array"
+    },
+    "days": {
+      "items": {
+        "type": "integer"
+      },
+      "title": "Days",
+      "type": "array"
+    },
+    "scopes": {
+      "items": {
+        "$ref": "#/$defs/ScopeCourse"
+      },
+      "title": "Scopes",
+      "type": "array"
+    },
+    "house": {
+      "additionalProperties": {
+        "items": {
+          "type": "number"
+        },
+        "type": "array"
+      },
+      "title": "House",
+      "type": "object"
+    }
+  },
+  "required": [
+    "time_s",
+    "model",
+    "model_name",
+    "basis",
+    "quantities",
+    "days",
+    "scopes",
+    "house"
+  ],
+  "title": "AreaCropCourse",
+  "type": "object"
+}

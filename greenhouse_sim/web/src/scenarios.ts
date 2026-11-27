@@ -20,6 +20,10 @@ export interface ScenarioSummary {
   /** How its runs grow its crop: organ by organ (`ORGAN_CROP`), or by the
    * simple daily model. */
   crop_model?: string;
+  /** Whether its model grows its crop plant by plant, or by area
+   * (`GROWN_BY_AREA`), which the viewer charts rather than draws (decision
+   * 0083). */
+  crop_grown_by?: "plants" | "area";
   /** The commands its runs give at a time of day, every day, unless a run
    * gives its own. */
   daily?: { time_of_day_s: number; actuator_id: string; level: number }[];

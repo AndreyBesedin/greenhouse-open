@@ -32,6 +32,7 @@ const SCENARIOS: ScenarioSummary[] = [
     plants: 32,
     duration_days: DAYS_OF_THE_RUN,
     crop_model: "simple",
+    crop_grown_by: "plants",
     daily: [],
     openings: [],
     opening_day: null,

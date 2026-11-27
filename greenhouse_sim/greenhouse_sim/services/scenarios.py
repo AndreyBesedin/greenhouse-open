@@ -13,13 +13,12 @@ it does not have, is refused with the reason.
 import math
 from collections.abc import Mapping, Sequence
 from datetime import date
-from typing import Any, Final
+from typing import Final, Literal
 
 from greenhouse_protocol.greenhouse import Plant
 from pydantic import BaseModel, ConfigDict, JsonValue, ValidationError
 
 from greenhouse_sim.climate.commands import DailyCommand
-from greenhouse_sim.core.area_crop import AreaInstance, planted
 
 # `Scenarios` is the services' too: the consumer's service names it from here.
 from greenhouse_sim.scenarios.catalogue import CatalogueEntry
@@ -32,7 +31,7 @@ from greenhouse_sim.scenarios.layout_files import (
 )
 from greenhouse_sim.scenarios.manifest_files import SCHEMA_VERSION as MANIFEST_FORMAT
 from greenhouse_sim.scenarios.registry import ModelRun, models_run
-from greenhouse_sim.scene.snapshot import SceneEntity, SceneSnapshot, greenhouse_scene
+from greenhouse_sim.scene.snapshot import SceneSnapshot, greenhouse_scene
 from greenhouse_sim.services.crop_models import registration
 from greenhouse_sim.services.errors import InvalidRequest, NotFound
 from greenhouse_sim.services.parameter_sets import ScenarioSet, SetRun, scenario_set, set_run
@@ -40,7 +39,6 @@ from greenhouse_sim.units import FULL_TURN_DEG
 from greenhouse_sim.weather.presets import PRESETS
 from greenhouse_sim.weather.recorded import recorded_weathers
 from greenhouse_sim.world.moves import Move, moved
-from greenhouse_sim.world.scopes import row_scopes
 
 # The envelope's dimensions a client may change.
 DIMENSIONS: Final = ("length", "width", "spans", "bays", "eave_height", "ridge_height")
@@ -63,6 +61,11 @@ SEED_MARK: Final = "#"
 MOVES_MARK: Final = "~"
 
 
+# How a scenario's crop model grows its crop: plant by plant, or by area
+# (`greenhouse_sim.services.crop_models.CropRegistration`).
+type CropGrownBy = Literal["plants", "area"]
+
+
 class ScenarioSummary(BaseModel):
     id: str
     name: str
@@ -71,6 +74,9 @@ class ScenarioSummary(BaseModel):
     duration_days: int
     # How its runs grow its crop: "simple" or "organ" (`CropModel`).
     crop_model: str
+    # Whether its model grows its crop plant by plant, or by area, which a
+    # viewer charts rather than draws (decision 0083).
+    crop_grown_by: CropGrownBy
     # The commands its runs give at a time of day, every day, unless a run
     # gives its own.
     daily: list[DailyCommand]
@@ -163,6 +169,7 @@ def _summary(entry: CatalogueEntry) -> ScenarioSummary:
         plants=entry.config.rows * entry.config.columns,
         duration_days=entry.config.duration_days,
         crop_model=entry.config.crop_model.value,
+        crop_grown_by="plants" if registration(entry.config).area is None else "area",
         daily=entry.config.daily,
         openings=[opening.opening_id for opening in entry.config.envelope.openings],
         opening_day=entry.opening_day,
@@ -258,25 +265,23 @@ def initial_scene(
 ) -> SceneSnapshot:
     """A scenario's full crop before its first day, as a viewer draws it,
     with the changes a client asks for: its transplants, drawn as the model
-    its rows grow draws them (`greenhouse_sim.services.crop_models`)."""
+    its rows grow draws them (`greenhouse_sim.services.crop_models`). A crop
+    grown by area has no plants, and is charted, not drawn (decision 0083):
+    its scene is the house's alone."""
     changes = changes or SceneChanges()
     config = changed(catalogue, scenario(catalogue, scenario_id), changes)
     levels = equipment_levels(config, changes.levels)
     house = greenhouse_scene(
         config.greenhouse_id, config.envelope, layout=config.layout, levels=levels
     )
-    grown_by = registration(config)
-    crop: list[SceneEntity] = []
-    if grown_by.plants is not None:
-        rung = grown_by.plants.rung(config)
-        transplants = [rung.transplant(plant_id) for plant_id in plant_ids(config)]
-        crop = grown_by.plants.drawn(transplants, config)
-    elif grown_by.area is not None:
-        canopy = grown_by.area.rung(config)
-        scopes = row_scopes(config.layout, config.envelope)
-        instances: tuple[AreaInstance[Any], ...] = planted(scopes, canopy)
-        crop = grown_by.area.drawn(instances, scopes, config)
-    return house.model_copy(update={"entities": [*house.entities, *crop]})
+    by_plant = registration(config).plants
+    if by_plant is None:
+        return house
+    rung = by_plant.rung(config)
+    transplants = [rung.transplant(plant_id) for plant_id in plant_ids(config)]
+    return house.model_copy(
+        update={"entities": [*house.entities, *by_plant.drawn(transplants, config)]}
+    )
 
 
 def layout(

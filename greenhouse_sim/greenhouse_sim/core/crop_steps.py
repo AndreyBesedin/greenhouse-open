@@ -15,7 +15,9 @@ one, whose step is a day (`greenhouse_sim.core.crop.PlantGrowth`, decision
   steps can be listed and its state at any step lived again from them,
   without the air or the light;
 - **a few steps' states:** its first step's, the latest worked out's, and
-  the few last asked for (`KEPT_STEPS`);
+  the few last asked for (`KEPT_STEPS`); and, for a crop whose state is
+  small (`keeps_days`), the start of every day it has lived, so that it
+  never lives a day again from an earlier one;
 - **what its own crop actions did,** step by step (`StepWork`);
 - **its steps taken over** from another crop of the same run, up to the
   first on which their air or their own crop actions differ
@@ -108,8 +110,8 @@ class Growth[StateT, LivedT](Protocol):
 class CropSteps[StateT, LivedT]:
     """A run's crop through its `steps`, made and lived as `growth` says,
     and worked as the run's own crop actions at each step ask (`planned`,
-    by step): see the module. Refused if its growth's step does not divide
-    a day."""
+    by step), keeping the start of every day it lives if it `keeps_days`:
+    see the module. Refused if its growth's step does not divide a day."""
 
     def __init__(
         self,
@@ -117,17 +119,19 @@ class CropSteps[StateT, LivedT]:
         *,
         steps: int,
         planned: Mapping[int, tuple[CropAction, ...]],
+        keeps_days: bool = False,
     ) -> None:
         self.steps_a_day = steps_a_day(growth.step_s)
         self.steps = steps
         self.growth = growth
         self._planned = dict(planned)
+        self._keeps_days = keeps_days
         # What the planned crop actions of each step worked out did.
         self._done: dict[int, StepWork] = {}
         # What the crop experienced on each step worked out, from the first.
         self._lived: list[LivedT] = []
-        # The crop at the steps kept: the first, the latest worked out, and
-        # the last asked for.
+        # The crop at the steps kept: the first, the latest worked out, the
+        # last asked for, and every day's start if it keeps them.
         self._kept: OrderedDict[int, StateT] = OrderedDict({0: growth.first()})
         # One request at a time works a crop on; others wait for it, and
         # find what it kept.
@@ -195,7 +199,15 @@ class CropSteps[StateT, LivedT]:
         state = self._kept[start]
         for lived in range(start, step):
             state = self._next_step(lived, state)
+            if self._kept_for_good(lived + 1):
+                with self._keeping:
+                    self._kept.setdefault(lived + 1, state)
         return state
+
+    def _kept_for_good(self, step: int) -> bool:
+        """Whether the crop keeps its state at `step` whatever is asked
+        after: the start of a day, for a crop that keeps them."""
+        return self._keeps_days and step % self.steps_a_day == 0
 
     def _next_step(self, lived: int, state: StateT) -> StateT:
         """The crop at the step after `lived`, `state` at it: once it has
@@ -326,9 +338,11 @@ class CropSteps[StateT, LivedT]:
             self._bounded(step)
 
     def _bounded(self, step: int) -> None:
-        """Drop the steps kept longest ago beyond `KEPT_STEPS` and two: never
-        the first, the latest or `step`. Called with `_keeping` held."""
+        """Drop the steps kept longest ago beyond `KEPT_STEPS` and two, but
+        those kept for good: never the first, the latest or `step`. Called
+        with `_keeping` held."""
         latest = max(self._kept)
-        while len(self._kept) > KEPT_STEPS + 2:
-            oldest = next(kept for kept in self._kept if kept not in (0, latest, step))
+        passing = [kept for kept in self._kept if not self._kept_for_good(kept)]
+        droppable = [kept for kept in passing if kept not in (0, latest, step)]
+        for oldest in droppable[: max(0, len(passing) - KEPT_STEPS - 2)]:
             del self._kept[oldest]

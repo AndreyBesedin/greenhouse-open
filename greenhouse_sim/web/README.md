@@ -220,7 +220,12 @@ draws the crop as it stands at the moment drawn
 (`GET /api/scenarios/{id}/crop`), and a selected part of a plant shows the
 plant's days, the house's air and its own light on each day it lived,
 charted day by day, what was picked from it, and its structure
-(`GET /api/scenarios/{id}/crop/{plant}`). On a scenario's view, a slider per door and vent sets how far
+(`GET /api/scenarios/{id}/crop/{plant}`). A crop grown by area, such as
+the TOMGRO house's and the Vanthoor house's, has no plants and is not
+drawn (decision 0083): in a climate run's view, "Crop by area" charts each
+quantity its model gives through the run's days up to the moment drawn,
+the house's line over its rows' least to most, labelled as the model's
+predictions (`GET /api/scenarios/{id}/area_crop`). On a scenario's view, a slider per door and vent sets how far
 it stands open: the viewer asks the simulator for the scene with it so
 (`?open=roof_vent_1:0.5`), and the address bar keeps it. Its climate
 equipment gets a switch and a slider each, the same way: a fan, heater or

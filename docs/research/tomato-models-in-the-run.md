@@ -68,8 +68,9 @@ days 1 and 120 it stays between 16.5 and 26.9 °C.
 `greenhouse_sim/tests/test_vanthoor_house.py` holds days 60 and 120 to
 the run, and marks the test slow.
 
-**What these numbers are:** predictions. The viewer draws each row as a
-canopy, marked as a proxy, with its numbers marked as predictions. They
+**What these numbers are:** predictions. The viewer charts each row's
+states and the house's through the run's days, labelled as the model's
+predictions, and draws no canopy in the house (decision 0083). They
 are not comparable with the TOMGRO house's: carbohydrate equivalents are
 not dry matter, and no conversion between the two is applied (decision
 0060). They also rest on how the run drives the model, which the

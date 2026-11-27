@@ -8,6 +8,7 @@ asks what the model declares. The registry
 parameters; its registration here, under the same name (`CROP_MODELS`),
 its declarations:
 
+- **its title**, its name in words, as a reader is told it (`title`);
 - **its state in a checkpoint**: its plants and what each lived
   (`state`), and what no run of it reaches (`implausible`);
 - **how it grows single plants** (`plants`, a `PlantAdapter`), if it does: its rung,
@@ -18,8 +19,10 @@ its declarations:
   organs and their plants' mean thermal time, none for a model without
   organs;
 - **how it grows by area** (`area`, an `AreaAdapter`), if it does: its
-  rung, its driver profile, how its instances are drawn, and what a sample
-  of an instance reads (`sampled`) (decision 0062);
+  rung, its driver profile, the quantities a viewer charts of it day by
+  day and how a state reads them (`charted`, `read`), and what a sample of
+  an instance reads (`sampled`) (decision 0062). It has no plants, and is
+  charted, not drawn (decision 0083);
 - **the run's own crop actions it takes** (`crop_actions`), by kind: the
   harvests, lowerings, leaves removed and inspections a plan asks for
   (P13.5), which the run routes to it; none for a model that takes none,
@@ -69,7 +72,6 @@ from greenhouse_sim.core.tomgro_crop import TomgroRung
 from greenhouse_sim.core.vanthoor_crop import VanthoorRung
 from greenhouse_sim.domain.crop import CropModel, FruitStatus
 from greenhouse_sim.domain.organs import FruitStage
-from greenhouse_sim.domain.scopes import AreaBasis
 from greenhouse_sim.scenarios.config import ScenarioConfig
 from greenhouse_sim.scenarios.crop_parameters import (
     ReducedTomgroCrop,
@@ -78,9 +80,8 @@ from greenhouse_sim.scenarios.crop_parameters import (
     carried_set,
 )
 from greenhouse_sim.scene.plants import crop_entities
-from greenhouse_sim.scene.snapshot import SceneEntity, canopy_entities, simple_plant_entities
+from greenhouse_sim.scene.snapshot import SceneEntity, simple_plant_entities
 from greenhouse_sim.units import DAY_S, HOUR_S
-from greenhouse_sim.world.scopes import CropScope, converted
 
 CM_PER_M: Final = 100.0
 # How far a plant's thermal time may be from the sum of the days it lived,
@@ -193,20 +194,34 @@ class PlantAdapter[PlantT: CropPlant]:
     probed: Callable[[Sequence[PlantT]], tuple[int, float]]
 
 
+class AreaQuantity(BaseModel):
+    """A quantity of a crop grown by area that a viewer charts (decision
+    0083): its `key` in what a state reads, its name, and its unit, the
+    model's own: per m² of its basis, or a plant's nodes, a temperature or a
+    temperature sum. A model's quantities keep its units, never converted to
+    another model's (decision 0062)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    key: str
+    name: str
+    unit: str
+
+
 @dataclass(frozen=True)
 class AreaAdapter[StateT: BaseModel]:
     """What the services ask of a crop model grown by area (decision 0062):
     its rung, built from a scenario; the driver profile through which the
-    run gives it its drivers, as its parameters name it; how its instances
-    are drawn, none of them as plants; and what a sample of a state of a
-    scenario's crop reads, each quantity per m² of the model's basis,
-    without a sample's errors."""
+    run gives it its drivers, as its parameters name it; the quantities a
+    viewer charts of it, in order, and what a state of a scenario's crop
+    reads of each, by key (decision 0083); and what a sample of a state
+    reads, each quantity per m² of the model's basis, without a sample's
+    errors. None of its instances is drawn as plants, nor drawn at all."""
 
     rung: Callable[[ScenarioConfig], AreaRung[StateT]]
     profile: Callable[[ScenarioConfig], DriverProfile]
-    drawn: Callable[
-        [Sequence[AreaInstance[StateT]], Sequence[CropScope], ScenarioConfig], list[SceneEntity]
-    ]
+    charted: tuple[AreaQuantity, ...]
+    read: Callable[[StateT, ScenarioConfig], Mapping[str, float]]
     sampled: Callable[[StateT, ScenarioConfig], Mapping[ObservationType, float]]
 
 
@@ -224,6 +239,7 @@ class CropRegistration[PlantT: CropPlant]:
     see the module."""
 
     name: str
+    title: str
     state: type[CropModelState]
     # What no run of the model reaches in a checkpoint's state on its day,
     # which fits its run's shape, as reasons; none if it is plausible.
@@ -402,41 +418,26 @@ def _tomgro_implausible(state: TomgroCropState, day: int, config: ScenarioConfig
     return problems
 
 
-def _tomgro_drawn(
-    instances: Sequence[AreaInstance[TomgroState]],
-    scopes: Sequence[CropScope],
-    config: ScenarioConfig,
-) -> list[SceneEntity]:
-    """Each row's canopy, drawn as a proxy (decision 0062): as tall as its
-    section's canopy height, and as dense as the light its leaves take over
-    the ground it is drawn on, `1 - exp(-K · LAI)`, its leaf area index per
-    m² of floor converted to the row's cultivated ground (`canopy_lai`). Its
-    properties are the model's five states, per m² of floor."""
-    rung = _tomgro_rung(config)
-    by_id = {scope.scope_id: scope for scope in scopes}
-    drawn: list[SceneEntity] = []
-    for instance in instances:
-        scope = by_id[instance.scope_id]
-        canopy_lai = converted(instance.state.lai, scope, rung.basis, AreaBasis.CULTIVATED)
-        drawn += canopy_entities(
-            scope,
-            config.layout,
-            config.envelope,
-            entity_id=f"{config.greenhouse_id}_{instance.scope_id}_canopy",
-            height_m=rung.canopy_height_m,
-            density=1 - math.exp(-rung.parameters.k * canopy_lai),
-            properties={
-                "model": CropModel.REDUCED_TOMGRO.value,
-                "basis": rung.basis.value,
-                "nodes": instance.state.n,
-                "lai": instance.state.lai,
-                "canopy_lai": canopy_lai,
-                "dry_weight_g_m2": instance.state.w,
-                "fruit_g_m2": instance.state.wf,
-                "mature_fruit_g_m2": instance.state.wm,
-            },
-        )
-    return drawn
+# What Reduced-State TOMGRO's course charts: its five states, per m² of
+# floor but its nodes, a plant's main stem's.
+TOMGRO_CHARTED: Final = (
+    AreaQuantity(key="nodes", name="Main stem nodes", unit="nodes"),
+    AreaQuantity(key="lai", name="Leaf area index", unit="m² m⁻²"),
+    AreaQuantity(key="dry_weight_g_m2", name="Above-ground dry weight", unit="g m⁻²"),
+    AreaQuantity(key="fruit_g_m2", name="Fruit dry weight", unit="g m⁻²"),
+    AreaQuantity(key="mature_fruit_g_m2", name="Mature fruit dry weight", unit="g m⁻²"),
+)
+
+
+def _tomgro_read(state: TomgroState, _config: ScenarioConfig) -> dict[str, float]:
+    """Its five states, as `TOMGRO_CHARTED` names them."""
+    return {
+        "nodes": state.n,
+        "lai": state.lai,
+        "dry_weight_g_m2": state.w,
+        "fruit_g_m2": state.wf,
+        "mature_fruit_g_m2": state.wm,
+    }
 
 
 def _tomgro_sampled(state: TomgroState, _config: ScenarioConfig) -> dict[ObservationType, float]:
@@ -493,46 +494,35 @@ def _vanthoor_implausible(state: VanthoorCropState, day: int, _config: ScenarioC
     return problems
 
 
-def _vanthoor_drawn(
-    instances: Sequence[AreaInstance[VanthoorState]],
-    scopes: Sequence[CropScope],
-    config: ScenarioConfig,
-) -> list[SceneEntity]:
-    """Each row's canopy, drawn as a proxy (decision 0062): as tall as its
-    section's canopy height, and as dense as the light its leaves take from
-    above over the ground it is drawn on, `1 - exp(-K1 · LAI)`, its leaf area
-    index per m² of floor converted to the row's cultivated ground
-    (`canopy_lai`). Its properties are the model's states, per m² of floor,
-    its pools in carbohydrate equivalents, never dry matter."""
-    rung = _vanthoor_rung(config)
-    by_id = {scope.scope_id: scope for scope in scopes}
-    drawn: list[SceneEntity] = []
-    for instance in instances:
-        scope, canopy = by_id[instance.scope_id], instance.state
-        lai = canopy.leaf_area_index(rung.parameters)
-        canopy_lai = converted(lai, scope, rung.basis, AreaBasis.CULTIVATED)
-        drawn += canopy_entities(
-            scope,
-            config.layout,
-            config.envelope,
-            entity_id=f"{config.greenhouse_id}_{instance.scope_id}_canopy",
-            height_m=rung.canopy_height_m,
-            density=1 - math.exp(-rung.parameters.k1_par * canopy_lai),
-            properties={
-                "model": CropModel.VANTHOOR_KATZIN.value,
-                "basis": rung.basis.value,
-                "lai": lai,
-                "canopy_lai": canopy_lai,
-                "buffer_ch2o_mg_m2": canopy.c_buf,
-                "fruit_ch2o_mg_m2": canopy.c_fruit,
-                "leaf_ch2o_mg_m2": canopy.c_leaf,
-                "stem_ch2o_mg_m2": canopy.c_stem,
-                "harvested_fruit_ch2o_mg_m2": canopy.harvested_fruit,
-                "temperature_sum_c_d": canopy.t_can_sum,
-                "canopy_temperature_24h_c": canopy.t_can_24,
-            },
-        )
-    return drawn
+# What Vanthoor's model's course charts: its leaf area index and its pools,
+# per m² of floor, the pools in carbohydrate equivalents, never dry matter;
+# its temperature sum, and the canopy's temperature over the last day.
+VANTHOOR_CHARTED: Final = (
+    AreaQuantity(key="lai", name="Leaf area index", unit="m² m⁻²"),
+    AreaQuantity(key="buffer_ch2o_mg_m2", name="Carbohydrate buffer", unit="mg CH₂O m⁻²"),
+    AreaQuantity(key="leaf_ch2o_mg_m2", name="Leaves", unit="mg CH₂O m⁻²"),
+    AreaQuantity(key="stem_ch2o_mg_m2", name="Stems", unit="mg CH₂O m⁻²"),
+    AreaQuantity(key="fruit_ch2o_mg_m2", name="Fruit", unit="mg CH₂O m⁻²"),
+    AreaQuantity(key="harvested_fruit_ch2o_mg_m2", name="Fruit harvested", unit="mg CH₂O m⁻²"),
+    AreaQuantity(key="temperature_sum_c_d", name="Temperature sum", unit="°C d"),
+    AreaQuantity(key="canopy_temperature_24h_c", name="Canopy temperature over 24 h", unit="°C"),
+)
+
+
+def _vanthoor_read(state: VanthoorState, config: ScenarioConfig) -> dict[str, float]:
+    """Its states, as `VANTHOOR_CHARTED` names them: its leaf area index by
+    its parameter set's specific leaf area, as a sample reads it."""
+    parameters = _set_values(_vanthoor_crop(config), VanthoorParameters)
+    return {
+        "lai": state.leaf_area_index(parameters),
+        "buffer_ch2o_mg_m2": state.c_buf,
+        "leaf_ch2o_mg_m2": state.c_leaf,
+        "stem_ch2o_mg_m2": state.c_stem,
+        "fruit_ch2o_mg_m2": state.c_fruit,
+        "harvested_fruit_ch2o_mg_m2": state.harvested_fruit,
+        "temperature_sum_c_d": state.t_can_sum,
+        "canopy_temperature_24h_c": state.t_can_24,
+    }
 
 
 def _vanthoor_sampled(state: VanthoorState, config: ScenarioConfig) -> dict[ObservationType, float]:
@@ -551,6 +541,7 @@ ORGAN_CROP_ACTIONS: Final = CropActions(
 
 ORGAN: Final = CropRegistration[Plant](
     name=CropModel.ORGAN.value,
+    title="Organ-level tomato",
     state=CropState,
     implausible=_organ_implausible,
     plants=PlantAdapter(
@@ -565,6 +556,7 @@ ORGAN: Final = CropRegistration[Plant](
 )
 SIMPLE: Final = CropRegistration[SimplePlant](
     name=CropModel.SIMPLE.value,
+    title="Simple daily tomato",
     state=SimpleCropState,
     implausible=_simple_implausible,
     plants=PlantAdapter(
@@ -581,6 +573,7 @@ SIMPLE: Final = CropRegistration[SimplePlant](
 )
 REDUCED_TOMGRO: Final = CropRegistration[Any](
     name=CropModel.REDUCED_TOMGRO.value,
+    title="Reduced-State TOMGRO",
     state=TomgroCropState,
     implausible=_tomgro_implausible,
     plants=None,
@@ -589,7 +582,8 @@ REDUCED_TOMGRO: Final = CropRegistration[Any](
         profile=lambda config: driver_profile(
             _tomgro_crop(config).driver_profile, _tomgro_crop(config).driver_profile_version
         ),
-        drawn=_tomgro_drawn,
+        charted=TOMGRO_CHARTED,
+        read=_tomgro_read,
         sampled=_tomgro_sampled,
     ),
     # Its harvest is the model's own rule; it takes none of a plan's.
@@ -597,6 +591,7 @@ REDUCED_TOMGRO: Final = CropRegistration[Any](
 )
 VANTHOOR_KATZIN: Final = CropRegistration[Any](
     name=CropModel.VANTHOOR_KATZIN.value,
+    title="Vanthoor (Katzin 2021)",
     state=VanthoorCropState,
     implausible=_vanthoor_implausible,
     plants=None,
@@ -605,7 +600,8 @@ VANTHOOR_KATZIN: Final = CropRegistration[Any](
         profile=lambda config: driver_profile(
             _vanthoor_crop(config).driver_profile, _vanthoor_crop(config).driver_profile_version
         ),
-        drawn=_vanthoor_drawn,
+        charted=VANTHOOR_CHARTED,
+        read=_vanthoor_read,
         sampled=_vanthoor_sampled,
     ),
     # Its harvest and its pruning are the model's own rules; it takes none

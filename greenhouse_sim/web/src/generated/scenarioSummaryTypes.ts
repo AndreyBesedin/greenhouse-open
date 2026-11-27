@@ -1,6 +1,7 @@
 // Generated from greenhouse_sim/services/scenario_summary.schema.json by `npm run generate`.
 // Do not edit: change the simulator's types and regenerate.
 
+export type CropGrownBy = "plants" | "area";
 export type Level = number;
 
 export interface ScenarioSummary {
@@ -10,6 +11,7 @@ export interface ScenarioSummary {
   plants: number;
   duration_days: number;
   crop_model: string;
+  crop_grown_by: CropGrownBy;
   daily: DailyCommand[];
   openings: string[];
   opening_day: number | null;
