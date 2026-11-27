@@ -239,6 +239,11 @@ COVER_MATERIALS: Final[Mapping[CoverMaterialName, Catalogued[CoverMaterial]]] = 
     ),
 }
 
+# The sheet a house whose cover is not described is taken to be of, where a
+# model of its air needs one (`climate.covered`): single glass, as its
+# glazing's U is by default.
+UNDESCRIBED_SHEET: Final = COVER_MATERIALS[CoverMaterialName.SINGLE_GLASS].properties
+
 LAYER_MATERIALS: Final[Mapping[LayerMaterialName, Catalogued[LayerMaterial]]] = {
     LayerMaterialName.CONCRETE: Catalogued(
         LayerMaterial(conductivity_w_m_k=1.7, volumetric_heat_capacity_j_m3_k=2.024e6),

@@ -58,6 +58,12 @@ strict = true
 plugins = ["pydantic.mypy"]
 files = ["greenhouse_sim", "tests"]
 
+# scipy, the development dependency the tests hold the climate's solver to
+# (its BDF, its matrix exponential), ships no type information.
+[[tool.mypy.overrides]]
+module = ["scipy", "scipy.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--import-mode=importlib"

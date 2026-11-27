@@ -7,7 +7,7 @@ from greenhouse_sim.airflow.prescribed import PrescribedAirflow, UniformAirflow
 from greenhouse_sim.cfd.setup import CfdSetup
 from greenhouse_sim.climate.commands import DailyCommand
 from greenhouse_sim.climate.control import Control
-from greenhouse_sim.climate.settings import GridAir, WholeHouseAir
+from greenhouse_sim.climate.settings import GridAir, VanthoorAir, WholeHouseAir
 from greenhouse_sim.climate.thermostat import Thermostat
 from greenhouse_sim.core.clock import DAY_S
 from greenhouse_sim.core.crop import CropWork
@@ -48,7 +48,7 @@ def _with_its_airs_kind(given: dict[str, Any]) -> dict[str, Any]:
     air = given.get("climate")
     if isinstance(air, dict) and "kind" not in air:
         return given | {"climate": air | {"kind": "grid"}}
-    if isinstance(air, BaseModel) and not isinstance(air, GridAir | WholeHouseAir):
+    if isinstance(air, BaseModel) and not isinstance(air, GridAir | WholeHouseAir | VanthoorAir):
         return given | {"climate": {**air.model_dump(), "kind": "grid"}}
     return given
 
@@ -115,7 +115,9 @@ class ScenarioConfig(BaseModel):
     # How its runs work out the house's air (P14.6): the whole house alone,
     # or cell by cell beside it, the default; and what its air starts from,
     # and how it exchanges with the outside, when its equipment drives it.
-    climate: Annotated[GridAir | WholeHouseAir, Field(discriminator="kind")] = GridAir()
+    climate: Annotated[GridAir | WholeHouseAir | VanthoorAir, Field(discriminator="kind")] = (
+        GridAir()
+    )
     # Where it lies on the Earth, and the weather outside it.
     site: Site = DEFAULT_SITE
     weather: Annotated[
@@ -263,6 +265,11 @@ class ScenarioConfig(BaseModel):
             raise ValueError(
                 f"its components' cover and its house air's {GLAZING_U} each give its "
                 f"glass's U: one of them does"
+            )
+        if isinstance(self.climate, VanthoorAir) and GLAZING_U in self.climate.model_fields_set:
+            raise ValueError(
+                f"its house air's model, vanthoor, takes its glass from its cover's sheets, "
+                f"not a {GLAZING_U}: its components describe its cover"
             )
         return self
 

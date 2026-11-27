@@ -1999,6 +1999,48 @@
       "title": "UniformAirflow",
       "type": "object"
     },
+    "VanthoorAir": {
+      "additionalProperties": false,
+      "description": "The house's air beside its cover and the sky, after Vanthoor (2011),\none well-mixed volume, which the run draws the same in every cell, as it\ndraws the whole house's (`greenhouse_sim.climate.covered`, P24.3). Its\ncover's sheets give its glass: a scenario that gives its glazing's U\nbeside it is refused (`ScenarioConfig`).",
+      "properties": {
+        "start_temperature_c": {
+          "default": 18.0,
+          "title": "Start Temperature C",
+          "type": "number"
+        },
+        "start_humidity_pct": {
+          "$ref": "#/$defs/Percent",
+          "default": 75.0
+        },
+        "start_co2_ppm": {
+          "default": 420.0,
+          "exclusiveMinimum": 0,
+          "title": "Start Co2 Ppm",
+          "type": "number"
+        },
+        "glazing_u_w_m2k": {
+          "default": 6.0,
+          "exclusiveMaximum": 20.389419544452608,
+          "minimum": 0.0,
+          "title": "Glazing U W M2K",
+          "type": "number"
+        },
+        "infiltration_per_h": {
+          "default": 0.25,
+          "minimum": 0,
+          "title": "Infiltration Per H",
+          "type": "number"
+        },
+        "infiltration_per_h_per_m_s": {
+          "default": 0.1,
+          "minimum": 0,
+          "title": "Infiltration Per H Per M S",
+          "type": "number"
+        }
+      },
+      "title": "VanthoorAir",
+      "type": "object"
+    },
     "VanthoorKatzinCrop": {
       "additionalProperties": false,
       "description": "The settings of Vanthoor's model as Katzin simplified it, grown by\narea (`greenhouse_sim.biology.tomato.vanthoor`, decisions 0060 and\n0062): the parameter set it runs, GreenLight 2.0.7's unless it names\nanother, the driver profile, named and versioned, through which the run\ngives it its drivers (`greenhouse_sim.core.drivers`), and the height\nabove its planting positions at which the light above its canopy is\nread, which the model does not grow: the run's choice, in m, not the\nmodel's.",
@@ -2608,6 +2650,21 @@
                 },
                 "parameters": {
                   "$ref": "#/$defs/WholeHouseAir"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model"
+              ],
+              "properties": {
+                "model": {
+                  "const": "vanthoor"
+                },
+                "parameters": {
+                  "$ref": "#/$defs/VanthoorAir"
                 }
               }
             }

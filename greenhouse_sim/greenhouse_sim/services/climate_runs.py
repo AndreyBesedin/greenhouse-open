@@ -263,10 +263,11 @@ def climate_day(simulator: Simulator, key: RunKey) -> ClimateDay:
 
     # A day of its house air's model: cell by cell beside the whole house,
     # or the whole house alone (P14.6).
-    day = DAYS[scenario(simulator.catalogue, key[0]).climate.kind]
+    config = scenario(simulator.catalogue, key[0])
+    day = DAYS[config.climate.kind]
 
     def make(others: list[tuple[RunKey, ClimateDay]]) -> ClimateDay:
-        run = day(_new_climate_run(simulator, key))
+        run = day(_new_climate_run(simulator, key), config.envelope, config.cover)
         for _, other in others:
             run.carry_on_from(other)
         taken_over = agreeing(simulator, house_of(key), run.run.schedule)

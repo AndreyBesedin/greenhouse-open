@@ -1,0 +1,126 @@
+{
+  "greenlight": "2.0.7",
+  "definitions": "models/katzin_2021/definition/vanthoor_2011/greenhouse_vanthoor_2011_chapter_8.json",
+  "cases": [
+    {
+      "case": "a cold night, the cover wet",
+      "given": {
+        "tTop": 16.0,
+        "tCovIn": 6.0,
+        "tCovE": 5.2,
+        "tOut": 2.0,
+        "tSky": -14.0,
+        "wind": 3.0,
+        "iGlob": 0.0,
+        "vpTop": 1500.0,
+        "aCov": 18000.0,
+        "aFlr": 14000.0
+      },
+      "fluxes": {
+        "hTopCovIn": 51.12783625466767,
+        "mvTopCovIn": 1.8538992554286507e-05,
+        "lTopCovIn": 45.42053175800194,
+        "hCovInCovE": 209.99999999999994,
+        "hCovEOut": 26.33142857142857,
+        "rCovESky": 71.93867314951792,
+        "rGlobSunCovE": 0.0,
+        "hecCovInCovE": 262.5,
+        "epsCovFir": 0.85,
+        "aCovPar": 0.020000000000000018,
+        "aCovNir": 0.020000000000000018,
+        "capCovIn": 791.7504827552175
+      },
+      "satVp_tCovIn": 933.436304212304
+    },
+    {
+      "case": "a sunny day, the cover dry",
+      "given": {
+        "tTop": 24.0,
+        "tCovIn": 19.5,
+        "tCovE": 19.0,
+        "tOut": 15.0,
+        "tSky": 2.0,
+        "wind": 1.5,
+        "iGlob": 650.0,
+        "vpTop": 1800.0,
+        "aCov": 18000.0,
+        "aFlr": 14000.0
+      },
+      "fluxes": {
+        "hTopCovIn": 17.677874930001444,
+        "mvTopCovIn": -1.9473068774568203e-25,
+        "lTopCovIn": -4.77090184976921e-19,
+        "hCovInCovE": 131.25,
+        "hCovEOut": 23.65714285714286,
+        "rCovESky": 74.8598717616934,
+        "rGlobSunCovE": 13.00000000000001,
+        "hecCovInCovE": 262.5,
+        "epsCovFir": 0.85,
+        "aCovPar": 0.020000000000000018,
+        "aCovNir": 0.020000000000000018,
+        "capCovIn": 791.7504827552175
+      },
+      "satVp_tCovIn": 2255.201896549142
+    },
+    {
+      "case": "the cover warmer than the air",
+      "given": {
+        "tTop": 10.0,
+        "tCovIn": 12.0,
+        "tCovE": 12.5,
+        "tOut": 14.0,
+        "tSky": 0.0,
+        "wind": 6.0,
+        "iGlob": 300.0,
+        "vpTop": 900.0,
+        "aCov": 1.0,
+        "aFlr": 1.0
+      },
+      "fluxes": {
+        "hTopCovIn": -4.676089753221202,
+        "mvTopCovIn": -1.7854156136422064e-27,
+        "lTopCovIn": -4.374268253423406e-21,
+        "hCovInCovE": -131.25,
+        "hCovEOut": -15.0,
+        "rCovESky": 52.58579643000336,
+        "rGlobSunCovE": 6.000000000000005,
+        "hecCovInCovE": 262.5,
+        "epsCovFir": 0.85,
+        "aCovPar": 0.020000000000000018,
+        "aCovNir": 0.020000000000000018,
+        "capCovIn": 791.7504827552175
+      },
+      "satVp_tCovIn": 1397.8274706927145
+    },
+    {
+      "case": "a storm, a flat roof",
+      "given": {
+        "tTop": 18.0,
+        "tCovIn": 8.0,
+        "tCovE": 7.0,
+        "tOut": 5.0,
+        "tSky": -20.0,
+        "wind": 14.0,
+        "iGlob": 50.0,
+        "vpTop": 1600.0,
+        "aCov": 1.0,
+        "aFlr": 1.0
+      },
+      "fluxes": {
+        "hTopCovIn": 39.76609486474152,
+        "mvTopCovIn": 1.3481977130060086e-05,
+        "lTopCovIn": 33.03084396864721,
+        "hCovInCovE": 262.5,
+        "hCovEOut": 39.2,
+        "rCovESky": 98.93780438228613,
+        "rGlobSunCovE": 1.0000000000000009,
+        "hecCovInCovE": 262.5,
+        "epsCovFir": 0.85,
+        "aCovPar": 0.020000000000000018,
+        "aCovNir": 0.020000000000000018,
+        "capCovIn": 791.7504827552175
+      },
+      "satVp_tCovIn": 1070.262560672091
+    }
+  ]
+}

@@ -1,7 +1,9 @@
 """A climate run through a day (P07.3), and since P09.2 through all its
 scenario's days, the fidelity ladder applied: the house's air cell by cell
-beside the whole house (`ClimateDay`, the house air's `grid` model), or the
-whole house alone (`WholeHouseDay`, its `whole_house` model, P14.6).
+beside the whole house (`ClimateDay`, the house air's `grid` model), the
+whole house alone (`WholeHouseDay`, its `whole_house` model, P14.6), or its
+air beside its cover and the sky (`VanthoorDay`, its `vanthoor` model,
+P24.3), drawn as the whole house's is.
 
 - **The house's air through the run** is the whole house's
   (`climate.house`): one well-mixed volume, from the run's start, under its
@@ -27,10 +29,12 @@ import math
 import threading
 import weakref
 from collections import OrderedDict
+from collections.abc import Callable
 from typing import Final
 
 import numpy as np
 
+from greenhouse_sim.climate.covered import CoveredHouse, house_nodes
 from greenhouse_sim.climate.glazing import GlazingAt, glazing_at
 from greenhouse_sim.climate.house import HouseAir, WholeHouse
 from greenhouse_sim.climate.openings import OpeningsAt
@@ -39,6 +43,8 @@ from greenhouse_sim.climate.run import ClimateRun
 from greenhouse_sim.climate.transport import AirState
 from greenhouse_sim.fields.field import EnvironmentField, FieldGrid
 from greenhouse_sim.units import HOUR_S
+from greenhouse_sim.world.components import Cover
+from greenhouse_sim.world.envelope import Envelope
 
 # How long the grid run from the start is drawn, in seconds: its first two
 # hours, after which the field comes from a later grid run.
@@ -58,9 +64,9 @@ class ClimateDay:
     """A climate run through a day: its grid run from the start, the whole
     house it holds, and the later grid runs drawn from the whole house."""
 
-    def __init__(self, run: ClimateRun) -> None:
+    def __init__(self, run: ClimateRun, house: WholeHouse | None = None) -> None:
         self.run = run
-        self.house = WholeHouse(run)
+        self.house = house or WholeHouse(run)
         # Its controller, or its thermostat, if it has one, decides from the
         # house's air, which its sensors sample: the grid runs follow.
         if run.control is not None or run.thermostat is not None:
@@ -212,6 +218,30 @@ class WholeHouseDay(ClimateDay):
         return OpeningsAt(time_s=time_s, openings=list(flows.values()))
 
 
+class VanthoorDay(WholeHouseDay):
+    """A climate run through its days by its air beside its cover and the
+    sky (P24.3, `greenhouse_sim.climate.covered`): drawn, sampled and seen
+    through its glazing and its openings as the whole house alone is, the
+    same in every cell. Its glazing is still drawn by its glass's U, not by
+    its cover's layers."""
+
+
+# A climate day of a run, in a house of an envelope and the cover its
+# components describe, if they do: which only the air beside its cover
+# reads.
+type DayMaker = Callable[[ClimateRun, Envelope, Cover | None], ClimateDay]
+
+
+def _covered_day(run: ClimateRun, envelope: Envelope, cover: Cover | None) -> ClimateDay:
+    """A day of `run`, its house's air beside the cover of `envelope`'s
+    walls and roof, of the sheets `cover` describes."""
+    return VanthoorDay(run, CoveredHouse(run, house_nodes(envelope, cover, run.glass)))
+
+
 # A climate day by its house air's model (`scenarios.registry`, decision
 # 0055).
-DAYS: Final[dict[str, type[ClimateDay]]] = {"grid": ClimateDay, "whole_house": WholeHouseDay}
+DAYS: Final[dict[str, DayMaker]] = {
+    "grid": lambda run, _envelope, _cover: ClimateDay(run),
+    "whole_house": lambda run, _envelope, _cover: WholeHouseDay(run),
+    "vanthoor": _covered_day,
+}

@@ -39,7 +39,7 @@ from greenhouse_sim.airflow.prescribed import (
     VortexAirflow,
 )
 from greenhouse_sim.climate.control import Control
-from greenhouse_sim.climate.settings import GridAir, WholeHouseAir
+from greenhouse_sim.climate.settings import GridAir, VanthoorAir, WholeHouseAir
 from greenhouse_sim.domain.crop import CropModel
 from greenhouse_sim.domain.parts import Part
 from greenhouse_sim.scenarios.config import ScenarioConfig
@@ -65,9 +65,10 @@ KIND: Final = "kind"
 # The sunlight's one model, and the sensors'.
 SUNLIGHT: Final = "haurwitz_erbs"
 SAMPLED: Final = "sampled"
-# The house air's two models.
+# The house air's models.
 GRID: Final = "grid"
 WHOLE_HOUSE: Final = "whole_house"
+VANTHOOR: Final = "vanthoor"
 # The controller's two models.
 LOOPS: Final = "loops"
 NO_CONTROLLER: Final = "none"
@@ -164,11 +165,13 @@ MODELS: Final[Mapping[Part, Mapping[str, Model]]] = {
     # own imperfections, and the weather station the weather
     # (`greenhouse_sim.sensors.air`).
     Part.SENSORS: _models(Model(Part.SENSORS, SAMPLED)),
-    # The house's air cell by cell beside the whole house, or the whole
-    # house alone (`greenhouse_sim.climate.day`).
+    # The house's air cell by cell beside the whole house, the whole house
+    # alone, or the air beside its cover and the sky
+    # (`greenhouse_sim.climate.day`).
     Part.HOUSE_AIR: _models(
         Model(Part.HOUSE_AIR, GRID, GridAir, "climate"),
         Model(Part.HOUSE_AIR, WHOLE_HOUSE, WholeHouseAir, "climate"),
+        Model(Part.HOUSE_AIR, VANTHOOR, VanthoorAir, "climate"),
     ),
     # Loops that each switch devices by one quantity of the house's air, in
     # steps, with hysteresis (P11, `greenhouse_sim.climate.control`), or no

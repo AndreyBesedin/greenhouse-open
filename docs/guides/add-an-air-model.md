@@ -17,13 +17,19 @@ each model chosen by a scenario's manifest from the registry
     moment's hour, or at the run's start in its first two hours;
   - `whole_house`, the whole house alone (`WholeHouseDay`): one well-mixed
     volume, which every moment's field draws the same in every cell, with
-    no grid run.
+    no grid run;
+  - `vanthoor`, the air beside its cover and the sky (`VanthoorDay`, P24.3,
+    `greenhouse_sim/greenhouse_sim/climate/covered.py`): drawn as the whole
+    house alone is, its air one well-mixed volume beside each glass's two
+    layers, after Vanthoor (2011).
 
   Either way, the whole house (`WholeHouse`,
   `greenhouse_sim/greenhouse_sim/climate/house.py`), worked exactly over
   stretches of at most a minute, cut at each command, is what the crop and
   the controller's loops read, and what the sensors sample: from the start
-  alone, and after the run's first two hours beside the grid.
+  alone, and after the run's first two hours beside the grid. The `vanthoor`
+  model's house (`CoveredHouse`) is a whole house whose stretches go by its
+  nodes' equations instead.
 
 **CFD** (`greenhouse_sim/greenhouse_sim/cfd/`) is a steady solution kept
 from OpenFOAM ([decision 0027](../decisions/0027-cfd-runs-out-of-process-on-the-fields-grid.md)),
@@ -82,9 +88,13 @@ The whole house alone was added this way, beside the grid (P14.6).
 2. **Its days,** a subclass of `ClimateDay`, overriding what it draws, as
    `WholeHouseDay` does: the field at a moment (`drawn`, `field`), what the
    sensors sample (`sampled`), and the glazing and the openings against its
-   air (`glazing_at`, `openings_at`); entered in `DAYS` under its name, by
-   which `greenhouse_sim/greenhouse_sim/services/climate_runs.py` builds a
-   run's days.
+   air (`glazing_at`, `openings_at`); entered in `DAYS` under its name, as
+   what makes a day of a run in a house of its envelope and its described
+   cover, by which `greenhouse_sim/greenhouse_sim/services/climate_runs.py`
+   builds a run's days. A model that keeps a state beside the house's air,
+   as `vanthoor` keeps its cover's layers, keeps it in a checkpoint as its
+   part's state (`ModelState.state`), so that the others' checkpoints do not
+   move.
 3. **Its choice:** its registry entry, a `Model` of `Part.HOUSE_AIR`, with
    the configuration's field that holds it (`climate`) and its version; and
    its place in `ScenarioConfig.climate`'s union
